@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - MovieRec</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Netflix Sans', 'Helvetica Neue', Arial, sans-serif;
+            background: #141414;
+            color: #fff;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            background: #000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #E50914;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 12px 16px;
+            color: #999;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: #333;
+            color: #fff;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #E50914 0%, #831010 100%);
+            padding: 24px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: #333;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #fff;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #E50914;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #E50914;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #f40612;
+        }
+
+        .btn-secondary {
+            background: #333;
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: #444;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        .table th {
+            background: #222;
+            font-weight: 600;
+        }
+
+        .table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .search-results {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .search-result-item {
+            padding: 15px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            transition: background 0.2s ease;
+        }
+
+        .search-result-item:hover {
+            background: #333;
+        }
+
+        .search-result-item img {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .modal.show {
+            display: block;
+        }
+
+        .close-btn {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #333;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #333;
+            border-radius: 50%;
+            border-top: 3px solid #E50914;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">MovieRec Admin</div>
+        <nav>
+            <a href="#dashboard" class="nav-item active" data-section="dashboard">Dashboard</a>
+            <a href="#content" class="nav-item" data-section="content">Content Management</a>
+            <a href="#recommendations" class="nav-item" data-section="recommendations">Recommendations</a>
+            <a href="#users" class="nav-item" data-section="users">User Management</a>
+            <a href="#analytics" class="nav-item" data-section="analytics">Analytics</a>
+            <hr class="my-4 border-gray-700">
+            <a href="#" class="nav-item" id="logout-btn">Logout</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="content-section">
+            <h1 class="text-3xl font-bold mb-6">Admin Dashboard</h1>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-users">0</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-content">0</div>
+                    <div class="stat-label">Total Content</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-ratings">0</div>
+                    <div class="stat-label">Total Ratings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="active-recommendations">0</div>
+                    <div class="stat-label">Active Recommendations</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Recent Activity</h2>
+                <div id="recent-activity">
+                    <p class="text-gray-400">Loading recent activity...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Content Management Section -->
+        <section id="content-section" class="content-section" style="display: none;">
+            <h1 class="text-3xl font-bold mb-6">Content Management</h1>
+            
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Search & Add Content</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" class="form-input" placeholder="Search for movies, TV shows, anime..." id="content-search">
+                    <select class="form-select" id="content-source">
+                        <option value="all">All Sources</option>
+                        <option value="tmdb">TMDB</option>
+                        <option value="anime">Anime (Jikan)</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" id="search-content-btn">Search</button>
+                
+                <div class="loader" id="search-loader">
+                    <div class="spinner"></div>
+                </div>
+                
+                <div class="search-results" id="content-search-results" style="display: none;"></div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Existing Content</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Language</th>
+                            <th>Popularity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="content-table">
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-400">Loading content...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Recommendations Section -->
+        <section id="recommendations-section" class="content-section" style="display: none;">
+            <h1 class="text-3xl font-bold mb-6">Public Recommendations</h1>
+            
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Create New Recommendation</h2>
+                <button class="btn btn-primary mb-4" id="create-recommendation-btn">Create Recommendation</button>
+                
+                <div id="active-recommendations">
+                    <p class="text-gray-400">Loading recommendations...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Users Section -->
+        <section id="users-section" class="content-section" style="display: none;">
+            <h1 class="text-3xl font-bold mb-6">User Management</h1>
+            
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Create Admin User</h2>
+                <form id="create-admin-form">
+                    <input type="text" class="form-input" placeholder="Username" id="admin-username" required>
+                    <input type="email" class="form-input" placeholder="Email" id="admin-email" required>
+                    <input type="password" class="form-input" placeholder="Password" id="admin-password" required>
+                    <button type="submit" class="btn btn-primary">Create Admin</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">User List</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table">
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-400">Loading users...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Analytics Section -->
+        <section id="analytics-section" class="content-section" style="display: none;">
+            <h1 class="text-3xl font-bold mb-6">Analytics</h1>
+            
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Content Performance</h2>
+                <div id="content-analytics">
+                    <p class="text-gray-400">Analytics data coming soon...</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Recommendation Modal -->
+    <div class="modal" id="recommendation-modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('recommendation-modal')">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Create Recommendation</h2>
+            <form id="recommendation-form">
+                <input type="hidden" id="rec-content-id">
+                <input type="text" class="form-input" placeholder="Recommendation Title" id="rec-title" required>
+                <textarea class="form-textarea" placeholder="Description" id="rec-description" rows="4" required></textarea>
+                <input type="number" class="form-input" placeholder="Priority (1-10)" id="rec-priority" min="1" max="10" value="5">
+                <input type="text" class="form-input" placeholder="Tags (comma separated)" id="rec-tags">
+                <input type="datetime-local" class="form-input" placeholder="Expires At" id="rec-expires">
+                <div class="mb-4">
+                    <p class="mb-2">Selected Content: <span id="selected-content-title" class="text-gray-400">None</span></p>
+                </div>
+                <button type="submit" class="btn btn-primary">Create Recommendation</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        const state = {
+            authToken: null,
+            userData: null,
+            selectedContent: null
+        };
+
+       const API_BASE = 'https://backend-app-970m.onrender.com/api';
+
+        // Initialize state
+        function initializeState() {
+            try {
+                const hash = window.location.hash.substring(1);
+                if (hash) {
+                    const data = JSON.parse(atob(hash));
+                    state.authToken = data.token;
+                    state.userData = data.user;
+                    window.location.hash = '';
+                }
+            } catch (e) {
+                console.error('Failed to parse auth data');
+            }
+
+            if (!state.authToken || !state.userData?.is_admin) {
+                window.location.href = 'index.html';
+                return false;
+            }
+
+            return true;
+        }
+
+        // API request helper
+        async function apiRequest(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.authToken}`,
+                ...options.headers
+            };
+
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                ...options,
+                headers
+            });
+
+            if (response.status === 401) {
+                window.location.href = 'index.html';
+                return null;
+            }
+
+            return response;
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = item.dataset.section;
+                
+                // Update active nav
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                
+                // Show section
+                document.querySelectorAll('.content-section').forEach(sec => sec.style.display = 'none');
+                document.getElementById(`${section}-section`).style.display = 'block';
+                
+                // Load section data
+                loadSectionData(section);
+            });
+        });
+
+        // Load section data
+        async function loadSectionData(section) {
+            switch(section) {
+                case 'dashboard':
+                    loadDashboardStats();
+                    break;
+                case 'content':
+                    // Content is loaded on search
+                    break;
+                case 'recommendations':
+                    loadRecommendations();
+                    break;
+                case 'users':
+                    // Users loaded on demand
+                    break;
+            }
+        }
+
+        // Load dashboard stats
+        async function loadDashboardStats() {
+            // This would normally fetch from backend
+            // For now, using placeholder data
+            document.getElementById('total-users').textContent = '1,234';
+            document.getElementById('total-content').textContent = '5,678';
+            document.getElementById('total-ratings').textContent = '12,345';
+            document.getElementById('active-recommendations').textContent = '15';
+            
+            // Load recent activity
+            document.getElementById('recent-activity').innerHTML = `
+                <div class="space-y-2">
+                    <p class="text-sm">• New user registered: john_doe</p>
+                    <p class="text-sm">• Content added: "Inception"</p>
+                    <p class="text-sm">• Recommendation created: "Weekend Picks"</p>
+                    <p class="text-sm">• User promoted to admin: jane_smith</p>
+                </div>
+            `;
+        }
+
+        // Content search
+        document.getElementById('search-content-btn').addEventListener('click', async () => {
+            const query = document.getElementById('content-search').value;
+            const source = document.getElementById('content-source').value;
+            
+            if (!query) return;
+            
+            const loader = document.getElementById('search-loader');
+            const results = document.getElementById('content-search-results');
+            
+            loader.style.display = 'block';
+            results.style.display = 'none';
+            
+            try {
+                const response = await apiRequest(`/admin/search-content?q=${encodeURIComponent(query)}&source=${source}`);
+                if (!response || !response.ok) return;
+                
+                const data = await response.json();
+                
+                results.innerHTML = '';
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(item => {
+                        const resultDiv = document.createElement('div');
+                        resultDiv.className = 'search-result-item';
+                        resultDiv.innerHTML = `
+                            <img src="${item.data.poster_url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 90"><rect fill="%23333" width="60" height="90"/></svg>'}" alt="${item.data.title}">
+                            <div class="flex-1">
+                                <div class="font-semibold">${item.data.title}</div>
+                                <div class="text-sm text-gray-400">${item.data.content_type} • ${item.source.toUpperCase()}</div>
+                                <div class="text-sm text-gray-400">${item.data.genres?.join(', ') || 'Unknown'}</div>
+                            </div>
+                            <div>
+                                <button class="btn btn-primary btn-sm" onclick="addContent('${encodeURIComponent(JSON.stringify(item.data))}')">Add</button>
+                                <button class="btn btn-secondary btn-sm ml-2" onclick="selectForRecommendation('${encodeURIComponent(JSON.stringify(item.data))}')">Recommend</button>
+                            </div>
+                        `;
+                        results.appendChild(resultDiv);
+                    });
+                    results.style.display = 'block';
+                } else {
+                    results.innerHTML = '<div class="p-4 text-center text-gray-400">No results found</div>';
+                    results.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+            } finally {
+                loader.style.display = 'none';
+            }
+        });
+
+        // Add content
+        async function addContent(encodedData) {
+            const contentData = JSON.parse(decodeURIComponent(encodedData));
+            
+            try {
+                const response = await apiRequest('/admin/add-content', {
+                    method: 'POST',
+                    body: JSON.stringify({ content_data: contentData })
+                });
+                
+                if (response && response.ok) {
+                    alert('Content added successfully!');
+                } else {
+                    alert('Failed to add content');
+                }
+            } catch (error) {
+                console.error('Add content error:', error);
+                alert('Error adding content');
+            }
+        }
+
+        // Select content for recommendation
+        function selectForRecommendation(encodedData) {
+            const contentData = JSON.parse(decodeURIComponent(encodedData));
+            state.selectedContent = contentData;
+            
+            document.getElementById('selected-content-title').textContent = contentData.title;
+            document.getElementById('rec-content-id').value = contentData.id || '';
+            openModal('recommendation-modal');
+        }
+
+        // Load recommendations
+        async function loadRecommendations() {
+            try {
+                const response = await apiRequest('/admin/recommendations');
+                if (!response || !response.ok) return;
+                
+                const data = await response.json();
+                const container = document.getElementById('active-recommendations');
+                
+                if (data.recommendations && data.recommendations.length > 0) {
+                    container.innerHTML = '<div class="space-y-4">' + 
+                        data.recommendations.map(rec => `
+                            <div class="border border-gray-700 rounded p-4">
+                                <h3 class="font-bold text-lg">${rec.title}</h3>
+                                <p class="text-gray-400 mb-2">${rec.description}</p>
+                                <div class="mb-2">
+                                    ${rec.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    Priority: ${rec.priority} • 
+                                    Expires: ${rec.expires_at ? new Date(rec.expires_at).toLocaleDateString() : 'Never'}
+                                </div>
+                            </div>
+                        `).join('') + '</div>';
+                } else {
+                    container.innerHTML = '<p class="text-gray-400">No active recommendations</p>';
+                }
+            } catch (error) {
+                console.error('Load recommendations error:', error);
+            }
+        }
+
+        // Create recommendation
+        document.getElementById('create-recommendation-btn').addEventListener('click', () => {
+            openModal('recommendation-modal');
+        });
+
+        document.getElementById('recommendation-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                content_id: document.getElementById('rec-content-id').value || state.selectedContent?.id,
+                title: document.getElementById('rec-title').value,
+                description: document.getElementById('rec-description').value,
+                priority: parseInt(document.getElementById('rec-priority').value),
+                tags: document.getElementById('rec-tags').value.split(',').map(t => t.trim()).filter(t => t),
+                expires_at: document.getElementById('rec-expires').value || null
+            };
+            
+            try {
+                const response = await apiRequest('/admin/recommendations', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response && response.ok) {
+                    alert('Recommendation created successfully!');
+                    closeModal('recommendation-modal');
+                    loadRecommendations();
+                } else {
+                    alert('Failed to create recommendation');
+                }
+            } catch (error) {
+                console.error('Create recommendation error:', error);
+                alert('Error creating recommendation');
+            }
+        });
+
+        // Create admin user
+        document.getElementById('create-admin-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                username: document.getElementById('admin-username').value,
+                email: document.getElementById('admin-email').value,
+                password: document.getElementById('admin-password').value
+            };
+            
+            try {
+                const response = await apiRequest('/admin/create-admin', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response && response.ok) {
+                    alert('Admin user created successfully!');
+                    e.target.reset();
+                } else {
+                    const data = await response.json();
+                    alert(data.message || 'Failed to create admin user');
+                }
+            } catch (error) {
+                console.error('Create admin error:', error);
+                alert('Error creating admin user');
+            }
+        });
+
+        // Modal functions
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('show');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            state.authToken = null;
+            state.userData = null;
+            window.location.href = 'index.html';
+        });
+
+        // Initialize
+        if (initializeState()) {
+            loadDashboardStats();
+        }
+    </script>
+</body>
+</html>

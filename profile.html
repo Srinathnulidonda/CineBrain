@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - CineScope</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary: #e50914;
+            --secondary: #221f1f;
+            --dark: #141414;
+            --light: #f5f5f1;
+        }
+
+        body {
+            background: var(--dark);
+            color: var(--light);
+            font-family: 'Arial', sans-serif;
+        }
+
+        .profile-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .form-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.3);
+        }
+
+        .movie-card {
+            min-width: 150px;
+            height: 225px;
+            background: var(--secondary);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .movie-card:hover {
+            transform: scale(1.05);
+        }
+
+        .movie-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary), #f40612);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .preference-chip {
+            background: rgba(229, 9, 20, 0.2);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .preference-chip.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .carousel-container {
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .carousel-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-90 backdrop-blur-sm">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button onclick="goBack()" class="text-white hover:text-red-500 text-xl">←</button>
+                    <h1 class="text-2xl font-bold text-red-600">CineScope</h1>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <a href="dashboard.html" class="text-white hover:text-red-500 transition">Dashboard</a>
+                    <button onclick="logout()" class="text-white hover:text-red-500 transition">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="pt-20 min-h-screen">
+        <div class="container mx-auto px-4 py-8">
+            <!-- Profile Header -->
+            <div class="profile-card rounded-xl p-8 mb-8">
+                <div class="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
+                    <!-- Avatar -->
+                    <div class="flex-shrink-0">
+                        <div class="w-32 h-32 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center text-4xl font-bold text-white">
+                            <span id="userAvatar">U</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Profile Info -->
+                    <div class="flex-1 text-center md:text-left">
+                        <h1 id="userName" class="text-3xl font-bold mb-2"></h1>
+                        <p id="userEmail" class="text-gray-400 mb-4"></p>
+                        <p class="text-gray-300 mb-6">Member since <span id="memberSince"></span></p>
+                        
+                        <!-- Stats -->
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="stat-card">
+                                <div class="text-2xl font-bold" id="watchlistCount">0</div>
+                                <div class="text-sm opacity-90">Watchlist</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="text-2xl font-bold" id="favoritesCount">0</div>
+                                <div class="text-sm opacity-90">Favorites</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="text-2xl font-bold" id="ratingsCount">0</div>
+                                <div class="text-sm opacity-90">Ratings</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="mb-8">
+                <div class="flex space-x-1 bg-gray-800 rounded-lg p-1">
+                    <button id="preferencesTab" class="flex-1 py-3 px-6 rounded-md bg-red-600 text-white transition-all">
+                        Preferences
+                    </button>
+                    <button id="watchlistTab" class="flex-1 py-3 px-6 rounded-md text-gray-400 hover:text-white transition-all">
+                        Watchlist
+                    </button>
+                    <button id="favoritesTab" class="flex-1 py-3 px-6 rounded-md text-gray-400 hover:text-white transition-all">
+                        Favorites
+                    </button>
+                    <button id="settingsTab" class="flex-1 py-3 px-6 rounded-md text-gray-400 hover:text-white transition-all">
+                        Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content -->
+
+            <!-- Preferences Tab -->
+            <div id="preferencesContent" class="tab-content">
+                <div class="profile-card rounded-xl p-8">
+                    <h2 class="text-2xl font-bold mb-6">Your Preferences</h2>
+                    
+                    <!-- Language Preferences -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4">Preferred Languages</h3>
+                        <div class="flex flex-wrap gap-3">
+                            <div class="preference-chip" data-type="language" data-value="english">English</div>
+                            <div class="preference-chip" data-type="language" data-value="hindi">Hindi</div>
+                            <div class="preference-chip" data-type="language" data-value="telugu">Telugu</div>
+                            <div class="preference-chip" data-type="language" data-value="tamil">Tamil</div>
+                            <div class="preference-chip" data-type="language" data-value="kannada">Kannada</div>
+                            <div class="preference-chip" data-type="language" data-value="malayalam">Malayalam</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Genre Preferences -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4">Favorite Genres</h3>
+                        <div class="flex flex-wrap gap-3">
+                            <div class="preference-chip" data-type="genre" data-value="action">Action</div>
+                            <div class="preference-chip" data-type="genre" data-value="comedy">Comedy</div>
+                            <div class="preference-chip" data-type="genre" data-value="drama">Drama</div>
+                            <div class="preference-chip" data-type="genre" data-value="horror">Horror</div>
+                            <div class="preference-chip" data-type="genre" data-value="romance">Romance</div>
+                            <div class="preference-chip" data-type="genre" data-value="thriller">Thriller</div>
+                            <div class="preference-chip" data-type="genre" data-value="sci-fi">Sci-Fi</div>
+                            <div class="preference-chip" data-type="genre" data-value="fantasy">Fantasy</div>
+                            <div class="preference-chip" data-type="genre" data-value="documentary">Documentary</div>
+                            <div class="preference-chip" data-type="genre" data-value="animation">Animation</div>
+                        </div>
+                    </div>
+                    
+                    <button onclick="savePreferences()" class="bg-red-600 text-white px-8 py-3 rounded-lg hover:bg-red-700 transition">
+                        Save Preferences
+                    </button>
+                </div>
+            </div>
+
+            <!-- Watchlist Tab -->
+            <div id="watchlistContent" class="tab-content hidden">
+                <div class="profile-card rounded-xl p-8">
+                    <h2 class="text-2xl font-bold mb-6">My Watchlist</h2>
+                    <div id="watchlistCarousel" class="carousel-container flex space-x-4 pb-4">
+                        <div class="loading mx-auto"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Favorites Tab -->
+            <div id="favoritesContent" class="tab-content hidden">
+                <div class="profile-card rounded-xl p-8">
+                    <h2 class="text-2xl font-bold mb-6">My Favorites</h2>
+                    <div id="favoritesCarousel" class="carousel-container flex space-x-4 pb-4">
+                        <div class="loading mx-auto"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settingsContent" class="tab-content hidden">
+                <div class="profile-card rounded-xl p-8">
+                    <h2 class="text-2xl font-bold mb-6">Account Settings</h2>
+                    
+                    <form id="settingsForm" class="space-y-6">
+                        <div>
+                            <label class="block text-gray-300 font-medium mb-2">Username</label>
+                            <input type="text" id="settingsUsername" class="form-input w-full px-4 py-3 rounded-lg" readonly>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-300 font-medium mb-2">Email</label>
+                            <input type="email" id="settingsEmail" class="form-input w-full px-4 py-3 rounded-lg">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-300 font-medium mb-2">Change Password</label>
+                            <input type="password" id="newPassword" class="form-input w-full px-4 py-3 rounded-lg" placeholder="Enter new password">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-300 font-medium mb-2">Confirm Password</label>
+                            <input type="password" id="confirmPassword" class="form-input w-full px-4 py-3 rounded-lg" placeholder="Confirm new password">
+                        </div>
+                        
+                        <div class="flex space-x-4">
+                            <button type="submit" class="bg-red-600 text-white px-8 py-3 rounded-lg hover:bg-red-700 transition">
+                                Update Settings
+                            </button>
+                            <button type="button" onclick="deleteAccount()" class="bg-gray-600 text-white px-8 py-3 rounded-lg hover:bg-gray-700 transition">
+                                Delete Account
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        
+        // Global variables
+        let currentUser = null;
+        let authToken = null;
+        let userPreferences = {
+            languages: [],
+            genres: []
+        };
+
+        // Authentication check
+        function checkAuth() {
+            authToken = sessionStorage.getItem('authToken');
+            const userStr = sessionStorage.getItem('currentUser');
+            
+            if (!authToken || !userStr) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            
+            currentUser = JSON.parse(userStr);
+            return true;
+        }
+
+        function getAuthHeaders() {
+            return {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        // Navigation
+        function goBack() {
+            window.history.back();
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        // Load user profile
+        function loadUserProfile() {
+            if (!currentUser) return;
+
+            document.getElementById('userName').textContent = currentUser.username;
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
+            
+            // Member since
+            const memberSince = new Date(currentUser.created_at || Date.now()).toLocaleDateString();
+            document.getElementById('memberSince').textContent = memberSince;
+            
+            // Load preferences
+            userPreferences.languages = currentUser.preferred_languages || [];
+            userPreferences.genres = currentUser.preferred_genres || [];
+            
+            // Highlight active preferences
+            updatePreferenceChips();
+            
+            // Populate settings form
+            document.getElementById('settingsUsername').value = currentUser.username;
+            document.getElementById('settingsEmail').value = currentUser.email;
+        }
+
+        function updatePreferenceChips() {
+            // Language chips
+            document.querySelectorAll('[data-type="language"]').forEach(chip => {
+                if (userPreferences.languages.includes(chip.dataset.value)) {
+                    chip.classList.add('active');
+                }
+            });
+            
+            // Genre chips
+            document.querySelectorAll('[data-type="genre"]').forEach(chip => {
+                if (userPreferences.genres.includes(chip.dataset.value)) {
+                    chip.classList.add('active');
+                }
+            });
+        }
+
+        // Tab functionality
+        function setupTabs() {
+            const tabs = ['preferences', 'watchlist', 'favorites', 'settings'];
+            
+            tabs.forEach(tabName => {
+                document.getElementById(`${tabName}Tab`).addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => {
+                        document.getElementById(`${t}Tab`).classList.remove('bg-red-600', 'text-white');
+                        document.getElementById(`${t}Tab`).classList.add('text-gray-400');
+                        document.getElementById(`${t}Content`).classList.add('hidden');
+                    });
+                    
+                    // Add active class to clicked tab
+                    document.getElementById(`${tabName}Tab`).classList.add('bg-red-600', 'text-white');
+                    document.getElementById(`${tabName}Tab`).classList.remove('text-gray-400');
+                    document.getElementById(`${tabName}Content`).classList.remove('hidden');
+                    
+                    // Load content for specific tabs
+                    if (tabName === 'watchlist') {
+                        loadWatchlist();
+                    } else if (tabName === 'favorites') {
+                        loadFavorites();
+                    }
+                });
+            });
+        }
+
+        // Preference management
+        function setupPreferences() {
+            document.querySelectorAll('.preference-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const type = chip.dataset.type;
+                    const value = chip.dataset.value;
+                    
+                    if (chip.classList.contains('active')) {
+                        chip.classList.remove('active');
+                        userPreferences[type + 's'] = userPreferences[type + 's'].filter(item => item !== value);
+                    } else {
+                        chip.classList.add('active');
+                        if (!userPreferences[type + 's'].includes(value)) {
+                            userPreferences[type + 's'].push(value);
+                        }
+                    }
+                });
+            });
+        }
+
+        async function savePreferences() {
+            try {
+                const response = await fetch(`${API_BASE}/user/preferences`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        preferred_languages: userPreferences.languages,
+                        preferred_genres: userPreferences.genres
+                    })
+                });
+
+                if (response.ok) {
+                    // Update current user data
+                    currentUser.preferred_languages = userPreferences.languages;
+                    currentUser.preferred_genres = userPreferences.genres;
+                    sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    alert('Preferences saved successfully!');
+                } else {
+                    alert('Failed to save preferences');
+                }
+            } catch (error) {
+                console.error('Save preferences error:', error);
+                alert('Failed to save preferences');
+            }
+        }
+
+        // Load watchlist and favorites
+        async function loadWatchlist() {
+            try {
+                const response = await fetch(`${API_BASE}/user/watchlist`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    populateContentCarousel('watchlistCarousel', data.watchlist || []);
+                    document.getElementById('watchlistCount').textContent = data.watchlist?.length || 0;
+                }
+            } catch (error) {
+                console.error('Load watchlist error:', error);
+            }
+        }
+
+        async function loadFavorites() {
+            try {
+                const response = await fetch(`${API_BASE}/user/favorites`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    populateContentCarousel('favoritesCarousel', data.favorites || []);
+                    document.getElementById('favoritesCount').textContent = data.favorites?.length || 0;
+                }
+            } catch (error) {
+                console.error('Load favorites error:', error);
+            }
+        }
+
+        function populateContentCarousel(containerId, content) {
+            const container = document.getElementById(containerId);
+            
+            if (!content || content.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No content found</div>';
+                return;
+            }
+            
+            container.innerHTML = content.map(item => {
+                const posterUrl = item.poster_path 
+                    ? `https://image.tmdb.org/t/p/w300${item.poster_path}`
+                    : '/api/placeholder/150/225';
+                    
+                return `
+                    <div class="movie-card" onclick="viewContent(${item.id})">
+                        <img src="${posterUrl}" alt="${item.title}" loading="lazy">
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
+                            <h4 class="font-semibold text-xs text-white">${item.title}</h4>
+                            <p class="text-yellow-400 text-xs">⭐ ${item.rating || 'N/A'}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function viewContent(contentId) {
+            localStorage.setItem('selectedContentId', contentId);
+            window.location.href = 'movie-detail.html';
+        }
+
+        // Settings management
+        function setupSettings() {
+            document.getElementById('settingsForm').addEventListener('submit', updateSettings);
+        }
+
+        async function updateSettings(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('settingsEmail').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Validate passwords
+            if (newPassword && newPassword !== confirmPassword) {
+                alert('Passwords do not match');
+                return;
+            }
+            
+            try {
+                const updateData = { email };
+                if (newPassword) {
+                    updateData.password = newPassword;
+                }
+                
+                const response = await fetch(`${API_BASE}/user/update`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (response.ok) {
+                    alert('Settings updated successfully!');
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                } else {
+                    alert('Failed to update settings');
+                }
+            } catch (error) {
+                console.error('Update settings error:', error);
+                alert('Failed to update settings');
+            }
+        }
+
+        function deleteAccount() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                if (confirm('This will permanently delete all your data. Are you absolutely sure?')) {
+                    // Implement account deletion
+                    alert('Account deletion is not implemented in this demo');
+                }
+            }
+        }
+
+        // Initialize page
+        function initializePage() {
+            if (!checkAuth()) return;
+            
+            loadUserProfile();
+            setupTabs();
+            setupPreferences();
+            setupSettings();
+            
+            // Load initial tab content
+            loadWatchlist();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
+</body>
+</html>

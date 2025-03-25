@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieFlix Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --netflix-red: #E50914;
+            --netflix-black: #141414;
+            --netflix-gray: #2F2F2F;
+            --text-gray: #B3B3B3;
+            --card-bg: #181818;
+            --success: #46d369;
+            --warning: #f1c40f;
+            --danger: #e74c3c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: var(--netflix-black);
+            color: white;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 100vh;
+            background: var(--card-bg);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--netflix-red);
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            color: var(--text-gray);
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--netflix-gray);
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid var(--netflix-red);
+        }
+
+        .stat-label {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        /* Tables */
+        .data-table {
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .table-header {
+            padding: 20px;
+            background: var(--netflix-gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--netflix-gray);
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+            color: var(--text-gray);
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid var(--netflix-gray);
+        }
+
+        tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Forms */
+        .form-section {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-gray);
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--netflix-gray);
+            border: 1px solid transparent;
+            border-radius: 4px;
+            color: white;
+            transition: border 0.3s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--netflix-red);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--netflix-red);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #f40612;
+        }
+
+        .btn-secondary {
+            background: var(--netflix-gray);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #404040;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Search Box */
+        .search-box {
+            position: relative;
+            max-width: 400px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--netflix-gray);
+            border: none;
+            border-radius: 4px;
+            color: white;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border-radius: 4px;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            z-index: 100;
+        }
+
+        .search-results.active {
+            display: block;
+        }
+
+        .search-item {
+            padding: 15px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--netflix-gray);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .search-item:hover {
+            background: var(--netflix-gray);
+        }
+
+        .search-item img {
+            width: 50px;
+            height: 75px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .modal-close {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-gray);
+        }
+
+        .modal-close:hover {
+            color: white;
+        }
+
+        /* Charts placeholder */
+        .chart-container {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-gray);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <h1 class="logo">MovieFlix Admin</h1>
+        <nav>
+            <a class="nav-item active" data-page="dashboard">Dashboard</a>
+            <a class="nav-item" data-page="content">Content Management</a>
+            <a class="nav-item" data-page="recommendations">Recommendations</a>
+            <a class="nav-item" data-page="telegram">Telegram Posts</a>
+            <a class="nav-item" data-page="users">Users</a>
+            <a class="nav-item" data-page="analytics">Analytics</a>
+            <a class="nav-item" id="logout-btn">Logout</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+        <!-- Content will be dynamically loaded here -->
+    </main>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Modal Title</h2>
+                <span class="modal-close" id="modal-close">✕</span>
+            </div>
+            <div id="modal-body">
+                <!-- Modal content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let auth = window.movieFlixAuth || null;
+        let currentPage = 'dashboard';
+        let dashboardData = null;
+        const API_BASE = 'http://localhost:5000/api';
+        const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/';
+
+        // Check authentication
+        if (!auth || !auth.token || !auth.user.is_admin) {
+            window.location.href = '/index.html';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            loadDashboard();
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (e.target.id === 'logout-btn') {
+                        if (confirm('Are you sure you want to logout?')) {
+                            window.movieFlixAuth = null;
+                            window.location.href = '/index.html';
+                        }
+                        return;
+                    }
+
+                    const page = e.target.dataset.page;
+                    if (page) {
+                        switchPage(page);
+                    }
+                });
+            });
+
+            // Modal close
+            document.getElementById('modal-close').addEventListener('click', closeModal);
+            document.getElementById('modal').addEventListener('click', (e) => {
+                if (e.target.id === 'modal') closeModal();
+            });
+        }
+
+        // Switch page
+        function switchPage(page) {
+            currentPage = page;
+            
+            // Update active nav
+            document.querySelectorAll('.nav-item').forEach(item => {
+                if (item.dataset.page === page) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // Load page content
+            switch(page) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'content':
+                    loadContentManagement();
+                    break;
+                case 'recommendations':
+                    loadRecommendations();
+                    break;
+                case 'telegram':
+                    loadTelegramManagement();
+                    break;
+                case 'users':
+                    loadUsersManagement();
+                    break;
+                case 'analytics':
+                    loadAnalytics();
+                    break;
+            }
+        }
+
+        // Load dashboard
+        async function loadDashboard() {
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = '<div class="header"><h1 class="page-title">Dashboard</h1></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/dashboard`, {
+                    headers: {
+                        'Authorization': `Bearer ${auth.token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load dashboard');
+
+                dashboardData = await response.json();
+
+                // Stats cards
+                const statsGrid = document.createElement('div');
+                statsGrid.className = 'stats-grid';
+                
+                const stats = [
+                    { label: 'Total Users', value: dashboardData.stats.total_users, color: '#3498db' },
+                    { label: 'Total Content', value: dashboardData.stats.total_content, color: '#2ecc71' },
+                    { label: 'Total Interactions', value: dashboardData.stats.total_interactions, color: '#f39c12' },
+                    { label: 'Total Reviews', value: dashboardData.stats.total_reviews, color: '#e74c3c' }
+                ];
+
+                stats.forEach(stat => {
+                    const card = document.createElement('div');
+                    card.className = 'stat-card';
+                    card.style.borderLeftColor = stat.color;
+                    card.innerHTML = `
+                        <div class="stat-label">${stat.label}</div>
+                        <div class="stat-value">${stat.value.toLocaleString()}</div>
+                    `;
+                    statsGrid.appendChild(card);
+                });
+
+                mainContent.appendChild(statsGrid);
+
+                // Recent users table
+                if (dashboardData.recent_users && dashboardData.recent_users.length > 0) {
+                    const usersTable = createTable('Recent Users', ['ID', 'Username', 'Joined'], 
+                        dashboardData.recent_users.map(user => [
+                            user.id,
+                            user.username,
+                            new Date(user.created_at).toLocaleDateString()
+                        ])
+                    );
+                    mainContent.appendChild(usersTable);
+                }
+
+                // Popular content table
+                if (dashboardData.popular_content && dashboardData.popular_content.length > 0) {
+                    const contentTable = createTable('Popular Content', ['Title', 'Type', 'Interactions'], 
+                        dashboardData.popular_content.map(item => [
+                            item.content.title,
+                            item.content.content_type || 'Movie',
+                            item.interactions
+                        ])
+                    );
+                    mainContent.appendChild(contentTable);
+                }
+
+                // Genre distribution chart placeholder
+                const chartContainer = document.createElement('div');
+                chartContainer.className = 'chart-container';
+                chartContainer.innerHTML = '<p>Genre Distribution Chart (Chart.js integration needed)</p>';
+                mainContent.appendChild(chartContainer);
+
+            } catch (error) {
+                console.error('Dashboard error:', error);
+                mainContent.innerHTML += '<p class="text-red-500">Failed to load dashboard data</p>';
+            }
+        }
+
+        // Load content management
+        async function loadContentManagement() {
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `
+                <div class="header">
+                    <h1 class="page-title">Content Management</h1>
+                    <button class="btn btn-primary" onclick="syncContent()">Sync Content</button>
+                </div>
+            `;
+
+            // Search section
+            const searchSection = document.createElement('div');
+            searchSection.className = 'form-section';
+            searchSection.innerHTML = `
+                <h2 class="text-xl font-bold mb-4">Search External Content</h2>
+                <div class="search-box">
+                    <input type="text" class="search-input" id="content-search" placeholder="Search movies, TV shows, anime...">
+                    <div class="search-results" id="content-search-results"></div>
+                </div>
+                <div class="mt-4">
+                    <label class="mr-4">
+                        <input type="radio" name="source" value="all" checked> All Sources
+                    </label>
+                    <label class="mr-4">
+                        <input type="radio" name="source" value="tmdb"> TMDB
+                    </label>
+                    <label class="mr-4">
+                        <input type="radio" name="source" value="omdb"> OMDb
+                    </label>
+                    <label>
+                        <input type="radio" name="source" value="anime"> Anime
+                    </label>
+                </div>
+            `;
+
+            mainContent.appendChild(searchSection);
+
+            // Setup search
+            let searchTimeout;
+            document.getElementById('content-search').addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    searchExternalContent(e.target.value);
+                }, 500);
+            });
+        }
+
+        // Search external content
+        async function searchExternalContent(query) {
+            if (!query.trim()) {
+                document.getElementById('content-search-results').classList.remove('active');
+                return;
+            }
+
+            const source = document.querySelector('input[name="source"]:checked').value;
+            const resultsDiv = document.getElementById('content-search-results');
+            
+            try {
+                const response = await fetch(`${API_BASE}/admin/content/search?q=${encodeURIComponent(query)}&source=${source}`, {
+                    headers: {
+                        'Authorization': `Bearer ${auth.token}`
+                    }
+                });
+
+                const data = await response.json();
+                resultsDiv.innerHTML = '';
+
+                // Combine all results
+                const allResults = [
+                    ...(data.tmdb || []).map(item => ({...item, source: 'tmdb'})),
+                    ...(data.omdb || []).map(item => ({...item, source: 'omdb'})),
+                    ...(data.anime || []).map(item => ({...item, source: 'anime'}))
+                ];
+
+                if (allResults.length === 0) {
+                    resultsDiv.innerHTML = '<p class="p-4 text-gray-400">No results found</p>';
+                } else {
+                    allResults.forEach(item => {
+                        const resultItem = createSearchResultItem(item);
+                        resultsDiv.appendChild(resultItem);
+                    });
+                }
+
+                resultsDiv.classList.add('active');
+
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+
+        // Create search result item
+        function createSearchResultItem(item) {
+            const div = document.createElement('div');
+            div.className = 'search-item';
+            
+            const posterPath = item.poster_path || item.Poster || item.images?.jpg?.image_url || '';
+            const title = item.title || item.name || item.Title || item.title_english || '';
+            const year = item.release_date ? new Date(item.release_date).getFullYear() : 
+                        item.first_air_date ? new Date(item.first_air_date).getFullYear() : 
+                        item.Year || '';
+            
+            div.innerHTML = `
+                <img src="${posterPath ? (item.source === 'tmdb' ? `${TMDB_IMAGE_BASE}w92${posterPath}` : posterPath) : '/placeholder.jpg'}" 
+                     alt="${title}"
+                     onerror="this.src='/placeholder.jpg'">
+                <div class="flex-1">
+                    <div class="font-bold">${title}</div>
+                    <div class="text-sm text-gray-400">${year} • ${item.source.toUpperCase()}</div>
+                </div>
+                <button class="btn btn-primary" onclick="addContent('${item.source}', '${item.id || item.imdbID || item.mal_id}', '${item.media_type || item.Type || 'movie'}')">
+                    Add
+                </button>
+            `;
+            
+            return div;
+        }
+
+        // Add content to database
+        window.addContent = async function(source, externalId, contentType) {
+            try {
+                const response = await fetch(`${API_BASE}/admin/content/add`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${auth.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        source: source,
+                        external_id: externalId,
+                        content_type: contentType
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Content added successfully!');
+                    document.getElementById('content-search-results').classList.remove('active');
+                } else {
+                    alert(data.error || 'Failed to add content');
+                }
+
+            } catch (error) {
+                console.error('Add content error:', error);
+                alert('Failed to add content');
+            }
+        };
+
+        // Load recommendations management
+        async function loadRecommendations() {
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `
+                <div class="header">
+                    <h1 class="page-title">Recommendations Management</h1>
+                    <button class="btn btn-primary" onclick="showCreateRecommendation()">Create Recommendation</button>
+                </div>
+            `;
+
+            // Create recommendation form
+            const formSection = document.createElement('div');
+            formSection.className = 'form-section';
+            formSection.style.display = 'none';
+            formSection.id = 'recommendation-form';
+            formSection.innerHTML = `
+                <h2 class="text-xl font-bold mb-4">Create New Recommendation</h2>
+                <form id="create-recommendation-form">
+                    <div class="form-group">
+                        <label class="form-label">Content ID</label>
+                        <input type="number" class="form-input" id="rec-content-id" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" id="rec-category" required>
+                            <option value="critics_choice">Critics' Choice</option>
+                            <option value="trending">Trending</option>
+                            <option value="featured">Featured</option>
+                            <option value="festival">Festival Special</option>
+                            <option value="weekend_special">Weekend Special</option>
+                            <option value="hidden_gem">Hidden Gem</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-textarea" id="rec-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Priority (1-10)</label>
+                        <input type="number" class="form-input" id="rec-priority" min="1" max="10" value="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Expires At</label>
+                        <input type="date" class="form-input" id="rec-expires">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="rec-telegram"> Send to Telegram
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Recommendation</button>
+                </form>
+            `;
+
+            mainContent.appendChild(formSection);
+
+            // Setup form submit
+            document.getElementById('create-recommendation-form').addEventListener('submit', createRecommendation);
+        }
+
+        // Show create recommendation form
+        window.showCreateRecommendation = function() {
+            const form = document.getElementById('recommendation-form');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        };
+
+        // Create recommendation
+        async function createRecommendation(e) {
+            e.preventDefault();
+
+            const data = {
+                content_id: parseInt(document.getElementById('rec-content-id').value),
+                category: document.getElementById('rec-category').value,
+                description: document.getElementById('rec-description').value,
+                priority: parseInt(document.getElementById('rec-priority').value),
+                expires_at: document.getElementById('rec-expires').value,
+                send_to_telegram: document.getElementById('rec-telegram').checked
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/recommendations/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${auth.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert('Recommendation created successfully!');
+                    document.getElementById('create-recommendation-form').reset();
+                    document.getElementById('recommendation-form').style.display = 'none';
+                } else {
+                    alert(result.error || 'Failed to create recommendation');
+                }
+
+            } catch (error) {
+                console.error('Create recommendation error:', error);
+                alert('Failed to create recommendation');
+            }
+        }
+
+        // Load Telegram management
+        async function loadTelegramManagement() {
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `
+                <div class="header">
+                    <h1 class="page-title">Telegram Management</h1>
+                </div>
+            `;
+
+            try {
+                // Load analytics
+                const response = await fetch(`${API_BASE}/admin/telegram/analytics`, {
+                    headers: {
+                        'Authorization': `Bearer ${auth.token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                // Stats
+                const statsGrid = document.createElement('div');
+                statsGrid.className = 'stats-grid';
+                
+                const stats = [
+                    { label: 'Total Posts', value: data.stats.total_posts, color: '#3498db' },
+                    { label: 'Successful', value: data.stats.successful_posts, color: '#2ecc71' },
+                    { label: 'Failed', value: data.stats.failed_posts, color: '#e74c3c' },
+                    { label: 'Scheduled', value: data.stats.scheduled_posts, color: '#f39c12' }
+                ];
+
+                stats.forEach(stat => {
+                    const card = document.createElement('div');
+                    card.className = 'stat-card';
+                    card.style.borderLeftColor = stat.color;
+                    card.innerHTML = `
+                        <div class="stat-label">${stat.label}</div>
+                        <div class="stat-value">${stat.value}</div>
+                    `;
+                    statsGrid.appendChild(card);
+                });
+
+                mainContent.appendChild(statsGrid);
+
+                // Recent posts
+                if (data.recent_posts && data.recent_posts.length > 0) {
+                    const postsTable = createTable('Recent Telegram Posts', 
+                        ['Content', 'Category', 'Status', 'Posted At', 'Channel'],
+                        data.recent_posts.map(post => [
+                            post.content_title,
+                            post.category,
+                            `<span class="${post.status === 'sent' ? 'text-green-500' : 'text-red-500'}">${post.status}</span>`,
+                            post.posted_at ? new Date(post.posted_at).toLocaleString() : '-',
+                            post.channel
+                        ])
+                    );
+                    mainContent.appendChild(postsTable);
+                }
+
+            } catch (error) {
+                console.error('Telegram management error:', error);
+            }
+        }
+
+        // Load users management
+        async function loadUsersManagement() {
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `
+                <div class="header">
+                    <h1 class="page-title">Users Management</h1>
+                </div>
+            `;
+
+            // Recent users from dashboard data
+            if (dashboardData && dashboardData.recent_users) {
+                const usersTable = createTable('All Users', 
+                    ['ID', 'Username', 'Email', 'Joined', 'Actions'],
+                    dashboardData.recent_users.map(user => [
+                        user.id,
+                        user.username,
+                        user.email || '-',
+                        new Date(user.created_at).toLocaleDateString(),
+                        '<button class="btn btn-secondary">View</button>'
+                    ])
+                );
+                mainContent.appendChild(usersTable);
+            }
+        }
+
+        // Load analytics
+        async function loadAnalytics() {
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `
+                <div class="header">
+                    <h1 class="page-title">Analytics</h1>
+                </div>
+            `;
+
+            // Placeholder charts
+            const charts = ['User Growth', 'Content Popularity', 'Interaction Trends', 'Genre Distribution'];
+            
+            charts.forEach(chartName => {
+                const container = document.createElement('div');
+                container.className = 'chart-container mb-6';
+                container.innerHTML = `<p>${chartName} Chart (Integration with Chart.js needed)</p>`;
+                mainContent.appendChild(container);
+            });
+        }
+
+        // Sync content
+        window.syncContent = async function() {
+            if (!confirm('This will sync trending content from external sources. Continue?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/sync/content`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${auth.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ type: 'trending' })
+                });
+
+                if (response.ok) {
+                    alert('Content sync started!');
+                } else {
+                    alert('Failed to start sync');
+                }
+
+            } catch (error) {
+                console.error('Sync error:', error);
+                alert('Failed to sync content');
+            }
+        };
+
+        // Create table helper
+        function createTable(title, headers, rows) {
+            const tableDiv = document.createElement('div');
+            tableDiv.className = 'data-table';
+            
+            const tableHeader = document.createElement('div');
+            tableHeader.className = 'table-header';
+            tableHeader.innerHTML = `<h2 class="text-xl font-bold">${title}</h2>`;
+            
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+            
+            // Headers
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            
+            // Rows
+            rows.forEach(rowData => {
+                const tr = document.createElement('tr');
+                rowData.forEach(cellData => {
+                    const td = document.createElement('td');
+                    td.innerHTML = cellData;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            
+            tableDiv.appendChild(tableHeader);
+            tableDiv.appendChild(table);
+            
+            return tableDiv;
+        }
+
+        // Modal functions
+        function openModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').innerHTML = content;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

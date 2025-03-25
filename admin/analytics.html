@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - CineScope Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #e50914;
+            --secondary: #221f1f;
+            --dark: #141414;
+            --light: #f5f5f1;
+        }
+
+        body {
+            background: var(--dark);
+            color: var(--light);
+            font-family: 'Arial', sans-serif;
+        }
+
+        .admin-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, var(--secondary) 0%, var(--dark) 100%);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #cbd5e1;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 4px 0;
+            transition: all 0.3s ease;
+        }
+
+        .nav-item:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary), #f40612);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            color: white;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            height: 400px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .trend-up {
+            color: #22c55e;
+        }
+
+        .trend-down {
+            color: #ef4444;
+        }
+
+        .trend-neutral {
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-90 backdrop-blur-sm">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold text-red-600">CineScope Admin</h1>
+                    <span class="text-gray-400">Analytics</span>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-300">Welcome, <span id="adminName">Admin</span></span>
+                    <button onclick="logout()" class="text-white hover:text-red-500 transition">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="fixed left-0 top-16 bottom-0 w-64 sidebar z-40 overflow-y-auto">
+        <div class="p-4">
+            <nav class="space-y-2">
+                <a href="dashboard.html" class="nav-item">
+                    📊 Dashboard
+                </a>
+                <a href="content-browser.html" class="nav-item">
+                    🔍 Browse Content
+                </a>
+                <a href="posts.html" class="nav-item">
+                    📝 Manage Posts
+                </a>
+                <a href="#" class="nav-item" style="background: var(--primary); color: white;">
+                    📈 Analytics
+                </a>
+                <a href="../dashboard.html" class="nav-item">
+                    👤 User View
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ml-64 pt-16 min-h-screen">
+        <div class="p-6">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold mb-2">Analytics Dashboard</h1>
+                <p class="text-gray-400">Comprehensive insights into user behavior and content performance</p>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="stat-card">
+                    <div class="text-3xl font-bold mb-2" id="totalUsers">
+                        <div class="loading"></div>
+                    </div>
+                    <div class="text-sm opacity-90">Total Users</div>
+                    <div class="text-xs opacity-75 mt-1" id="usersGrowth">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-3xl font-bold mb-2" id="totalContent">
+                        <div class="loading"></div>
+                    </div>
+                    <div class="text-sm opacity-90">Total Content</div>
+                    <div class="text-xs opacity-75 mt-1" id="contentGrowth">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-3xl font-bold mb-2" id="totalInteractions">
+                        <div class="loading"></div>
+                    </div>
+                    <div class="text-sm opacity-90">Total Interactions</div>
+                    <div class="text-xs opacity-75 mt-1" id="interactionsGrowth">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-3xl font-bold mb-2" id="activeUsers">
+                        <div class="loading"></div>
+                    </div>
+                    <div class="text-sm opacity-90">Active Users (7d)</div>
+                    <div class="text-xs opacity-75 mt-1" id="activeUsersGrowth">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Charts Row 1 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- User Growth Chart -->
+                <div class="admin-card p-6">
+                    <h2 class="text-xl font-bold mb-4">📈 User Growth (Last 30 Days)</h2>
+                    <div class="chart-container">
+                        <canvas id="userGrowthChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Content Interactions Chart -->
+                <div class="admin-card p-6">
+                    <h2 class="text-xl font-bold mb-4">🎬 Daily Interactions</h2>
+                    <div class="chart-container">
+                        <canvas id="interactionsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row 2 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Popular Genres -->
+                <div class="admin-card p-6">
+                    <h2 class="text-xl font-bold mb-4">🎭 Popular Genres</h2>
+                    <div class="chart-container">
+                        <canvas id="genresChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Content Type Distribution -->
+                <div class="admin-card p-6">
+                    <h2 class="text-xl font-bold mb-4">📊 Content Distribution</h2>
+                    <div class="chart-container">
+                        <canvas id="contentTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Analytics -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Top Content -->
+                <div class="admin-card p-6">
+                    <h2 class="text-xl font-bold mb-4">🏆 Most Popular Content</h2>
+                    <div id="topContentList" class="space-y-3">
+                        <div class="flex justify-center py-4">
+                            <div class="loading"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Engagement -->
+                <div class="admin-card p-6">
+                    <h2 class="text-xl font-bold mb-4">👥 User Engagement</h2>
+                    <div class="space-y-4">
+                        <div class="metric-card">
+                            <div class="text-lg font-bold" id="avgSessionTime">Loading...</div>
+                            <div class="text-sm text-gray-400">Avg Session Time</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="text-lg font-bold" id="bounceRate">Loading...</div>
+                            <div class="text-sm text-gray-400">Bounce Rate</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="text-lg font-bold" id="repeatUsers">Loading...</div>
+                            <div class="text-sm text-gray-400">Repeat Users</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Platform Usage -->
+                <div class="admin-card p-6">
+                    <h2 class="text-xl font-bold mb-4">📱 Platform Usage</h2>
+                    <div class="space-y-4">
+                        <div class="metric-card">
+                            <div class="text-lg font-bold" id="mobileUsers">Loading...</div>
+                            <div class="text-sm text-gray-400">Mobile Users</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="text-lg font-bold" id="desktopUsers">Loading...</div>
+                            <div class="text-sm text-gray-400">Desktop Users</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="text-lg font-bold" id="tabletUsers">Loading...</div>
+                            <div class="text-sm text-gray-400">Tablet Users</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="admin-card p-6">
+                <h2 class="text-xl font-bold mb-4">🕒 Recent Activity</h2>
+                <div id="recentActivityList" class="space-y-3">
+                    <div class="flex justify-center py-4">
+                        <div class="loading"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        
+        // Global variables
+        let currentUser = null;
+        let authToken = null;
+        let charts = {};
+
+        // Authentication check
+        function checkAuth() {
+            authToken = sessionStorage.getItem('authToken');
+            const userStr = sessionStorage.getItem('currentUser');
+            
+            if (!authToken || !userStr) {
+                window.location.href = '../login.html';
+                return false;
+            }
+            
+            currentUser = JSON.parse(userStr);
+            
+            if (!currentUser.is_admin) {
+                window.location.href = '../dashboard.html';
+                return false;
+            }
+            
+            document.getElementById('adminName').textContent = currentUser.username;
+            return true;
+        }
+
+        function getAuthHeaders() {
+            return {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '../login.html';
+        }
+
+        // Load analytics data
+        async function loadAnalytics() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/analytics`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateMetrics(data);
+                    createCharts(data);
+                    updateDetailedAnalytics(data);
+                } else {
+                    showError('Failed to load analytics data');
+                }
+            } catch (error) {
+                console.error('Analytics error:', error);
+                showError('Failed to load analytics data');
+            }
+        }
+
+        function updateMetrics(data) {
+            // Update main metrics
+            document.getElementById('totalUsers').textContent = data.total_users || 0;
+            document.getElementById('totalContent').textContent = data.total_content || 0;
+            document.getElementById('totalInteractions').textContent = data.total_interactions || 0;
+            document.getElementById('activeUsers').textContent = data.active_users_last_week || 0;
+
+            // Calculate and display growth rates (mock data for demo)
+            document.getElementById('usersGrowth').innerHTML = '<span class="trend-up">↗ +12%</span> vs last month';
+            document.getElementById('contentGrowth').innerHTML = '<span class="trend-up">↗ +8%</span> vs last month';
+            document.getElementById('interactionsGrowth').innerHTML = '<span class="trend-up">↗ +25%</span> vs last month';
+            document.getElementById('activeUsersGrowth').innerHTML = '<span class="trend-neutral">→ +2%</span> vs last week';
+        }
+
+        function createCharts(data) {
+            createUserGrowthChart();
+            createInteractionsChart();
+            createGenresChart(data.popular_genres || []);
+            createContentTypeChart();
+        }
+
+        function createUserGrowthChart() {
+            const ctx = document.getElementById('userGrowthChart').getContext('2d');
+            
+            // Generate mock data for last 30 days
+            const labels = [];
+            const userData = [];
+            const today = new Date();
+            
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                userData.push(Math.floor(Math.random() * 50) + 10 + i); // Mock growing data
+            }
+
+            charts.userGrowth = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'New Users',
+                        data: userData,
+                        borderColor: '#e50914',
+                        backgroundColor: 'rgba(229, 9, 20, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#f5f5f1' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createInteractionsChart() {
+            const ctx = document.getElementById('interactionsChart').getContext('2d');
+            
+            // Generate mock data for interactions
+            const labels = [];
+            const viewsData = [];
+            const likesData = [];
+            const watchlistData = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+                viewsData.push(Math.floor(Math.random() * 500) + 200);
+                likesData.push(Math.floor(Math.random() * 100) + 50);
+                watchlistData.push(Math.floor(Math.random() * 150) + 75);
+            }
+
+            charts.interactions = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Views',
+                            data: viewsData,
+                            backgroundColor: '#3b82f6'
+                        },
+                        {
+                            label: 'Likes',
+                            data: likesData,
+                            backgroundColor: '#10b981'
+                        },
+                        {
+                            label: 'Watchlist',
+                            data: watchlistData,
+                            backgroundColor: '#f59e0b'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#f5f5f1' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createGenresChart(genresData) {
+            const ctx = document.getElementById('genresChart').getContext('2d');
+            
+            const labels = genresData.slice(0, 8).map(item => item.genre || 'Unknown');
+            const data = genresData.slice(0, 8).map(item => item.count || 0);
+            
+            // Add mock data if not enough real data
+            if (labels.length < 5) {
+                const mockGenres = ['Action', 'Comedy', 'Drama', 'Horror', 'Romance'];
+                const mockData = [250, 180, 220, 120, 160];
+                labels.push(...mockGenres.slice(0, 5 - labels.length));
+                data.push(...mockData.slice(0, 5 - data.length));
+            }
+
+            charts.genres = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#e50914', '#f59e0b', '#10b981', '#3b82f6', 
+                            '#8b5cf6', '#ef4444', '#06b6d4', '#84cc16'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { 
+                                color: '#f5f5f1',
+                                padding: 15
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createContentTypeChart() {
+            const ctx = document.getElementById('contentTypeChart').getContext('2d');
+            
+            charts.contentType = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Movies', 'TV Shows', 'Anime'],
+                    datasets: [{
+                        data: [45, 35, 20], // Mock percentages
+                        backgroundColor: ['#e50914', '#f59e0b', '#10b981']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { 
+                                color: '#f5f5f1',
+                                padding: 15
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDetailedAnalytics(data) {
+            // Update top content
+            populateTopContent(data.popular_content || []);
+            
+            // Update engagement metrics (mock data)
+            document.getElementById('avgSessionTime').textContent = '12m 34s';
+            document.getElementById('bounceRate').textContent = '23%';
+            document.getElementById('repeatUsers').textContent = '67%';
+            
+            // Update platform usage (mock data)
+            document.getElementById('mobileUsers').textContent = '58%';
+            document.getElementById('desktopUsers').textContent = '35%';
+            document.getElementById('tabletUsers').textContent = '7%';
+            
+            // Update recent activity
+            populateRecentActivity();
+        }
+
+        function populateTopContent(content) {
+            const container = document.getElementById('topContentList');
+            
+            if (content.length === 0) {
+                // Add mock data
+                content = [
+                    { title: 'Popular Movie 1', interactions: 1250 },
+                    { title: 'Trending Show 1', interactions: 980 },
+                    { title: 'Top Anime 1', interactions: 850 },
+                    { title: 'Hot Movie 2', interactions: 720 },
+                    { title: 'Viral Show 2', interactions: 650 }
+                ];
+            }
+
+            container.innerHTML = content.slice(0, 5).map((item, index) => `
+                <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-red-500 font-bold">#${index + 1}</span>
+                        <span class="text-white text-sm">${item.title}</span>
+                    </div>
+                    <span class="text-gray-400 text-sm">${item.interactions} views</span>
+                </div>
+            `).join('');
+        }
+
+        function populateRecentActivity() {
+            const container = document.getElementById('recentActivityList');
+            
+            // Mock recent activity data
+            const activities = [
+                { type: 'user_join', message: 'New user registered: user123', time: '2 min ago' },
+                { type: 'content_add', message: 'Admin added new recommendation', time: '15 min ago' },
+                { type: 'interaction', message: '50+ users viewed "Popular Movie"', time: '30 min ago' },
+                { type: 'user_join', message: 'New user registered: movie_fan', time: '45 min ago' },
+                { type: 'content_trending', message: '"Anime Series" is trending', time: '1 hour ago' }
+            ];
+
+            container.innerHTML = activities.map(activity => {
+                const icon = activity.type === 'user_join' ? '👤' : 
+                           activity.type === 'content_add' ? '📝' : 
+                           activity.type === 'interaction' ? '👁️' : '🔥';
+                           
+                return `
+                    <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xl">${icon}</span>
+                            <span class="text-white text-sm">${activity.message}</span>
+                        </div>
+                        <span class="text-gray-400 text-xs">${activity.time}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showError(message) {
+            console.error(message);
+            // Show error state in key metrics
+            document.getElementById('totalUsers').textContent = 'Error';
+            document.getElementById('totalContent').textContent = 'Error';
+            document.getElementById('totalInteractions').textContent = 'Error';
+            document.getElementById('activeUsers').textContent = 'Error';
+        }
+
+        // Initialize page
+        function initializePage() {
+            if (!checkAuth()) return;
+            
+            loadAnalytics();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
+</body>
+</html>
