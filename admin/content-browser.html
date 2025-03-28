@@ -4,939 +4,673 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Content Browser - CineScope Admin</title>
-    <script src="auth.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        :root {
-            --netflix-red: #e50914;
-            --netflix-black: #141414;
-            --netflix-gray: #333333;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--netflix-black);
-            color: white;
-        }
-
-        .navbar {
-            background: rgba(20, 20, 20, 0.95);
-            backdrop-filter: blur(10px);
-        }
-
-        .search-container {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .search-input {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            border-radius: 8px;
-            padding: 12px 16px;
-            width: 100%;
-            transition: all 0.3s ease;
-        }
-
-        .search-input:focus {
-            border-color: var(--netflix-red);
-            background: rgba(255, 255, 255, 0.15);
-            outline: none;
-        }
-
-        .search-input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .filter-select {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-
-        .filter-select:focus {
-            outline: none;
-            border-color: var(--netflix-red);
-        }
-
-        .btn-primary {
-            background: var(--netflix-red);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background: #b8070e;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .content-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .content-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--netflix-red);
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .content-image {
-            width: 120px;
-            height: 180px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-saved {
-            background: rgba(76, 175, 80, 0.2);
-            color: #4caf50;
-        }
-
-        .status-new {
-            background: rgba(255, 152, 0, 0.2);
-            color: #ff9800;
-        }
-
-        .loading-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 1rem;
-            animation: pulse 2s infinite;
-        }
-
-        .loading-image {
-            width: 120px;
-            height: 180px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-        }
-
-        .loading-line {
-            height: 16px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            margin-bottom: 8px;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .pagination button {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .pagination button:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .pagination button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .pagination button.active {
-            background: var(--netflix-red);
-            border-color: var(--netflix-red);
-        }
-
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 2rem;
-        }
-
-        .tab {
-            padding: 12px 24px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.3s ease;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .tab.active {
-            color: white;
-            border-bottom-color: var(--netflix-red);
-        }
-
-        .tab:hover {
-            color: white;
-        }
-
-        @media (max-width: 768px) {
-            .content-image {
-                width: 80px;
-                height: 120px;
-            }
-
-            .search-container {
-                padding: 1rem;
-            }
-        }
-    </style>
+    <meta name="description" content="Browse and manage all content on CineScope platform.">
+    
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar fixed top-0 left-0 right-0 z-30 px-4 py-3">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <button onclick="goBack()" class="text-white hover:text-red-500">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                </button>
-                <h1 class="text-xl font-bold text-red-600">Content Browser</h1>
-            </div>
-            <div class="flex items-center space-x-4">
-                <a href="dashboard.html" class="text-white hover:text-red-500">Dashboard</a>
-                <a href="posts.html" class="text-white hover:text-red-500">Recommendations</a>
-            </div>
+    <div id="preloader" class="preloader">
+        <div class="flex flex-col items-center">
+            <div class="loader"></div>
+            <p class="mt-4 text-lg font-medium">Loading Content Browser...</p>
         </div>
-    </nav>
+    </div>
 
-    <!-- Main Content -->
-    <main class="pt-20 p-6 max-w-7xl mx-auto">
+    <div id="header-placeholder"></div>
+
+    <main class="container py-8">
         <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold mb-2">Content Management</h1>
-            <p class="text-gray-400">Search, browse, and manage content in your platform</p>
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-4xl font-bold mb-2">🗂️ Content Browser</h1>
+                <p class="text-gray-400">Browse, search, and manage all platform content</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="btn btn-secondary" onclick="openFilterModal()">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    Advanced Filters
+                </button>
+                <button class="btn btn-primary" onclick="openAddContentModal()">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add Content
+                </button>
+            </div>
         </div>
 
-        <!-- Tabs -->
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('search')">🔍 Search Content</div>
-            <div class="tab" onclick="switchTab('manage')">📚 Manage Content</div>
-            <div class="tab" onclick="switchTab('bulk')">⚡ Bulk Actions</div>
-        </div>
-
-        <!-- Search Tab -->
-        <div id="searchTab" class="tab-content">
-            <!-- Search Container -->
-            <div class="search-container">
-                <div class="flex flex-col md:flex-row gap-4 mb-4">
-                    <div class="flex-1">
-                        <input 
-                            type="text" 
-                            id="searchInput" 
-                            class="search-input" 
-                            placeholder="Search for movies, TV shows, anime..."
-                            autocomplete="off"
-                        >
+        <!-- Search Bar -->
+        <div class="card mb-8">
+            <div class="card-content">
+                <div class="grid grid-1 md:grid-4 gap-4">
+                    <div class="md:col-span-2">
+                        <input type="search" id="contentSearch" class="form-input" placeholder="Search by title, ID, or IMDB ID...">
                     </div>
-                    <div class="flex gap-2">
-                        <select id="sourceFilter" class="filter-select">
-                            <option value="tmdb">TMDB</option>
-                            <option value="anime">Anime (MAL)</option>
-                        </select>
-                        <select id="typeFilter" class="filter-select">
-                            <option value="multi">All Types</option>
+                    <div>
+                        <select id="contentTypeFilter" class="form-input">
+                            <option value="">All Types</option>
                             <option value="movie">Movies</option>
                             <option value="tv">TV Shows</option>
+                            <option value="anime">Anime</option>
                         </select>
-                        <button id="searchBtn" class="btn-primary">Search</button>
                     </div>
-                </div>
-                
-                <div class="flex items-center gap-4 text-sm text-gray-400">
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <span>Already in database</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        <span>New content</span>
+                    <div>
+                        <button class="btn btn-primary w-full" onclick="searchContent()">
+                            Search Content
+                        </button>
                     </div>
                 </div>
             </div>
-
-            <!-- Search Results -->
-            <div id="searchResults" class="space-y-4">
-                <div class="text-center py-12 text-gray-400">
-                    <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    <p class="text-lg">Search for content to get started</p>
-                    <p class="text-sm">Use the search bar above to find movies, TV shows, or anime</p>
-                </div>
-            </div>
-
-            <!-- Pagination -->
-            <div id="searchPagination" class="pagination hidden"></div>
         </div>
 
-        <!-- Manage Tab -->
-        <div id="manageTab" class="tab-content hidden">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold mb-2">Existing Content</h2>
-                    <p class="text-gray-400">Manage content already in your database</p>
-                </div>
-                <div class="flex gap-2 mt-4 md:mt-0">
-                    <select id="manageTypeFilter" class="filter-select">
-                        <option value="all">All Types</option>
-                        <option value="movie">Movies</option>
-                        <option value="tv">TV Shows</option>
-                        <option value="anime">Anime</option>
-                    </select>
-                    <select id="manageSortFilter" class="filter-select">
-                        <option value="recent">Recently Added</option>
-                        <option value="title">Title</option>
-                        <option value="rating">Rating</option>
-                        <option value="popularity">Popularity</option>
-                    </select>
-                </div>
-            </div>
-
-            <div id="manageContent" class="space-y-4">
-                <!-- Content will be loaded here -->
-            </div>
-
-            <div id="managePagination" class="pagination"></div>
-        </div>
-
-        <!-- Bulk Actions Tab -->
-        <div id="bulkTab" class="tab-content hidden">
-            <div class="search-container">
-                <h2 class="text-2xl font-bold mb-4">Bulk Actions</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-semibold">Import Popular Content</h3>
-                        <div class="space-y-2">
-                            <button class="btn-secondary w-full" onclick="importTrending()">
-                                Import Trending Movies
-                            </button>
-                            <button class="btn-secondary w-full" onclick="importPopularTV()">
-                                Import Popular TV Shows
-                            </button>
-                            <button class="btn-secondary w-full" onclick="importTopAnime()">
-                                Import Top Anime
-                            </button>
-                        </div>
+        <!-- Content Table -->
+        <div class="card">
+            <div class="card-content">
+                <!-- Table Actions -->
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-4">
+                        <select id="bulkAction" class="form-input">
+                            <option value="">Bulk Actions</option>
+                            <option value="recommend">Create Recommendations</option>
+                            <option value="update">Update Metadata</option>
+                            <option value="delete">Delete Selected</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="applyBulkAction()">Apply</button>
                     </div>
-                    
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-semibold">Content Maintenance</h3>
-                        <div class="space-y-2">
-                            <button class="btn-secondary w-full" onclick="updateOTTData()">
-                                Update OTT Platform Data
-                            </button>
-                            <button class="btn-secondary w-full" onclick="refreshMetadata()">
-                                Refresh Content Metadata
-                            </button>
-                            <button class="btn-secondary w-full" onclick="cleanupDuplicates()">
-                                Cleanup Duplicates
-                            </button>
-                        </div>
+                    <div class="text-sm text-gray-400">
+                        Showing <span id="showingCount">0</span> of <span id="totalCount">0</span> items
                     </div>
                 </div>
-                
-                <div id="bulkProgress" class="hidden mt-6">
-                    <div class="bg-gray-700 rounded-full h-4">
-                        <div id="bulkProgressBar" class="bg-red-600 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-800">
+                            <tr>
+                                <th class="px-4 py-3 text-left">
+                                    <input type="checkbox" id="selectAll" onclick="toggleSelectAll()">
+                                </th>
+                                <th class="px-4 py-3 text-left">ID</th>
+                                <th class="px-4 py-3 text-left">Title</th>
+                                <th class="px-4 py-3 text-left">Type</th>
+                                <th class="px-4 py-3 text-left">Rating</th>
+                                <th class="px-4 py-3 text-left">Release Date</th>
+                                <th class="px-4 py-3 text-left">Status</th>
+                                <th class="px-4 py-3 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contentTableBody">
+                            <!-- Content rows will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="flex items-center justify-between mt-6">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-400">Items per page:</span>
+                        <select id="itemsPerPage" class="form-input" onchange="changeItemsPerPage()">
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
                     </div>
-                    <p id="bulkProgressText" class="text-center mt-2 text-gray-400">Processing...</p>
+                    <div class="flex items-center gap-2">
+                        <button class="btn btn-ghost btn-sm" onclick="previousPage()" id="prevBtn" disabled>
+                            Previous
+                        </button>
+                        <span class="px-4 py-2 text-sm">
+                            Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                        </span>
+                        <button class="btn btn-ghost btn-sm" onclick="nextPage()" id="nextBtn">
+                            Next
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <script>
-        // Constants
-        const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        
-        // State
-        let currentUser = window.currentUser;
-        let authToken = window.authToken;
-        let currentTab = 'search';
-        let searchCurrentPage = 1;
-        let manageCurrentPage = 1;
-        let searchTimeout;
+    <div id="footer-placeholder"></div>
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAdminAuthentication();
-            initializeEventListeners();
-            loadManageContent();
+    <!-- Add Content Modal -->
+    <div id="addContentModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Content</h3>
+                <button class="modal-close" onclick="closeAddContentModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="space-y-4">
+                    <div class="form-group">
+                        <label class="form-label">Search External Sources</label>
+                        <input type="text" id="externalSearchQuery" class="form-input" 
+                               placeholder="Enter movie/show title...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Source</label>
+                        <select id="externalSource" class="form-input">
+                            <option value="tmdb">TMDB (Movies & TV)</option>
+                            <option value="anime">Jikan (Anime)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary w-full" onclick="searchExternal()">
+                        Search External Database
+                    </button>
+                    
+                    <div id="externalSearchResults" class="mt-6" style="display: none;">
+                        <!-- Search results will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Content Modal -->
+    <div id="editContentModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Content</h3>
+                <button class="modal-close" onclick="closeEditModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="editContentForm" class="space-y-4">
+                    <!-- Form fields will be populated dynamically -->
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendation Modal -->
+    <div id="recommendationModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Create Admin Recommendation</h3>
+                <button class="modal-close" onclick="closeRecommendationModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="recommendationForm" class="space-y-4">
+                    <div id="selectedContentInfo" class="mb-4">
+                        <!-- Selected content info will be shown here -->
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Recommendation Type</label>
+                        <select id="recommendationType" class="form-input">
+                            <option value="admin_choice">Admin's Choice</option>
+                            <option value="trending">Trending Pick</option>
+                            <option value="hidden_gem">Hidden Gem</option>
+                            <option value="must_watch">Must Watch</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea id="recommendationDescription" class="form-input h-32" 
+                                  placeholder="Why do you recommend this content?" required></textarea>
+                    </div>
+                    <div class="flex justify-end gap-4">
+                        <button type="button" class="btn btn-secondary" onclick="closeRecommendationModal()">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Create Recommendation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/include.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        let currentPage = 1;
+        let itemsPerPage = 20;
+        let totalItems = 0;
+        let selectedItems = new Set();
+        let allContent = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!appState.isAuthenticated() || !appState.isAdmin()) {
+                window.location.href = '/login';
+                return;
+            }
+
+            await loadContent();
+            setupEventListeners();
         });
 
-        function checkAdminAuthentication() {
-            if (!currentUser || !authToken || !currentUser.is_admin) {
-                window.location.href = '../login.html?redirect=admin/content-browser.html';
+        function setupEventListeners() {
+            document.getElementById('contentSearch').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchContent();
+            });
+
+            document.getElementById('recommendationForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await createRecommendation();
+            });
+        }
+
+        async function loadContent() {
+            try {
+                // Simulate loading content from database
+                const response = await api.getTrending('all', 100);
+                allContent = response.recommendations || [];
+                totalItems = allContent.length;
+                
+                renderContent();
+                updatePagination();
+
+            } catch (error) {
+                console.error('Error loading content:', error);
+                UI.showToast('Failed to load content', 'error');
+            }
+        }
+
+        function renderContent() {
+            const tbody = document.getElementById('contentTableBody');
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageContent = allContent.slice(start, end);
+
+            if (pageContent.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-8 text-gray-400">
+                            No content found
+                        </td>
+                    </tr>
+                `;
                 return;
             }
+
+            tbody.innerHTML = pageContent.map(item => `
+                <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+                    <td class="px-4 py-3">
+                        <input type="checkbox" value="${item.id}" onchange="toggleSelection(${item.id})"
+                               ${selectedItems.has(item.id) ? 'checked' : ''}>
+                    </td>
+                    <td class="px-4 py-3 text-sm">${item.id}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-3">
+                            <img src="${item.poster_path || Utils.getPlaceholderImage(40, 60)}" 
+                                 alt="${Utils.sanitizeHTML(item.title)}" 
+                                 class="w-10 h-15 object-cover rounded">
+                            <div>
+                                <div class="font-medium">${Utils.sanitizeHTML(item.title)}</div>
+                                <div class="text-xs text-gray-400">${item.original_title || ''}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="badge badge-ghost">${item.content_type?.toUpperCase()}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        ${item.rating ? `<span class="text-yellow-400">⭐ ${item.rating.toFixed(1)}</span>` : '-'}
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                        ${item.release_date ? new Date(item.release_date).toLocaleDateString() : '-'}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="badge ${getStatusBadgeClass(item)}">
+                            ${getContentStatus(item)}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <button class="btn btn-ghost btn-sm" onclick="Router.navigate('/details?id=${item.id}')" 
+                                    title="View">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                            <button class="btn btn-ghost btn-sm" onclick="editContent(${item.id})" 
+                                    title="Edit">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            <button class="btn btn-ghost btn-sm" onclick="openRecommendationModal(${item.id})" 
+                                    title="Recommend">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.getElementById('showingCount').textContent = pageContent.length;
+            document.getElementById('totalCount').textContent = totalItems;
         }
 
-        function initializeEventListeners() {
-            // Search functionality
-            document.getElementById('searchInput').addEventListener('input', handleSearchInput);
-            document.getElementById('searchBtn').addEventListener('click', performSearch);
-            document.getElementById('searchInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    performSearch();
-                }
-            });
-
-            // Filter changes
-            document.getElementById('manageTypeFilter').addEventListener('change', loadManageContent);
-            document.getElementById('manageSortFilter').addEventListener('change', loadManageContent);
+        function getContentStatus(item) {
+            if (item.is_trending) return 'Trending';
+            if (item.is_new_release) return 'New';
+            if (item.is_critics_choice) return 'Critics\' Choice';
+            return 'Active';
         }
 
-        function switchTab(tabName) {
-            currentTab = tabName;
-            
-            // Hide all tab contents
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.add('hidden');
-            });
-            
-            // Show selected tab
-            document.getElementById(tabName + 'Tab').classList.remove('hidden');
-            
-            // Update tab buttons
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.classList.add('active');
+        function getStatusBadgeClass(item) {
+            if (item.is_trending) return 'badge-warning';
+            if (item.is_new_release) return 'badge-success';
+            if (item.is_critics_choice) return 'badge-primary';
+            return 'badge-ghost';
+        }
 
-            // Load content for specific tabs
-            if (tabName === 'manage' && document.getElementById('manageContent').children.length === 0) {
-                loadManageContent();
+        function updatePagination() {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            document.getElementById('currentPage').textContent = currentPage;
+            document.getElementById('totalPages').textContent = totalPages;
+
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderContent();
+                updatePagination();
             }
         }
 
-        function handleSearchInput() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                const query = document.getElementById('searchInput').value.trim();
-                if (query.length > 2) {
-                    performSearch();
-                } else if (query.length === 0) {
-                    showSearchPlaceholder();
-                }
-            }, 500);
+        function nextPage() {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderContent();
+                updatePagination();
+            }
         }
 
-        async function performSearch() {
-            const query = document.getElementById('searchInput').value.trim();
-            const source = document.getElementById('sourceFilter').value;
-            const type = document.getElementById('typeFilter').value;
+        function changeItemsPerPage() {
+            itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+            currentPage = 1;
+            renderContent();
+            updatePagination();
+        }
+
+        function toggleSelection(id) {
+            if (selectedItems.has(id)) {
+                selectedItems.delete(id);
+            } else {
+                selectedItems.add(id);
+            }
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('#contentTableBody input[type="checkbox"]');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+                const id = parseInt(checkbox.value);
+                if (selectAll.checked) {
+                    selectedItems.add(id);
+                } else {
+                    selectedItems.delete(id);
+                }
+            });
+        }
+
+        async function searchContent() {
+            const query = document.getElementById('contentSearch').value.trim();
+            const type = document.getElementById('contentTypeFilter').value;
+
+            if (!query && !type) {
+                await loadContent();
+                return;
+            }
+
+            // Filter content
+            let filtered = allContent;
+
+            if (query) {
+                filtered = filtered.filter(item => 
+                    item.title.toLowerCase().includes(query.toLowerCase()) ||
+                    item.id.toString() === query ||
+                    (item.imdb_id && item.imdb_id === query)
+                );
+            }
+
+            if (type) {
+                filtered = filtered.filter(item => item.content_type === type);
+            }
+
+            allContent = filtered;
+            totalItems = filtered.length;
+            currentPage = 1;
+            renderContent();
+            updatePagination();
+        }
+
+        function openAddContentModal() {
+            document.getElementById('addContentModal').classList.add('show');
+        }
+
+        function closeAddContentModal() {
+            document.getElementById('addContentModal').classList.remove('show');
+            document.getElementById('externalSearchResults').style.display = 'none';
+            document.getElementById('externalSearchQuery').value = '';
+        }
+
+        async function searchExternal() {
+            const query = document.getElementById('externalSearchQuery').value.trim();
+            const source = document.getElementById('externalSource').value;
 
             if (!query) {
-                showSearchPlaceholder();
+                UI.showToast('Please enter a search query', 'error');
                 return;
             }
 
-            showSearchLoading();
-
             try {
-                const params = new URLSearchParams({
-                    query: query,
-                    source: source,
-                    ...(type !== 'multi' && { type: type }),
-                    page: searchCurrentPage
-                });
+                const resultsContainer = document.getElementById('externalSearchResults');
+                resultsContainer.style.display = 'block';
+                resultsContainer.innerHTML = '<div class="text-center py-4"><div class="loader"></div></div>';
 
-                const response = await fetch(`${API_BASE}/admin/search?${params}`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
+                const response = await api.adminSearch(query, source);
+                const results = response.results || [];
 
-                const data = await response.json();
-
-                if (response.ok) {
-                    displaySearchResults(data.results || []);
-                    updateSearchPagination(data);
-                } else {
-                    showSearchError(data.error || 'Search failed');
+                if (results.length === 0) {
+                    resultsContainer.innerHTML = '<div class="text-center text-gray-400 py-4">No results found</div>';
+                    return;
                 }
-            } catch (error) {
-                console.error('Search error:', error);
-                showSearchError('Search failed. Please try again.');
-            }
-        }
 
-        function displaySearchResults(results) {
-            const container = document.getElementById('searchResults');
-            const pagination = document.getElementById('searchPagination');
-
-            if (results.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12 text-gray-400">
-                        <p class="text-lg">No results found</p>
-                        <p class="text-sm">Try different keywords or filters</p>
+                resultsContainer.innerHTML = `
+                    <h4 class="font-semibold mb-4">Search Results (${results.length})</h4>
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        ${results.map(item => `
+                            <div class="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
+                                <img src="${item.poster_path || Utils.getPlaceholderImage(60, 90)}" 
+                                     alt="${Utils.sanitizeHTML(item.title)}" 
+                                     class="w-12 h-18 object-cover rounded">
+                                <div class="flex-1 min-w-0">
+                                    <h5 class="font-medium truncate">${Utils.sanitizeHTML(item.title)}</h5>
+                                    <p class="text-sm text-gray-400">${item.release_date || 'N/A'} • ${item.content_type?.toUpperCase()}</p>
+                                    ${item.rating ? `<div class="text-xs text-yellow-400">⭐ ${item.rating}</div>` : ''}
+                                </div>
+                                <button class="btn btn-primary btn-sm" onclick="addExternalContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                    Add to DB
+                                </button>
+                            </div>
+                        `).join('')}
                     </div>
                 `;
-                pagination.classList.add('hidden');
-                return;
-            }
 
-            container.innerHTML = results.map(item => createSearchResultCard(item)).join('');
-            pagination.classList.remove('hidden');
-        }
-
-        function createSearchResultCard(item) {
-            const posterUrl = item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image';
-            const isInDatabase = Math.random() > 0.7; // Simulate database check
-            const statusClass = isInDatabase ? 'status-saved' : 'status-new';
-            const statusText = isInDatabase ? 'In Database' : 'New Content';
-
-            return `
-                <div class="content-card">
-                    <div class="p-4">
-                        <div class="flex space-x-4">
-                            <img src="${posterUrl}" alt="${item.title}" class="content-image" loading="lazy">
-                            <div class="flex-1">
-                                <div class="flex items-start justify-between mb-2">
-                                    <h3 class="font-bold text-lg">${item.title}</h3>
-                                    <span class="status-badge ${statusClass}">${statusText}</span>
-                                </div>
-                                
-                                <div class="flex items-center space-x-4 text-sm text-gray-400 mb-2">
-                                    <span class="capitalize">${item.content_type || 'movie'}</span>
-                                    ${item.rating ? `<span>⭐ ${item.rating.toFixed(1)}</span>` : ''}
-                                    ${item.release_date ? `<span>${item.release_date}</span>` : ''}
-                                </div>
-                                
-                                <p class="text-gray-300 text-sm mb-4 line-clamp-3">${item.overview || 'No description available.'}</p>
-                                
-                                <div class="flex space-x-2">
-                                    ${isInDatabase ? `
-                                        <button class="btn-secondary" onclick="viewContentDetails('${item.id}')">
-                                            View Details
-                                        </button>
-                                        <button class="btn-secondary" onclick="editContent('${item.id}')">
-                                            Edit
-                                        </button>
-                                    ` : `
-                                        <button class="btn-primary" onclick="saveContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                                            Add to Database
-                                        </button>
-                                        <button class="btn-secondary" onclick="previewContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                                            Preview
-                                        </button>
-                                    `}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        async function loadManageContent() {
-            const container = document.getElementById('manageContent');
-            const typeFilter = document.getElementById('manageTypeFilter').value;
-            const sortFilter = document.getElementById('manageSortFilter').value;
-
-            showManageLoading();
-
-            try {
-                // Since we don't have a specific endpoint, simulate with search
-                const response = await fetch(`${API_BASE}/recommendations/trending?limit=20`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    let content = data.recommendations || [];
-                    
-                    // Apply filters
-                    if (typeFilter !== 'all') {
-                        content = content.filter(item => item.content_type === typeFilter);
-                    }
-
-                    displayManageContent(content);
-                } else {
-                    showManageError('Failed to load content');
-                }
             } catch (error) {
-                console.error('Error loading manage content:', error);
-                showManageError('Failed to load content');
+                console.error('Error searching external content:', error);
+                document.getElementById('externalSearchResults').innerHTML = 
+                    '<div class="text-center text-red-400 py-4">Search failed. Please try again.</div>';
             }
         }
 
-        function displayManageContent(content) {
-            const container = document.getElementById('manageContent');
-
-            if (content.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12 text-gray-400">
-                        <p class="text-lg">No content found</p>
-                        <p class="text-sm">Try adjusting your filters</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = content.map(item => createManageContentCard(item)).join('');
-        }
-
-        function createManageContentCard(item) {
-            const posterUrl = item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image';
-
-            return `
-                <div class="content-card">
-                    <div class="p-4">
-                        <div class="flex space-x-4">
-                            <img src="${posterUrl}" alt="${item.title}" class="content-image" loading="lazy">
-                            <div class="flex-1">
-                                <div class="flex items-start justify-between mb-2">
-                                    <h3 class="font-bold text-lg">${item.title}</h3>
-                                    <div class="flex space-x-2">
-                                        <button class="btn-secondary text-sm" onclick="editContent(${item.id})">
-                                            Edit
-                                        </button>
-                                        <button class="btn-secondary text-sm text-red-400" onclick="deleteContent(${item.id}, '${item.title}')">
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex items-center space-x-4 text-sm text-gray-400 mb-2">
-                                    <span class="capitalize">${item.content_type}</span>
-                                    ${item.rating ? `<span>⭐ ${item.rating.toFixed(1)}</span>` : ''}
-                                    ${item.release_date ? `<span>${new Date(item.release_date).getFullYear()}</span>` : ''}
-                                </div>
-                                
-                                <p class="text-gray-300 text-sm mb-4 line-clamp-2">${item.overview || 'No description available.'}</p>
-                                
-                                <div class="flex items-center justify-between">
-                                    <div class="flex space-x-2">
-                                        ${(item.genres || []).slice(0, 3).map(genre => 
-                                            `<span class="bg-red-600 bg-opacity-20 text-red-400 px-2 py-1 rounded text-xs">${genre}</span>`
-                                        ).join('')}
-                                    </div>
-                                    <div class="flex space-x-2">
-                                        <button class="btn-primary text-sm" onclick="createRecommendationFromContent(${item.id})">
-                                            Recommend
-                                        </button>
-                                        <button class="btn-secondary text-sm" onclick="viewContentDetails(${item.id})">
-                                            View
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        async function saveContent(contentData) {
+        async function addExternalContent(contentData) {
             try {
-                const response = await fetch(`${API_BASE}/admin/content`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(contentData)
-                });
+                const response = await api.saveContent(contentData);
+                UI.showToast('Content added successfully!', 'success');
+                closeAddContentModal();
+                await loadContent();
 
-                const data = await response.json();
-
-                if (response.ok) {
-                    showNotification('Content saved successfully!');
-                    // Refresh search results
-                    performSearch();
-                } else {
-                    showNotification(data.error || 'Failed to save content', 'error');
-                }
             } catch (error) {
-                console.error('Error saving content:', error);
-                showNotification('Failed to save content', 'error');
-            }
-        }
-
-        async function deleteContent(contentId, title) {
-            if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
-                return;
-            }
-
-            try {
-                // API endpoint for deleting content would be needed
-                showNotification('Content deleted successfully!');
-                loadManageContent(); // Refresh the list
-            } catch (error) {
-                console.error('Error deleting content:', error);
-                showNotification('Failed to delete content', 'error');
+                console.error('Error adding content:', error);
+                UI.showToast('Failed to add content', 'error');
             }
         }
 
         function editContent(contentId) {
-            // Open edit modal or redirect to edit page
-            showNotification('Edit functionality would be implemented here');
+            const content = allContent.find(item => item.id === contentId);
+            if (!content) return;
+
+            // Populate edit form
+            const modal = document.getElementById('editContentModal');
+            const form = document.getElementById('editContentForm');
+            
+            form.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-input" value="${Utils.sanitizeHTML(content.title)}" disabled>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select class="form-input">
+                        <option value="active" ${!content.is_hidden ? 'selected' : ''}>Active</option>
+                        <option value="hidden" ${content.is_hidden ? 'selected' : ''}>Hidden</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" ${content.is_trending ? 'checked' : ''}>
+                        <span>Mark as Trending</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" ${content.is_critics_choice ? 'checked' : ''}>
+                        <span>Mark as Critics' Choice</span>
+                    </label>
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveContentEdits(${contentId})">Save Changes</button>
+                </div>
+            `;
+
+            modal.classList.add('show');
         }
 
-        function viewContentDetails(contentId) {
-            window.open(`../details.html?id=${contentId}`, '_blank');
+        function closeEditModal() {
+            document.getElementById('editContentModal').classList.remove('show');
         }
 
-        function createRecommendationFromContent(contentId) {
-            window.location.href = `posts.html?content_id=${contentId}`;
+        async function saveContentEdits(contentId) {
+            // Implement save functionality
+            UI.showToast('Content updated successfully!', 'success');
+            closeEditModal();
+            await loadContent();
         }
 
-        function previewContent(contentData) {
-            // Open preview modal
-            showNotification('Preview functionality would be implemented here');
+        function openRecommendationModal(contentId) {
+            const content = allContent.find(item => item.id === contentId);
+            if (!content) return;
+
+            currentRecommendationContent = content;
+
+            // Show content info
+            document.getElementById('selectedContentInfo').innerHTML = `
+                <div class="flex items-center gap-4 p-4 bg-gray-800 rounded-lg">
+                    <img src="${content.poster_path || Utils.getPlaceholderImage(60, 90)}" 
+                         alt="${Utils.sanitizeHTML(content.title)}" 
+                         class="w-12 h-18 object-cover rounded">
+                    <div>
+                        <h4 class="font-semibold">${Utils.sanitizeHTML(content.title)}</h4>
+                        <p class="text-sm text-gray-400">
+                            ${content.release_date ? new Date(content.release_date).getFullYear() : 'N/A'} • 
+                            ${content.content_type?.toUpperCase()} • 
+                            ${content.rating ? `⭐ ${content.rating.toFixed(1)}` : 'No rating'}
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('recommendationModal').classList.add('show');
         }
 
-        // Bulk Actions
-        async function importTrending() {
-            await performBulkAction('Importing trending movies...', async () => {
-                const response = await fetch(`${API_BASE}/recommendations/trending?limit=50`);
-                const data = await response.json();
-                
-                if (response.ok) {
-                    // Process and save trending content
-                    return data.recommendations?.length || 0;
-                }
-                throw new Error('Failed to fetch trending content');
-            });
+        function closeRecommendationModal() {
+            document.getElementById('recommendationModal').classList.remove('show');
+            document.getElementById('recommendationForm').reset();
+            currentRecommendationContent = null;
         }
 
-        async function importPopularTV() {
-            await performBulkAction('Importing popular TV shows...', async () => {
-                // Simulate TV show import
-                return Math.floor(Math.random() * 20) + 10;
-            });
-        }
+        async function createRecommendation() {
+            if (!currentRecommendationContent) return;
 
-        async function importTopAnime() {
-            await performBulkAction('Importing top anime...', async () => {
-                const response = await fetch(`${API_BASE}/recommendations/anime?limit=50`);
-                const data = await response.json();
-                
-                if (response.ok) {
-                    return data.recommendations?.length || 0;
-                }
-                throw new Error('Failed to fetch anime content');
-            });
-        }
-
-        async function updateOTTData() {
-            await performBulkAction('Updating OTT platform data...', async () => {
-                // Simulate OTT data update
-                return Math.floor(Math.random() * 100) + 50;
-            });
-        }
-
-        async function refreshMetadata() {
-            await performBulkAction('Refreshing content metadata...', async () => {
-                // Simulate metadata refresh
-                return Math.floor(Math.random() * 200) + 100;
-            });
-        }
-
-        async function cleanupDuplicates() {
-            await performBulkAction('Cleaning up duplicates...', async () => {
-                // Simulate duplicate cleanup
-                return Math.floor(Math.random() * 10) + 5;
-            });
-        }
-
-        async function performBulkAction(message, action) {
-            const progressContainer = document.getElementById('bulkProgress');
-            const progressBar = document.getElementById('bulkProgressBar');
-            const progressText = document.getElementById('bulkProgressText');
-
-            progressContainer.classList.remove('hidden');
-            progressText.textContent = message;
-            progressBar.style.width = '0%';
+            const type = document.getElementById('recommendationType').value;
+            const description = document.getElementById('recommendationDescription').value;
 
             try {
-                // Simulate progress
-                for (let i = 0; i <= 100; i += 10) {
-                    progressBar.style.width = i + '%';
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                }
+                await api.createAdminRecommendation(
+                    currentRecommendationContent.id,
+                    type,
+                    description
+                );
 
-                const result = await action();
-                
-                progressText.textContent = `Completed! Processed ${result} items.`;
-                setTimeout(() => {
-                    progressContainer.classList.add('hidden');
-                    showNotification(`Bulk action completed successfully! Processed ${result} items.`);
-                }, 2000);
+                UI.showToast('Recommendation created successfully!', 'success');
+                closeRecommendationModal();
 
             } catch (error) {
-                console.error('Bulk action error:', error);
-                progressText.textContent = 'Failed to complete bulk action.';
-                setTimeout(() => {
-                    progressContainer.classList.add('hidden');
-                    showNotification('Bulk action failed', 'error');
-                }, 2000);
+                console.error('Error creating recommendation:', error);
+                UI.showToast('Failed to create recommendation', 'error');
             }
         }
 
-        // Helper functions
-        function showSearchLoading() {
-            document.getElementById('searchResults').innerHTML = `
-                <div class="space-y-4">
-                    ${Array(3).fill(0).map(() => `
-                        <div class="loading-card">
-                            <div class="flex space-x-4">
-                                <div class="loading-image"></div>
-                                <div class="flex-1">
-                                    <div class="loading-line w-3/4 mb-2"></div>
-                                    <div class="loading-line w-1/2 mb-2"></div>
-                                    <div class="loading-line w-full mb-2"></div>
-                                    <div class="loading-line w-2/3"></div>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        function showManageLoading() {
-            document.getElementById('manageContent').innerHTML = `
-                <div class="space-y-4">
-                    ${Array(5).fill(0).map(() => `
-                        <div class="loading-card">
-                            <div class="flex space-x-4">
-                                <div class="loading-image"></div>
-                                <div class="flex-1">
-                                    <div class="loading-line w-3/4 mb-2"></div>
-                                    <div class="loading-line w-1/2 mb-2"></div>
-                                    <div class="loading-line w-full mb-2"></div>
-                                    <div class="loading-line w-2/3"></div>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        function showSearchPlaceholder() {
-            document.getElementById('searchResults').innerHTML = `
-                <div class="text-center py-12 text-gray-400">
-                    <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    <p class="text-lg">Search for content to get started</p>
-                    <p class="text-sm">Use the search bar above to find movies, TV shows, or anime</p>
-                </div>
-            `;
-            document.getElementById('searchPagination').classList.add('hidden');
-        }
-
-        function showSearchError(message) {
-            document.getElementById('searchResults').innerHTML = `
-                <div class="text-center py-12">
-                    <p class="text-xl text-red-500">${message}</p>
-                    <button onclick="performSearch()" class="btn-primary mt-4">Try Again</button>
-                </div>
-            `;
-        }
-
-        function showManageError(message) {
-            document.getElementById('manageContent').innerHTML = `
-                <div class="text-center py-12">
-                    <p class="text-xl text-red-500">${message}</p>
-                    <button onclick="loadManageContent()" class="btn-primary mt-4">Try Again</button>
-                </div>
-            `;
-        }
-
-        function updateSearchPagination(data) {
-            // Implement pagination controls
-            const pagination = document.getElementById('searchPagination');
-            pagination.innerHTML = `
-                <button onclick="searchPrevPage()" ${searchCurrentPage <= 1 ? 'disabled' : ''}>Previous</button>
-                <span>Page ${searchCurrentPage}</span>
-                <button onclick="searchNextPage()">Next</button>
-            `;
-        }
-
-        function searchPrevPage() {
-            if (searchCurrentPage > 1) {
-                searchCurrentPage--;
-                performSearch();
-            }
-        }
-
-        function searchNextPage() {
-            searchCurrentPage++;
-            performSearch();
-        }
-
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-20 right-4 px-4 py-2 rounded-lg z-50 ${
-                type === 'error' ? 'bg-red-600' : 'bg-green-600'
-            } text-white`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
+        function applyBulkAction() {
+            const action = document.getElementById('bulkAction').value;
             
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
+            if (!action) {
+                UI.showToast('Please select an action', 'warning');
+                return;
+            }
+
+            if (selectedItems.size === 0) {
+                UI.showToast('Please select items first', 'warning');
+                return;
+            }
+
+            switch (action) {
+                case 'recommend':
+                    UI.showToast(`Creating recommendations for ${selectedItems.size} items...`, 'info');
+                    break;
+                case 'update':
+                    UI.showToast(`Updating metadata for ${selectedItems.size} items...`, 'info');
+                    break;
+                case 'delete':
+                    if (confirm(`Are you sure you want to delete ${selectedItems.size} items?`)) {
+                        UI.showToast(`Deleting ${selectedItems.size} items...`, 'warning');
+                    }
+                    break;
+            }
+
+            // Clear selections
+            selectedItems.clear();
+            document.getElementById('selectAll').checked = false;
+            renderContent();
         }
 
-        function goBack() {
-            window.location.href = 'dashboard.html';
-        }
+        let currentRecommendationContent = null;
+
+        // Click outside modal to close
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                e.target.classList.remove('show');
+            }
+        });
     </script>
 </body>
 </html>

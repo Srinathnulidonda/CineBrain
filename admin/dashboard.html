@@ -1,731 +1,478 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - CineScope</title>
-    <script src="auth.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        :root {
-            --netflix-red: #e50914;
-            --netflix-black: #141414;
-            --netflix-gray: #333333;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--netflix-black);
-            color: white;
-        }
-
-        .sidebar {
-            width: 280px;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .sidebar.hidden {
-            transform: translateX(-100%);
-        }
-
-        .main-content {
-            margin-left: 280px;
-            transition: margin-left 0.3s ease;
-        }
-
-        .main-content.full-width {
-            margin-left: 0;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--netflix-red);
-        }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--netflix-red);
-        }
-
-        .sidebar-link {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem 1.5rem;
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            border-radius: 8px;
-            margin: 0.25rem 1rem;
-        }
-
-        .sidebar-link:hover, .sidebar-link.active {
-            background: rgba(229, 9, 20, 0.1);
-            color: var(--netflix-red);
-        }
-
-        .sidebar-icon {
-            width: 20px;
-            height: 20px;
-            margin-right: 0.75rem;
-        }
-
-        .quick-action-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 1.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .quick-action-card:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .btn-primary {
-            background: var(--netflix-red);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background: #b8070e;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .activity-item {
-            display: flex;
-            align-items: center;
-            padding: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .card-body h6 {
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-.card-body small {
-    display: block;
-    margin-bottom: 0.2rem;
-}
-
-        .activity-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--netflix-red);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-        }
-
-        .chart-container {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 1.5rem;
-            height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .navbar {
-            background: rgba(20, 20, 20, 0.95);
-            backdrop-filter: blur(10px);
-        }
-
-        @media (max-width: 1024px) {
-            .sidebar {
-                position: fixed;
-                height: 100vh;
-                z-index: 40;
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-        }
-    </style>
+    <meta name="description" content="CineScope admin dashboard for content and user management.">
+    
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar fixed top-0 left-0 right-0 z-30 px-4 py-3">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <button id="sidebarToggle" class="lg:hidden text-white">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    <div id="preloader" class="preloader">
+        <div class="flex flex-col items-center">
+            <div class="loader"></div>
+            <p class="mt-4 text-lg font-medium">Loading Admin Dashboard...</p>
+        </div>
+    </div>
+
+    <div id="header-placeholder"></div>
+
+    <main class="container py-8">
+        <!-- Admin Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-4xl font-bold mb-2">🛠️ Admin Dashboard</h1>
+                <p class="text-gray-400">Manage content, users, and platform analytics</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="stats-card min-w-0">
+                    <div class="stats-value text-sm" id="lastUpdate">--</div>
+                    <div class="stats-label">Last Update</div>
+                </div>
+                <button class="btn btn-primary" onclick="refreshDashboard()">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
+                    Refresh
                 </button>
-                <h1 class="text-xl font-bold text-red-600">CineScope Admin</h1>
-            </div>
-            
-            <div class="flex items-center space-x-4">
-                <div class="relative">
-                    <button id="notificationToggle" class="text-white hover:text-red-500">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5z"></path>
-                        </svg>
-                    </button>
-                    <div class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs" id="notificationBadge">3</div>
-                </div>
-                
-                <div class="relative">
-                    <button id="userMenuToggle" class="flex items-center space-x-2 text-white hover:text-red-500">
-                        <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
-                            <span id="adminInitial">A</span>
-                        </div>
-                        <span id="adminName">Admin</span>
-                    </button>
-                    <div id="userMenu" class="hidden absolute right-0 top-12 bg-black border border-gray-700 rounded-lg py-2 w-48">
-                        <a href="../profile.html" class="block px-4 py-2 text-white hover:bg-gray-800">Profile</a>
-                        <hr class="border-gray-700 my-2">
-                        <button id="logoutBtn" class="block w-full text-left px-4 py-2 text-white hover:bg-gray-800">Logout</button>
-                    </div>
-                </div>
             </div>
         </div>
-    </nav>
 
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar fixed left-0 top-16 h-full z-20">
-        <div class="py-6">
-            <nav class="space-y-2">
-                <a href="dashboard.html" class="sidebar-link active">
-                    <svg class="sidebar-icon" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
-                    </svg>
-                    Dashboard
-                </a>
-                
-                <a href="content-browser.html" class="sidebar-link">
-                    <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 011 1v4a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h4z"></path>
-                    </svg>
-                    Content Browser
-                </a>
-                
-                <a href="posts.html" class="sidebar-link">
-                    <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                    Recommendations
-                </a>
-                
-                <a href="analytics.html" class="sidebar-link">
-                    <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
-                    Analytics
-                </a>
-            </nav>
-            
-            <div class="mt-8 px-6">
-                <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Actions</h3>
-                <div class="space-y-2">
-                    <button class="w-full text-left py-2 px-3 rounded text-sm text-white hover:bg-gray-700" onclick="openContentSearch()">
-                        Add Content
-                    </button>
-                    <button class="w-full text-left py-2 px-3 rounded text-sm text-white hover:bg-gray-700" onclick="createRecommendation()">
-                        Create Recommendation
-                    </button>
-                    <button class="w-full text-left py-2 px-3 rounded text-sm text-white hover:bg-gray-700" onclick="viewAnalytics()">
-                        View Reports
-                    </button>
-                </div>
+        <!-- Quick Stats -->
+        <div class="grid grid-2 md:grid-4 gap-6 mb-8">
+            <div class="stats-card">
+                <div class="stats-value" id="totalUsers">0</div>
+                <div class="stats-label">Total Users</div>
             </div>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main id="mainContent" class="main-content pt-20 p-6">
-        <!-- Welcome Section -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold mb-2">Welcome back, <span id="welcomeAdminName">Admin</span>!</h1>
-            <p class="text-gray-400">Here's what's happening with your platform today.</p>
-        </div>
-
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="stat-card">
-                <div class="stat-number" id="totalUsers">0</div>
-                <div class="text-gray-400">Total Users</div>
-                <div class="text-sm text-green-500 mt-1">+12% this month</div>
+            <div class="stats-card">
+                <div class="stats-value" id="totalContent">0</div>
+                <div class="stats-label">Content Items</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number" id="totalContent">0</div>
-                <div class="text-gray-400">Total Content</div>
-                <div class="text-sm text-blue-500 mt-1">+5 today</div>
+            <div class="stats-card">
+                <div class="stats-value" id="totalInteractions">0</div>
+                <div class="stats-label">User Interactions</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number" id="totalInteractions">0</div>
-                <div class="text-gray-400">Total Interactions</div>
-                <div class="text-sm text-purple-500 mt-1">+25% this week</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="activeUsers">0</div>
-                <div class="text-gray-400">Active Users</div>
-                <div class="text-sm text-yellow-500 mt-1">Last 7 days</div>
+            <div class="stats-card">
+                <div class="stats-value" id="activeUsers">0</div>
+                <div class="stats-label">Active Users (7d)</div>
             </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="quick-action-card" onclick="openContentSearch()">
-                <div class="flex items-center mb-4">
-                    <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mr-4">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
+        <section class="section">
+            <h2 class="section-title">Quick Actions</h2>
+            <div class="grid grid-2 md:grid-4 gap-4">
+                <a href="/admin/content-browser" class="card hover:scale-105 transition-transform">
+                    <div class="card-content text-center">
+                        <div class="text-3xl mb-2">🎬</div>
+                        <h3 class="font-semibold">Content Browser</h3>
+                        <p class="text-sm text-gray-400">Search & manage content</p>
                     </div>
-                    <div>
-                        <h3 class="font-semibold">Add New Content</h3>
-                        <p class="text-sm text-gray-400">Search and add movies, TV shows, anime</p>
+                </a>
+                <a href="/admin/analytics" class="card hover:scale-105 transition-transform">
+                    <div class="card-content text-center">
+                        <div class="text-3xl mb-2">📊</div>
+                        <h3 class="font-semibold">Analytics</h3>
+                        <p class="text-sm text-gray-400">View detailed statistics</p>
                     </div>
-                </div>
+                </a>
+                <button class="card hover:scale-105 transition-transform" onclick="openContentSearch()">
+                    <div class="card-content text-center">
+                        <div class="text-3xl mb-2">🔍</div>
+                        <h3 class="font-semibold">Add Content</h3>
+                        <p class="text-sm text-gray-400">Search external APIs</p>
+                    </div>
+                </button>
+                <button class="card hover:scale-105 transition-transform" onclick="checkMLService()">
+                    <div class="card-content text-center">
+                        <div class="text-3xl mb-2">🤖</div>
+                        <h3 class="font-semibold">ML Service</h3>
+                        <p class="text-sm text-gray-400">Check service status</p>
+                    </div>
+                </button>
             </div>
-            
-            <div class="quick-action-card" onclick="createRecommendation()">
-                <div class="flex items-center mb-4">
-                    <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mr-4">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="font-semibold">Create Recommendation</h3>
-                        <p class="text-sm text-gray-400">Recommend content to users</p>
-                    </div>
-                </div>
-            </div>
-            
-            
-            <div class="quick-action-card" onclick="viewAnalytics()">
-                <div class="flex items-center mb-4">
-                    <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mr-4">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="font-semibold">View Analytics</h3>
-                        <p class="text-sm text-gray-400">Platform insights and reports</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </section>
 
-        <!-- Charts and Activity -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <!-- User Growth Chart -->
-            <div class="chart-container">
-                <div class="text-center">
-                    <h3 class="text-lg font-semibold mb-4">User Growth</h3>
-                    <div class="text-6xl text-gray-600">📈</div>
-                    <p class="text-gray-400 mt-4">Chart visualization would be implemented here</p>
-                    <p class="text-sm text-gray-500">Using Chart.js or similar library</p>
-                </div>
+        <!-- Recent Admin Recommendations -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Recent Recommendations</h2>
+                <button class="btn btn-primary btn-sm" onclick="createNewRecommendation()">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    New Recommendation
+                </button>
             </div>
-            
-            <!-- Content Distribution -->
-            <div class="chart-container">
-                <div class="text-center">
-                    <h3 class="text-lg font-semibold mb-4">Content Distribution</h3>
-                    <div class="text-6xl text-gray-600">🥧</div>
-                    <p class="text-gray-400 mt-4">Pie chart showing content types</p>
-                    <p class="text-sm text-gray-500">Movies, TV Shows, Anime breakdown</p>
-                </div>
+            <div class="space-y-4" id="recentRecommendations">
+                <!-- Recent recommendations will be loaded here -->
             </div>
-        </div>
-<div class="card">
-    <div class="card-header">
-        <h4>ML Service Status</h4>
-        <button onclick="checkMLService()" class="btn btn-primary btn-sm">Check Status</button>
-        <button onclick="updateMLModels()" class="btn btn-warning btn-sm">Update Models</button>
-    </div>
-    <div class="card-body">
-        <div id="ml-status-display">Click "Check Status" to test ML service</div>
-    </div>
-</div>
+        </section>
 
-        <!-- Recent Activity -->
-        <div class="bg-gray-800 bg-opacity-50 rounded-lg">
-            <div class="p-6 border-b border-gray-700">
-                <h2 class="text-xl font-bold">Recent Activity</h2>
+        <!-- Popular Content Overview -->
+        <section class="section">
+            <h2 class="section-title">Popular Content</h2>
+            <div class="content-grid" id="popularContent">
+                <!-- Popular content will be loaded here -->
             </div>
-            <div id="activityList">
-                <div class="activity-item">
-                    <div class="activity-icon">
-                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
-                        </svg>
+        </section>
+
+        <!-- ML Service Status -->
+        <section class="section">
+            <h2 class="section-title">ML Service Status</h2>
+            <div class="card">
+                <div class="card-content">
+                    <div id="mlServiceStatus">
+                        <div class="flex items-center justify-center py-8">
+                            <div class="loader"></div>
+                            <span class="ml-4">Checking ML service status...</span>
+                        </div>
                     </div>
-                    <div class="flex-1">
-                        <p class="font-semibold">New user registration</p>
-                        <p class="text-sm text-gray-400">john_doe joined the platform</p>
-                    </div>
-                    <div class="text-sm text-gray-500">2 minutes ago</div>
-                </div>
-                
-                <div class="activity-item">
-                    <div class="activity-icon bg-green-600">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-semibold">Content added</p>
-                        <p class="text-sm text-gray-400">Spider-Man: No Way Home was added to the database</p>
-                    </div>
-                    <div class="text-sm text-gray-500">15 minutes ago</div>
-                </div>
-                
-                <div class="activity-item">
-                    <div class="activity-icon bg-blue-600">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-semibold">Admin recommendation</p>
-                        <p class="text-sm text-gray-400">You recommended "The Batman" to trending</p>
-                    </div>
-                    <div class="text-sm text-gray-500">1 hour ago</div>
-                </div>
-                
-                <div class="activity-item">
-                    <div class="activity-icon bg-purple-600">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-semibold">Platform milestone</p>
-                        <p class="text-sm text-gray-400">Reached 1000 total users!</p>
-                    </div>
-                    <div class="text-sm text-gray-500">3 hours ago</div>
                 </div>
             </div>
-        </div>
+        </section>
     </main>
+
+    <div id="footer-placeholder"></div>
+
+    <!-- Content Search Modal -->
+    <div id="contentSearchModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Search External Content</h3>
+                <button class="modal-close" onclick="closeContentSearchModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="space-y-4">
+                    <div class="form-group">
+                        <label class="form-label">Search Query</label>
+                        <input type="text" id="contentSearchInput" class="form-input" placeholder="Enter movie, TV show, or anime title...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Source</label>
+                        <select id="contentSource" class="form-input">
+                            <option value="tmdb">TMDB (Movies & TV)</option>
+                            <option value="anime">Jikan (Anime)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary w-full" onclick="searchExternalContent()">
+                        Search Content
+                    </button>
+                </div>
+                <div id="searchResults" class="mt-6" style="display: none;">
+                    <!-- Search results will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/include.js"></script>
+    <script src="/js/main.js"></script>
     <script>
-        // Constants
-        const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        
-        // State
-        let currentUser = window.currentUser;
-        let authToken = window.authToken;
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!appState.isAuthenticated() || !appState.isAdmin()) {
+                window.location.href = '/login';
+                return;
+            }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAdminAuthentication();
-            initializeEventListeners();
-            loadDashboardData();
+            await loadDashboardData();
+            updateLastUpdateTime();
         });
-
-        function checkAdminAuthentication() {
-    // Load auth data from localStorage
-    window.loadAuthData();
-    
-    if (!window.currentUser || !window.authToken || !window.currentUser.is_admin) {
-        window.location.href = '../login.html?redirect=admin/dashboard.html';
-        return;
-    }
-    
-    // Update UI with admin data
-    document.getElementById('adminName').textContent = window.currentUser.username;
-    document.getElementById('adminInitial').textContent = window.currentUser.username.charAt(0).toUpperCase();
-    document.getElementById('welcomeAdminName').textContent = window.currentUser.username;
-}
-Up
-
-        function initializeEventListeners() {
-            // Sidebar toggle
-            document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
-            
-            // User menu
-            document.getElementById('userMenuToggle').addEventListener('click', toggleUserMenu);
-            document.getElementById('logoutBtn').addEventListener('click', logout);
-            
-            // Close user menu when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('#userMenuToggle') && !e.target.closest('#userMenu')) {
-                    document.getElementById('userMenu').classList.add('hidden');
-                }
-            });
-        }
 
         async function loadDashboardData() {
             try {
-                const response = await fetch(`${API_BASE}/admin/analytics`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
+                // Load analytics data
+                const analyticsResponse = await api.getAnalytics();
+                updateStatistics(analyticsResponse);
 
-                const data = await response.json();
+                // Load recent admin recommendations
+                await loadRecentRecommendations();
 
-                if (response.ok) {
-                    updateDashboardStats(data);
-                } else {
-                    console.error('Failed to load dashboard data:', data.error);
-                    // Show simulated data instead
-                    showSimulatedData();
-                }
+                // Load popular content
+                await loadPopularContent();
+
+                // Check ML service status
+                await loadMLServiceStatus();
+
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
-                showSimulatedData();
+                UI.showToast('Some dashboard data failed to load', 'warning');
             }
         }
 
-        function updateDashboardStats(data) {
-            document.getElementById('totalUsers').textContent = data.total_users || 0;
-            document.getElementById('totalContent').textContent = data.total_content || 0;
-            document.getElementById('totalInteractions').textContent = data.total_interactions || 0;
-            document.getElementById('activeUsers').textContent = data.active_users_last_week || 0;
+        function updateStatistics(data) {
+            document.getElementById('totalUsers').textContent = (data.total_users || 0).toLocaleString();
+            document.getElementById('totalContent').textContent = (data.total_content || 0).toLocaleString();
+            document.getElementById('totalInteractions').textContent = (data.total_interactions || 0).toLocaleString();
+            document.getElementById('activeUsers').textContent = (data.active_users_last_week || 0).toLocaleString();
         }
 
-        function showSimulatedData() {
-            // Show simulated data for demonstration
-            document.getElementById('totalUsers').textContent = '1,247';
-            document.getElementById('totalContent').textContent = '3,456';
-            document.getElementById('totalInteractions').textContent = '12,890';
-            document.getElementById('activeUsers').textContent = '834';
+        async function loadRecentRecommendations() {
+            try {
+                const response = await api.getAdminRecommendations(1, 5);
+                const recommendations = response.recommendations || [];
+
+                const container = document.getElementById('recentRecommendations');
+                
+                if (recommendations.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📝</div>
+                            <h3 class="empty-state-title">No recommendations yet</h3>
+                            <p class="empty-state-description">Create your first admin recommendation to share with users.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = recommendations.map(rec => `
+                    <div class="card">
+                        <div class="card-content">
+                            <div class="flex items-start gap-4">
+                                <img src="${rec.content.poster_path || Utils.getPlaceholderImage(80, 120)}" 
+                                     alt="${Utils.sanitizeHTML(rec.content.title)}" 
+                                     class="w-16 h-24 object-cover rounded">
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold mb-1">${Utils.sanitizeHTML(rec.content.title)}</h3>
+                                    <p class="text-sm text-gray-400 mb-2">
+                                        Recommended by ${rec.admin_name} • ${new Date(rec.created_at).toLocaleDateString()}
+                                    </p>
+                                    <p class="text-sm text-gray-300">${Utils.truncateText(rec.description, 100)}</p>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <span class="badge badge-${rec.recommendation_type === 'trending' ? 'warning' : 'primary'}">
+                                            ${rec.recommendation_type.replace('_', ' ').toUpperCase()}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-ghost btn-sm" onclick="Router.navigate('/details?id=${rec.content.id}')">
+                                    View
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading recent recommendations:', error);
+            }
         }
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
+        async function loadPopularContent() {
+            try {
+                const response = await api.getTrending('all', 8);
+                const content = response.recommendations || [];
+
+                const container = document.getElementById('popularContent');
+                contentManager.renderMovieGrid(container, { recommendations: content });
+
+            } catch (error) {
+                console.error('Error loading popular content:', error);
+                document.getElementById('popularContent').innerHTML = `
+                    <div class="col-span-full text-center text-gray-400 py-8">
+                        Failed to load popular content
+                    </div>
+                `;
+            }
+        }
+
+        async function loadMLServiceStatus() {
+            try {
+                const response = await api.checkMLService();
+                renderMLServiceStatus(response);
+
+            } catch (error) {
+                console.error('Error checking ML service:', error);
+                document.getElementById('mlServiceStatus').innerHTML = `
+                    <div class="text-center text-red-400 py-4">
+                        <div class="text-2xl mb-2">❌</div>
+                        <p>Failed to check ML service status</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderMLServiceStatus(status) {
+            const container = document.getElementById('mlServiceStatus');
+            const isHealthy = status.status === 'healthy';
+            const isPartial = status.status === 'partial';
+
+            container.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full ${isHealthy ? 'bg-green-400' : isPartial ? 'bg-yellow-400' : 'bg-red-400'} animate-pulse"></div>
+                            <h3 class="text-lg font-semibold">
+                                ML Service: ${status.status.charAt(0).toUpperCase() + status.status.slice(1)}
+                            </h3>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="loadMLServiceStatus()">
+                            Refresh
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-1 md:grid-3 gap-4">
+                        ${Object.entries(status.checks || {}).map(([key, check]) => `
+                            <div class="bg-gray-800 rounded-lg p-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium capitalize">${key.replace('_', ' ')}</span>
+                                    <span class="w-2 h-2 rounded-full ${check.status === 'pass' ? 'bg-green-400' : 'bg-red-400'}"></span>
+                                </div>
+                                ${check.response_time ? `<div class="text-xs text-gray-400">Response: ${check.response_time}</div>` : ''}
+                                ${check.error ? `<div class="text-xs text-red-400">${check.error}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    ${status.quick_actions?.force_update_available ? `
+                        <div class="flex justify-end">
+                            <button class="btn btn-primary btn-sm" onclick="updateMLService()">
+                                Force Update Models
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function updateLastUpdateTime() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        async function refreshDashboard() {
+            const button = event.target;
+            const originalText = button.innerHTML;
             
-            sidebar.classList.toggle('hidden');
-            mainContent.classList.toggle('full-width');
-        }
+            button.innerHTML = `
+                <svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Refreshing...
+            `;
+            button.disabled = true;
 
-        function toggleUserMenu() {
-            document.getElementById('userMenu').classList.toggle('hidden');
+            try {
+                await loadDashboardData();
+                updateLastUpdateTime();
+                UI.showToast('Dashboard refreshed!', 'success');
+            } catch (error) {
+                UI.showToast('Failed to refresh dashboard', 'error');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
         }
-
-function logout() {
-    // Clear user data
-    window.clearAuthData();
-    
-    // Redirect to login
-    window.location.href = '../login.html';
-}
 
         function openContentSearch() {
-            window.location.href = 'content-browser.html';
+            document.getElementById('contentSearchModal').classList.add('show');
         }
 
-        function createRecommendation() {
-            window.location.href = 'posts.html';
+        function closeContentSearchModal() {
+            document.getElementById('contentSearchModal').classList.remove('show');
+            document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('contentSearchInput').value = '';
         }
 
-        function viewAnalytics() {
-            window.location.href = 'analytics.html';
-        }
-async function checkMLService() {
-    const display = document.getElementById('ml-status-display');
-    display.innerHTML = '<div class="text-center"><i class="fa fa-spinner fa-spin"></i> Checking ML service...</div>';
-    
-    try {
-        const response = await fetch('/api/admin/ml-service-check', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        
-        const data = await response.json();
-        displayMLStatus(data);
-    } catch (error) {
-        display.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-    }
-}
+        async function searchExternalContent() {
+            const query = document.getElementById('contentSearchInput').value.trim();
+            const source = document.getElementById('contentSource').value;
 
-async function updateMLModels() {
-    if (!confirm('This will force update ML models. Continue?')) return;
-    
-    try {
-        const response = await fetch('/api/admin/ml-service-update', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            alert('✅ ' + data.message);
-        } else {
-            alert('❌ ' + data.message);
-        }
-    } catch (error) {
-        alert('❌ Error: ' + error.message);
-    }
-}
+            if (!query) {
+                UI.showToast('Please enter a search query', 'error');
+                return;
+            }
 
-function displayMLStatus(data) {
-    const statusColors = {
-        'healthy': 'success',
-        'partial': 'warning', 
-        'unhealthy': 'danger',
-        'error': 'danger'
-    };
-    
-    const statusIcons = {
-        'healthy': '✅',
-        'partial': '⚠️',
-        'unhealthy': '❌',
-        'error': '💥'
-    };
-    
-    let html = `
-        <div class="alert alert-${statusColors[data.status]}">
-            <h5>${statusIcons[data.status]} ML Service Status: ${data.status.toUpperCase()}</h5>
-            <small>Last checked: ${new Date(data.timestamp).toLocaleString()}</small>
-        </div>
-    `;
-    
-    if (data.summary) {
-        html += `
-            <div class="row mb-3">
-                <div class="col-md-4 text-center">
-                    <div class="bg-light p-2 rounded">
-                        <strong>${data.summary.passed}</strong><br>
-                        <small>Passed</small>
+            try {
+                const resultsContainer = document.getElementById('searchResults');
+                resultsContainer.style.display = 'block';
+                resultsContainer.innerHTML = '<div class="text-center py-4"><div class="loader"></div></div>';
+
+                const response = await api.adminSearch(query, source);
+                const results = response.results || [];
+
+                if (results.length === 0) {
+                    resultsContainer.innerHTML = '<div class="text-center text-gray-400 py-4">No results found</div>';
+                    return;
+                }
+
+                resultsContainer.innerHTML = `
+                    <h4 class="font-semibold mb-4">Search Results (${results.length})</h4>
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        ${results.map(item => `
+                            <div class="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
+                                <img src="${item.poster_path || Utils.getPlaceholderImage(60, 90)}" 
+                                     alt="${Utils.sanitizeHTML(item.title)}" 
+                                     class="w-12 h-18 object-cover rounded">
+                                <div class="flex-1 min-w-0">
+                                    <h5 class="font-medium truncate">${Utils.sanitizeHTML(item.title)}</h5>
+                                    <p class="text-sm text-gray-400">${item.release_date || 'N/A'} • ${item.content_type?.toUpperCase()}</p>
+                                    ${item.rating ? `<div class="text-xs text-yellow-400">⭐ ${item.rating}</div>` : ''}
+                                </div>
+                                <button class="btn btn-primary btn-sm" onclick="saveExternalContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                    Add to DB
+                                </button>
+                            </div>
+                        `).join('')}
                     </div>
-                </div>
-                <div class="col-md-4 text-center">
-                    <div class="bg-light p-2 rounded">
-                        <strong>${data.summary.failed}</strong><br>
-                        <small>Failed</small>
-                    </div>
-                </div>
-                <div class="col-md-4 text-center">
-                    <div class="bg-light p-2 rounded">
-                        <strong>${data.summary.total_checks}</strong><br>
-                        <small>Total Checks</small>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    // Detailed results
-    html += '<div class="row">';
-    
-    if (data.checks) {
-        for (const [checkName, result] of Object.entries(data.checks)) {
-            if (typeof result === 'object' && result.status) {
-                const icon = result.status === 'pass' ? '✅' : '❌';
-                const cardClass = result.status === 'pass' ? 'border-success' : 'border-danger';
-                
-                html += `
-                    <div class="col-md-6 mb-2">
-                        <div class="card ${cardClass}" style="border-width: 2px;">
-                            <div class="card-body p-2">
-                                <h6 class="card-title">${icon} ${checkName.replace('_', ' ').toUpperCase()}</h6>
                 `;
-                
-                if (result.response_time) {
-                    html += `<small>⏱️ ${result.response_time}</small><br>`;
-                }
-                
-                if (result.count !== undefined) {
-                    html += `<small>📊 ${result.count} recommendations</small><br>`;
-                }
-                
-                if (result.strategy) {
-                    html += `<small>🎯 Strategy: ${result.strategy}</small><br>`;
-                }
-                
-                if (result.error) {
-                    html += `<small class="text-danger">❌ ${result.error}</small>`;
-                }
-                
-                if (result.models_initialized !== undefined) {
-                    const modelIcon = result.models_initialized ? '🤖✅' : '🤖❌';
-                    html += `<small>${modelIcon} Models: ${result.models_initialized ? 'Ready' : 'Not Ready'}</small><br>`;
-                }
-                
-                html += '</div></div></div>';
+
+            } catch (error) {
+                console.error('Error searching external content:', error);
+                document.getElementById('searchResults').innerHTML = 
+                    '<div class="text-center text-red-400 py-4">Search failed. Please try again.</div>';
             }
         }
-    }
-    
-    html += '</div>';
-    
-    // Quick stats
-    if (data.checks && data.checks.database_integration) {
-        const db = data.checks.database_integration;
-        html += `
-            <div class="alert alert-info mt-3">
-                <strong>📊 Data Summary:</strong>
-                ${db.backend_users} users, ${db.backend_content} content, ${db.backend_interactions} interactions
-                ${db.data_ready ? '✅ Ready for ML' : '⚠️ Needs more data'}
-            </div>
-        `;
-    }
-    
-    document.getElementById('ml-status-display').innerHTML = html;
-}
 
-// Auto-check on page load
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('ml-status-display')) {
-        checkMLService();
-    }
-});
-        // Auto-hide sidebar on mobile when clicking outside
-        document.addEventListener('click', function(e) {
-            if (window.innerWidth <= 1024) {
-                const sidebar = document.getElementById('sidebar');
-                const sidebarToggle = document.getElementById('sidebarToggle');
+        async function saveExternalContent(contentData) {
+            try {
+                const response = await api.saveContent(contentData);
+                UI.showToast('Content added to database!', 'success');
                 
-                if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
-                    sidebar.classList.add('hidden');
-                    document.getElementById('mainContent').classList.add('full-width');
-                }
+                // Refresh dashboard stats
+                loadDashboardData();
+                
+            } catch (error) {
+                console.error('Error saving content:', error);
+                UI.showToast('Failed to save content', 'error');
             }
-        });
+        }
 
-        // Handle responsive behavior
-        window.addEventListener('resize', function() {
-            if (window.innerWidth > 1024) {
-                document.getElementById('sidebar').classList.remove('hidden');
-                document.getElementById('mainContent').classList.remove('full-width');
+        function createNewRecommendation() {
+            Router.navigate('/admin/content-browser?action=recommend');
+        }
+
+        async function updateMLService() {
+            try {
+                const button = event.target;
+                button.disabled = true;
+                button.textContent = 'Updating...';
+
+                await api.updateMLService();
+                UI.showToast('ML service update initiated!', 'success');
+                
+                // Refresh ML service status after a delay
+                setTimeout(loadMLServiceStatus, 3000);
+
+            } catch (error) {
+                UI.showToast('Failed to update ML service', 'error');
+            } finally {
+                event.target.disabled = false;
+                event.target.textContent = 'Force Update Models';
+            }
+        }
+
+        async function checkMLService() {
+            await loadMLServiceStatus();
+            UI.showToast('ML service status refreshed', 'info');
+        }
+
+        // Click outside modal to close
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                e.target.classList.remove('show');
             }
         });
     </script>

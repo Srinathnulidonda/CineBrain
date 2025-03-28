@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Movies & Shows - CineScope</title>
+    <meta name="description" content="Explore the best English movies, TV shows, and content on CineScope.">
+    
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+    <div id="preloader" class="preloader">
+        <div class="flex flex-col items-center">
+            <div class="loader"></div>
+            <p class="mt-4 text-lg font-medium">Loading English Content...</p>
+        </div>
+    </div>
+
+    <div id="header-placeholder"></div>
+
+    <main class="container py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-4">🇺🇸 English Content</h1>
+            <p class="text-gray-400 text-lg">Hollywood movies, TV shows, and international English content</p>
+        </div>
+
+        <!-- Content Type Tabs -->
+        <div class="tabs mb-8" id="contentTabs">
+            <div class="tab-list">
+                <button class="tab-button active" data-tab="movie">Movies</button>
+                <button class="tab-button" data-tab="tv">TV Shows</button>
+                <button class="tab-button" data-tab="mixed">Mixed</button>
+            </div>
+        </div>
+
+        <!-- Genre Filter -->
+        <div class="flex justify-center mb-8">
+            <select id="genreFilter" class="form-input max-w-xs">
+                <option value="">All Genres</option>
+                <option value="action">Action</option>
+                <option value="comedy">Comedy</option>
+                <option value="drama">Drama</option>
+                <option value="thriller">Thriller</option>
+                <option value="romance">Romance</option>
+                <option value="sci-fi">Sci-Fi</option>
+                <option value="horror">Horror</option>
+                <option value="fantasy">Fantasy</option>
+            </select>
+        </div>
+
+        <div class="content-grid" id="englishContent">
+            <!-- Content will be loaded here -->
+        </div>
+
+        <div class="text-center mt-12">
+            <button id="loadMoreBtn" class="btn btn-secondary" onclick="loadMore()" style="display: none;">
+                Load More English Content
+            </button>
+        </div>
+
+        <!-- Featured English Content Sections -->
+        <section class="section mt-16">
+            <h2 class="section-title">Hollywood Blockbusters</h2>
+            <div class="horizontal-scroll" id="blockbustersContent">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Popular TV Series</h2>
+            <div class="horizontal-scroll" id="tvSeriesContent">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="/js/include.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        let currentType = 'movie';
+        let currentGenre = '';
+        let currentPage = 1;
+        let allResults = [];
+        let isLoading = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            UI.initTabs(document.getElementById('contentTabs'));
+            setupEventListeners();
+            loadEnglishContent();
+            loadFeaturedSections();
+        });
+
+        function setupEventListeners() {
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    currentType = button.dataset.tab;
+                    resetAndLoad();
+                });
+            });
+
+            document.getElementById('genreFilter').addEventListener('change', (e) => {
+                currentGenre = e.target.value;
+                resetAndLoad();
+            });
+        }
+
+        function resetAndLoad() {
+            currentPage = 1;
+            allResults = [];
+            loadEnglishContent();
+        }
+
+        async function loadEnglishContent() {
+            if (isLoading) return;
+
+            try {
+                isLoading = true;
+                const container = document.getElementById('englishContent');
+                
+                if (currentPage === 1) {
+                    UI.showSkeleton(container, 20);
+                }
+
+                let response;
+                if (currentGenre) {
+                    response = await api.getGenreRecommendations(currentGenre, currentType === 'mixed' ? 'movie' : currentType, 20);
+                } else {
+                    response = await api.getRegionalContent('english', currentType === 'mixed' ? 'movie' : currentType, 20);
+                }
+                
+                const content = response.recommendations || [];
+
+                if (currentPage === 1) {
+                    allResults = content;
+                } else {
+                    allResults = [...allResults, ...content];
+                }
+
+                contentManager.renderMovieGrid(container, { recommendations: allResults });
+                
+                const loadMoreBtn = document.getElementById('loadMoreBtn');
+                loadMoreBtn.style.display = content.length >= 20 ? 'block' : 'none';
+
+            } catch (error) {
+                console.error('Error loading English content:', error);
+                showErrorState();
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        async function loadFeaturedSections() {
+            // Load blockbusters (high-budget action movies)
+            try {
+                const blockbustersResponse = await api.getGenreRecommendations('action', 'movie', 10);
+                const blockbusters = blockbustersResponse.recommendations || [];
+                
+                const blockbustersContainer = document.getElementById('blockbustersContent');
+                blockbustersContainer.innerHTML = blockbusters.map(item => {
+                    const card = UI.createMovieCard(item);
+                    card.classList.add('horizontal-scroll-item');
+                    return card.outerHTML;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error loading blockbusters:', error);
+            }
+
+            // Load popular TV series
+            try {
+                const tvResponse = await api.getRegionalContent('english', 'tv', 10);
+                const tvSeries = tvResponse.recommendations || [];
+                
+                const tvContainer = document.getElementById('tvSeriesContent');
+                tvContainer.innerHTML = tvSeries.map(item => {
+                    const card = UI.createMovieCard(item);
+                    card.classList.add('horizontal-scroll-item');
+                    return card.outerHTML;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error loading TV series:', error);
+            }
+
+            Utils.lazyLoadImages();
+        }
+
+        function loadMore() {
+            currentPage++;
+            loadEnglishContent();
+        }
+
+        function showErrorState() {
+            const container = document.getElementById('englishContent');
+            container.innerHTML = `
+                <div class="col-span-full">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <h3 class="empty-state-title">Failed to load English content</h3>
+                        <p class="empty-state-description">Please try again later.</p>
+                        <button class="btn btn-primary mt-4" onclick="loadEnglishContent()">Retry</button>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

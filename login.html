@@ -4,635 +4,397 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In - CineScope</title>
-    <script src="auth.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        :root {
-            --netflix-red: #e50914;
-            --netflix-black: #141414;
-            --netflix-gray: #333333;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #141414 0%, #000000 100%);
-            min-height: 100vh;
-        }
-
-        .auth-container {
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .form-input {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        .form-input:focus {
-            border-color: var(--netflix-red);
-            background: rgba(255, 255, 255, 0.15);
-            outline: none;
-        }
-
-        .form-input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .btn-primary {
-            background: var(--netflix-red);
-            color: white;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background: #b8070e;
-            transform: translateY(-2px);
-        }
-
-        .btn-primary:disabled {
-            background: #666;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .error-message {
-            background: rgba(229, 9, 20, 0.1);
-            border: 1px solid rgba(229, 9, 20, 0.3);
-            color: #ff6b6b;
-        }
-
-        .success-message {
-            background: rgba(46, 125, 50, 0.1);
-            border: 1px solid rgba(46, 125, 50, 0.3);
-            color: #4caf50;
-        }
-
-        .preference-pill {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .preference-pill.selected {
-            background: var(--netflix-red);
-            border-color: var(--netflix-red);
-        }
-
-        .loading-spinner {
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 2px solid white;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .form-section {
-            transition: all 0.5s ease;
-        }
-
-        .form-section.hidden {
-            display: none;
-        }
-
-        .toggle-link {
-            color: var(--netflix-red);
-            cursor: pointer;
-            text-decoration: underline;
-        }
-
-        .toggle-link:hover {
-            color: #b8070e;
-        }
-
-        @media (max-width: 768px) {
-            .auth-container {
-                margin: 1rem;
-            }
-        }
-    </style>
+    <meta name="description" content="Sign in to CineScope to access personalized movie and TV show recommendations.">
+    
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
 </head>
 <body>
-    <div class="min-h-screen flex items-center justify-center p-4">
-        <div class="auth-container rounded-lg p-8 w-full max-w-md">
-            <!-- Header -->
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-red-600 mb-2">CineScope</h1>
-                <p class="text-gray-400">Your entertainment destination</p>
+    <!-- Preloader -->
+    <div id="preloader" class="preloader">
+        <div class="flex flex-col items-center">
+            <div class="loader"></div>
+            <p class="mt-4 text-lg font-medium">Loading...</p>
+        </div>
+    </div>
+
+    <div class="min-h-screen flex">
+        <!-- Left Side - Branding -->
+        <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary to-secondary relative overflow-hidden">
+            <div class="absolute inset-0 bg-black/20"></div>
+            <div class="relative z-10 flex flex-col justify-center items-center text-center p-12">
+                <h1 class="text-4xl font-bold text-white mb-6">Welcome to CineScope</h1>
+                <p class="text-xl text-white/90 mb-8 max-w-md">
+                    Discover your next favorite movie with AI-powered recommendations tailored just for you.
+                </p>
+                <div class="grid grid-2 gap-6 max-w-md w-full">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-white">50K+</div>
+                        <div class="text-white/80 text-sm">Movies & Shows</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-white">10K+</div>
+                        <div class="text-white/80 text-sm">Happy Users</div>
+                    </div>
+                </div>
             </div>
-
-            <!-- Error/Success Messages -->
-            <div id="messageContainer" class="hidden mb-6 p-4 rounded-lg">
-                <p id="messageText"></p>
+            
+            <!-- Animated background -->
+            <div class="absolute inset-0 opacity-10">
+                <div class="absolute top-1/4 left-1/4 w-32 h-32 bg-white rounded-full animate-pulse"></div>
+                <div class="absolute top-3/4 right-1/4 w-24 h-24 bg-white rounded-full animate-pulse" style="animation-delay: 1s;"></div>
+                <div class="absolute bottom-1/4 left-1/3 w-16 h-16 bg-white rounded-full animate-pulse" style="animation-delay: 2s;"></div>
             </div>
+        </div>
 
-            <!-- Sign In Form -->
-            <form id="signInForm" class="form-section">
-                <h2 class="text-2xl font-bold text-white mb-6">Sign In</h2>
-                
-                <div class="space-y-4">
-                    <div>
-                        <input 
-                            type="text" 
-                            id="signInUsername" 
-                            class="form-input w-full px-4 py-3 rounded-lg" 
-                            placeholder="Username"
-                            required
-                        >
+        <!-- Right Side - Auth Forms -->
+        <div class="w-full lg:w-1/2 flex items-center justify-center p-8">
+            <div class="w-full max-w-md">
+                <!-- Navigation Tabs -->
+                <div class="tabs mb-8">
+                    <div class="tab-list flex border-b border-gray-700">
+                        <button class="tab-button active flex-1 py-3 text-center" data-tab="login">
+                            Sign In
+                        </button>
+                        <button class="tab-button flex-1 py-3 text-center" data-tab="register">
+                            Sign Up
+                        </button>
                     </div>
-                    
-                    <div>
-                        <input 
-                            type="password" 
-                            id="signInPassword" 
-                            class="form-input w-full px-4 py-3 rounded-lg" 
-                            placeholder="Password"
-                            required
-                        >
-                    </div>
-                    
-                    <button 
-                        type="submit" 
-                        id="signInButton" 
-                        class="btn-primary w-full py-3 rounded-lg flex items-center justify-center"
-                    >
-                        <span id="signInButtonText">Sign In</span>
-                        <div id="signInSpinner" class="loading-spinner ml-2 hidden"></div>
-                    </button>
                 </div>
-                
-                <div class="mt-6 text-center">
-                    <p class="text-gray-400">
-                        Don't have an account? 
-                        <span class="toggle-link" onclick="showSignUp()">Sign up here</span>
-                    </p>
-                </div>
-            </form>
 
-            <!-- Sign Up Form -->
-            <form id="signUpForm" class="form-section hidden">
-                <h2 class="text-2xl font-bold text-white mb-6">Create Account</h2>
-                
-                <div class="space-y-4">
-                    <div>
-                        <input 
-                            type="text" 
-                            id="signUpUsername" 
-                            class="form-input w-full px-4 py-3 rounded-lg" 
-                            placeholder="Username"
-                            required
-                        >
+                <!-- Sign In Form -->
+                <div class="tab-panel active" data-panel="login">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-white">Welcome Back</h2>
+                        <p class="text-gray-400 mt-2">Sign in to your account to continue</p>
                     </div>
-                    
-                    <div>
-                        <input 
-                            type="email" 
-                            id="signUpEmail" 
-                            class="form-input w-full px-4 py-3 rounded-lg" 
-                            placeholder="Email"
-                            required
-                        >
-                    </div>
-                    
-                    <div>
-                        <input 
-                            type="password" 
-                            id="signUpPassword" 
-                            class="form-input w-full px-4 py-3 rounded-lg" 
-                            placeholder="Password (min 6 characters)"
-                            required
-                            minlength="6"
-                        >
-                    </div>
-                    
-                    <div>
-                        <input 
-                            type="password" 
-                            id="confirmPassword" 
-                            class="form-input w-full px-4 py-3 rounded-lg" 
-                            placeholder="Confirm Password"
-                            required
-                        >
-                    </div>
-                    
-                    <button 
-                        type="button" 
-                        id="nextButton" 
-                        class="btn-primary w-full py-3 rounded-lg"
-                        onclick="showPreferences()"
-                    >
-                        Next: Set Preferences
-                    </button>
-                </div>
-                
-                <div class="mt-6 text-center">
-                    <p class="text-gray-400">
-                        Already have an account? 
-                        <span class="toggle-link" onclick="showSignIn()">Sign in here</span>
-                    </p>
-                </div>
-            </form>
 
-            <!-- Preferences Form -->
-            <div id="preferencesForm" class="form-section hidden">
-                <h2 class="text-2xl font-bold text-white mb-6">Set Your Preferences</h2>
-                
-                <div class="mb-6">
-                    <h3 class="text-lg font-semibold text-white mb-3">Preferred Languages</h3>
-                    <div id="languagePreferences" class="flex flex-wrap gap-2">
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="english">English</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="hindi">Hindi</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="telugu">Telugu</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="tamil">Tamil</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="kannada">Kannada</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="malayalam">Malayalam</span>
+                    <form id="loginForm" class="space-y-6">
+                        <div class="form-group">
+                            <label for="loginUsername" class="form-label">Username</label>
+                            <input type="text" id="loginUsername" name="username" class="form-input" 
+                                   placeholder="Enter your username" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="loginPassword" class="form-label">Password</label>
+                            <div class="relative">
+                                <input type="password" id="loginPassword" name="password" class="form-input pr-12" 
+                                       placeholder="Enter your password" required>
+                                <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                                        onclick="togglePassword('loginPassword', this)">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="remember" class="rounded border-gray-600 bg-gray-700 text-primary focus:ring-primary">
+                                <span class="ml-2 text-sm text-gray-400">Remember me</span>
+                            </label>
+                            <a href="#" class="text-sm text-primary hover:text-primary-light">Forgot password?</a>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-full">
+                            Sign In
+                        </button>
+
+                        <!-- Demo Accounts -->
+                        <div class="mt-6 p-4 bg-gray-800 rounded-lg">
+                            <p class="text-sm text-gray-400 mb-3">Demo Accounts:</p>
+                            <div class="space-y-2">
+                                <button type="button" class="w-full text-left text-xs text-gray-300 hover:text-white p-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
+                                        onclick="fillDemoCredentials('admin', 'admin123')">
+                                    <strong>Admin:</strong> admin / admin123
+                                </button>
+                                <button type="button" class="w-full text-left text-xs text-gray-300 hover:text-white p-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
+                                        onclick="fillDemoCredentials('demo', 'demo123')">
+                                    <strong>User:</strong> demo / demo123
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Sign Up Form -->
+                <div class="tab-panel" data-panel="register">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-white">Create Account</h2>
+                        <p class="text-gray-400 mt-2">Join CineScope for personalized recommendations</p>
+                    </div>
+
+                    <form id="registerForm" class="space-y-6">
+                        <div class="form-group">
+                            <label for="registerUsername" class="form-label">Username</label>
+                            <input type="text" id="registerUsername" name="username" class="form-input" 
+                                   placeholder="Choose a username" required minlength="3">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="registerEmail" class="form-label">Email</label>
+                            <input type="email" id="registerEmail" name="email" class="form-input" 
+                                   placeholder="Enter your email" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="registerPassword" class="form-label">Password</label>
+                            <div class="relative">
+                                <input type="password" id="registerPassword" name="password" class="form-input pr-12" 
+                                       placeholder="Create a password" required minlength="6">
+                                <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                                        onclick="togglePassword('registerPassword', this)">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmPassword" class="form-label">Confirm Password</label>
+                            <input type="password" id="confirmPassword" name="confirmPassword" class="form-input" 
+                                   placeholder="Confirm your password" required>
+                        </div>
+
+                        <!-- Preferences -->
+                        <div class="space-y-4">
+                            <div class="form-group">
+                                <label class="form-label">Preferred Languages</label>
+                                <div class="grid grid-2 gap-2 mt-2">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="languages" value="english" class="rounded border-gray-600 bg-gray-700 text-primary">
+                                        <span class="ml-2 text-sm">English</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="languages" value="hindi" class="rounded border-gray-600 bg-gray-700 text-primary">
+                                        <span class="ml-2 text-sm">Hindi</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="languages" value="telugu" class="rounded border-gray-600 bg-gray-700 text-primary">
+                                        <span class="ml-2 text-sm">Telugu</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="languages" value="tamil" class="rounded border-gray-600 bg-gray-700 text-primary">
+                                        <span class="ml-2 text-sm">Tamil</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Preferred Genres</label>
+                                <div class="grid grid-2 gap-2 mt-2">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="genres" value="action" class="rounded border-gray-600 bg-gray-700 text-primary">
+                                        <span class="ml-2 text-sm">Action</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="genres" value="comedy" class="rounded border-gray-600 bg-gray-700 text-primary">
+                                        <span class="ml-2 text-sm">Comedy</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="genres" value="drama" class="rounded border-gray-600 bg-gray-700 text-primary">
+                                        <span class="ml-2 text-sm">Drama</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="genres" value="thriller" class="rounded border-gray-600 bg-gray-700 text-primary">
+                                        <span class="ml-2 text-sm">Thriller</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" id="terms" name="terms" class="rounded border-gray-600 bg-gray-700 text-primary" required>
+                            <label for="terms" class="ml-2 text-sm text-gray-400">
+                                I agree to the <a href="#" class="text-primary hover:text-primary-light">Terms of Service</a> 
+                                and <a href="#" class="text-primary hover:text-primary-light">Privacy Policy</a>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-full">
+                            Create Account
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Social Login -->
+                <div class="mt-8">
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-gray-700"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm">
+                            <span class="px-2 bg-gray-900 text-gray-400">Or continue with</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 grid grid-2 gap-3">
+                        <button class="btn btn-secondary flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Google
+                        </button>
+                        <button class="btn btn-secondary flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                            </svg>
+                            Facebook
+                        </button>
                     </div>
                 </div>
-                
-                <div class="mb-6">
-                    <h3 class="text-lg font-semibold text-white mb-3">Favorite Genres</h3>
-                    <div id="genrePreferences" class="flex flex-wrap gap-2">
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="action">Action</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="comedy">Comedy</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="drama">Drama</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="thriller">Thriller</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="romance">Romance</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="horror">Horror</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="sci-fi">Sci-Fi</span>
-                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="animation">Animation</span>
-                    </div>
-                </div>
-                
-                <div class="space-y-4">
-                    <button 
-                        type="button" 
-                        id="completeSignUpButton" 
-                        class="btn-primary w-full py-3 rounded-lg flex items-center justify-center"
-                        onclick="completeSignUp()"
-                    >
-                        <span id="completeSignUpText">Complete Sign Up</span>
-                        <div id="completeSignUpSpinner" class="loading-spinner ml-2 hidden"></div>
-                    </button>
-                    
-                    <button 
-                        type="button" 
-                        class="w-full py-3 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-gray-400 transition"
-                        onclick="skipPreferences()"
-                    >
-                        Skip for Now
-                    </button>
-                </div>
-                
-                <div class="mt-6 text-center">
-                    <p class="text-gray-400">
-                        <span class="toggle-link" onclick="showSignUp()">← Back to Sign Up</span>
-                    </p>
+
+                <!-- Back to Home -->
+                <div class="mt-8 text-center">
+                    <a href="/" class="text-gray-400 hover:text-white text-sm">
+                        ← Back to Home
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-<script>
-    // Constants
-    const API_BASE = 'https://backend-app-970m.onrender.com/api';
-    
-    // State
-    let selectedLanguages = [];
-    let selectedGenres = [];
-    
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
-        initializeEventListeners();
-        checkExistingAuth();
-    });
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize tabs
+            UI.initTabs(document.querySelector('.tabs'));
 
-    function initializeEventListeners() {
-        // Form submissions
-        document.getElementById('signInForm').addEventListener('submit', handleSignIn);
-        
-        // Preference selection
-        document.querySelectorAll('#languagePreferences .preference-pill').forEach(pill => {
-            pill.addEventListener('click', function() {
-                togglePreference(this, 'lang', selectedLanguages);
-            });
-        });
-        
-        document.querySelectorAll('#genrePreferences .preference-pill').forEach(pill => {
-            pill.addEventListener('click', function() {
-                togglePreference(this, 'genre', selectedGenres);
-            });
+            // Initialize password strength indicator
+            const passwordInput = document.getElementById('registerPassword');
+            if (passwordInput) {
+                passwordInput.addEventListener('input', updatePasswordStrength);
+            }
+
+            // Confirm password validation
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+            if (confirmPasswordInput) {
+                confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+            }
         });
 
-        // Input validation
-        document.getElementById('signUpPassword').addEventListener('input', validatePassword);
-        document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
-    }
+        function togglePassword(inputId, button) {
+            const input = document.getElementById(inputId);
+            const isPassword = input.type === 'password';
+            
+            input.type = isPassword ? 'text' : 'password';
+            
+            // Update icon
+            const icon = button.querySelector('svg');
+            if (isPassword) {
+                icon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L12 12m6-6l6 6-6 6-6-6 6-6z"></path>
+                `;
+            } else {
+                icon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                `;
+            }
+        }
 
-    function checkExistingAuth() {
-        // Check if user is already logged in
-        const storedUser = localStorage.getItem('currentUser');
-        const storedToken = localStorage.getItem('authToken');
-        
-        if (storedUser && storedToken) {
-            try {
-                const user = JSON.parse(storedUser);
-                // Set global variables
-                window.currentUser = user;
-                window.authToken = storedToken;
-                
-                // Redirect based on user role
-                if (user.is_admin) {
-                    window.location.href = 'admin/dashboard.html';
-                } else {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const redirectTo = urlParams.get('redirect') || 'dashboard.html';
-                    window.location.href = redirectTo;
-                }
+        function fillDemoCredentials(username, password) {
+            document.getElementById('loginUsername').value = username;
+            document.getElementById('loginPassword').value = password;
+        }
+
+        function updatePasswordStrength(e) {
+            const password = e.target.value;
+            const strengthIndicator = document.getElementById('passwordStrength');
+            
+            if (!strengthIndicator) {
+                // Create strength indicator if it doesn't exist
+                const indicator = document.createElement('div');
+                indicator.id = 'passwordStrength';
+                indicator.className = 'mt-2';
+                e.target.parentNode.appendChild(indicator);
+            }
+
+            const strength = calculatePasswordStrength(password);
+            const strengthElement = document.getElementById('passwordStrength');
+            
+            const strengthColors = {
+                0: 'bg-gray-600',
+                1: 'bg-red-500',
+                2: 'bg-yellow-500',
+                3: 'bg-blue-500',
+                4: 'bg-green-500'
+            };
+
+            const strengthTexts = {
+                0: '',
+                1: 'Weak',
+                2: 'Fair',
+                3: 'Good',
+                4: 'Strong'
+            };
+
+            if (password.length === 0) {
+                strengthElement.innerHTML = '';
                 return;
-            } catch (error) {
-                // Clear invalid stored data
-                localStorage.removeItem('currentUser');
-                localStorage.removeItem('authToken');
             }
-        }
-    }
 
-    function showSignUp() {
-        document.getElementById('signInForm').classList.add('hidden');
-        document.getElementById('signUpForm').classList.remove('hidden');
-        document.getElementById('preferencesForm').classList.add('hidden');
-        clearMessages();
-    }
-
-    function showSignIn() {
-        document.getElementById('signInForm').classList.remove('hidden');
-        document.getElementById('signUpForm').classList.add('hidden');
-        document.getElementById('preferencesForm').classList.add('hidden');
-        clearMessages();
-    }
-
-    function showPreferences() {
-        // Validate sign up form first
-        const username = document.getElementById('signUpUsername').value.trim();
-        const email = document.getElementById('signUpEmail').value.trim();
-        const password = document.getElementById('signUpPassword').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-
-        if (!username || !email || !password || !confirmPassword) {
-            showMessage('Please fill in all fields', 'error');
-            return;
+            strengthElement.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <div class="flex-1 bg-gray-700 rounded-full h-2">
+                        <div class="h-2 rounded-full transition-all duration-300 ${strengthColors[strength]}" 
+                             style="width: ${(strength / 4) * 100}%"></div>
+                    </div>
+                    <span class="text-xs text-gray-400">${strengthTexts[strength]}</span>
+                </div>
+            `;
         }
 
-        if (password !== confirmPassword) {
-            showMessage('Passwords do not match', 'error');
-            return;
+        function calculatePasswordStrength(password) {
+            let strength = 0;
+            
+            if (password.length >= 8) strength++;
+            if (/[a-z]/.test(password)) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+            
+            return Math.min(strength, 4);
         }
 
-        if (password.length < 6) {
-            showMessage('Password must be at least 6 characters', 'error');
-            return;
-        }
-
-        if (!isValidEmail(email)) {
-            showMessage('Please enter a valid email address', 'error');
-            return;
-        }
-
-        document.getElementById('signUpForm').classList.add('hidden');
-        document.getElementById('preferencesForm').classList.remove('hidden');
-        clearMessages();
-    }
-
-    function togglePreference(element, type, array) {
-        const value = element.dataset[type];
-        const index = array.indexOf(value);
-
-        if (index > -1) {
-            array.splice(index, 1);
-            element.classList.remove('selected');
-        } else {
-            array.push(value);
-            element.classList.add('selected');
-        }
-    }
-
-    async function handleSignIn(e) {
-        e.preventDefault();
-        
-        const username = document.getElementById('signInUsername').value.trim();
-        const password = document.getElementById('signInPassword').value;
-
-        if (!username || !password) {
-            showMessage('Please enter both username and password', 'error');
-            return;
-        }
-
-        setSignInLoading(true);
-
-        try {
-            const response = await fetch(`${API_BASE}/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    password: password
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showMessage('Sign in successful! Redirecting...', 'success');
-                
-                // Store user data in localStorage AND memory
-                localStorage.setItem('currentUser', JSON.stringify(data.user));
-                localStorage.setItem('authToken', data.token);
-                window.currentUser = data.user;
-                window.authToken = data.token;
-                
-                // Redirect based on user role
-                setTimeout(() => {
-                    if (data.user.is_admin) {
-                        window.location.href = 'admin/dashboard.html';
-                    } else {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const redirectTo = urlParams.get('redirect') || 'dashboard.html';
-                        window.location.href = redirectTo;
-                    }
-                }, 1500);
+        function validatePasswordMatch() {
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const confirmInput = document.getElementById('confirmPassword');
+            
+            if (confirmPassword.length === 0) {
+                confirmInput.setCustomValidity('');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                confirmInput.setCustomValidity('Passwords do not match');
             } else {
-                showMessage(data.error || 'Sign in failed', 'error');
-            }
-        } catch (error) {
-            console.error('Sign in error:', error);
-            showMessage('Network error. Please try again.', 'error');
-        } finally {
-            setSignInLoading(false);
-        }
-    }
-
-    async function completeSignUp() {
-        const username = document.getElementById('signUpUsername').value.trim();
-        const email = document.getElementById('signUpEmail').value.trim();
-        const password = document.getElementById('signUpPassword').value;
-
-        setCompleteSignUpLoading(true);
-
-        try {
-            const response = await fetch(`${API_BASE}/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    email: email,
-                    password: password,
-                    preferred_languages: selectedLanguages,
-                    preferred_genres: selectedGenres
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showMessage('Account created successfully! Redirecting...', 'success');
-                
-                // Store user data in localStorage AND memory
-                localStorage.setItem('currentUser', JSON.stringify(data.user));
-                localStorage.setItem('authToken', data.token);
-                window.currentUser = data.user;
-                window.authToken = data.token;
-                
-                // Redirect to dashboard
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1500);
-            } else {
-                showMessage(data.error || 'Registration failed', 'error');
-            }
-        } catch (error) {
-            console.error('Registration error:', error);
-            showMessage('Network error. Please try again.', 'error');
-        } finally {
-            setCompleteSignUpLoading(false);
-        }
-    }
-
-    function skipPreferences() {
-        completeSignUp();
-    }
-
-    function setSignInLoading(loading) {
-        const button = document.getElementById('signInButton');
-        const text = document.getElementById('signInButtonText');
-        const spinner = document.getElementById('signInSpinner');
-
-        if (loading) {
-            button.disabled = true;
-            text.textContent = 'Signing In...';
-            spinner.classList.remove('hidden');
-        } else {
-            button.disabled = false;
-            text.textContent = 'Sign In';
-            spinner.classList.add('hidden');
-        }
-    }
-
-    function setCompleteSignUpLoading(loading) {
-        const button = document.getElementById('completeSignUpButton');
-        const text = document.getElementById('completeSignUpText');
-        const spinner = document.getElementById('completeSignUpSpinner');
-
-        if (loading) {
-            button.disabled = true;
-            text.textContent = 'Creating Account...';
-            spinner.classList.remove('hidden');
-        } else {
-            button.disabled = false;
-            text.textContent = 'Complete Sign Up';
-            spinner.classList.add('hidden');
-        }
-    }
-
-    function showMessage(message, type) {
-        const container = document.getElementById('messageContainer');
-        const text = document.getElementById('messageText');
-
-        text.textContent = message;
-        container.className = `mb-6 p-4 rounded-lg ${type === 'error' ? 'error-message' : 'success-message'}`;
-        container.classList.remove('hidden');
-
-        // Auto-hide success messages
-        if (type === 'success') {
-            setTimeout(clearMessages, 3000);
-        }
-    }
-
-    function clearMessages() {
-        document.getElementById('messageContainer').classList.add('hidden');
-    }
-
-    function validatePassword() {
-        const password = document.getElementById('signUpPassword').value;
-        const input = document.getElementById('signUpPassword');
-
-        if (password.length > 0 && password.length < 6) {
-            input.style.borderColor = '#ef4444';
-        } else {
-            input.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-        }
-    }
-
-    function validateConfirmPassword() {
-        const password = document.getElementById('signUpPassword').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        const input = document.getElementById('confirmPassword');
-
-        if (confirmPassword.length > 0 && password !== confirmPassword) {
-            input.style.borderColor = '#ef4444';
-        } else {
-            input.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-        }
-    }
-
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    // Handle browser back button
-    window.addEventListener('popstate', function() {
-        showSignIn();
-    });
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
-            const visibleForm = document.querySelector('.form-section:not(.hidden)');
-            if (visibleForm && visibleForm.id === 'signInForm') {
-                handleSignIn(e);
-            } else if (visibleForm && visibleForm.id === 'signUpForm') {
-                showPreferences();
-            } else if (visibleForm && visibleForm.id === 'preferencesForm') {
-                completeSignUp();
+                confirmInput.setCustomValidity('');
             }
         }
-    });
-</script>
+
+        // Handle social login buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('button')?.textContent?.includes('Google')) {
+                UI.showToast('Google login coming soon!', 'info');
+            }
+            if (e.target.closest('button')?.textContent?.includes('Facebook')) {
+                UI.showToast('Facebook login coming soon!', 'info');
+            }
+        });
+    </script>
 </body>
 </html>

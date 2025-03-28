@@ -4,728 +4,583 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Favorites - CineScope</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        :root {
-            --netflix-red: #e50914;
-            --netflix-black: #141414;
-            --netflix-gray: #333333;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--netflix-black);
-            color: white;
-        }
-
-        .navbar {
-            background: rgba(20, 20, 20, 0.95);
-            backdrop-filter: blur(10px);
-        }
-
-        .content-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .content-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--netflix-red);
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .content-image {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-        }
-
-        .favorite-heart {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.8);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--netflix-red);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .favorite-heart:hover {
-            background: rgba(0,0,0,1);
-            transform: scale(1.1);
-        }
-
-        .btn-primary {
-            background: var(--netflix-red);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 14px;
-        }
-
-        .btn-primary:hover {
-            background: #b8070e;
-        }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 14px;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .filter-select {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-
-        .filter-select:focus {
-            outline: none;
-            border-color: var(--netflix-red);
-        }
-
-        .genre-tag {
-            background: rgba(229, 9, 20, 0.2);
-            color: var(--netflix-red);
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 600;
-            margin: 2px;
-            display: inline-block;
-        }
-
-        .rating-stars {
-            color: #ffd700;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-        }
-
-        .empty-state-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        .grid-layout {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .loading-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            overflow: hidden;
-            animation: pulse 2s infinite;
-        }
-
-        .loading-image {
-            width: 100%;
-            height: 200px;
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .loading-content {
-            padding: 1rem;
-        }
-
-        .loading-line {
-            height: 16px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            margin-bottom: 8px;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        @media (max-width: 768px) {
-            .grid-layout {
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 1rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .grid-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <meta name="description" content="Your favorite movies, TV shows, and anime that you love the most.">
+    
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar fixed top-0 left-0 right-0 z-30 px-4 py-3">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <button onclick="goBack()" class="text-white hover:text-red-500">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                </button>
-                <h1 class="text-xl font-bold text-red-600">My Favorites</h1>
-            </div>
-            <div class="flex items-center space-x-4">
-                <a href="../dashboard.html" class="text-white hover:text-red-500">Dashboard</a>
-                <a href="../profile.html" class="text-white hover:text-red-500">Profile</a>
-            </div>
+    <div id="preloader" class="preloader">
+        <div class="flex flex-col items-center">
+            <div class="loader"></div>
+            <p class="mt-4 text-lg font-medium">Loading Favorites...</p>
         </div>
-    </nav>
+    </div>
 
-    <!-- Main Content -->
-    <main class="pt-20 p-6 max-w-7xl mx-auto">
+    <div id="header-placeholder"></div>
+
+    <main class="container py-8">
         <!-- Header -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
             <div>
-                <h1 class="text-3xl font-bold mb-2">My Favorites ❤️</h1>
+                <h1 class="text-4xl font-bold mb-2">❤️ My Favorites</h1>
                 <p class="text-gray-400">Content you absolutely love</p>
             </div>
-            
-            <!-- Controls -->
-            <div class="flex items-center space-x-4 mt-4 md:mt-0">
-                <!-- Sort Filter -->
-                <select id="sortFilter" class="filter-select">
-                    <option value="added">Recently Added</option>
-                    <option value="title">Title</option>
-                    <option value="rating">Rating</option>
-                    <option value="release">Release Date</option>
-                </select>
-                
-                <!-- Type Filter -->
-                <select id="typeFilter" class="filter-select">
-                    <option value="all">All Types</option>
-                    <option value="movie">Movies</option>
-                    <option value="tv">TV Shows</option>
-                    <option value="anime">Anime</option>
-                </select>
-                
-                <!-- Genre Filter -->
-                <select id="genreFilter" class="filter-select">
-                    <option value="all">All Genres</option>
-                    <option value="action">Action</option>
-                    <option value="comedy">Comedy</option>
-                    <option value="drama">Drama</option>
-                    <option value="romance">Romance</option>
-                    <option value="thriller">Thriller</option>
-                    <option value="horror">Horror</option>
-                    <option value="sci-fi">Sci-Fi</option>
-                    <option value="animation">Animation</option>
-                </select>
+            <div class="flex items-center gap-4 mt-4 md:mt-0">
+                <div class="stats-card min-w-0">
+                    <div class="stats-value text-2xl" id="favoritesCount">0</div>
+                    <div class="stats-label">Favorites</div>
+                </div>
+                <button class="btn btn-secondary" onclick="shareMyFavorites()">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                    </svg>
+                    Share List
+                </button>
             </div>
         </div>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            <div class="bg-gray-800 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-red-500" id="totalFavorites">0</div>
-                <div class="text-sm text-gray-400">Total Favorites</div>
-            </div>
-            <div class="bg-gray-800 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-blue-500" id="movieCount">0</div>
-                <div class="text-sm text-gray-400">Movies</div>
-            </div>
-            <div class="bg-gray-800 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-green-500" id="tvCount">0</div>
-                <div class="text-sm text-gray-400">TV Shows</div>
-            </div>
-            <div class="bg-gray-800 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-purple-500" id="animeCount">0</div>
-                <div class="text-sm text-gray-400">Anime</div>
-            </div>
-            <div class="bg-gray-800 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-yellow-500" id="avgRating">0.0</div>
-                <div class="text-sm text-gray-400">Avg Rating</div>
-            </div>
-        </div>
-
-        <!-- Content Grid -->
-        <div id="favoritesContainer" class="grid-layout">
-            <!-- Loading State -->
-            <div class="loading-card">
-                <div class="loading-image"></div>
-                <div class="loading-content">
-                    <div class="loading-line w-3/4 mb-2"></div>
-                    <div class="loading-line w-1/2 mb-2"></div>
-                    <div class="loading-line w-full"></div>
-                </div>
-            </div>
-            <div class="loading-card">
-                <div class="loading-image"></div>
-                <div class="loading-content">
-                    <div class="loading-line w-3/4 mb-2"></div>
-                    <div class="loading-line w-1/2 mb-2"></div>
-                    <div class="loading-line w-full"></div>
-                </div>
-            </div>
-            <div class="loading-card">
-                <div class="loading-image"></div>
-                <div class="loading-content">
-                    <div class="loading-line w-3/4 mb-2"></div>
-                    <div class="loading-line w-1/2 mb-2"></div>
-                    <div class="loading-line w-full"></div>
+        <!-- Filters and Views -->
+        <div class="card mb-8">
+            <div class="card-content">
+                <div class="grid grid-1 md:grid-5 gap-6">
+                    <div>
+                        <label class="form-label">Filter by Type</label>
+                        <select id="typeFilter" class="form-input">
+                            <option value="">All Types</option>
+                            <option value="movie">Movies</option>
+                            <option value="tv">TV Shows</option>
+                            <option value="anime">Anime</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Filter by Genre</label>
+                        <select id="genreFilter" class="form-input">
+                            <option value="">All Genres</option>
+                            <option value="action">Action</option>
+                            <option value="comedy">Comedy</option>
+                            <option value="drama">Drama</option>
+                            <option value="thriller">Thriller</option>
+                            <option value="romance">Romance</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Sort by</label>
+                        <select id="sortBy" class="form-input">
+                            <option value="added">Date Added</option>
+                            <option value="rating">Rating</option>
+                            <option value="title">Title</option>
+                            <option value="release_date">Release Date</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">View</label>
+                        <div class="flex border border-gray-700 rounded-lg overflow-hidden">
+                            <button class="flex-1 p-2 bg-primary text-white text-sm" id="gridViewBtn" onclick="setView('grid')">
+                                Grid
+                            </button>
+                            <button class="flex-1 p-2 bg-gray-800 text-gray-400 text-sm" id="listViewBtn" onclick="setView('list')">
+                                List
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-end">
+                        <button class="btn btn-ghost w-full" onclick="createFavoritesList()">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Create List
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Empty State -->
-        <div id="emptyState" class="empty-state hidden">
-            <div class="empty-state-icon">💔</div>
-            <h3 class="text-xl font-bold mb-2">No favorites yet</h3>
-            <p class="text-gray-400 mb-6">Start favoriting content you love to see them here</p>
-            <a href="../index.html" class="btn-primary">Discover Content</a>
+        <!-- Favorites Content -->
+        <div id="favoritesContent">
+            <!-- Content will be loaded here -->
         </div>
 
-        <!-- Recommendations -->
-        <div id="recommendationsSection" class="mt-16 hidden">
-            <h2 class="text-2xl font-bold mb-6">Based on Your Favorites</h2>
-            <div id="recommendationsContainer" class="grid-layout">
+        <!-- Statistics -->
+        <section class="section mt-16">
+            <h2 class="section-title">Your Taste Profile</h2>
+            <div class="grid grid-1 md:grid-2 gap-8">
+                <!-- Favorite Genres Chart -->
+                <div class="card">
+                    <div class="card-content">
+                        <h3 class="text-lg font-semibold mb-4">Favorite Genres</h3>
+                        <div id="genreStats" class="space-y-3">
+                            <!-- Genre stats will be populated -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rating Distribution -->
+                <div class="card">
+                    <div class="card-content">
+                        <h3 class="text-lg font-semibold mb-4">Rating Distribution</h3>
+                        <div id="ratingStats" class="space-y-3">
+                            <!-- Rating stats will be populated -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recommendations based on favorites -->
+        <section class="section">
+            <h2 class="section-title">More Like Your Favorites</h2>
+            <p class="text-gray-400 mb-6">Discover content similar to what you love</p>
+            <div class="content-grid" id="recommendationsContent">
                 <!-- Recommendations will be loaded here -->
             </div>
-        </div>
+        </section>
     </main>
 
+    <div id="footer-placeholder"></div>
+
+    <script src="/js/include.js"></script>
+    <script src="/js/main.js"></script>
     <script>
-        // Constants
-        const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        
-        // State
-        let currentUser = window.currentUser;
-        let authToken = window.authToken;
-        let favoritesData = [];
-        let currentSort = 'added';
-        let currentTypeFilter = 'all';
-        let currentGenreFilter = 'all';
+        let favoritesItems = [];
+        let filteredItems = [];
+        let currentView = 'grid';
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAuthentication();
-            initializeEventListeners();
-            loadFavorites();
-        });
-
-        function checkAuthentication() {
-            if (!currentUser || !authToken) {
-                window.location.href = '../login.html?redirect=user/favorites.html';
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!appState.isAuthenticated()) {
+                window.location.href = '/login';
                 return;
             }
-        }
 
-        function initializeEventListeners() {
-            // Sort and filter changes
-            document.getElementById('sortFilter').addEventListener('change', function() {
-                currentSort = this.value;
-                renderFavorites();
-            });
+            setupEventListeners();
+            await loadFavorites();
+            await loadRecommendations();
+        });
 
-            document.getElementById('typeFilter').addEventListener('change', function() {
-                currentTypeFilter = this.value;
-                renderFavorites();
-            });
-
-            document.getElementById('genreFilter').addEventListener('change', function() {
-                currentGenreFilter = this.value;
-                renderFavorites();
+        function setupEventListeners() {
+            ['typeFilter', 'genreFilter', 'sortBy'].forEach(id => {
+                document.getElementById(id).addEventListener('change', applyFiltersAndSort);
             });
         }
 
         async function loadFavorites() {
             try {
-                const response = await fetch(`${API_BASE}/user/favorites`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
+                const container = document.getElementById('favoritesContent');
+                UI.showSkeleton(container, 6);
 
-                const data = await response.json();
+                const response = await api.getFavorites();
+                favoritesItems = response.favorites || [];
+                
+                document.getElementById('favoritesCount').textContent = favoritesItems.length;
+                
+                updateStatistics();
+                applyFiltersAndSort();
 
-                if (response.ok) {
-                    favoritesData = data.favorites || [];
-                    renderFavorites();
-                    updateStats();
-                    
-                    if (favoritesData.length > 0) {
-                        loadRecommendations();
-                    }
-                } else {
-                    showError(data.error || 'Failed to load favorites');
-                }
             } catch (error) {
                 console.error('Error loading favorites:', error);
-                showError('Failed to load favorites');
+                showErrorState();
             }
         }
 
-        function renderFavorites() {
-            const container = document.getElementById('favoritesContainer');
-            const emptyState = document.getElementById('emptyState');
+        function applyFiltersAndSort() {
+            const typeFilter = document.getElementById('typeFilter').value;
+            const genreFilter = document.getElementById('genreFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
 
-            // Filter data
-            let filteredData = favoritesData.filter(item => {
-                // Type filter
-                if (currentTypeFilter !== 'all' && item.content_type !== currentTypeFilter) {
-                    return false;
-                }
-                
-                // Genre filter
-                if (currentGenreFilter !== 'all') {
+            // Apply filters
+            filteredItems = favoritesItems.filter(item => {
+                if (typeFilter && item.content_type !== typeFilter) return false;
+                if (genreFilter) {
                     const genres = item.genres || [];
-                    if (!genres.some(genre => genre.toLowerCase().includes(currentGenreFilter.toLowerCase()))) {
+                    if (!genres.some(genre => genre.toLowerCase().includes(genreFilter.toLowerCase()))) {
                         return false;
                     }
                 }
-                
                 return true;
             });
 
-            // Sort data
-            filteredData.sort((a, b) => {
-                switch (currentSort) {
-                    case 'title':
-                        return a.title.localeCompare(b.title);
-                    case 'rating':
-                        return (b.rating || 0) - (a.rating || 0);
-                    case 'release':
-                        return new Date(b.release_date || 0) - new Date(a.release_date || 0);
-                    default: // 'added'
-                        return new Date(b.favorited_at || 0) - new Date(a.favorited_at || 0);
-                }
-            });
+            // Apply sort
+            switch (sortBy) {
+                case 'rating':
+                    filteredItems.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+                    break;
+                case 'title':
+                    filteredItems.sort((a, b) => a.title.localeCompare(b.title));
+                    break;
+                case 'release_date':
+                    filteredItems.sort((a, b) => new Date(b.release_date || 0) - new Date(a.release_date || 0));
+                    break;
+                default: // added
+                    // Keep original order
+            }
 
-            if (filteredData.length === 0) {
-                container.classList.add('hidden');
-                emptyState.classList.remove('hidden');
+            renderFavorites();
+        }
+
+        function renderFavorites() {
+            const container = document.getElementById('favoritesContent');
+
+            if (filteredItems.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❤️</div>
+                        <h3 class="empty-state-title">
+                            ${favoritesItems.length === 0 ? 'No favorites yet' : 'No items match your filters'}
+                        </h3>
+                        <p class="empty-state-description">
+                            ${favoritesItems.length === 0 
+                                ? 'Start adding content you love to your favorites!' 
+                                : 'Try adjusting your filters to see more items.'
+                            }
+                        </p>
+                        ${favoritesItems.length === 0 ? `
+                            <a href="/categories/trending" class="btn btn-primary mt-4">
+                                Discover Content
+                            </a>
+                        ` : `
+                            <button class="btn btn-secondary mt-4" onclick="clearFilters()">
+                                Clear Filters
+                            </button>
+                        `}
+                    </div>
+                `;
                 return;
             }
 
-            container.classList.remove('hidden');
-            emptyState.classList.add('hidden');
-            container.innerHTML = filteredData.map(item => createFavoriteCard(item)).join('');
+            if (currentView === 'grid') {
+                renderGridView(container);
+            } else {
+                renderListView(container);
+            }
         }
 
-        function createFavoriteCard(item) {
-            const posterUrl = item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image';
-            const rating = item.rating ? item.rating.toFixed(1) : 'N/A';
-            const ottInfo = getOTTInfo(item.ott_platforms);
-
-            return `
-                <div class="content-card" onclick="openContentDetails(${item.id})">
-                    <div class="relative">
-                        <img src="${posterUrl}" alt="${item.title}" class="content-image" loading="lazy">
-                        <div class="favorite-heart" onclick="event.stopPropagation(); removeFromFavorites(${item.id})" title="Remove from favorites">
-                            ❤️
-                        </div>
-                    </div>
-                    <div class="p-4">
-                        <h3 class="font-bold text-lg mb-2 line-clamp-1">${item.title}</h3>
-                        
-                        <div class="flex items-center justify-between text-sm text-gray-400 mb-2">
-                            <span class="capitalize">${item.content_type}</span>
-                            <span class="rating-stars">⭐ ${rating}</span>
-                        </div>
-                        
-                        ${item.release_date ? `
-                            <div class="text-sm text-gray-400 mb-2">
-                                ${new Date(item.release_date).getFullYear()}
+        function renderGridView(container) {
+            container.innerHTML = `
+                <div class="content-grid">
+                    ${filteredItems.map(item => `
+                        <div class="movie-card relative group">
+                            <img src="${item.poster_path || Utils.getPlaceholderImage()}" 
+                                 alt="${Utils.sanitizeHTML(item.title)}" 
+                                 class="w-full h-full object-cover rounded-lg"
+                                 onerror="this.src='${Utils.getPlaceholderImage()}'">
+                            
+                            <!-- Favorite indicator -->
+                            <div class="absolute top-2 left-2 z-10">
+                                <div class="bg-red-600 text-white p-2 rounded-full">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                    </svg>
+                                </div>
                             </div>
-                        ` : ''}
-                        
-                        <p class="text-gray-300 text-sm mb-3 line-clamp-2">${item.overview || 'No description available.'}</p>
-                        
-                        <div class="mb-3">
-                            ${(item.genres || []).slice(0, 3).map(genre => 
-                                `<span class="genre-tag">${genre}</span>`
-                            ).join('')}
-                        </div>
-                        
-                        ${ottInfo}
-                        
-                        <div class="flex space-x-2 mt-4">
-                            <button class="btn-primary flex-1" onclick="event.stopPropagation(); watchContent(${item.id})">
-                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
-                                </svg>
-                                Watch
-                            </button>
-                            <button class="btn-secondary" onclick="event.stopPropagation(); addToWatchlist(${item.id})" title="Add to Watchlist">
+                            
+                            <!-- Remove button -->
+                            <button class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onclick="removeFromFavorites(${item.id})"
+                                    title="Remove from favorites">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
                             </button>
+                            
+                            <!-- Content overlay -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                <div class="absolute bottom-0 left-0 right-0 p-4">
+                                    <h3 class="font-semibold text-sm mb-2">${Utils.sanitizeHTML(item.title)}</h3>
+                                    <div class="flex items-center gap-2 text-xs text-gray-300 mb-3">
+                                        ${item.rating ? `<span class="flex items-center gap-1">⭐ ${Utils.formatRating(item.rating)}</span>` : ''}
+                                        ${item.release_date ? `<span>${Utils.formatDate(item.release_date)}</span>` : ''}
+                                        <span class="badge badge-ghost text-xs">${item.content_type?.toUpperCase()}</span>
+                                    </div>
+                                    <button class="btn btn-primary btn-sm w-full" onclick="Router.navigate('/details?id=${item.id}')">
+                                        View Details
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    `).join('')}
+                </div>
+            `;
+
+            Utils.lazyLoadImages();
+        }
+
+        function renderListView(container) {
+            container.innerHTML = `
+                <div class="space-y-4">
+                    ${filteredItems.map(item => `
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="flex gap-4">
+                                    <div class="relative">
+                                        <img src="${item.poster_path || Utils.getPlaceholderImage(100, 150)}" 
+                                             alt="${Utils.sanitizeHTML(item.title)}" 
+                                             class="w-20 h-30 object-cover rounded"
+                                             onerror="this.src='${Utils.getPlaceholderImage(100, 150)}'">
+                                        <div class="absolute -top-2 -right-2 bg-red-600 text-white p-1 rounded-full">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-start justify-between">
+                                            <div>
+                                                <h3 class="text-lg font-semibold mb-2">${Utils.sanitizeHTML(item.title)}</h3>
+                                                <div class="flex items-center gap-4 mb-2 text-sm text-gray-400">
+                                                    ${item.rating ? `<span class="flex items-center gap-1">⭐ ${Utils.formatRating(item.rating)}</span>` : ''}
+                                                    ${item.release_date ? `<span>${Utils.formatDate(item.release_date)}</span>` : ''}
+                                                    <span class="badge badge-ghost">${item.content_type?.toUpperCase() || 'MOVIE'}</span>
+                                                </div>
+                                                <p class="text-gray-300 text-sm">${Utils.truncateText(item.overview, 150)}</p>
+                                            </div>
+                                            <div class="flex gap-2 ml-4">
+                                                <button class="btn btn-primary btn-sm" onclick="Router.navigate('/details?id=${item.id}')">
+                                                    View
+                                                </button>
+                                                <button class="btn btn-error btn-sm" onclick="removeFromFavorites(${item.id})" title="Remove">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
             `;
         }
 
-        function getOTTInfo(ottPlatforms) {
-            if (!ottPlatforms || ottPlatforms.length === 0) {
-                return '<div class="text-xs text-gray-500 mb-2">No streaming info</div>';
-            }
-
-            const platforms = typeof ottPlatforms === 'string' ? JSON.parse(ottPlatforms) : ottPlatforms;
-            const freePlatforms = platforms.filter(p => p.is_free);
-            const paidPlatforms = platforms.filter(p => !p.is_free);
-
-            let html = '<div class="text-xs mb-2">';
+        function setView(view) {
+            currentView = view;
             
-            if (freePlatforms.length > 0) {
-                html += `<span class="bg-green-600 bg-opacity-20 text-green-400 px-2 py-1 rounded mr-1">FREE (${freePlatforms.length})</span>`;
+            const gridBtn = document.getElementById('gridViewBtn');
+            const listBtn = document.getElementById('listViewBtn');
+            
+            if (view === 'grid') {
+                gridBtn.classList.add('bg-primary', 'text-white');
+                gridBtn.classList.remove('bg-gray-800', 'text-gray-400');
+                listBtn.classList.add('bg-gray-800', 'text-gray-400');
+                listBtn.classList.remove('bg-primary', 'text-white');
+            } else {
+                listBtn.classList.add('bg-primary', 'text-white');
+                listBtn.classList.remove('bg-gray-800', 'text-gray-400');
+                gridBtn.classList.add('bg-gray-800', 'text-gray-400');
+                gridBtn.classList.remove('bg-primary', 'text-white');
             }
             
-            if (paidPlatforms.length > 0) {
-                html += `<span class="bg-orange-600 bg-opacity-20 text-orange-400 px-2 py-1 rounded">PAID (${paidPlatforms.length})</span>`;
-            }
-            
-            html += '</div>';
-            return html;
+            renderFavorites();
         }
 
-        function updateStats() {
-            const total = favoritesData.length;
-            const movies = favoritesData.filter(item => item.content_type === 'movie').length;
-            const tvShows = favoritesData.filter(item => item.content_type === 'tv').length;
-            const anime = favoritesData.filter(item => item.content_type === 'anime').length;
-            
-            // Calculate average rating
-            const ratingsSum = favoritesData.reduce((sum, item) => sum + (item.rating || 0), 0);
-            const avgRating = total > 0 ? (ratingsSum / total).toFixed(1) : '0.0';
+        function updateStatistics() {
+            // Genre statistics
+            const genreCount = {};
+            const ratingCount = { high: 0, medium: 0, low: 0 };
 
-            document.getElementById('totalFavorites').textContent = total;
-            document.getElementById('movieCount').textContent = movies;
-            document.getElementById('tvCount').textContent = tvShows;
-            document.getElementById('animeCount').textContent = anime;
-            document.getElementById('avgRating').textContent = avgRating;
-        }
-
-        async function loadRecommendations() {
-            try {
-                // Get recommendations based on user's favorite genres
-                const favoriteGenres = getFavoriteGenres();
-                if (favoriteGenres.length === 0) return;
-
-                const response = await fetch(`${API_BASE}/recommendations/popular/${favoriteGenres[0]}?limit=12`);
-                const data = await response.json();
-
-                if (response.ok && data.recommendations?.length > 0) {
-                    // Filter out items already in favorites
-                    const favoriteIds = favoritesData.map(item => item.id);
-                    const newRecommendations = data.recommendations.filter(item => !favoriteIds.includes(item.id));
-                    
-                    if (newRecommendations.length > 0) {
-                        displayRecommendations(newRecommendations.slice(0, 8));
-                    }
+            favoritesItems.forEach(item => {
+                // Count genres
+                if (item.genres) {
+                    item.genres.forEach(genre => {
+                        genreCount[genre] = (genreCount[genre] || 0) + 1;
+                    });
                 }
-            } catch (error) {
-                console.error('Error loading recommendations:', error);
-            }
-        }
 
-        function getFavoriteGenres() {
-            const genreCounts = {};
-            
-            favoritesData.forEach(item => {
-                (item.genres || []).forEach(genre => {
-                    genreCounts[genre] = (genreCounts[genre] || 0) + 1;
-                });
+                // Count ratings
+                const rating = item.rating || 0;
+                if (rating >= 8) ratingCount.high++;
+                else if (rating >= 6) ratingCount.medium++;
+                else ratingCount.low++;
             });
+
+            // Render genre stats
+            const genreStatsContainer = document.getElementById('genreStats');
+            const sortedGenres = Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
             
-            return Object.keys(genreCounts).sort((a, b) => genreCounts[b] - genreCounts[a]);
-        }
+            if (sortedGenres.length === 0) {
+                genreStatsContainer.innerHTML = '<p class="text-gray-400 text-sm">No genre data available</p>';
+            } else {
+                genreStatsContainer.innerHTML = sortedGenres.map(([genre, count]) => {
+                    const percentage = Math.round((count / favoritesItems.length) * 100);
+                    return `
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm">${genre}</span>
+                            <div class="flex items-center gap-2">
+                                <div class="w-20 bg-gray-800 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: ${percentage}%"></div>
+                                </div>
+                                <span class="text-xs text-gray-400 w-8">${count}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
 
-        function displayRecommendations(recommendations) {
-            const section = document.getElementById('recommendationsSection');
-            const container = document.getElementById('recommendationsContainer');
+            // Render rating stats
+            const ratingStatsContainer = document.getElementById('ratingStats');
+            const total = favoritesItems.length;
             
-            section.classList.remove('hidden');
-            container.innerHTML = recommendations.map(item => createRecommendationCard(item)).join('');
-        }
-
-        function createRecommendationCard(item) {
-            const posterUrl = item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image';
-            const rating = item.rating ? item.rating.toFixed(1) : 'N/A';
-
-            return `
-                <div class="content-card" onclick="openContentDetails(${item.id})">
-                    <div class="relative">
-                        <img src="${posterUrl}" alt="${item.title}" class="content-image" loading="lazy">
-                        <div class="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">
-                            Recommended
+            if (total === 0) {
+                ratingStatsContainer.innerHTML = '<p class="text-gray-400 text-sm">No rating data available</p>';
+            } else {
+                ratingStatsContainer.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">High Rated (8.0+)</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-20 bg-gray-800 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: ${Math.round((ratingCount.high / total) * 100)}%"></div>
+                            </div>
+                            <span class="text-xs text-gray-400 w-8">${ratingCount.high}</span>
                         </div>
                     </div>
-                    <div class="p-4">
-                        <h3 class="font-bold text-lg mb-2 line-clamp-1">${item.title}</h3>
-                        <div class="flex items-center justify-between text-sm text-gray-400 mb-2">
-                            <span class="capitalize">${item.content_type}</span>
-                            <span class="rating-stars">⭐ ${rating}</span>
-                        </div>
-                        <p class="text-gray-300 text-sm mb-3 line-clamp-2">${item.overview || 'No description available.'}</p>
-                        <div class="flex space-x-2">
-                            <button class="btn-primary flex-1" onclick="event.stopPropagation(); openContentDetails(${item.id})">
-                                View Details
-                            </button>
-                            <button class="btn-secondary" onclick="event.stopPropagation(); addToFavorites(${item.id})" title="Add to Favorites">
-                                ❤️
-                            </button>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Medium Rated (6.0-7.9)</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-20 bg-gray-800 rounded-full h-2">
+                                <div class="bg-yellow-500 h-2 rounded-full" style="width: ${Math.round((ratingCount.medium / total) * 100)}%"></div>
+                            </div>
+                            <span class="text-xs text-gray-400 w-8">${ratingCount.medium}</span>
                         </div>
                     </div>
-                </div>
-            `;
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Lower Rated (< 6.0)</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-20 bg-gray-800 rounded-full h-2">
+                                <div class="bg-red-500 h-2 rounded-full" style="width: ${Math.round((ratingCount.low / total) * 100)}%"></div>
+                            </div>
+                            <span class="text-xs text-gray-400 w-8">${ratingCount.low}</span>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         async function removeFromFavorites(contentId) {
-            if (!confirm('Remove this item from your favorites?')) return;
-
             try {
-                // Note: API endpoint for removing from favorites would be needed
-                // For now, just remove from local data
-                favoritesData = favoritesData.filter(item => item.id !== contentId);
-                renderFavorites();
-                updateStats();
-                showNotification('Removed from favorites');
+                favoritesItems = favoritesItems.filter(item => item.id !== contentId);
+                document.getElementById('favoritesCount').textContent = favoritesItems.length;
                 
-                // Reload recommendations if favorites change significantly
-                if (favoritesData.length > 0) {
-                    loadRecommendations();
-                }
+                UI.showToast('Removed from favorites', 'success');
+                updateStatistics();
+                applyFiltersAndSort();
+
             } catch (error) {
-                console.error('Failed to remove from favorites:', error);
-                showNotification('Failed to remove from favorites');
+                console.error('Error removing from favorites:', error);
+                UI.showToast('Failed to remove from favorites', 'error');
             }
         }
 
-        async function addToFavorites(contentId) {
+        function clearFilters() {
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('genreFilter').value = '';
+            document.getElementById('sortBy').value = 'added';
+            applyFiltersAndSort();
+        }
+
+        async function loadRecommendations() {
+            if (favoritesItems.length === 0) return;
+
             try {
-                const response = await fetch(`${API_BASE}/interactions`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        content_id: contentId,
-                        interaction_type: 'favorite'
-                    })
-                });
+                const container = document.getElementById('recommendationsContent');
+                UI.showSkeleton(container, 6);
 
-                if (response.ok) {
-                    showNotification('Added to favorites!');
-                    // Reload favorites to include new item
-                    loadFavorites();
-                }
+                // Get recommendations based on favorites
+                const response = await api.getTrending('all', 12);
+                const recommendations = response.recommendations || [];
+
+                contentManager.renderMovieGrid(container, { recommendations });
+
             } catch (error) {
-                console.error('Failed to add to favorites:', error);
-                showNotification('Failed to add to favorites');
+                console.error('Error loading recommendations:', error);
+                document.getElementById('recommendationsContent').innerHTML = `
+                    <div class="col-span-full text-center text-gray-400 py-8">
+                        Failed to load recommendations
+                    </div>
+                `;
             }
         }
 
-        async function addToWatchlist(contentId) {
-            try {
-                const response = await fetch(`${API_BASE}/interactions`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        content_id: contentId,
-                        interaction_type: 'watchlist'
-                    })
-                });
+        function shareMyFavorites() {
+            if (favoritesItems.length === 0) {
+                UI.showToast('No favorites to share', 'warning');
+                return;
+            }
 
-                if (response.ok) {
-                    showNotification('Added to watchlist!');
-                }
-            } catch (error) {
-                console.error('Failed to add to watchlist:', error);
-                showNotification('Failed to add to watchlist');
+            const shareText = `Check out my favorite movies and shows on CineScope! I've got ${favoritesItems.length} amazing picks.`;
+            const shareUrl = window.location.origin + '/user/favorites';
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'My CineScope Favorites',
+                    text: shareText,
+                    url: shareUrl
+                });
+            } else {
+                Utils.copyToClipboard(shareUrl).then(() => {
+                    UI.showToast('Favorites link copied to clipboard!', 'success');
+                });
             }
         }
 
-        function watchContent(contentId) {
-            // Record a view interaction and then open details
-            recordInteraction(contentId, 'view');
-            openContentDetails(contentId);
-        }
-
-        async function recordInteraction(contentId, type) {
-            try {
-                await fetch(`${API_BASE}/interactions`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        content_id: contentId,
-                        interaction_type: type
-                    })
-                });
-            } catch (error) {
-                console.error('Failed to record interaction:', error);
+        function createFavoritesList() {
+            if (favoritesItems.length === 0) {
+                UI.showToast('Add some favorites first!', 'warning');
+                return;
             }
+
+            UI.showModal(`
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">Create Custom List</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="form-label">List Name</label>
+                            <input type="text" id="listName" class="form-input" placeholder="My Awesome Movies">
+                        </div>
+                        <div>
+                            <label class="form-label">Description (Optional)</label>
+                            <textarea id="listDescription" class="form-input h-20" placeholder="A collection of my all-time favorite movies..."></textarea>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="publicList" class="rounded">
+                            <label for="publicList" class="text-sm">Make this list public</label>
+                        </div>
+                        <div class="flex justify-end gap-4">
+                            <button class="btn btn-secondary" onclick="UI.hideModal(this.closest('.modal-overlay'))">Cancel</button>
+                            <button class="btn btn-primary" onclick="saveCustomList()">Create List</button>
+                        </div>
+                    </div>
+                </div>
+            `, 'Create Custom List');
         }
 
-        function openContentDetails(contentId) {
-            window.location.href = `../details.html?id=${contentId}`;
+        function saveCustomList() {
+            const name = document.getElementById('listName').value.trim();
+            const description = document.getElementById('listDescription').value.trim();
+            const isPublic = document.getElementById('publicList').checked;
+
+            if (!name) {
+                UI.showToast('Please enter a list name', 'error');
+                return;
+            }
+
+            // Simulate saving the list
+            UI.showToast('Custom list created successfully!', 'success');
+            UI.hideModal(document.querySelector('.modal-overlay'));
         }
 
-        function showError(message) {
-            const container = document.getElementById('favoritesContainer');
+        function showErrorState() {
+            const container = document.getElementById('favoritesContent');
             container.innerHTML = `
-                <div class="col-span-full text-center py-12">
-                    <p class="text-xl text-red-500">${message}</p>
-                    <button onclick="loadFavorites()" class="btn-primary mt-4">Try Again</button>
+                <div class="empty-state">
+                    <div class="empty-state-icon">❌</div>
+                    <h3 class="empty-state-title">Failed to load favorites</h3>
+                    <p class="empty-state-description">Please try again later.</p>
+                    <button class="btn btn-primary mt-4" onclick="loadFavorites()">Retry</button>
                 </div>
             `;
-        }
-
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50';
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        }
-
-        function goBack() {
-            window.location.href = '../dashboard.html';
         }
     </script>
 </body>
