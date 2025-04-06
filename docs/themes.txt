@@ -1,0 +1,182 @@
+1. theme.css
+
+    /* Instant theme transitions */
+    * {
+    /* Remove all transition delays for theme-related properties */
+    transition: background - color 0s, color 0s, border- color 0s, fill 0s, stroke 0s!important;
+}
+
+/* Only animate specific properties that need smooth transitions */
+.mobile - nav - item: active,
+.content - card: hover,
+.wishlist - btn: hover,
+.carousel - nav: hover,
+.icon - button:hover {
+    transition: transform 0.2s ease, box - shadow 0.2s ease!important;
+}
+
+/* Disable transitions during theme change */
+[data - theme - transitioning] * {
+    transition: none!important;
+}
+
+2. theme - manager.js
+
+/**
+ * Centralized Theme Manager for CineBrain
+ * Handles instant theme switching across all components
+ */
+class ThemeManager {
+    constructor() {
+        this.currentTheme = this.getStoredTheme() || 'dark';
+        this.listeners = new Set();
+        this.initialized = false;
+    }
+
+    /**
+     * Initialize theme manager
+     */
+    init() {
+        if (this.initialized) return;
+
+        // Apply initial theme immediately
+        this.applyTheme(this.currentTheme, false);
+
+        // Setup keyboard shortcut for testing
+        this.setupKeyboardShortcut();
+
+        this.initialized = true;
+    }
+
+    /**
+     * Get stored theme from localStorage
+     */
+    getStoredTheme() {
+        return localStorage.getItem('cinebrain-theme');
+    }
+
+    /**
+     * Register a component to receive theme updates
+     */
+    register(callback) {
+        this.listeners.add(callback);
+        // Immediately notify the new listener of current theme
+        callback(this.currentTheme);
+    }
+
+    /**
+     * Unregister a component
+     */
+    unregister(callback) {
+        this.listeners.delete(callback);
+    }
+
+    /**
+     * Apply theme to all elements instantly
+     */
+    applyTheme(theme, notify = true) {
+        // Validate theme
+        if (!['dark', 'light'].includes(theme)) {
+            theme = 'dark';
+        }
+
+        this.currentTheme = theme;
+
+        // Apply to all possible theme attributes at once
+        const elements = [
+            document.documentElement,
+            document.body
+        ];
+
+        // Use requestAnimationFrame for synchronous visual update
+        requestAnimationFrame(() => {
+            elements.forEach(element => {
+                // Set all theme attributes simultaneously
+                element.setAttribute('data-theme', theme);
+                element.setAttribute('data-bs-theme', theme);
+                element.dataset.theme = theme;
+                element.dataset.bsTheme = theme;
+            });
+
+            // Force style recalculation
+            document.body.offsetHeight;
+
+            // Update localStorage
+            localStorage.setItem('cinebrain-theme', theme);
+
+            // Notify all registered listeners instantly
+            if (notify) {
+                this.notifyListeners(theme);
+            }
+
+            // Update feather icons if available
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        });
+    }
+
+    /**
+     * Toggle between light and dark theme
+     */
+    toggleTheme() {
+        const newTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+        this.applyTheme(newTheme);
+    }
+
+    /**
+     * Get current theme
+     */
+    getCurrentTheme() {
+        return this.currentTheme;
+    }
+
+    /**
+     * Notify all listeners instantly
+     */
+    notifyListeners(theme) {
+        // Use a single animation frame for all updates
+        requestAnimationFrame(() => {
+            this.listeners.forEach(callback => {
+                try {
+                    callback(theme);
+                } catch (error) {
+                    console.error('Error notifying theme listener:', error);
+                }
+            });
+        });
+
+        // Dispatch global event for any other listeners
+        window.dispatchEvent(new CustomEvent('themeChanged', {
+            detail: { theme },
+            bubbles: true
+        }));
+    }
+
+    /**
+     * Setup keyboard shortcut for testing
+     */
+    setupKeyboardShortcut() {
+        document.addEventListener('keydown', (e) => {
+            // Alt + T for theme toggle
+            if (e.altKey && e.key === 't') {
+                e.preventDefault();
+                this.toggleTheme();
+            }
+        });
+    }
+}
+
+// Create singleton instance
+const themeManager = new ThemeManager();
+
+// Initialize immediately
+themeManager.init();
+
+// Make it globally available
+window.themeManager = themeManager;
+
+// Export for module usage
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = themeManager;
+}
