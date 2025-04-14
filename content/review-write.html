@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com;
+        style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: https: blob:;
+        connect-src 'self' https://backend-app-970m.onrender.com https://api.themoviedb.org https://image.tmdb.org;
+        base-uri 'self';
+        form-action 'self';
+    ">
+
+    <title>Write Review - CineBrain</title>
+    <meta name="title" content="Write Review - CineBrain" id="meta-title">
+    <meta name="description" content="Share your thoughts and write a review for this content on CineBrain."
+        id="meta-description">
+    <meta name="theme-color" content="#113CCF">
+
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-icon-180x180.png">
+    <link rel="canonical" href="" id="canonical-url">
+
+    <meta property="og:type" content="article" id="og-type">
+    <meta property="og:url" content="" id="og-url">
+    <meta property="og:title" content="Write Review on CineBrain" id="og-title">
+    <meta property="og:description" content="Share your thoughts and write a review for this content."
+        id="og-description">
+    <meta property="og:image" content="https://cinebrain.vercel.app/assets/images/og-image-1200x630.jpg" id="og-image">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://image.tmdb.org">
+
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+    <link rel="stylesheet" href="/assets/css/mobile-nav.css">
+    <link rel="stylesheet" href="/assets/css/content-card.css">
+    <link rel="stylesheet" href="/assets/css/theme.css">
+    <link rel="stylesheet" href="/assets/css/review-write.css">
+
+    <script>
+        (function () {
+            try {
+                const savedTheme = localStorage.getItem('cinebrain-theme');
+                const theme = (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+        })();
+    </script>
+</head>
+
+<body itemscope itemtype="https://schema.org/WebPage">
+    <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
+
+    <!-- Loading Screen -->
+    <div class="review-loader" id="pageLoader" role="progressbar" aria-label="Loading content">
+        <div class="loader-backdrop"></div>
+        <div class="loader-content">
+            <div class="cinebrain-pulse">
+                <div class="pulse-ring"></div>
+                <div class="pulse-ring"></div>
+                <div class="pulse-ring"></div>
+            </div>
+            <div class="loader-text">Loading Content</div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header itemscope itemtype="https://schema.org/WPHeader">
+        <nav class="navbar navbar-expand-lg navbar-cinebrain fixed-top" role="navigation" aria-label="Main navigation">
+            <div class="container-fluid">
+                <div class="navbar-brand-wrapper">
+                    <a href="/" style="text-decoration: none;" aria-label="CineBrain Home">
+                        <h1 class="navbar-brand-cinebrain">CineBrain</h1>
+                        <div class="tagline">
+                            <span class="tagline-full">The Mind Behind Your Next Favorite</span>
+                            <span class="tagline-medium" style="display: none;">Your Next Favorite</span>
+                            <span class="tagline-short" style="display: none;">Next Favorite</span>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="search-container desktop-search" id="desktopSearchContainer">
+                    <div class="search-wrapper">
+                        <div class="search-bar-wrapper">
+                            <div class="search-input-wrapper">
+                                <i data-feather="search" class="search-icon"></i>
+                                <input type="text" class="form-control search-input" id="desktopSearchInput"
+                                    placeholder="Search movies, shows, anime..." autocomplete="off" maxlength="100">
+                                <button class="search-clear" id="searchClear" aria-label="Clear search"
+                                    style="display: none;">
+                                    <i data-feather="x"></i>
+                                </button>
+                            </div>
+                            <div class="search-results" id="desktopSearchResults" role="listbox"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-icons-section">
+                    <button class="icon-button mobile-search-trigger" id="mobileSearchTrigger" aria-label="Open search">
+                        <i data-feather="search"></i>
+                    </button>
+                    <button class="icon-button theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                        <i data-feather="sun" class="theme-icon theme-icon-light"></i>
+                        <i data-feather="moon" class="theme-icon theme-icon-dark"></i>
+                    </button>
+                    <div class="dropdown">
+                        <div class="avatar-menu" data-bs-toggle="dropdown" id="avatarMenu" role="button">
+                            <i data-feather="user"></i>
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-cinebrain" id="userDropdown"></ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Mobile Search Overlay -->
+    <div class="mobile-search-overlay" id="mobileSearchOverlay" aria-hidden="true">
+        <div class="container">
+            <div class="mobile-search-header">
+                <button class="btn-back" id="closeMobileSearch" aria-label="Close search">
+                    <i data-feather="arrow-left"></i>
+                </button>
+                <div class="mobile-search-input-wrapper">
+                    <i data-feather="search" class="search-icon"></i>
+                    <input type="text" class="form-control search-input" id="mobileSearchInput"
+                        placeholder="Search movies, shows, anime..." autocomplete="off" autofocus maxlength="100">
+                </div>
+            </div>
+            <div class="search-results mobile-results" id="mobileSearchResults" role="listbox"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content" role="main">
+        <!-- Header Section -->
+        <section class="review-header">
+            <div class="container-xl">
+                <div class="header-content">
+                    <div class="back-button-section">
+                        <button class="btn-back-to-content" id="backToContent">
+                            <i data-feather="arrow-left"></i>
+                            <span>Back to Details</span>
+                        </button>
+                    </div>
+
+                    <div class="page-title-section">
+                        <h1 class="page-title">Write Review</h1>
+                        <p class="page-subtitle">Share your thoughts about this content</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Content Info Section -->
+        <section class="content-info-section">
+            <div class="container-xl">
+                <div class="content-info-card" id="contentInfoCard">
+                    <div class="content-poster-container">
+                        <img id="contentPoster" class="content-poster" alt="Content poster">
+                        <div class="content-type-badge" id="contentTypeBadge">MOVIE</div>
+                    </div>
+
+                    <div class="content-details">
+                        <h2 class="content-title" id="contentTitle">Loading...</h2>
+                        <div class="content-meta">
+                            <span class="meta-item" id="contentYear">2024</span>
+                            <span class="meta-separator">•</span>
+                            <span class="meta-item" id="contentGenres">Action, Drama</span>
+                        </div>
+                        <div class="content-rating">
+                            <div class="rating-display">
+                                <i data-feather="star" class="rating-icon"></i>
+                                <span class="rating-value" id="contentRating">8.5</span>
+                                <span class="rating-label">TMDB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Review Form Section -->
+        <section class="review-form-section">
+            <div class="container-xl">
+                <form class="review-form" id="reviewForm">
+                    <!-- Rating Section -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h3 class="section-title">
+                                <i data-feather="star"></i>
+                                Your Rating
+                            </h3>
+                            <p class="section-description">Rate this content from 1 to 10</p>
+                        </div>
+
+                        <div class="rating-input-container">
+                            <div class="rating-stars" id="ratingStars">
+                                <!-- Stars will be generated by JavaScript -->
+                            </div>
+                            <div class="rating-display-text">
+                                <span class="selected-rating" id="selectedRating">0</span>
+                                <span class="rating-max">/10</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Review Title Section -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <label for="reviewTitle" class="section-title">
+                                <i data-feather="edit-3"></i>
+                                Review Title
+                            </label>
+                            <p class="section-description">Give your review a catchy title</p>
+                        </div>
+
+                        <div class="input-container">
+                            <input type="text" id="reviewTitle" name="reviewTitle" class="form-input"
+                                placeholder="Summarize your review in a few words..." maxlength="100"
+                                autocomplete="off">
+                            <div class="input-footer">
+                                <span class="character-count">
+                                    <span id="titleCharCount">0</span>/100
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Review Text Section -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <label for="reviewText" class="section-title">
+                                <i data-feather="message-square"></i>
+                                Your Review
+                            </label>
+                            <p class="section-description">Share your detailed thoughts and opinions</p>
+                        </div>
+
+                        <div class="input-container">
+                            <textarea id="reviewText" name="reviewText" class="form-textarea"
+                                placeholder="Write your review here. What did you think about the story, characters, cinematography, or overall experience? Be detailed and honest in your thoughts..."
+                                rows="8" maxlength="2000" required></textarea>
+                            <div class="input-footer">
+                                <div class="textarea-tools">
+                                    <button type="button" class="tool-btn" id="expandTextarea" title="Expand">
+                                        <i data-feather="maximize"></i>
+                                    </button>
+                                </div>
+                                <span class="character-count">
+                                    <span id="textCharCount">0</span>/2000
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Options Section -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h3 class="section-title">
+                                <i data-feather="settings"></i>
+                                Review Options
+                            </h3>
+                        </div>
+
+                        <div class="options-container">
+                            <div class="option-item">
+                                <div class="option-main">
+                                    <div class="option-info">
+                                        <label for="spoilerWarning" class="option-label">Contains Spoilers</label>
+                                        <p class="option-description">Check this if your review reveals plot details</p>
+                                    </div>
+                                    <div class="option-control">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="spoilerWarning" name="spoilerWarning">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="option-item">
+                                <div class="option-main">
+                                    <div class="option-info">
+                                        <label for="publicReview" class="option-label">Make Review Public</label>
+                                        <p class="option-description">Allow other users to see your review</p>
+                                    </div>
+                                    <div class="option-control">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="publicReview" name="publicReview" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Section -->
+                    <div class="form-section">
+                        <div class="submit-container">
+                            <div class="submit-actions">
+                                <button type="button" class="btn-secondary" id="cancelBtn">
+                                    <i data-feather="x"></i>
+                                    Cancel
+                                </button>
+                                <button type="button" class="btn-save-draft" id="saveDraftBtn">
+                                    <i data-feather="save"></i>
+                                    Save Draft
+                                </button>
+                                <button type="submit" class="btn-primary" id="submitBtn">
+                                    <i data-feather="send"></i>
+                                    <span>Submit Review</span>
+                                </button>
+                            </div>
+
+                            <div class="submit-info">
+                                <p class="info-text">
+                                    <i data-feather="info"></i>
+                                    Your review will be moderated before being published
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav">
+        <div class="mobile-nav-container" id="mobileNavContainer"></div>
+    </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <aside class="mobile-menu-overlay" id="mobileMenuOverlay" aria-hidden="true">
+        <div class="menu-handle"></div>
+        <div class="menu-header">
+            <h3 class="menu-title">CineBrain Menu</h3>
+            <button class="menu-close-btn" id="mobileMenuClose">
+                <i data-feather="x"></i>
+            </button>
+        </div>
+        <section class="menu-section">
+            <h4 class="menu-section-title">Browse Categories</h4>
+            <div class="mobile-menu-grid" id="mobileMenuGrid"></div>
+        </section>
+        <section class="menu-section">
+            <h4 class="menu-section-title" id="userSectionTitle">Account</h4>
+            <div class="mobile-menu-list" id="mobileMenuList"></div>
+        </section>
+        <footer class="menu-footer">
+            <div class="menu-footer-info">
+                <span class="app-version">CineBrain v2.0.0</span>
+                <span class="menu-footer-separator">•</span>
+                <a href="/pages/privacy.html" class="menu-footer-link">Privacy</a>
+                <span class="menu-footer-separator">•</span>
+                <a href="/pages/terms.html" class="menu-footer-link">Terms</a>
+            </div>
+        </footer>
+    </aside>
+
+    <div class="mobile-backdrop" id="mobileBackdrop" aria-hidden="true"></div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationTitle">Confirm Action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmationMessage">Are you sure you want to perform this action?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmAction">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content success-modal">
+                <div class="modal-body text-center">
+                    <div class="success-icon">
+                        <i data-feather="check-circle"></i>
+                    </div>
+                    <h4 class="success-title">Review Submitted!</h4>
+                    <p class="success-message">Thank you for your review. It will be published after moderation.</p>
+                    <div class="success-actions">
+                        <button type="button" class="btn btn-primary" id="backToContentFromSuccess">
+                            Back to Content
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="/assets/js/theme-manager.js"></script>
+    <script src="/assets/js/topbar.js"></script>
+    <script src="/assets/js/mobile-nav.js"></script>
+    <script src="/assets/js/review-write.js"></script>
+</body>
+
+</html>
