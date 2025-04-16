@@ -783,17 +783,20 @@
 }
 
 .carousel-wrapper {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: var(--card-width);
+    display: flex;
     gap: var(--card-gap);
     overflow-x: auto;
+    overflow-y: hidden;
     scroll-behavior: smooth;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     -ms-overflow-style: none;
     padding: clamp(3px, 0.8vw, 6px) 0 clamp(12px, 3vw, 20px);
     -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
 }
 
 .carousel-wrapper::-webkit-scrollbar {
@@ -852,8 +855,13 @@
     position: relative;
     scroll-snap-align: start;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.2s ease-out;
     transform-origin: center bottom;
+    flex-shrink: 0;
+    width: var(--card-width);
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 .content-card:hover {
@@ -1259,14 +1267,45 @@
     }
 
     .carousel-wrapper {
-        grid-auto-columns: clamp(110px, 30vw, 140px);
         gap: clamp(8px, 2vw, 12px);
         padding: 0 clamp(12px, 3vw, 16px);
         margin: 0 calc(-1 * clamp(12px, 3vw, 16px));
+        scroll-snap-type: none;
+        -webkit-transform: translateZ(0);
+        -moz-transform: translateZ(0);
+        -ms-transform: translateZ(0);
+        -o-transform: translateZ(0);
+        transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+        -moz-backface-visibility: hidden;
+        -ms-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+    }
+
+    .content-card {
+        width: clamp(110px, 30vw, 140px);
+        transition: none;
+        will-change: auto;
+    }
+
+    .content-card:hover {
+        transform: none;
     }
 
     .content-card:active {
         transform: scale(0.98);
+        transition: transform 0.1s ease-out;
+    }
+
+    .content-card * {
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+    }
+
+    .content-card .card-poster-container {
+        will-change: auto;
     }
 
     .content-card .card-info {
@@ -1310,13 +1349,31 @@
 
 @media (max-width: 360px) {
     .carousel-wrapper {
-        grid-auto-columns: clamp(100px, 28vw, 130px);
+        gap: clamp(6px, 1.5vw, 10px);
+    }
+
+    .content-card {
+        width: clamp(100px, 28vw, 130px);
     }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
+    .content-card {
+        width: clamp(150px, 18vw, 170px);
+    }
+}
+
+@supports (-webkit-overflow-scrolling: touch) {
     .carousel-wrapper {
-        grid-auto-columns: clamp(150px, 18vw, 170px);
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: auto;
+    }
+}
+
+@media (max-width: 768px) and (pointer: coarse) {
+    .content-card:hover {
+        transform: none;
+        z-index: auto;
     }
 }
 

@@ -18,9 +18,11 @@ class PersonPage {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
                 if (this.currentFilter && this.allFilmographyWorks.length > 0) {
-                    this.filterFilmography(this.currentFilter);
+                    requestAnimationFrame(() => {
+                        this.filterFilmography(this.currentFilter);
+                    });
                 }
-            }, 300);
+            }, 150);
         });
 
         this.init();
@@ -533,20 +535,26 @@ class PersonPage {
         }
 
         document.getElementById('noFilmography').style.display = 'none';
-        container.innerHTML = '';
+
+        const fragment = document.createDocumentFragment();
 
         works.forEach(work => {
             const card = this.createFilmographyCard(work, work.isUpcoming, work.isTBA);
             if (card) {
-                container.appendChild(card);
+                fragment.appendChild(card);
             }
         });
+
+        container.innerHTML = '';
+        container.appendChild(fragment);
 
         const carouselContainer = container.closest('.carousel-container');
         if (carouselContainer) {
             this.setupCarouselNavigation(carouselContainer);
             this.setupKeyboardNavigation(carouselContainer);
-            this.setupSwipeGestures(carouselContainer);
+            if (window.innerWidth <= 768) {
+                this.setupSwipeGestures(carouselContainer);
+            }
         }
     }
 
@@ -760,85 +768,85 @@ class PersonPage {
 
     setupSwipeGestures(carouselContainer) {
         const wrapper = carouselContainer.querySelector('.carousel-wrapper');
-        if (!wrapper) return;
+        if (!wrapper || window.innerWidth > 768) return;
 
+        let isScrolling = false;
+        let startX = 0;
+        let startY = 0;
+        let scrollStarted = false;
+
+        const touchStartHandler = (e) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            isScrolling = false;
+            scrollStarted = false;
+        };
+
+        const touchMoveHandler = (e) => {
+            if (!startX || !startY) return;
+
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            const deltaX = Math.abs(currentX - startX);
+            const deltaY = Math.abs(currentY - startY);
+
+            if (!scrollStarted) {
+                isScrolling = deltaY > deltaX;
+                scrollStarted = true;
+            }
+
+            if (!isScrolling && deltaX > 10) {
+                e.preventDefault();
+            }
+        };
+
+        const touchEndHandler = () => {
+            startX = 0;
+            startY = 0;
+            isScrolling = false;
+            scrollStarted = false;
+        };
+
+        wrapper.addEventListener('touchstart', touchStartHandler, { passive: true });
+        wrapper.addEventListener('touchmove', touchMoveHandler, { passive: false });
+        wrapper.addEventListener('touchend', touchEndHandler, { passive: true });
+
+        if (window.innerWidth <= 768) {
+            return;
+        }
+
+        this.setupDesktopDragScroll(wrapper);
+    }
+
+    setupDesktopDragScroll(wrapper) {
         let isDown = false;
         let startX = 0;
         let scrollLeft = 0;
-        let velocity = 0;
-        let momentumID = null;
-        let lastX = 0;
-        let lastTime = Date.now();
 
-        const startDragging = (pageX) => {
+        wrapper.addEventListener('mousedown', (e) => {
             isDown = true;
-            startX = pageX;
+            startX = e.pageX - wrapper.offsetLeft;
             scrollLeft = wrapper.scrollLeft;
-            lastX = pageX;
-            lastTime = Date.now();
-            wrapper.style.scrollBehavior = 'auto';
             wrapper.style.cursor = 'grabbing';
+        });
 
-            if (momentumID) {
-                cancelAnimationFrame(momentumID);
-                momentumID = null;
-            }
-        };
-
-        const stopDragging = () => {
-            if (!isDown) return;
+        wrapper.addEventListener('mouseleave', () => {
             isDown = false;
-            wrapper.style.scrollBehavior = 'smooth';
             wrapper.style.cursor = 'grab';
+        });
 
-            if (Math.abs(velocity) > 0.5) {
-                const deceleration = 0.95;
-                const momentum = () => {
-                    wrapper.scrollLeft += velocity;
-                    velocity *= deceleration;
+        wrapper.addEventListener('mouseup', () => {
+            isDown = false;
+            wrapper.style.cursor = 'grab';
+        });
 
-                    if (Math.abs(velocity) > 0.5) {
-                        momentumID = requestAnimationFrame(momentum);
-                    }
-                };
-                momentumID = requestAnimationFrame(momentum);
-            }
-        };
-
-        const handleMove = (pageX) => {
-            if (!isDown) return;
-
-            const now = Date.now();
-            const dt = now - lastTime;
-            const dx = pageX - lastX;
-
-            velocity = dx / dt * 16;
-
-            const x = pageX;
-            const walk = (x - startX) * 1.5;
-            wrapper.scrollLeft = scrollLeft - walk;
-
-            lastX = pageX;
-            lastTime = now;
-        };
-
-        wrapper.addEventListener('mousedown', (e) => startDragging(e.pageX));
-        wrapper.addEventListener('mouseleave', stopDragging);
-        wrapper.addEventListener('mouseup', stopDragging);
         wrapper.addEventListener('mousemove', (e) => {
             if (!isDown) return;
             e.preventDefault();
-            handleMove(e.pageX);
+            const x = e.pageX - wrapper.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            wrapper.scrollLeft = scrollLeft - walk;
         });
-
-        wrapper.addEventListener('touchstart', (e) => {
-            startDragging(e.touches[0].pageX);
-        }, { passive: true });
-
-        wrapper.addEventListener('touchend', stopDragging);
-        wrapper.addEventListener('touchmove', (e) => {
-            handleMove(e.touches[0].pageX);
-        }, { passive: true });
     }
 
     setupLazyLoading(card) {
