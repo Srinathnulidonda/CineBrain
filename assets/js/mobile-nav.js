@@ -1,13 +1,3 @@
-/**
- * CineBrain Mobile Navigation Component
- * Enhanced with Spotify-like interactions and theme support
- * Fixed: Navigation highlighting properly updates when switching pages
- * Fixed: Pull-to-refresh prevention when closing menu
- * Fixed: Navigation is always visible (no auto-hide)
- * Fixed: No rotation animations on buttons
- * Fixed: Instant theme switching with Theme Manager
- */
-
 class MobileNavigation {
     constructor(config = {}) {
         // Configuration

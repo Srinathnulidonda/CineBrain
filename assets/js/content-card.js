@@ -489,7 +489,7 @@ class ContentCardManager {
                 }
 
                 if (slug) {
-                    window.location.href = `/content/details.html?slug=${encodeURIComponent(slug)}`;
+                    window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
                 } else {
                     console.error('No slug available for content:', content);
                     this.showNotification('Unable to view details', 'error');
