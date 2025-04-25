@@ -1,7 +1,7 @@
 // Simple Upcoming Releases App
 class UpcomingApp {
     constructor() {
-        this.apiUrl = 'https://backend-app-970m.onrender.com/api/upcoming-sync';
+        this.apiUrl = 'https://cinebrain.onrender.com/api/upcoming-sync';
         this.data = {
             movies: [],
             tv_series: [],

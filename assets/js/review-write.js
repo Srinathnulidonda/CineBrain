@@ -1,6 +1,6 @@
 class ReviewWritePage {
     constructor() {
-        this.apiBase = 'https://backend-app-970m.onrender.com/api';
+        this.apiBase = 'https://cinebrain.onrender.com/api';
         this.posterBase = 'https://image.tmdb.org/t/p/w500';
         this.contentSlug = this.getContentSlugFromUrl();
         this.contentData = null;
