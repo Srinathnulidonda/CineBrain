@@ -1,4 +1,4 @@
-class HeroFooterManager {
+class CineBrainHeroManager {
     constructor() {
         this.apiBase = 'https://cinebrain.onrender.com/api';
         this.authToken = localStorage.getItem('cinebrain-token');
@@ -54,6 +54,10 @@ class HeroFooterManager {
             this.userWishlist = window.contentCardManager.userWishlist;
         }
 
+        if (this.isAuthenticated) {
+            await this.loadUserFavorites();
+        }
+
         this.preventSkeletonConflicts();
         this.optimizeAnimationPerformance();
 
@@ -65,6 +69,39 @@ class HeroFooterManager {
         this.startAutoPlay();
         this.showControlsHint();
         this.startRealTimeUpdates();
+    }
+
+    async loadUserFavorites() {
+        if (!this.isAuthenticated) {
+            this.userWishlist.clear();
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiBase}/user/favorites`, {
+                headers: {
+                    'Authorization': `Bearer ${this.authToken}`
+                },
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.userWishlist.clear();
+
+                if (data.favorites && Array.isArray(data.favorites)) {
+                    data.favorites.forEach(item => {
+                        this.userWishlist.add(item.id);
+                    });
+                }
+
+                console.log('CineBrain Hero: Loaded favorites with', this.userWishlist.size, 'items');
+            } else if (response.status === 401) {
+                this.handleAuthFailure();
+            }
+        } catch (error) {
+            console.error('CineBrain Hero: Error loading favorites:', error);
+        }
     }
 
     preventSkeletonConflicts() {
@@ -114,12 +151,12 @@ class HeroFooterManager {
     async initHero() {
         const heroSection = document.getElementById('heroSection');
         if (!heroSection) {
-            console.log('Hero section not found - skipping initialization');
+            console.log('CineBrain Hero section not found - skipping initialization');
             return;
         }
 
         heroSection.setAttribute('tabindex', '0');
-        heroSection.setAttribute('aria-label', 'Hero carousel - Use arrow keys to navigate, enter for details');
+        heroSection.setAttribute('aria-label', 'CineBrain Hero carousel - Use arrow keys to navigate, enter for details');
 
         try {
             this.showHeroLoading(true);
@@ -133,25 +170,25 @@ class HeroFooterManager {
             }
 
         } catch (error) {
-            console.error('Error initializing hero:', error);
+            console.error('CineBrain Hero initialization error:', error);
             this.showHeroError();
         }
     }
 
     async fetchRealTimeContent() {
         try {
-            const cacheKey = `hero-content-${this.getTodayDateString()}`;
+            const cacheKey = `cinebrain-hero-content-${this.getTodayDateString()}`;
             const cachedContent = this.getCachedContent(cacheKey);
 
             if (cachedContent && this.isCacheValid(cachedContent.timestamp)) {
                 this.todaysPicks = cachedContent.content;
-                console.log('Using cached hero content');
+                console.log('CineBrain Hero: Using cached content');
 
                 this.scheduleBackgroundRefresh();
                 return;
             }
 
-            console.log('Fetching fresh hero content from backend...');
+            console.log('CineBrain Hero: Fetching fresh content from backend...');
 
             const contentSources = await this.fetchMultipleContentSources();
             const processedContent = this.processBackendContent(contentSources);
@@ -163,15 +200,15 @@ class HeroFooterManager {
                 timestamp: Date.now()
             }, this.realTimeUpdateInterval);
 
-            console.log(`Fetched ${this.todaysPicks.length} real-time hero picks`);
+            console.log(`CineBrain Hero: Fetched ${this.todaysPicks.length} real-time picks`);
 
         } catch (error) {
-            console.error('Error fetching real-time content:', error);
+            console.error('CineBrain Hero: Error fetching real-time content:', error);
 
-            const fallbackCache = this.getCachedContent('hero-fallback');
+            const fallbackCache = this.getCachedContent('cinebrain-hero-fallback');
             if (fallbackCache) {
                 this.todaysPicks = fallbackCache.content;
-                console.log('Using fallback cached content');
+                console.log('CineBrain Hero: Using fallback cached content');
             } else {
                 this.todaysPicks = this.getFallbackContent();
             }
@@ -237,7 +274,7 @@ class HeroFooterManager {
                         weight: config.weight
                     };
                 } catch (error) {
-                    console.warn(`Failed to fetch ${config.name}:`, error);
+                    console.warn(`CineBrain Hero: Failed to fetch ${config.name}:`, error);
                     return { name: config.name, data: [], weight: config.weight };
                 }
             });
@@ -253,7 +290,7 @@ class HeroFooterManager {
             return sources;
 
         } catch (error) {
-            console.error('Error fetching content sources:', error);
+            console.error('CineBrain Hero: Error fetching content sources:', error);
             return sources;
         } finally {
             controllers.forEach(controller => {
@@ -302,7 +339,7 @@ class HeroFooterManager {
                     throw error;
                 }
 
-                console.warn(`Attempt ${attempt + 1} failed for ${endpoint}:`, error);
+                console.warn(`CineBrain Hero: Attempt ${attempt + 1} failed for ${endpoint}:`, error);
 
                 if (attempt === retries) {
                     throw error;
@@ -471,7 +508,7 @@ class HeroFooterManager {
             this.currentIndex = index;
 
         } catch (error) {
-            console.error('Error displaying hero content:', error);
+            console.error('CineBrain Hero: Error displaying content:', error);
         }
     }
 
@@ -502,7 +539,7 @@ class HeroFooterManager {
         }
 
         if (heroTitle) {
-            heroTitle.textContent = content.title || content.original_title || 'Featured Content';
+            heroTitle.textContent = content.title || content.original_title || 'CineBrain Featured Content';
         }
 
         if (heroRating) {
@@ -516,9 +553,9 @@ class HeroFooterManager {
         if (heroType) {
             let type = (content.content_type || content.media_type || 'movie').toUpperCase();
             if (content.source === 'admin_choice') {
-                type = 'FEATURED';
+                type = 'CINEBRAIN FEATURED';
             } else if (content.source === 'upcoming') {
-                type = 'UPCOMING';
+                type = 'CINEBRAIN UPCOMING';
             }
             heroType.textContent = type;
         }
@@ -534,7 +571,7 @@ class HeroFooterManager {
 
         if (heroGenres) {
             const genres = this.extractGenres(content);
-            heroGenres.textContent = genres.slice(0, 2).join(' • ') || 'Entertainment';
+            heroGenres.textContent = genres.slice(0, 2).join(' • ') || 'CineBrain Entertainment';
         }
 
         if (heroDescription) {
@@ -605,12 +642,17 @@ class HeroFooterManager {
             this.updateButtonContent(watchBtn, {
                 icon: 'play',
                 text: 'View Details',
-                mobileAriaLabel: 'View Details'
+                mobileAriaLabel: 'View CineBrain Details'
             });
         }
 
         if (wishlistBtn) {
-            wishlistBtn.onclick = () => this.handleWishlistToggle(content);
+            wishlistBtn.dataset.contentId = content.id;
+            wishlistBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.handleWishlistToggle(content);
+            };
             this.updateWishlistButtonState(wishlistBtn, content);
         }
 
@@ -619,7 +661,7 @@ class HeroFooterManager {
             this.updateButtonContent(infoBtn, {
                 icon: 'info',
                 text: 'More Info',
-                mobileAriaLabel: 'More Information'
+                mobileAriaLabel: 'More CineBrain Information'
             });
         }
     }
@@ -652,15 +694,15 @@ class HeroFooterManager {
             button.classList.add('active');
             this.updateButtonContent(button, {
                 icon: 'heart',
-                text: 'In List',
-                mobileAriaLabel: 'Remove from Wishlist'
+                text: 'In CineBrain List',
+                mobileAriaLabel: 'Remove from CineBrain Favorites'
             });
         } else {
             button.classList.remove('active');
             this.updateButtonContent(button, {
                 icon: 'heart',
-                text: 'Add to List',
-                mobileAriaLabel: 'Add to Wishlist'
+                text: 'Add to CineBrain List',
+                mobileAriaLabel: 'Add to CineBrain Favorites'
             });
         }
 
@@ -672,34 +714,105 @@ class HeroFooterManager {
         if (slug) {
             window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
         } else {
-            console.error('No slug available for content:', content);
-            this.showNotification('Unable to view details', 'error');
+            console.error('CineBrain Hero: No slug available for content:', content);
+            this.showNotification('Unable to view CineBrain details', 'error');
         }
     }
 
     async handleWishlistToggle(content) {
-        if (window.contentCardManager) {
-            const button = document.getElementById('heroWishlistBtn');
-            try {
-                await window.contentCardManager.handleWishlistClick(content.id, button);
-
-                if (window.contentCardManager.userWishlist.has(content.id)) {
-                    this.userWishlist.add(content.id);
-                } else {
-                    this.userWishlist.delete(content.id);
-                }
-
-                this.updateWishlistButtonState(button, content);
-
-            } catch (error) {
-                console.error('Error toggling wishlist:', error);
-                this.showNotification('Failed to update wishlist', 'error');
-            }
-        } else {
-            this.showNotification('Please login to add to wishlist', 'warning');
+        if (!this.isAuthenticated) {
+            this.showNotification('Please login to add to CineBrain favorites', 'warning');
             setTimeout(() => {
                 window.location.href = '/auth/login.html?redirect=' + encodeURIComponent(window.location.pathname);
             }, 1000);
+            return;
+        }
+
+        const button = document.getElementById('heroWishlistBtn');
+        if (!button) return;
+
+        try {
+            if (button.disabled) return;
+            button.disabled = true;
+
+            const isCurrentlyInFavorites = button.classList.contains('active') || this.userWishlist.has(content.id);
+
+            if (isCurrentlyInFavorites) {
+                button.classList.remove('active');
+                this.userWishlist.delete(content.id);
+            } else {
+                button.classList.add('active');
+                this.userWishlist.add(content.id);
+            }
+
+            this.updateWishlistButtonState(button, content);
+
+            const response = await fetch(`${this.apiBase}/interactions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.authToken}`
+                },
+                body: JSON.stringify({
+                    content_id: content.id,
+                    interaction_type: isCurrentlyInFavorites ? 'remove_favorite' : 'favorite'
+                }),
+                signal: AbortSignal.timeout(8000)
+            });
+
+            if (!response.ok) {
+                if (isCurrentlyInFavorites) {
+                    button.classList.add('active');
+                    this.userWishlist.add(content.id);
+                } else {
+                    button.classList.remove('active');
+                    this.userWishlist.delete(content.id);
+                }
+                this.updateWishlistButtonState(button, content);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            this.showNotification(
+                isCurrentlyInFavorites ? 'Removed from CineBrain favorites' : 'Added to CineBrain favorites',
+                'success'
+            );
+
+            if (window.contentCardManager && window.contentCardManager.userFavorites) {
+                if (isCurrentlyInFavorites) {
+                    window.contentCardManager.userFavorites.delete(content.id);
+                    window.contentCardManager.interactionStates.delete(content.id);
+                } else {
+                    window.contentCardManager.userFavorites.add(content.id);
+                    window.contentCardManager.interactionStates.set(content.id, 'favorite');
+                }
+                window.contentCardManager.updateWishlistButtons();
+            }
+
+        } catch (error) {
+            console.error('CineBrain Hero: Wishlist error:', error);
+
+            if (error.message.includes('401')) {
+                this.handleAuthFailure();
+                this.showNotification('Please login again to CineBrain', 'warning');
+                return;
+            }
+
+            this.showNotification('Failed to update CineBrain favorites', 'error');
+
+            const isCurrentlyInFavorites = this.userWishlist.has(content.id);
+            if (isCurrentlyInFavorites) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+            this.updateWishlistButtonState(button, content);
+
+        } finally {
+            setTimeout(() => {
+                button.disabled = false;
+            }, 300);
         }
     }
 
@@ -747,13 +860,13 @@ class HeroFooterManager {
             const timeSinceLastUpdate = currentTime - this.lastUpdateTime;
 
             if (timeSinceLastUpdate >= this.realTimeUpdateInterval) {
-                console.log('Performing real-time hero content update...');
+                console.log('CineBrain Hero: Performing real-time content update...');
                 await this.performBackgroundUpdate();
             }
 
             const today = this.getTodayDateString();
             if (today !== this.lastUpdateDate) {
-                console.log('Date changed - performing daily refresh...');
+                console.log('CineBrain Hero: Date changed - performing daily refresh...');
                 this.lastUpdateDate = today;
                 await this.performDailyRefresh();
             }
@@ -772,7 +885,7 @@ class HeroFooterManager {
                 const oldPicks = [...this.todaysPicks];
                 this.todaysPicks = newPicks;
 
-                const cacheKey = `hero-content-${this.getTodayDateString()}`;
+                const cacheKey = `cinebrain-hero-content-${this.getTodayDateString()}`;
                 this.setCachedContent(cacheKey, {
                     content: this.todaysPicks,
                     timestamp: Date.now()
@@ -781,14 +894,14 @@ class HeroFooterManager {
                 if (this.hasSignificantChanges(oldPicks, newPicks)) {
                     this.currentIndex = 0;
                     await this.displayHeroContent(0);
-                    console.log('Hero content updated with fresh data');
+                    console.log('CineBrain Hero: Content updated with fresh data');
                 }
 
                 this.lastUpdateTime = Date.now();
             }
 
         } catch (error) {
-            console.error('Background update failed:', error);
+            console.error('CineBrain Hero: Background update failed:', error);
         }
     }
 
@@ -802,11 +915,11 @@ class HeroFooterManager {
                 this.currentIndex = 0;
                 await this.displayHeroContent(0);
                 this.startAutoPlay();
-                console.log('Daily refresh completed');
+                console.log('CineBrain Hero: Daily refresh completed');
             }
 
         } catch (error) {
-            console.error('Daily refresh failed:', error);
+            console.error('CineBrain Hero: Daily refresh failed:', error);
         }
     }
 
@@ -900,9 +1013,9 @@ class HeroFooterManager {
 
     getFallbackContent() {
         return [{
-            id: 'fallback-1',
+            id: 'cinebrain-fallback-1',
             title: 'CineBrain AI Recommendations',
-            overview: 'Experience the future of entertainment discovery with our advanced AI-powered recommendation system. Get personalized suggestions for movies, TV shows, and anime.',
+            overview: 'Experience the future of entertainment discovery with CineBrain\'s advanced AI-powered recommendation system. Get personalized suggestions for movies, TV shows, and anime.',
             content_type: 'featured',
             rating: 9.2,
             backdrop_path: this.getPlaceholderImage(),
@@ -918,11 +1031,11 @@ class HeroFooterManager {
         if (heroSection) {
             heroSection.innerHTML = `
                 <div class="hero-error" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 2rem; color: white;">
-                    <h2 style="margin-bottom: 1rem;">Unable to load content</h2>
+                    <h2 style="margin-bottom: 1rem;">Unable to load CineBrain content</h2>
                     <p style="margin-bottom: 1.5rem; opacity: 0.8;">Please check your connection and try again</p>
                     <button onclick="window.location.reload()" class="hero-btn hero-btn-primary" style="display: flex; align-items: center; gap: 0.5rem;">
                         <i data-feather="refresh-cw"></i>
-                        <span class="btn-text">Retry</span>
+                        <span class="btn-text">Retry CineBrain</span>
                     </button>
                 </div>
             `;
@@ -945,11 +1058,11 @@ class HeroFooterManager {
             switch (e.code) {
                 case 'ArrowLeft':
                     this.previousSlide();
-                    this.showControlsHint('Previous');
+                    this.showControlsHint('Previous CineBrain Pick');
                     break;
                 case 'ArrowRight':
                     this.nextSlide();
-                    this.showControlsHint('Next');
+                    this.showControlsHint('Next CineBrain Pick');
                     break;
                 case 'Enter':
                     if (this.todaysPicks[this.currentIndex]) {
@@ -965,7 +1078,7 @@ class HeroFooterManager {
                     const slideNumber = parseInt(e.code.replace('Digit', '')) - 1;
                     if (slideNumber >= 0 && slideNumber < this.todaysPicks.length) {
                         this.goToSlide(slideNumber);
-                        this.showControlsHint(`Slide ${slideNumber + 1}`);
+                        this.showControlsHint(`CineBrain Pick ${slideNumber + 1}`);
                     }
                     break;
             }
@@ -1021,7 +1134,7 @@ class HeroFooterManager {
 
         const hint = document.querySelector('.hero-controls-hint') || this.createControlsHint();
 
-        let message = action || '←→ Navigate • Enter Details • 1-6 Go to slide';
+        let message = action || '←→ Navigate CineBrain • Enter Details • 1-6 Go to pick';
         hint.textContent = message;
         hint.classList.add('show');
 
@@ -1105,10 +1218,14 @@ class HeroFooterManager {
         this.authToken = localStorage.getItem('cinebrain-token');
         this.isAuthenticated = !!this.authToken;
 
-        if (window.contentCardManager?.userWishlist) {
-            this.userWishlist = window.contentCardManager.userWishlist;
+        if (this.isAuthenticated) {
+            await this.loadUserFavorites();
         } else {
             this.userWishlist.clear();
+        }
+
+        if (window.contentCardManager?.userWishlist) {
+            this.userWishlist = window.contentCardManager.userWishlist;
         }
 
         if (this.todaysPicks[this.currentIndex]) {
@@ -1147,7 +1264,7 @@ class HeroFooterManager {
             };
             localStorage.setItem(`cinebrain-hero-${key}`, JSON.stringify(data));
         } catch (e) {
-            console.warn('Failed to cache hero content:', e);
+            console.warn('CineBrain Hero: Failed to cache content:', e);
         }
     }
 
@@ -1159,7 +1276,7 @@ class HeroFooterManager {
         if (window.topbar?.notificationSystem) {
             window.topbar.notificationSystem.show(message, type);
         } else {
-            console.log(`${type.toUpperCase()}: ${message}`);
+            console.log(`CineBrain ${type.toUpperCase()}: ${message}`);
         }
     }
 
@@ -1173,8 +1290,8 @@ class HeroFooterManager {
 }
 
 if (document.getElementById('heroSection')) {
-    const heroFooterManager = new HeroFooterManager();
-    window.heroFooterManager = heroFooterManager;
+    const cineBrainHeroManager = new CineBrainHeroManager();
+    window.cineBrainHeroManager = cineBrainHeroManager;
 } else {
-    console.log('Hero section not found - skipping hero initialization');
+    console.log('CineBrain Hero: Section not found - skipping initialization');
 }

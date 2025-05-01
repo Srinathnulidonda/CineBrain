@@ -1,23 +1,14 @@
-/**
- * CineBrain Opening Animation
- * Optimized with requestAnimationFrame and reduced reflows
- * @version 2.0.0
- */
-
 (function () {
     'use strict';
 
-    // Skip animation if user prefers reduced motion
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         return;
     }
 
-    // Check if animation was already shown in this session
     if (sessionStorage.getItem('cinebrain-opening-shown')) {
         return;
     }
 
-    // Create and inject optimized styles
     const styles = `
         * {
             margin: 0;
@@ -38,7 +29,7 @@
         .cinebrain-opening-container {
             width: 100vw;
             height: 100vh;
-            height: 100dvh; /* Dynamic viewport height for mobile */
+            height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -58,7 +49,7 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            transform: translateZ(0); /* Hardware acceleration */
+            transform: translateZ(0);
         }
 
         .cinebrain-logo {
@@ -137,7 +128,6 @@
             }
         }
 
-        /* Reduced motion support */
         @media (prefers-reduced-motion: reduce) {
             .cinebrain-opening-container,
             .cinebrain-logo,
@@ -147,7 +137,6 @@
             }
         }
 
-        /* Ultra-wide screens */
         @media (min-width: 1920px) {
             .cinebrain-logo {
                 font-size: 120px;
@@ -158,13 +147,11 @@
         }
     `;
 
-    // Create and inject style element
     const styleElement = document.createElement('style');
     styleElement.id = 'cinebrain-opening-styles';
     styleElement.textContent = styles;
     document.head.appendChild(styleElement);
 
-    // Create opening animation HTML
     const openingHTML = `
         <div class="cinebrain-opening-container" id="cinebrain-opening" role="presentation" aria-hidden="true">
             <div class="cinebrain-logo-container">
@@ -174,37 +161,29 @@
         </div>
     `;
 
-    // Initialize opening animation
     function initOpening() {
-        // Use requestAnimationFrame for smooth insertion
         requestAnimationFrame(() => {
-            // Insert opening animation at the beginning of body
             document.body.insertAdjacentHTML('afterbegin', openingHTML);
 
-            // Mark as shown in session
             sessionStorage.setItem('cinebrain-opening-shown', 'true');
 
-            // Schedule removal
             scheduleRemoval();
         });
     }
 
-    // Schedule removal with optimized animation
     function scheduleRemoval() {
-        const duration = 3500; // Total animation duration
+        const duration = 3500;
         const fadeOutDuration = 500;
 
         setTimeout(() => {
             const openingElement = document.getElementById('cinebrain-opening');
             if (openingElement) {
-                // Use requestAnimationFrame for smooth animation
                 requestAnimationFrame(() => {
                     openingElement.style.animation = `cinebrain-fadeout ${fadeOutDuration}ms ease-out forwards`;
 
                     setTimeout(() => {
                         requestAnimationFrame(() => {
                             openingElement.remove();
-                            // Clean up styles
                             const styleEl = document.getElementById('cinebrain-opening-styles');
                             if (styleEl) {
                                 styleEl.remove();
@@ -216,7 +195,6 @@
         }, duration);
     }
 
-    // Wait for DOM to be ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initOpening);
     } else {
