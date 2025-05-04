@@ -383,7 +383,7 @@ class DetailsPage {
                         card.style.transform = '';
                         const personSlug = card.dataset.personSlug;
                         if (personSlug) {
-                            window.location.href = `/content/person.html?${personSlug}`;
+                            window.location.href = `/explore/person.html?${personSlug}`;
                         }
                     }, 100);
                 };
@@ -432,7 +432,7 @@ class DetailsPage {
                             card.style.transform = '';
                             const personSlug = card.dataset.personSlug;
                             if (personSlug) {
-                                window.location.href = `/content/person.html?${personSlug}`;
+                                window.location.href = `/explore/person.html?${personSlug}`;
                             }
                         }, 100);
                     };
@@ -913,7 +913,7 @@ class DetailsPage {
                     }
 
                     if (slug) {
-                        window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+                        window.location.href = `/explore/details.html?${encodeURIComponent(slug)}`;
                     } else {
                         console.error('No slug available for content:', content);
                         this.showToast('Unable to view details', 'error');
@@ -1019,7 +1019,7 @@ class DetailsPage {
         if (writeReviewBtn) {
             writeReviewBtn.addEventListener('click', () => {
                 if (this.isAuthenticated) {
-                    window.location.href = `/content/review-write.html?content=${this.contentSlug}`;
+                    window.location.href = `/explore/review-write.html?content=${this.contentSlug}`;
                 } else {
                     this.showToast('Please login to write a review', 'warning');
                     setTimeout(() => {

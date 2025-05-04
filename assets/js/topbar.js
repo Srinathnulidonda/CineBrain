@@ -845,10 +845,10 @@ class TopbarComponent {
                 const contentId = item.dataset.id;
 
                 if (slug) {
-                    window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+                    window.location.href = `/explore/details.html?${encodeURIComponent(slug)}`;
                 } else if (contentId) {
                     console.warn('No slug available, using ID-based navigation');
-                    window.location.href = `/content/details.html?id=${contentId}`;
+                    window.location.href = `/explore/details.html?id=${contentId}`;
                 } else {
                     console.error('No slug or ID available for navigation');
                     if (this.notificationSystem) {

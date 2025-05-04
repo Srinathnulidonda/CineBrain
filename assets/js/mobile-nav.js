@@ -324,8 +324,8 @@ class MobileNavigation {
 
         let navItems = [
             { id: 'home', label: 'Home', icon: 'home', route: '/index.html' },
-            { id: 'trending', label: 'Trending', icon: 'trending-up', route: '/content/trending.html' },
-            { id: 'discover', label: 'Discover', icon: 'compass', route: '/content/movies.html' }
+            { id: 'trending', label: 'Trending', icon: 'trending-up', route: '/explore/trending.html' },
+            { id: 'discover', label: 'Discover', icon: 'compass', route: '/explore/movies.html' }
         ];
 
         if (isAuthenticated) {
@@ -354,7 +354,7 @@ class MobileNavigation {
             }
         } else {
             navItems.push(
-                { id: 'anime', label: 'Anime', icon: 'tv', route: '/content/anime.html' },
+                { id: 'anime', label: 'Anime', icon: 'tv', route: '/explore/anime.html' },
                 { id: 'more', label: 'More', icon: 'grid', action: 'openMenu' }
             );
         }
@@ -372,7 +372,7 @@ class MobileNavigation {
                 if (!isActive) {
                     if (item.id === 'home' && (currentPath === '/' || currentPath === '/index.html')) {
                         isActive = true;
-                    } else if (item.id === 'discover' && currentPath.includes('/content/') &&
+                    } else if (item.id === 'discover' && currentPath.includes('/explore/') &&
                         !currentPath.includes('trending') && !currentPath.includes('anime')) {
                         isActive = true;
                     }
@@ -416,12 +416,12 @@ class MobileNavigation {
         }
 
         const gridItems = [
-            { icon: 'film', label: 'Movies', route: '/content/movies.html' },
-            { icon: 'tv', label: 'Shows', route: '/content/tv-shows.html' },
-            { icon: 'play-circle', label: 'Anime', route: '/content/anime.html' },
-            { icon: 'star', label: 'Top Rated', route: '/content/top-rated.html' },
-            { icon: 'clock', label: 'New', route: '/content/new-releases.html' },
-            { icon: 'globe', label: 'Regional', route: '/content/regional.html' },
+            { icon: 'film', label: 'Movies', route: '/explore/movies.html' },
+            { icon: 'tv', label: 'Shows', route: '/explore/tv-shows.html' },
+            { icon: 'play-circle', label: 'Anime', route: '/explore/anime.html' },
+            { icon: 'star', label: 'Top Rated', route: '/explore/top-rated.html' },
+            { icon: 'clock', label: 'New', route: '/explore/new-releases.html' },
+            { icon: 'globe', label: 'Regional', route: '/explore/regional.html' },
             { icon: 'heart', label: 'Favorites', route: '/user/favorites.html' },
             { icon: 'activity', label: 'Activity', route: '/user/activity.html' }
         ];
@@ -655,7 +655,7 @@ class MobileNavigation {
                 isActive = true;
             } else if (normalizedRoute === '/index.html' && (currentPath === '/' || currentPath === '')) {
                 isActive = true;
-            } else if (normalizedRoute.includes('/content/') && currentPath.includes('/content/')) {
+            } else if (normalizedRoute.includes('/explore/') && currentPath.includes('/explore/')) {
                 const routeBaseName = normalizedRoute.split('/').pop().split('.')[0];
                 const pathBaseName = currentPath.split('/').pop().split('.')[0];
                 isActive = routeBaseName === pathBaseName;

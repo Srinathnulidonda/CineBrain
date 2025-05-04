@@ -363,8 +363,8 @@ class CineBrainContentCardManager {
         row.id = rowConfig.id;
 
         const seeAllUrl = rowConfig.cinebrain_service ?
-            '/content/new-releases.html' :
-            `/content/${rowConfig.id}.html`;
+            '/explore/new-releases.html' :
+            `/explore/${rowConfig.id}.html`;
 
         row.innerHTML = `
             <div class="row-header">
@@ -490,7 +490,7 @@ class CineBrainContentCardManager {
                 }
 
                 if (slug) {
-                    window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+                    window.location.href = `/explore/details.html?${encodeURIComponent(slug)}`;
                 } else {
                     console.error('CineBrain: No slug available for content:', content);
                     this.showNotification('Unable to view details', 'error');
