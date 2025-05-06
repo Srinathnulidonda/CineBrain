@@ -1,6 +1,6 @@
 class CineBrainNewReleasesManager {
     constructor() {
-        this.apiBase = 'https://cinebrain.onrender.com/api';
+        this.apiBase = window.CineBrainConfig.apiBase;
         this.authToken = this.getAuthToken();
         this.isAuthenticated = !!this.authToken;
         this.currentUser = this.getCurrentUser();
@@ -58,7 +58,7 @@ class CineBrainNewReleasesManager {
             },
             {
                 id: 'new-movies',
-                title: 'New CineBrain Movies',
+                title: 'New Movies',
                 description: 'Latest theatrical and streaming movie releases',
                 endpoint: '/recommendations/new-releases',
                 params: { content_type: 'movie', limit: 20, sort_by: 'popularity_desc' },
@@ -66,7 +66,7 @@ class CineBrainNewReleasesManager {
             },
             {
                 id: 'new-tv-shows',
-                title: 'New CineBrain TV Shows',
+                title: 'New TV Shows',
                 description: 'Fresh series premieres and new episodes',
                 endpoint: '/recommendations/new-releases',
                 params: { content_type: 'tv', limit: 20, sort_by: 'release_date_desc' },
@@ -82,7 +82,7 @@ class CineBrainNewReleasesManager {
             },
             {
                 id: 'new-anime',
-                title: 'New CineBrain Anime',
+                title: 'New Anime',
                 description: 'Latest anime releases and seasonal picks',
                 endpoint: '/recommendations/anime',
                 params: { type: 'airing', limit: 20, sort_by: 'start_date_desc' },
@@ -90,7 +90,7 @@ class CineBrainNewReleasesManager {
             },
             {
                 id: 'recent-releases',
-                title: 'Recent CineBrain Releases',
+                title: 'Recent Releases',
                 description: 'Latest releases from the past month',
                 endpoint: '/recommendations/new-releases',
                 params: { limit: 20, sort_by: 'release_date_desc', date_range: 'month' },
@@ -98,7 +98,7 @@ class CineBrainNewReleasesManager {
             },
             {
                 id: 'international-releases',
-                title: 'International CineBrain Releases',
+                title: 'International Releases',
                 description: 'New foreign content with subtitles',
                 endpoint: '/recommendations/trending',
                 params: { category: 'all', filter: 'international', language_priority: 'false', limit: 18 },

@@ -1,6 +1,6 @@
 class CineBrainNewReleasesHeroManager {
     constructor() {
-        this.apiBase = 'https://cinebrain.onrender.com/api';
+        this.apiBase = window.CineBrainConfig.apiBase;
         this.authToken = this.getAuthToken();
         this.isAuthenticated = !!this.authToken;
 

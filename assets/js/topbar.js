@@ -384,7 +384,7 @@ class NotificationSystem {
 
 class TopbarComponent {
     constructor() {
-        this.apiBase = 'https://cinebrain.onrender.com/api';
+        this.apiBase = window.CineBrainConfig.apiBase;
         this.searchEngine = new SearchEngine(this.apiBase);
         this.notificationSystem = new NotificationSystem();
         this.searchDebounceTimer = null;

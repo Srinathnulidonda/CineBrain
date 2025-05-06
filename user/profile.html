@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>Your Profile - CineBrain</title>
+
+    <script>
+        document.title = 'Your Profile - CineBrain';
+    </script>
+
+    <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com;
+    style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: https: blob:;
+    connect-src 'self' https://cinebrain.onrender.com https://api.themoviedb.org https://api.jikan.moe https://www.omdbapi.com https://www.googleapis.com https://cdn.jsdelivr.net;
+    base-uri 'self';
+    form-action 'self';
+  ">
+
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
+
+    <meta name="description"
+        content="Manage your CineBrain profile, view your watchlist, favorites, and personalized recommendations.">
+    <meta name="author" content="CineBrain">
+    <meta name="robots" content="noindex, nofollow">
+
+    <meta name="application-name" content="CineBrain">
+    <meta name="apple-mobile-web-app-title" content="CineBrain">
+    <meta name="theme-color" content="#113CCF">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-icon-180x180.png">
+    <link rel="manifest" href="/site.webmanifest">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://image.tmdb.org">
+    <link rel="dns-prefetch" href="https://api.themoviedb.org">
+
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+    <link rel="stylesheet" href="/assets/css/mobile-nav.css">
+    <link rel="stylesheet" href="/assets/css/content-card.css">
+    <link rel="stylesheet" href="/assets/css/theme.css">
+    <link rel="stylesheet" href="/assets/css/footer.css">
+
+    <style>
+        :root {
+            --profile-avatar-size: clamp(80px, 20vw, 120px);
+            --profile-card-padding: clamp(16px, 4vw, 24px);
+            --profile-stat-size: clamp(2rem, 6vw, 2.5rem);
+            --profile-section-gap: clamp(20px, 5vw, 32px);
+            --profile-border-radius: clamp(16px, 4vw, 20px);
+            --profile-item-height: clamp(60px, 15vw, 80px);
+        }
+
+        [data-theme="dark"] {
+            --profile-bg: rgba(255, 255, 255, 0.03);
+            --profile-border: rgba(255, 255, 255, 0.08);
+            --profile-hover-bg: rgba(255, 255, 255, 0.05);
+            --profile-accent-bg: rgba(17, 60, 207, 0.1);
+            --profile-accent-border: rgba(17, 60, 207, 0.3);
+            --stat-value-color: #ffffff;
+            --stat-label-color: #888888;
+            --activity-item-bg: rgba(255, 255, 255, 0.02);
+            --activity-border: rgba(255, 255, 255, 0.05);
+            --badge-accent-bg: rgba(17, 60, 207, 0.2);
+            --badge-accent-color: #4A90E2;
+            --progress-bg: rgba(255, 255, 255, 0.1);
+            --progress-fill: var(--cinebrain-primary);
+        }
+
+        [data-theme="light"] {
+            --profile-bg: rgba(0, 0, 0, 0.02);
+            --profile-border: rgba(0, 0, 0, 0.06);
+            --profile-hover-bg: rgba(0, 0, 0, 0.03);
+            --profile-accent-bg: rgba(17, 60, 207, 0.05);
+            --profile-accent-border: rgba(17, 60, 207, 0.15);
+            --stat-value-color: #000000;
+            --stat-label-color: #666666;
+            --activity-item-bg: rgba(0, 0, 0, 0.01);
+            --activity-border: rgba(0, 0, 0, 0.03);
+            --badge-accent-bg: rgba(17, 60, 207, 0.1);
+            --badge-accent-color: #113CCF;
+            --progress-bg: rgba(0, 0, 0, 0.06);
+            --progress-fill: var(--cinebrain-primary);
+        }
+
+        .profile-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: clamp(16px, 4vw, 24px);
+            padding-top: calc(var(--navbar-height) + clamp(16px, 4vw, 24px));
+        }
+
+        .profile-header {
+            background: var(--profile-bg);
+            border: 1px solid var(--profile-border);
+            border-radius: var(--profile-border-radius);
+            padding: var(--profile-card-padding);
+            margin-bottom: var(--profile-section-gap);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--cinebrain-primary), var(--cinebrain-primary-light));
+        }
+
+        .profile-info {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: clamp(16px, 4vw, 20px);
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .profile-info {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: clamp(12px, 3vw, 16px);
+            }
+        }
+
+        .profile-avatar {
+            width: var(--profile-avatar-size);
+            height: var(--profile-avatar-size);
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--cinebrain-primary), var(--cinebrain-primary-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(var(--profile-avatar-size) * 0.4);
+            font-weight: 700;
+            color: white;
+            position: relative;
+            border: 3px solid var(--profile-border);
+            box-shadow: 0 4px 20px rgba(17, 60, 207, 0.2);
+        }
+
+        .profile-details h1 {
+            font-size: clamp(1.5rem, 5vw, 2rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 clamp(4px, 1vw, 8px) 0;
+        }
+
+        .profile-details .username {
+            color: var(--text-secondary);
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            margin-bottom: clamp(8px, 2vw, 12px);
+        }
+
+        .profile-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: clamp(6px, 1.5vw, 8px);
+        }
+
+        .profile-badge {
+            background: var(--badge-accent-bg);
+            color: var(--badge-accent-color);
+            border: 1px solid var(--profile-accent-border);
+            padding: clamp(4px, 1vw, 6px) clamp(8px, 2vw, 12px);
+            border-radius: clamp(12px, 3vw, 16px);
+            font-size: clamp(0.7rem, 1.8vw, 0.8rem);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .profile-badge svg {
+            width: clamp(12px, 3vw, 14px);
+            height: clamp(12px, 3vw, 14px);
+        }
+
+        .profile-actions {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(8px, 2vw, 10px);
+        }
+
+        @media (max-width: 768px) {
+            .profile-actions {
+                flex-direction: row;
+                justify-content: center;
+            }
+        }
+
+        .profile-btn {
+            background: var(--profile-bg);
+            border: 1px solid var(--profile-border);
+            color: var(--text-primary);
+            padding: clamp(8px, 2vw, 10px) clamp(16px, 4vw, 20px);
+            border-radius: clamp(8px, 2vw, 10px);
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: clamp(6px, 1.5vw, 8px);
+            justify-content: center;
+            text-decoration: none;
+            min-width: clamp(100px, 25vw, 120px);
+        }
+
+        .profile-btn:hover {
+            background: var(--profile-hover-bg);
+            border-color: var(--profile-accent-border);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+
+        .profile-btn svg {
+            width: clamp(14px, 3.5vw, 16px);
+            height: clamp(14px, 3.5vw, 16px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(clamp(120px, 30vw, 160px), 1fr));
+            gap: clamp(12px, 3vw, 16px);
+            margin-bottom: var(--profile-section-gap);
+        }
+
+        .stat-card {
+            background: var(--profile-bg);
+            border: 1px solid var(--profile-border);
+            border-radius: var(--profile-border-radius);
+            padding: clamp(16px, 4vw, 20px);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background: var(--profile-hover-bg);
+            transform: translateY(-2px);
+            border-color: var(--profile-accent-border);
+        }
+
+        .stat-value {
+            font-size: var(--profile-stat-size);
+            font-weight: 700;
+            color: var(--stat-value-color);
+            margin-bottom: clamp(4px, 1vw, 6px);
+        }
+
+        .stat-label {
+            font-size: clamp(0.7rem, 1.8vw, 0.8rem);
+            color: var(--stat-label-color);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .content-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--profile-section-gap);
+        }
+
+        @media (max-width: 968px) {
+            .content-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-card {
+            background: var(--profile-bg);
+            border: 1px solid var(--profile-border);
+            border-radius: var(--profile-border-radius);
+            padding: var(--profile-card-padding);
+            height: fit-content;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: clamp(16px, 4vw, 20px);
+            padding-bottom: clamp(12px, 3vw, 16px);
+            border-bottom: 1px solid var(--profile-border);
+        }
+
+        .section-title {
+            font-size: clamp(1.1rem, 3vw, 1.3rem);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: clamp(8px, 2vw, 10px);
+        }
+
+        .section-title svg {
+            width: clamp(18px, 4.5vw, 20px);
+            height: clamp(18px, 4.5vw, 20px);
+            stroke: var(--cinebrain-primary);
+        }
+
+        .see-all-link {
+            color: var(--cinebrain-primary);
+            text-decoration: none;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .see-all-link:hover {
+            color: var(--cinebrain-primary-light);
+            transform: translateX(2px);
+        }
+
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(8px, 2vw, 10px);
+        }
+
+        .activity-item {
+            background: var(--activity-item-bg);
+            border: 1px solid var(--activity-border);
+            border-radius: clamp(8px, 2vw, 10px);
+            padding: clamp(12px, 3vw, 14px);
+            display: flex;
+            align-items: center;
+            gap: clamp(10px, 2.5vw, 12px);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .activity-item:hover {
+            background: var(--profile-hover-bg);
+            border-color: var(--profile-accent-border);
+            transform: translateX(4px);
+        }
+
+        .activity-poster {
+            width: clamp(40px, 10vw, 50px);
+            height: clamp(60px, 15vw, 75px);
+            border-radius: clamp(4px, 1vw, 6px);
+            background: var(--poster-bg);
+            border: 1px solid var(--poster-border);
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .activity-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            margin-bottom: clamp(2px, 0.5vw, 4px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .activity-meta {
+            font-size: clamp(0.7rem, 1.8vw, 0.8rem);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: clamp(6px, 1.5vw, 8px);
+        }
+
+        .activity-type {
+            background: var(--badge-accent-bg);
+            color: var(--badge-accent-color);
+            padding: clamp(2px, 0.5vw, 3px) clamp(6px, 1.5vw, 8px);
+            border-radius: clamp(4px, 1vw, 6px);
+            font-size: clamp(0.6rem, 1.5vw, 0.7rem);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .preferences-grid {
+            display: grid;
+            gap: clamp(16px, 4vw, 20px);
+        }
+
+        .preference-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: clamp(12px, 3vw, 16px) 0;
+            border-bottom: 1px solid var(--profile-border);
+        }
+
+        .preference-item:last-child {
+            border-bottom: none;
+        }
+
+        .preference-label {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: clamp(0.9rem, 2.2vw, 1rem);
+        }
+
+        .preference-value {
+            color: var(--text-secondary);
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            text-align: right;
+        }
+
+        .progress-container {
+            margin-top: clamp(8px, 2vw, 10px);
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: clamp(4px, 1vw, 6px);
+            font-size: clamp(0.7rem, 1.8vw, 0.8rem);
+            color: var(--text-secondary);
+        }
+
+        .progress-bar-custom {
+            height: clamp(6px, 1.5vw, 8px);
+            background: var(--progress-bg);
+            border-radius: clamp(3px, 0.75vw, 4px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--progress-fill), var(--cinebrain-primary-light));
+            border-radius: inherit;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: clamp(32px, 8vw, 40px) clamp(16px, 4vw, 20px);
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: clamp(48px, 12vw, 64px);
+            height: clamp(48px, 12vw, 64px);
+            stroke: var(--text-muted);
+            margin-bottom: clamp(12px, 3vw, 16px);
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            color: var(--text-primary);
+            margin-bottom: clamp(8px, 2vw, 10px);
+        }
+
+        .empty-state p {
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            color: var(--text-secondary);
+            margin-bottom: clamp(16px, 4vw, 20px);
+        }
+
+        .breadcrumb-nav {
+            margin-bottom: clamp(16px, 4vw, 20px);
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+        }
+
+        .breadcrumb-nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .breadcrumb-nav a:hover {
+            color: var(--cinebrain-primary);
+        }
+
+        .breadcrumb-current {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .loading-spinner-profile {
+            display: inline-block;
+            width: clamp(20px, 5vw, 24px);
+            height: clamp(20px, 5vw, 24px);
+            border: 2px solid var(--profile-border);
+            border-top-color: var(--cinebrain-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .activity-item {
+                flex-direction: column;
+                text-align: center;
+                gap: clamp(8px, 2vw, 10px);
+            }
+
+            .activity-content {
+                text-align: center;
+            }
+
+            .activity-meta {
+                justify-content: center;
+            }
+        }
+
+        .profile-completion {
+            background: var(--profile-accent-bg);
+            border: 1px solid var(--profile-accent-border);
+            border-radius: var(--profile-border-radius);
+            padding: var(--profile-card-padding);
+            margin-bottom: var(--profile-section-gap);
+        }
+
+        .completion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: clamp(12px, 3vw, 16px);
+        }
+
+        .completion-title {
+            font-size: clamp(1rem, 2.5vw, 1.1rem);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .completion-score {
+            font-size: clamp(1.2rem, 3vw, 1.4rem);
+            font-weight: 700;
+            color: var(--cinebrain-primary);
+        }
+
+        .insight-card {
+            background: var(--profile-bg);
+            border: 1px solid var(--profile-border);
+            border-radius: clamp(8px, 2vw, 10px);
+            padding: clamp(12px, 3vw, 16px);
+            margin-bottom: clamp(10px, 2.5vw, 12px);
+        }
+
+        .insight-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: clamp(0.85rem, 2.1vw, 0.95rem);
+            margin-bottom: clamp(4px, 1vw, 6px);
+        }
+
+        .insight-description {
+            font-size: clamp(0.75rem, 1.9vw, 0.85rem);
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+    </style>
+
+    <script>
+        (function () {
+            try {
+                const savedTheme = localStorage.getItem('cinebrain-theme');
+                const theme = (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+        })();
+    </script>
+
+</head>
+
+<body>
+
+    <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
+
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-cinebrain fixed-top" role="navigation" aria-label="Main navigation">
+            <div class="container-fluid">
+                <div class="navbar-brand-wrapper">
+                    <a href="/" style="text-decoration: none;" aria-label="CineBrain Home">
+                        <div class="navbar-brand-cinebrain">CineBrain</div>
+                        <div class="tagline">
+                            <span class="tagline-full">The Mind Behind Your Next Favorite</span>
+                            <span class="tagline-medium" style="display: none;">Your Next Favorite</span>
+                            <span class="tagline-short" style="display: none;">Next Favorite</span>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="search-container desktop-search" id="desktopSearchContainer">
+                    <div class="search-wrapper">
+                        <div class="search-bar-wrapper">
+                            <div class="search-input-wrapper">
+                                <i data-feather="search" class="search-icon"></i>
+                                <input type="text" class="form-control search-input" id="desktopSearchInput"
+                                    placeholder="Search movies, shows, anime..." autocomplete="off"
+                                    aria-label="Search for movies, TV shows, and anime" maxlength="100">
+                                <button class="search-clear" id="searchClear" aria-label="Clear search"
+                                    style="display: none;">
+                                    <i data-feather="x"></i>
+                                </button>
+                            </div>
+                            <div class="search-results" id="desktopSearchResults" role="region" aria-live="polite">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-icons-section">
+                    <button class="icon-button mobile-search-trigger" id="mobileSearchTrigger" aria-label="Open search">
+                        <i data-feather="search"></i>
+                    </button>
+
+                    <button class="icon-button theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                        <i data-feather="sun" class="theme-icon theme-icon-light"></i>
+                        <i data-feather="moon" class="theme-icon theme-icon-dark"></i>
+                    </button>
+
+                    <div class="dropdown">
+                        <div class="avatar-menu" data-bs-toggle="dropdown" aria-expanded="false" id="avatarMenu"
+                            role="button" aria-label="User menu">
+                            <i data-feather="user"></i>
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-cinebrain" id="userDropdown">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="mobile-search-overlay" id="mobileSearchOverlay" aria-hidden="true">
+        <div class="container">
+            <div class="mobile-search-header">
+                <button class="btn-back" id="closeMobileSearch" aria-label="Close search">
+                    <i data-feather="arrow-left"></i>
+                </button>
+                <div class="mobile-search-input-wrapper">
+                    <i data-feather="search" class="search-icon"></i>
+                    <input type="text" class="form-control search-input" id="mobileSearchInput"
+                        placeholder="Search movies, shows, anime..." autocomplete="off" autofocus
+                        aria-label="Search for entertainment" maxlength="100">
+                </div>
+            </div>
+            <div class="search-results mobile-results" id="mobileSearchResults" role="region" aria-live="polite">
+            </div>
+        </div>
+    </div>
+
+    <main id="main-content" role="main">
+        <div class="profile-container">
+
+            <nav class="breadcrumb-nav" aria-label="Breadcrumb">
+                <a href="/">Home</a> / <span class="breadcrumb-current">Your Profile</span>
+            </nav>
+
+            <div class="profile-header" id="profileHeader">
+                <div class="profile-info">
+                    <div class="profile-avatar" id="profileAvatar">
+                        <span id="avatarInitial">U</span>
+                    </div>
+
+                    <div class="profile-details">
+                        <h1 id="profileName">Loading...</h1>
+                        <div class="username" id="profileUsername">@username</div>
+                        <div class="profile-badges" id="profileBadges">
+                            <div class="profile-badge">
+                                <i data-feather="calendar"></i>
+                                <span id="memberSince">Member since...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-actions">
+                        <a href="/user/settings.html" class="profile-btn">
+                            <i data-feather="settings"></i>
+                            <span>Settings</span>
+                        </a>
+                        <a href="/user/activity.html" class="profile-btn">
+                            <i data-feather="activity"></i>
+                            <span>Activity</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-completion" id="profileCompletion">
+                <div class="completion-header">
+                    <h2 class="completion-title">Profile Completion</h2>
+                    <div class="completion-score" id="completionScore">0%</div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar-custom">
+                        <div class="progress-fill" id="completionProgress" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div id="completionInsights"></div>
+            </div>
+
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalInteractions">--</div>
+                    <div class="stat-label">Total Activity</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="favoriteCount">--</div>
+                    <div class="stat-label">Favorites</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="watchlistCount">--</div>
+                    <div class="stat-label">Watchlist</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="ratingsGiven">--</div>
+                    <div class="stat-label">Ratings Given</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="averageRating">--</div>
+                    <div class="stat-label">Avg Rating</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="hoursWatched">--</div>
+                    <div class="stat-label">Hours Watched</div>
+                </div>
+            </div>
+
+            <div class="content-sections">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i data-feather="clock"></i>
+                            Recent Activity
+                        </h2>
+                        <a href="/user/activity.html" class="see-all-link">View All</a>
+                    </div>
+                    <div class="activity-list" id="recentActivity">
+                        <div class="loading-spinner-profile"></div>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i data-feather="user"></i>
+                            Preferences
+                        </h2>
+                        <a href="/user/settings.html" class="see-all-link">Edit</a>
+                    </div>
+                    <div class="preferences-grid" id="userPreferences">
+                        <div class="loading-spinner-profile"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card" style="margin-top: var(--profile-section-gap);">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i data-feather="trending-up"></i>
+                        Your Insights
+                    </h2>
+                </div>
+                <div id="userInsights">
+                    <div class="loading-spinner-profile"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile navigation">
+        <div class="mobile-nav-container" id="mobileNavContainer">
+        </div>
+    </nav>
+
+    <aside class="mobile-menu-overlay" id="mobileMenuOverlay" aria-hidden="true">
+        <div class="menu-handle" role="presentation"></div>
+        <div class="menu-header">
+            <h3 class="menu-title">CineBrain Menu</h3>
+            <button class="menu-close-btn" id="mobileMenuClose" aria-label="Close menu">
+                <i data-feather="x"></i>
+            </button>
+        </div>
+
+        <section class="menu-section">
+            <h4 class="menu-section-title">Browse Categories</h4>
+            <div class="mobile-menu-grid" id="mobileMenuGrid">
+            </div>
+        </section>
+
+        <section class="menu-section">
+            <h4 class="menu-section-title" id="userSectionTitle">Account</h4>
+            <div class="mobile-menu-list" id="mobileMenuList">
+            </div>
+        </section>
+    </aside>
+
+    <div class="mobile-backdrop" id="mobileBackdrop" aria-hidden="true"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+    <script>
+        window.secureStorage = {
+            getItem: function (key) {
+                try {
+                    return localStorage.getItem(key);
+                } catch (e) {
+                    console.error('Storage access error:', e);
+                    return null;
+                }
+            },
+            setItem: function (key, value) {
+                try {
+                    if (typeof value === 'string' && value.length < 5000) {
+                        localStorage.setItem(key, value);
+                    }
+                } catch (e) {
+                    console.error('Storage write error:', e);
+                }
+            },
+            removeItem: function (key) {
+                try {
+                    localStorage.removeItem(key);
+                } catch (e) {
+                    console.error('Storage remove error:', e);
+                }
+            }
+        };
+
+        window.sanitizeInput = function (str) {
+            if (typeof str !== 'string') return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        };
+    </script>
+
+    <script src="/assets/js/theme-manager.js"></script>
+    <script src="/assets/js/topbar.js"></script>
+    <script src="/assets/js/mobile-nav.js"></script>
+    <script src="/assets/js/config.js"></script>
+    <script>
+        class ProfileManager {
+            constructor() {
+                this.apiBase = window.CineBrainConfig.apiBase;
+                this.authToken = localStorage.getItem('cinebrain-token');
+                this.currentUser = this.getCurrentUser();
+                this.isAuthenticated = !!this.authToken;
+
+                if (!this.isAuthenticated) {
+                    window.location.href = '/auth/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+
+                this.init();
+            }
+
+            getCurrentUser() {
+                const userStr = localStorage.getItem('cinebrain-user');
+                if (userStr) {
+                    try {
+                        return JSON.parse(userStr);
+                    } catch (e) {
+                        console.error('Error parsing user data:', e);
+                        return null;
+                    }
+                }
+                return null;
+            }
+
+            async init() {
+                try {
+                    await this.loadProfile();
+                    await this.loadUserStats();
+                    await this.loadRecentActivity();
+                    await this.loadUserPreferences();
+                    await this.loadUserInsights();
+
+                    if (typeof feather !== 'undefined') {
+                        feather.replace();
+                    }
+                } catch (error) {
+                    console.error('Profile initialization error:', error);
+                    this.showError('Failed to load profile data');
+                }
+            }
+
+            async loadProfile() {
+                if (!this.currentUser) return;
+
+                try {
+                    const response = await fetch(`${this.apiBase}/users/profile`, {
+                        headers: {
+                            'Authorization': `Bearer ${this.authToken}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.displayProfile(data);
+                    } else {
+                        this.displayProfile({ user: this.currentUser });
+                    }
+                } catch (error) {
+                    console.error('Error loading profile:', error);
+                    this.displayProfile({ user: this.currentUser });
+                }
+            }
+
+            displayProfile(data) {
+                const user = data.user || this.currentUser;
+                if (!user) return;
+
+                document.getElementById('profileName').textContent = user.username || 'User';
+                document.getElementById('profileUsername').textContent = `@${user.username || 'user'}`;
+
+                const initial = user.username ? user.username.charAt(0).toUpperCase() : 'U';
+                document.getElementById('avatarInitial').textContent = initial;
+
+                const memberSince = user.created_at ? new Date(user.created_at).getFullYear() : 'Unknown';
+                document.getElementById('memberSince').textContent = `Member since ${memberSince}`;
+
+                const badges = document.getElementById('profileBadges');
+                let badgeHTML = `
+          <div class="profile-badge">
+            <i data-feather="calendar"></i>
+            <span>Member since ${memberSince}</span>
+          </div>
+        `;
+
+                if (user.is_admin) {
+                    badgeHTML += `
+            <div class="profile-badge">
+              <i data-feather="shield"></i>
+              <span>Admin</span>
+            </div>
+          `;
+                }
+
+                if (data.profile_completion && data.profile_completion.score >= 80) {
+                    badgeHTML += `
+            <div class="profile-badge">
+              <i data-feather="check-circle"></i>
+              <span>Complete Profile</span>
+            </div>
+          `;
+                }
+
+                badges.innerHTML = badgeHTML;
+
+                if (data.profile_completion) {
+                    this.displayProfileCompletion(data.profile_completion);
+                }
+            }
+
+            displayProfileCompletion(completion) {
+                const score = completion.score || 0;
+                document.getElementById('completionScore').textContent = `${score}%`;
+                document.getElementById('completionProgress').style.width = `${score}%`;
+
+                const insights = document.getElementById('completionInsights');
+                let insightsHTML = '';
+
+                if (completion.suggestions && completion.suggestions.length > 0) {
+                    completion.suggestions.forEach(suggestion => {
+                        insightsHTML += `
+              <div class="insight-card">
+                <div class="insight-title">💡 Suggestion</div>
+                <div class="insight-description">${this.escapeHtml(suggestion)}</div>
+              </div>
+            `;
+                    });
+                }
+
+                insights.innerHTML = insightsHTML;
+            }
+
+            async loadUserStats() {
+                try {
+                    const response = await fetch(`${this.apiBase}/users/analytics`, {
+                        headers: {
+                            'Authorization': `Bearer ${this.authToken}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.displayStats(data.analytics || {});
+                    } else {
+                        this.displayStats({});
+                    }
+                } catch (error) {
+                    console.error('Error loading stats:', error);
+                    this.displayStats({});
+                }
+            }
+
+            displayStats(stats) {
+                document.getElementById('totalInteractions').textContent = stats.total_interactions || 0;
+                document.getElementById('favoriteCount').textContent = stats.favorites || 0;
+                document.getElementById('watchlistCount').textContent = stats.watchlist_items || 0;
+                document.getElementById('ratingsGiven').textContent = stats.ratings_given || 0;
+                document.getElementById('averageRating').textContent = stats.average_rating ?
+                    `${stats.average_rating}/10` : '--';
+
+                const estimatedHours = (stats.content_watched || 0) * 1.5;
+                document.getElementById('hoursWatched').textContent = Math.round(estimatedHours);
+            }
+
+            async loadRecentActivity() {
+                try {
+                    const response = await fetch(`${this.apiBase}/users/profile`, {
+                        headers: {
+                            'Authorization': `Bearer ${this.authToken}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.displayRecentActivity(data.recent_activity || []);
+                    } else {
+                        this.displayRecentActivity([]);
+                    }
+                } catch (error) {
+                    console.error('Error loading recent activity:', error);
+                    this.displayRecentActivity([]);
+                }
+            }
+
+            displayRecentActivity(activities) {
+                const container = document.getElementById('recentActivity');
+
+                if (!activities || activities.length === 0) {
+                    container.innerHTML = `
+            <div class="empty-state">
+              <i data-feather="clock"></i>
+              <h3>No Recent Activity</h3>
+              <p>Start exploring CineBrain to see your activity here!</p>
+              <a href="/" class="profile-btn">
+                <i data-feather="home"></i>
+                <span>Discover Content</span>
+              </a>
+            </div>
+          `;
+                    return;
+                }
+
+                let html = '';
+                activities.slice(0, 5).forEach(activity => {
+                    const content = activity.content;
+                    if (!content) return;
+
+                    const posterUrl = content.poster_path ?
+                        (content.poster_path.startsWith('http') ? content.poster_path :
+                            `https://image.tmdb.org/t/p/w92${content.poster_path}`) :
+                        '/assets/images/placeholder-poster.svg';
+
+                    const timeAgo = this.getTimeAgo(activity.timestamp);
+                    const actionText = this.getActionText(activity.interaction_type);
+
+                    html += `
+            <div class="activity-item" onclick="window.location.href='/explore/details.html?${encodeURIComponent(content.slug || content.id)}'">
+              <img src="${posterUrl}" alt="${this.escapeHtml(content.title)}" class="activity-poster"
+                   onerror="this.src='/assets/images/placeholder-poster.svg'">
+              <div class="activity-content">
+                <div class="activity-title">${this.escapeHtml(content.title)}</div>
+                <div class="activity-meta">
+                  <span class="activity-type">${actionText}</span>
+                  <span>${timeAgo}</span>
+                  ${activity.rating ? `<span>⭐ ${activity.rating}/10</span>` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+                });
+
+                container.innerHTML = html;
+            }
+
+            async loadUserPreferences() {
+                const container = document.getElementById('userPreferences');
+
+                if (!this.currentUser) {
+                    container.innerHTML = '<div class="empty-state"><p>No preferences data available</p></div>';
+                    return;
+                }
+
+                const preferences = [
+                    {
+                        label: 'Preferred Languages',
+                        value: this.currentUser.preferred_languages ?
+                            this.currentUser.preferred_languages.join(', ') : 'Not set'
+                    },
+                    {
+                        label: 'Favorite Genres',
+                        value: this.currentUser.preferred_genres ?
+                            this.currentUser.preferred_genres.slice(0, 3).join(', ') : 'Not set'
+                    },
+                    {
+                        label: 'Location',
+                        value: this.currentUser.location || 'Not set'
+                    },
+                    {
+                        label: 'Member Since',
+                        value: this.currentUser.created_at ?
+                            new Date(this.currentUser.created_at).toLocaleDateString() : 'Unknown'
+                    }
+                ];
+
+                let html = '';
+                preferences.forEach(pref => {
+                    html += `
+            <div class="preference-item">
+              <div class="preference-label">${pref.label}</div>
+              <div class="preference-value">${this.escapeHtml(pref.value)}</div>
+            </div>
+          `;
+                });
+
+                container.innerHTML = html;
+            }
+
+            async loadUserInsights() {
+                try {
+                    const response = await fetch(`${this.apiBase}/personalized/profile-insights`, {
+                        headers: {
+                            'Authorization': `Bearer ${this.authToken}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.displayUserInsights(data.insights || {});
+                    } else {
+                        this.displayUserInsights({});
+                    }
+                } catch (error) {
+                    console.error('Error loading insights:', error);
+                    this.displayUserInsights({});
+                }
+            }
+
+            displayUserInsights(insights) {
+                const container = document.getElementById('userInsights');
+
+                if (!insights || Object.keys(insights).length === 0) {
+                    container.innerHTML = `
+            <div class="empty-state">
+              <i data-feather="trending-up"></i>
+              <h3>Building Your Profile</h3>
+              <p>Keep using CineBrain to get personalized insights!</p>
+            </div>
+          `;
+                    return;
+                }
+
+                let html = '';
+
+                if (insights.profile_strength) {
+                    const strength = insights.profile_strength;
+                    html += `
+            <div class="insight-card">
+              <div class="insight-title">📊 Profile Strength: ${strength.status}</div>
+              <div class="insight-description">
+                Your profile is ${Math.round(strength.completeness * 100)}% complete with 
+                ${Math.round(strength.confidence * 100)}% confidence level.
+              </div>
+              <div class="progress-container">
+                <div class="progress-label">
+                  <span>Completeness</span>
+                  <span>${Math.round(strength.completeness * 100)}%</span>
+                </div>
+                <div class="progress-bar-custom">
+                  <div class="progress-fill" style="width: ${strength.completeness * 100}%"></div>
+                </div>
+              </div>
+            </div>
+          `;
+                }
+
+                if (insights.preferences && insights.preferences.top_genres) {
+                    html += `
+            <div class="insight-card">
+              <div class="insight-title">🎭 Your Top Genres</div>
+              <div class="insight-description">
+                ${insights.preferences.top_genres.join(', ')}
+              </div>
+            </div>
+          `;
+                }
+
+                if (insights.behavior) {
+                    const behavior = insights.behavior;
+                    html += `
+            <div class="insight-card">
+              <div class="insight-title">🎯 Viewing Style: ${behavior.viewing_style}</div>
+              <div class="insight-description">
+                You have ${behavior.total_interactions} total interactions with an engagement score of 
+                ${Math.round(behavior.engagement_score * 100)}%.
+              </div>
+            </div>
+          `;
+                }
+
+                if (insights.recommendations_quality) {
+                    const quality = insights.recommendations_quality;
+                    html += `
+            <div class="insight-card">
+              <div class="insight-title">🤖 AI Recommendation Quality</div>
+              <div class="insight-description">
+                ${quality.next_improvement}
+              </div>
+              <div class="progress-container">
+                <div class="progress-label">
+                  <span>Accuracy</span>
+                  <span>${Math.round(quality.accuracy_estimate)}%</span>
+                </div>
+                <div class="progress-bar-custom">
+                  <div class="progress-fill" style="width: ${quality.accuracy_estimate}%"></div>
+                </div>
+              </div>
+            </div>
+          `;
+                }
+
+                container.innerHTML = html || `
+          <div class="empty-state">
+            <i data-feather="trending-up"></i>
+            <h3>No Insights Yet</h3>
+            <p>Use CineBrain more to unlock personalized insights!</p>
+          </div>
+        `;
+            }
+
+            getActionText(interactionType) {
+                const actions = {
+                    'favorite': 'Favorited',
+                    'watchlist': 'Added to Watchlist',
+                    'rating': 'Rated',
+                    'view': 'Viewed',
+                    'like': 'Liked',
+                    'search': 'Searched'
+                };
+                return actions[interactionType] || 'Interacted';
+            }
+
+            getTimeAgo(timestamp) {
+                if (!timestamp) return 'Recently';
+
+                const now = new Date();
+                const time = new Date(timestamp);
+                const diff = now - time;
+
+                const seconds = Math.floor(diff / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const hours = Math.floor(minutes / 60);
+                const days = Math.floor(hours / 24);
+
+                if (days > 0) return `${days}d ago`;
+                if (hours > 0) return `${hours}h ago`;
+                if (minutes > 0) return `${minutes}m ago`;
+                return 'Just now';
+            }
+
+            showError(message) {
+                if (window.topbar && window.topbar.notificationSystem) {
+                    window.topbar.notificationSystem.show(message, 'error');
+                } else {
+                    console.error(message);
+                }
+            }
+
+            escapeHtml(text) {
+                if (!text || typeof text !== 'string') return '';
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new ProfileManager();
+        });
+    </script>
+
+</body>
+
+</html>
