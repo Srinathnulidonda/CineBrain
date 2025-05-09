@@ -44,8 +44,40 @@ class DetailsPage {
     }
 
     getContentSlugFromUrl() {
-        const queryString = window.location.search.substring(1);
-        return decodeURIComponent(queryString);
+        try {
+            const queryString = window.location.search.substring(1);
+            if (!queryString) {
+                // Try to get slug from pathname if no query string
+                const pathParts = window.location.pathname.split('/');
+                const lastPart = pathParts[pathParts.length - 1];
+                if (lastPart && lastPart !== 'details.html') {
+                    return decodeURIComponent(lastPart);
+                }
+                return null;
+            }
+
+            // Decode and clean the slug
+            let slug = decodeURIComponent(queryString);
+
+            // Remove any additional parameters if present
+            if (slug.includes('&')) {
+                slug = slug.split('&')[0];
+            }
+
+            // Clean up the slug
+            slug = slug.trim().toLowerCase();
+
+            // Validate slug format
+            if (slug.length < 2 || slug.length > 150) {
+                console.warn('Invalid slug length:', slug);
+                return null;
+            }
+
+            return slug;
+        } catch (error) {
+            console.error('Error parsing content slug from URL:', error);
+            return null;
+        }
     }
 
     getCurrentUser() {
@@ -60,56 +92,119 @@ class DetailsPage {
 
     async init() {
         try {
+            // Validate slug first
             if (!this.contentSlug) {
-                this.showError('No content specified');
+                this.showError('No content specified in URL');
                 this.hideLoader();
                 return;
             }
 
-            if (this.isAuthenticated) {
-                await this.loadUserLists();
+            // Clean and validate slug
+            const cleanSlug = this.contentSlug.trim().toLowerCase();
+            if (cleanSlug.length < 2 || cleanSlug.length > 150) {
+                this.showError('Invalid content URL format');
+                this.hideLoader();
+                return;
             }
 
+            // Load user data if authenticated
+            if (this.isAuthenticated) {
+                try {
+                    await this.loadUserLists();
+                } catch (error) {
+                    console.warn('Failed to load user lists:', error);
+                    // Continue without user lists
+                }
+            }
+
+            // Load main content
             await this.loadContentDetails();
+
+            // Setup UI
             this.setupEventListeners();
             this.setupTabNavigation();
             this.setupModals();
 
+            // Initialize icons
             if (typeof feather !== 'undefined') {
                 feather.replace();
             }
 
             this.hideLoader();
 
+            // Load recommendations in background
             setTimeout(() => {
-                this.loadRecommendations();
+                this.loadRecommendations().catch(error => {
+                    console.warn('Failed to load recommendations:', error);
+                });
             }, 300);
 
         } catch (error) {
             console.error('Initialization error:', error);
-            this.showError(error.message);
+
+            // Show appropriate error message
+            let errorMessage = 'Failed to load content';
+            if (error.message.includes('not found')) {
+                errorMessage = 'This content could not be found. It may have been removed or the link is incorrect.';
+            } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                errorMessage = 'Network error. Please check your connection and try again.';
+            }
+
+            this.showError(errorMessage);
             this.hideLoader();
         }
     }
 
     async loadContentDetails() {
+        if (!this.contentSlug) {
+            throw new Error('No content slug provided');
+        }
+
+        // Clean and validate slug before making request
+        const cleanSlug = this.contentSlug.replace(/[^a-z0-9\-]/g, '');
+        if (!cleanSlug || cleanSlug.length < 2) {
+            throw new Error('Invalid content slug format');
+        }
+
         const url = `${this.apiBase}/details/${encodeURIComponent(this.contentSlug)}`;
 
         try {
             const response = await fetch(url, {
                 headers: {
                     'Accept': 'application/json',
+                    'Cache-Control': 'no-cache',
                     ...(this.authToken && { 'Authorization': `Bearer ${this.authToken}` })
                 }
             });
 
+            if (response.status === 404) {
+                // Try alternative slug formats if initial request fails
+                const alternativeSlug = await this.tryAlternativeSlugFormats(this.contentSlug);
+                if (alternativeSlug) {
+                    // Update URL without reload
+                    const newUrl = `/explore/details.html?${encodeURIComponent(alternativeSlug)}`;
+                    window.history.replaceState(null, '', newUrl);
+                    this.contentSlug = alternativeSlug;
+                    return this.loadContentDetails(); // Retry with new slug
+                }
+                throw new Error('Content not found. It may have been moved or removed.');
+            }
+
             if (!response.ok) {
-                throw new Error(`Failed to load content (${response.status})`);
+                const errorText = await response.text();
+                throw new Error(`Failed to load content (${response.status}): ${errorText}`);
             }
 
             this.contentData = await response.json();
+
+            // Validate the response data
+            if (!this.contentData || typeof this.contentData !== 'object') {
+                throw new Error('Invalid content data received');
+            }
+
             await this.renderContent();
 
+            // Load reviews separately if not included
             if (!this.contentData.reviews) {
                 await this.loadReviews();
             }
@@ -119,7 +214,59 @@ class DetailsPage {
             throw error;
         }
     }
+    async tryAlternativeSlugFormats(originalSlug) {
+        const alternatives = [];
 
+        // Remove year from slug
+        const withoutYear = originalSlug.replace(/-\d{4}(-\d+)?$/, '');
+        if (withoutYear !== originalSlug) {
+            alternatives.push(withoutYear);
+        }
+
+        // Add content type prefixes
+        const contentTypes = ['movie', 'tv', 'anime'];
+        contentTypes.forEach(type => {
+            if (!originalSlug.startsWith(`${type}-`)) {
+                alternatives.push(`${type}-${originalSlug}`);
+            }
+        });
+
+        // Remove content type prefixes
+        contentTypes.forEach(type => {
+            if (originalSlug.startsWith(`${type}-`)) {
+                alternatives.push(originalSlug.replace(`${type}-`, ''));
+            }
+        });
+
+        // Try with and without TMDB ID
+        const withoutTmdbId = originalSlug.replace(/-\d+$/, '');
+        if (withoutTmdbId !== originalSlug) {
+            alternatives.push(withoutTmdbId);
+        }
+
+        // Test each alternative
+        for (const altSlug of alternatives) {
+            if (altSlug && altSlug !== originalSlug) {
+                try {
+                    const response = await fetch(`${this.apiBase}/details/${encodeURIComponent(altSlug)}`, {
+                        method: 'HEAD', // Just check if it exists
+                        headers: {
+                            ...(this.authToken && { 'Authorization': `Bearer ${this.authToken}` })
+                        }
+                    });
+
+                    if (response.ok) {
+                        console.log(`Found alternative slug: ${altSlug}`);
+                        return altSlug;
+                    }
+                } catch (error) {
+                    console.debug(`Alternative slug ${altSlug} failed:`, error);
+                }
+            }
+        }
+
+        return null;
+    }
     async loadReviews(page = 1, sortBy = 'newest') {
         try {
             const url = `${this.apiBase}/details/${encodeURIComponent(this.contentSlug)}/reviews?page=${page}&limit=20&sort_by=${sortBy}`;
@@ -1036,19 +1183,7 @@ class DetailsPage {
                 card.style.transform = 'scale(0.98)';
                 setTimeout(() => {
                     card.style.transform = '';
-
-                    let slug = content.slug;
-
-                    if (!slug && content.title) {
-                        slug = this.generateSlug(content.title, content.release_date);
-                    }
-
-                    if (slug) {
-                        window.location.href = `/explore/details.html?${encodeURIComponent(slug)}`;
-                    } else {
-                        console.error('No slug available for content:', content);
-                        this.showToast('Unable to view details', 'error');
-                    }
+                    this.navigateToContent(content);
                 }, 100);
             }
         });
@@ -1060,30 +1195,102 @@ class DetailsPage {
         });
     }
 
-    generateSlug(title, releaseDate) {
-        if (!title) return '';
+    navigateToContent(content) {
+        try {
+            let slug = content.slug;
 
-        let slug = title.toLowerCase()
-            .replace(/[^\w\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-+|-+$/g, '')
-            .trim();
-
-        if (releaseDate) {
-            const year = this.extractYear(releaseDate);
-            if (year) {
-                slug += `-${year}`;
+            // If no slug, try to generate one
+            if (!slug && content.title) {
+                slug = this.generateSlug(
+                    content.title,
+                    content.release_date,
+                    content.content_type,
+                    content.tmdb_id || content.id
+                );
             }
-        }
 
-        if (slug.length > 100) {
-            slug = slug.substring(0, 100).replace(/-[^-]*$/, '');
-        }
+            // Validate slug before navigation
+            if (slug && slug.length >= 2) {
+                const cleanSlug = slug.replace(/[^a-z0-9\-]/g, '');
+                if (cleanSlug.length >= 2) {
+                    window.location.href = `/explore/details.html?${encodeURIComponent(cleanSlug)}`;
+                    return;
+                }
+            }
 
-        return slug;
+            // Fallback: use content ID
+            if (content.id) {
+                window.location.href = `/explore/details.html?content-${content.id}`;
+                return;
+            }
+
+            console.error('Cannot navigate: no valid slug or ID for content:', content);
+            this.showToast('Unable to view content details', 'error');
+
+        } catch (error) {
+            console.error('Navigation error:', error);
+            this.showToast('Navigation failed', 'error');
+        }
     }
 
+    generateSlug(title, releaseDate, contentType = 'movie', tmdbId = null) {
+        if (!title) return '';
+
+        try {
+            // Clean the title
+            let slug = title.toLowerCase()
+                .trim()
+                // Remove special characters except spaces and hyphens
+                .replace(/[^\w\s\-']/g, '')
+                // Replace multiple spaces with single space
+                .replace(/\s+/g, ' ')
+                // Replace spaces with hyphens
+                .replace(/\s+/g, '-')
+                // Remove multiple consecutive hyphens
+                .replace(/-+/g, '-')
+                // Remove leading/trailing hyphens
+                .replace(/^-+|-+$/g, '');
+
+            // Add content type prefix for better organization
+            if (contentType === 'anime' && !slug.startsWith('anime-')) {
+                slug = `anime-${slug}`;
+            } else if (contentType === 'tv' && !slug.startsWith('tv-')) {
+                slug = `tv-${slug}`;
+            } else if (contentType === 'movie' && slug.length < 10) {
+                slug = `movie-${slug}`;
+            }
+
+            // Add year if available
+            if (releaseDate) {
+                const year = this.extractYear(releaseDate);
+                if (year && year >= 1900 && year <= 2030) {
+                    slug += `-${year}`;
+                }
+            }
+
+            // Add TMDB ID for uniqueness if provided and slug is short
+            if (tmdbId && slug.length < 15) {
+                slug += `-${tmdbId}`;
+            }
+
+            // Ensure reasonable length
+            if (slug.length > 120) {
+                const parts = slug.substring(0, 117).split('-');
+                if (parts.length > 1) {
+                    parts.pop(); // Remove last incomplete part
+                    slug = parts.join('-');
+                } else {
+                    slug = slug.substring(0, 117);
+                }
+            }
+
+            return slug || `content-${tmdbId || Date.now()}`;
+
+        } catch (error) {
+            console.error('Error generating slug:', error);
+            return `content-${tmdbId || Date.now()}`;
+        }
+    }
     setupEventListeners() {
         ['watchTrailerBtn', 'mobilePlayBtn'].forEach(id => {
             const btn = document.getElementById(id);
@@ -1678,27 +1885,71 @@ class DetailsPage {
     }
 
     playTrailer(trailer) {
-        if (!trailer || !trailer.embed_url) {
-            this.showToast('No trailer available', 'warning');
-            return;
-        }
-
-        const modal = document.getElementById('trailerModal');
-        const trailerFrame = document.getElementById('trailerFrame');
-        const trailerTitle = document.getElementById('trailerTitle');
-
-        if (modal && trailerFrame) {
-            trailerFrame.src = trailer.embed_url;
-            if (trailerTitle) {
-                trailerTitle.textContent = trailer.name || 'Trailer';
+        try {
+            if (!trailer) {
+                this.showToast('No trailer available', 'warning');
+                return;
             }
 
-            const bsModal = new bootstrap.Modal(modal);
-            bsModal.show();
+            let embedUrl = null;
 
-            modal.addEventListener('hidden.bs.modal', () => {
+            // Handle different trailer data formats
+            if (trailer.embed_url) {
+                embedUrl = trailer.embed_url;
+            } else if (trailer.youtube_id) {
+                embedUrl = `https://www.youtube.com/embed/${trailer.youtube_id}?autoplay=1&rel=0&modestbranding=1`;
+            } else if (trailer.key) {
+                embedUrl = `https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0&modestbranding=1`;
+            }
+
+            if (!embedUrl) {
+                this.showToast('Trailer not available', 'warning');
+                return;
+            }
+
+            const modal = document.getElementById('trailerModal');
+            const trailerFrame = document.getElementById('trailerFrame');
+            const trailerTitle = document.getElementById('trailerTitle');
+
+            if (modal && trailerFrame) {
+                // Clear any existing source first
                 trailerFrame.src = '';
-            }, { once: true });
+
+                // Set new source
+                trailerFrame.src = embedUrl;
+
+                if (trailerTitle) {
+                    trailerTitle.textContent = trailer.title || trailer.name || 'Trailer';
+                }
+
+                const bsModal = new bootstrap.Modal(modal, {
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+
+                bsModal.show();
+
+                // Clean up on modal close
+                const cleanup = () => {
+                    trailerFrame.src = '';
+                    modal.removeEventListener('hidden.bs.modal', cleanup);
+                };
+
+                modal.addEventListener('hidden.bs.modal', cleanup, { once: true });
+
+                // Handle escape key
+                const handleEscape = (e) => {
+                    if (e.key === 'Escape') {
+                        bsModal.hide();
+                        document.removeEventListener('keydown', handleEscape);
+                    }
+                };
+                document.addEventListener('keydown', handleEscape);
+            }
+        } catch (error) {
+            console.error('Error playing trailer:', error);
+            this.showToast('Failed to play trailer', 'error');
         }
     }
 
@@ -2030,13 +2281,84 @@ class DetailsPage {
         const container = document.querySelector('#main-content');
         if (container) {
             container.innerHTML = `
-                <div style="text-align: center; padding: 50px 20px; min-height: 400px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                    <i data-feather="alert-circle" style="width: 64px; height: 64px; color: var(--text-secondary); margin-bottom: 16px;"></i>
-                    <h2 style="color: var(--text-primary); margin-bottom: 8px;">Error</h2>
-                    <p style="color: var(--text-secondary); margin-bottom: 20px;">${this.escapeHtml(message)}</p>
-                    <a href="/" style="color: var(--cinebrain-primary); text-decoration: none; padding: 12px 24px; border: 1px solid var(--cinebrain-primary); border-radius: 8px;">Go Home</a>
+            <div class="error-container" style="
+                text-align: center; 
+                padding: 50px 20px; 
+                min-height: 60vh; 
+                display: flex; 
+                flex-direction: column; 
+                justify-content: center; 
+                align-items: center;
+                max-width: 600px;
+                margin: 0 auto;
+            ">
+                <div class="error-icon" style="
+                    width: 80px; 
+                    height: 80px; 
+                    background: var(--surface-variant); 
+                    border-radius: 50%; 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center; 
+                    margin-bottom: 24px;
+                ">
+                    <i data-feather="search" style="width: 40px; height: 40px; color: var(--text-secondary);"></i>
                 </div>
-            `;
+                
+                <h2 style="
+                    color: var(--text-primary); 
+                    margin-bottom: 12px; 
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                ">Content Not Found</h2>
+                
+                <p style="
+                    color: var(--text-secondary); 
+                    margin-bottom: 32px; 
+                    line-height: 1.5;
+                    max-width: 400px;
+                ">${this.escapeHtml(message)}</p>
+                
+                <div class="error-actions" style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+                    <a href="/" class="btn-primary" style="
+                        color: white; 
+                        text-decoration: none; 
+                        padding: 12px 24px; 
+                        background: var(--cinebrain-primary); 
+                        border-radius: 8px;
+                        font-weight: 500;
+                        transition: transform 0.1s ease;
+                    " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        Go Home
+                    </a>
+                    
+                    <button onclick="history.back()" class="btn-secondary" style="
+                        color: var(--text-primary); 
+                        background: var(--surface-variant); 
+                        border: none;
+                        padding: 12px 24px; 
+                        border-radius: 8px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: transform 0.1s ease;
+                    " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        Go Back
+                    </button>
+                    
+                    <a href="/explore.html" class="btn-secondary" style="
+                        color: var(--text-primary); 
+                        text-decoration: none; 
+                        padding: 12px 24px; 
+                        background: var(--surface-variant); 
+                        border-radius: 8px;
+                        font-weight: 500;
+                        transition: transform 0.1s ease;
+                    " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        Browse Content
+                    </a>
+                </div>
+            </div>
+        `;
 
             if (typeof feather !== 'undefined') {
                 feather.replace();
