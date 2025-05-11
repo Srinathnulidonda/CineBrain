@@ -1115,10 +1115,12 @@ class TopbarComponent {
                 ? username.substring(0, 8) + (username.length > 8 ? '...' : '')
                 : username;
 
+            const profileUrl = window.CineBrainUtils ? window.CineBrainUtils.getProfileURL(this.currentUser.username) : `/users/profile.html?username=${this.currentUser.username}`;
+
             let menuItems = `
                 <li><h6 class="dropdown-header">Hello, ${displayName}!</h6></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item dropdown-item-cinebrain" href="/${this.currentUser.username}/profile.html">
+                <li><a class="dropdown-item dropdown-item-cinebrain" href="${profileUrl}">
                     <i data-feather="user"></i><span>Profile</span>
                 </a></li>
                 <li><a class="dropdown-item dropdown-item-cinebrain" href="/user/watchlist.html">

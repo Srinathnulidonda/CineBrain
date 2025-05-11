@@ -14,13 +14,14 @@
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <link rel="stylesheet" href="/assets/css/auth/auth.css">
+    <link rel="stylesheet" href="/assets/css/auth/loading.css">
 </head>
 
 <body>
     <div class="login-card">
         <div class="brand">
             <h1 class="brand-name">CineBrain</h1>
-            <p class="brand-tagline">Your Personal Entertainment Companion</p>
+            <p class="brand-tagline">The Mind Behind Your Next Favorite</p>
         </div>
 
         <div class="alert alert-error" id="alertBox"></div>
@@ -46,11 +47,11 @@
                 </div>
             </div>
 
-            <button type="submit" class="login-button" id="loginButton">
-                <div class="login-button-content">
+            <button type="submit" class="login-button auth-button" id="loginButton">
+                <div class="login-button-content auth-button-content">
                     <span class="button-text">Login to CineBrain</span>
-                    <div class="spinner"></div>
                 </div>
+                <div class="loading-spinner"></div>
             </button>
         </form>
 
@@ -62,6 +63,7 @@
             </p>
         </div>
     </div>
+
     <script src="/assets/js/config.js"></script>
     <script>
         const API_BASE = window.CineBrainConfig.apiBase;
@@ -92,6 +94,56 @@
             document.body.setAttribute('data-bs-theme', theme);
         }
 
+        // Enhanced button state management with ripple effect
+        function setButtonLoading() {
+            const loginButton = document.getElementById('loginButton');
+            loginButton.classList.add('loading', 'clicked');
+            loginButton.classList.remove('success', 'error');
+            loginButton.disabled = true;
+
+            // Remove ripple effect after animation
+            setTimeout(() => {
+                loginButton.classList.remove('clicked');
+            }, 600);
+        }
+
+        function setButtonSuccess() {
+            const loginButton = document.getElementById('loginButton');
+            loginButton.classList.remove('loading');
+            loginButton.classList.add('success');
+            loginButton.disabled = true;
+        }
+
+        function setButtonError() {
+            const loginButton = document.getElementById('loginButton');
+            loginButton.classList.remove('loading');
+            loginButton.classList.add('error');
+
+            // Reset error state after animation
+            setTimeout(() => {
+                loginButton.classList.remove('error');
+                loginButton.disabled = false;
+            }, 1000);
+        }
+
+        function resetButton() {
+            const loginButton = document.getElementById('loginButton');
+            loginButton.classList.remove('loading', 'success', 'error', 'clicked');
+            loginButton.disabled = false;
+        }
+
+        // Add ripple effect on click
+        function addRippleEffect(button) {
+            button.addEventListener('click', function (e) {
+                if (!this.disabled) {
+                    this.classList.add('clicked');
+                    setTimeout(() => {
+                        this.classList.remove('clicked');
+                    }, 600);
+                }
+            });
+        }
+
         window.addEventListener('storage', (e) => {
             if (e.key === 'cinebrain-theme' && e.newValue) {
                 applyTheme(e.newValue);
@@ -117,6 +169,10 @@
             setupFormValidation();
             setupLoginForm();
             checkAuthStatus();
+
+            // Add ripple effect to login button
+            const loginButton = document.getElementById('loginButton');
+            addRippleEffect(loginButton);
         });
 
         function setupPasswordToggle() {
@@ -145,10 +201,12 @@
 
             usernameInput.addEventListener('input', () => {
                 hideAlert();
+                resetButton();
             });
 
             passwordInput.addEventListener('input', () => {
                 hideAlert();
+                resetButton();
             });
         }
 
@@ -181,6 +239,7 @@
                 const password = document.getElementById('password').value;
 
                 if (!validateForm(username, password)) {
+                    setButtonError();
                     return;
                 }
 
@@ -189,11 +248,8 @@
         }
 
         async function loginUser(username, password) {
-            const loginButton = document.getElementById('loginButton');
-
             try {
-                loginButton.classList.add('loading');
-                loginButton.disabled = true;
+                setButtonLoading();
                 hideAlert();
 
                 debugLog('Attempting CineBrain login', { username, passwordLength: password.length });
@@ -236,26 +292,20 @@
 
                     localStorage.setItem('cinebrain-login-time', new Date().toISOString());
 
-                    debugLog('CineBrain login successful, user data stored', {
+                    debugLog('CineBrain login successful', {
                         userId: data.user.id,
                         username: data.user.username,
-                        isAdmin: data.user.is_admin,
-                        hasStats: !!data.user.stats,
-                        hasRecEffectiveness: !!data.user.recommendation_effectiveness
+                        isAdmin: data.user.is_admin
                     });
 
-                    showAlert('CineBrain login successful! Welcome back!', 'success');
+                    setButtonSuccess();
+                    showAlert('Login successful! Welcome back!', 'success');
 
                     setTimeout(() => {
-                        if (data.user.is_admin) {
-                            const redirectTo = localStorage.getItem('cinebrain-redirect-after-login') || '/index.html';
-                            window.location.href = redirectTo;
-                        } else {
-                            window.location.href = '/index.html';
-                        }
-
+                        const redirectTo = localStorage.getItem('cinebrain-redirect-after-login') || '/index.html';
+                        window.location.href = redirectTo;
                         localStorage.removeItem('cinebrain-redirect-after-login');
-                    }, 1200);
+                    }, 1500);
                 } else {
                     let errorMessage = data.error || 'Invalid credentials';
 
@@ -269,6 +319,7 @@
 
                     debugLog('CineBrain login failed', { error: data.error, status: response.status });
                     showAlert(errorMessage, 'error');
+                    setButtonError();
                 }
             } catch (error) {
                 debugLog('CineBrain login error', error);
@@ -281,9 +332,7 @@
                 }
 
                 showAlert(errorMessage, 'error');
-            } finally {
-                loginButton.classList.remove('loading');
-                loginButton.disabled = false;
+                setButtonError();
             }
         }
 
