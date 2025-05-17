@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>Content Recommendations - CineBrain Admin</title>
+
+    <!-- Security Headers (Fixed CSP) -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com;
+        style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: blob: https: http:;
+        connect-src 'self' https://cinebrain.onrender.com wss://cinebrain.onrender.com https://cdn.jsdelivr.net;
+        base-uri 'self';
+        form-action 'self';
+        object-src 'none';
+    ">
+
+    <!-- SEO & Meta -->
+    <meta name="description" content="CineBrain Admin - Create and manage content recommendations">
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-icon-180x180.png">
+
+    <!-- Performance Optimizations -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://image.tmdb.org" crossorigin>
+    <link rel="preconnect" href="https://cinebrain.onrender.com" crossorigin>
+
+    <!-- Core CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Bangers&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Component CSS -->
+    <link rel="stylesheet" href="/assets/css/components/theme.css">
+    <link rel="stylesheet" href="/assets/css/components/topbar.css">
+    <link rel="stylesheet" href="/assets/css/components/mobile-nav.css">
+    <link rel="stylesheet" href="/assets/css/admin/dashboard.css">
+    <link rel="stylesheet" href="/assets/css/admin/recommendations.css">
+
+    <!-- Theme Initialization -->
+    <script>
+        (function () {
+            try {
+                const savedTheme = localStorage.getItem('cinebrain-theme');
+                const theme = (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+        })();
+    </script>
+</head>
+
+<body>
+    <!-- Header Navigation -->
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-cinebrain fixed-top" role="navigation">
+            <div class="container-fluid">
+                <div class="navbar-brand-wrapper">
+                    <a href="/admin/" style="text-decoration: none;">
+                        <div class="navbar-brand-cinebrain">CineBrain</div>
+                        <div class="tagline">
+                            <span class="tagline-full">Recommendations</span>
+                            <span class="tagline-medium" style="display: none;">Recommend</span>
+                            <span class="tagline-short" style="display: none;">Rec</span>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="nav-icons-section">
+                    <button class="icon-button theme-toggle" id="themeToggle">
+                        <i data-feather="sun" class="theme-icon theme-icon-light"></i>
+                        <i data-feather="moon" class="theme-icon theme-icon-dark"></i>
+                    </button>
+
+                    <div class="dropdown">
+                        <button class="avatar-menu" data-bs-toggle="dropdown" id="avatarMenu">
+                            <i data-feather="shield"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-cinebrain" id="adminDropdown">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" role="main">
+        <div class="recommendations-container">
+            <!-- Header Section -->
+            <div class="header-section">
+                <div class="header-content">
+                    <h1 class="page-title">
+                        <i data-feather="star" class="title-icon"></i>
+                        <span>Content Recommendations</span>
+                    </h1>
+                    <p class="page-subtitle">Search and recommend movies, TV shows, and anime to your users</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-refresh" onclick="recommendationManager.refreshMyRecommendations()">
+                        <i data-feather="refresh-cw"></i>
+                        <span class="btn-text">Refresh</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Section -->
+            <section class="search-section">
+                <h3 class="section-title">
+                    <i data-feather="search"></i>
+                    <span>Search Content</span>
+                </h3>
+                <div class="admin-search-wrapper">
+                    <i data-feather="search" class="admin-search-icon"></i>
+                    <input type="text" class="admin-search-input" id="contentSearch"
+                        placeholder="Search movies, TV shows, anime..." autocomplete="off">
+                    <button class="search-clear-btn" id="searchClearBtn" style="display: none;">
+                        <i data-feather="x"></i>
+                    </button>
+                </div>
+                <div class="content-type-filters">
+                    <button class="filter-btn active" data-type="multi">All</button>
+                    <button class="filter-btn" data-type="movie">Movies</button>
+                    <button class="filter-btn" data-type="tv">TV Shows</button>
+                    <button class="filter-btn" data-type="anime">Anime</button>
+                </div>
+            </section>
+
+            <!-- Search Results Section -->
+            <section class="search-results-section" id="searchResultsSection" style="display: none;">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i data-feather="grid"></i>
+                        <span>Search Results</span>
+                    </h3>
+                    <span id="resultsCount" class="badge-count"></span>
+                </div>
+                <div id="searchResults" class="search-results-grid">
+                    <!-- Search results will be populated here -->
+                </div>
+                <div id="searchLoading" class="loading-container" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <p class="loading-text">Searching content...</p>
+                </div>
+            </section>
+
+            <!-- My Recommendations Section -->
+            <section class="my-recommendations-section">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i data-feather="bookmark"></i>
+                        <span>My Recommendations</span>
+                    </h3>
+                    <span id="myRecommendationsCount" class="badge-count">0</span>
+                </div>
+                <div id="myRecommendations" class="recommendations-grid">
+                    <!-- Existing recommendations will be populated here -->
+                </div>
+                <div id="recommendationsLoading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p class="loading-text">Loading your recommendations...</p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Recommendation Modal -->
+    <div class="modal fade recommendation-modal" id="recommendationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i data-feather="star"></i>
+                        <span>Create Recommendation</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="recommendationForm" class="recommendation-form">
+                        <!-- Content Preview -->
+                        <div id="contentPreview" class="content-preview">
+                            <!-- Will be populated with selected content -->
+                        </div>
+
+                        <!-- Recommendation Details -->
+                        <div class="form-group">
+                            <label class="form-label">Recommendation Type</label>
+                            <select id="recommendationType" class="form-control-admin" required>
+                                <option value="">Select type...</option>
+                                <option value="editors_choice">Editor's Choice</option>
+                                <option value="trending">Trending Now</option>
+                                <option value="hidden_gem">Hidden Gem</option>
+                                <option value="classic">Classic Must-Watch</option>
+                                <option value="new_release">New Release</option>
+                                <option value="seasonal">Seasonal Pick</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Description (Optional)</label>
+                            <textarea id="recommendationDescription" class="form-control-admin" rows="4"
+                                placeholder="Why do you recommend this? What makes it special? Tell users what to expect..."></textarea>
+                            <small class="form-hint">Add a personal note about why you're recommending this
+                                content.</small>
+                        </div>
+
+                        <!-- Telegram Options -->
+                        <div class="telegram-options">
+                            <h6 class="telegram-title">
+                                <i data-feather="send"></i>
+                                <span>Telegram Channel</span>
+                            </h6>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="postToTelegram" checked>
+                                <span>Post to Telegram channel</span>
+                            </label>
+                            <small class="telegram-hint">
+                                Automatically share this recommendation with your Telegram subscribers.
+                            </small>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn-submit">
+                                <span id="submitText">Create Recommendation</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav">
+        <div class="mobile-nav-container" id="mobileNavContainer">
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <aside class="mobile-menu-overlay" id="mobileMenuOverlay" aria-hidden="true">
+        <div class="menu-handle"></div>
+        <div class="menu-header">
+            <h3 class="menu-title">Admin Menu</h3>
+            <button class="menu-close-btn" id="mobileMenuClose">
+                <i data-feather="x"></i>
+            </button>
+        </div>
+        <section class="menu-section">
+            <div class="mobile-menu-grid" id="mobileMenuGrid"></div>
+        </section>
+        <section class="menu-section">
+            <h4 class="menu-section-title" id="userSectionTitle">Admin Tools</h4>
+            <div class="mobile-menu-list" id="mobileMenuList"></div>
+        </section>
+    </aside>
+
+    <!-- Mobile Backdrop -->
+    <div class="mobile-backdrop" id="mobileBackdrop"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+    <!-- Core Scripts -->
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/components/theme-manager.js"></script>
+    <script src="/assets/js/components/topbar.js"></script>
+    <script src="/assets/js/components/mobile-nav.js"></script>
+
+    <!-- Recommendations Manager Script -->
+    <script>
+        // Placeholder image as data URI
+        const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI0LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHdpZHRoPSI0MDBweCIgaGVpZ2h0PSI2MDBweCIgdmlld0JveD0iMCAwIDQwMCA2MDAiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDQwMCA2MDA7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4KCS5zdDB7ZmlsbDojMzMzMzMzO30KCS5zdDF7ZmlsbDojNjY2NjY2O30KPC9zdHlsZT4KPHJlY3QgY2xhc3M9InN0MCIgd2lkdGg9IjQwMCIgaGVpZ2h0PSI2MDAiLz4KPHBhdGggY2xhc3M9InN0MSIgZD0iTTI1MCwyODBjMC0yNy42LTIyLjQtNTAtNTAtNTBzLTUwLDIyLjQtNTAsNTBzMjIuNCw1MCw1MCw1MFMyNTAsMzA3LjYsMjUwLDI4MHogTTE3MCwyODAKCWMwLTE2LjYsMTMuNC0zMCwzMC0zMHMzMCwxMy40LDMwLDMwcy0xMy40LDMwLTMwLDMwUzE3MCwyOTYuNiwxNzAsMjgweiIvPgo8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMjAwLDM1MGMtMzMuMSwwLTYwLDI2LjktNjAsNjB2MTBjMCw1LjUsNC41LDEwLDEwLDEwaDE0YzUuNSwwLDEwLTQuNSwxMC0xMHYtMTBjMC0xNC4zLDExLjctMjYsMjYtMjYKCXMyNiwxMS43LDI2LDI2djEwYzAsNS41LDQuNSwxMCwxMCwxMGgxNGM1LjUsMCwxMC00LjUsMTAtMTB2LTEwQzI2MCwzNzYuOSwyMzMuMSwzNTAsMjAwLDM1MHoiLz4KPC9zdmc+';
+
+        class RecommendationManager {
+            constructor() {
+                this.apiBase = window.CineBrainConfig.apiBase;
+                this.token = localStorage.getItem('cinebrain-token');
+                this.currentUser = JSON.parse(localStorage.getItem('cinebrain-user') || '{}');
+                this.selectedContent = null;
+                this.currentSearchType = 'multi';
+                this.searchDebounceTimer = null;
+                this.searchCache = new Map();
+
+                // Detect if running locally
+                this.isLocalDev = window.location.hostname === 'localhost' ||
+                    window.location.hostname === '127.0.0.1' ||
+                    window.location.hostname === '';
+
+                this.init();
+            }
+
+            async init() {
+                // Verify admin access
+                if (!this.token || !this.currentUser.is_admin) {
+                    window.location.href = '/auth/login.html?redirect=admin';
+                    return;
+                }
+
+                this.setupEventListeners();
+                this.loadMyRecommendations();
+                this.updateAdminDropdown();
+
+                if (typeof feather !== 'undefined') {
+                    feather.replace();
+                }
+            }
+
+            setupEventListeners() {
+                // Search input
+                const searchInput = document.getElementById('contentSearch');
+                const searchClearBtn = document.getElementById('searchClearBtn');
+
+                searchInput.addEventListener('input', (e) => {
+                    this.handleSearchInput(e.target.value);
+                    searchClearBtn.style.display = e.target.value ? 'flex' : 'none';
+                });
+
+                searchClearBtn.addEventListener('click', () => {
+                    searchInput.value = '';
+                    searchClearBtn.style.display = 'none';
+                    this.hideSearchResults();
+                });
+
+                // Content type filters
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.setActiveFilter(e.target);
+                        this.currentSearchType = e.target.dataset.type;
+                        const query = searchInput.value.trim();
+                        if (query) {
+                            this.performSearch(query, this.currentSearchType);
+                        }
+                    });
+                });
+
+                // Recommendation form
+                document.getElementById('recommendationForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.submitRecommendation();
+                });
+
+                // Theme toggle
+                document.getElementById('themeToggle')?.addEventListener('click', () => {
+                    if (window.themeManager) {
+                        window.themeManager.toggleTheme();
+                    }
+                });
+            }
+
+            setActiveFilter(activeBtn) {
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                activeBtn.classList.add('active');
+            }
+
+            handleSearchInput(query) {
+                const trimmedQuery = query.trim();
+
+                // Clear previous timer
+                clearTimeout(this.searchDebounceTimer);
+
+                if (trimmedQuery.length < 2) {
+                    this.hideSearchResults();
+                    return;
+                }
+
+                // Debounce search
+                this.searchDebounceTimer = setTimeout(() => {
+                    this.performSearch(trimmedQuery, this.currentSearchType);
+                }, 300);
+            }
+
+            async performSearch(query, type = 'multi') {
+                const cacheKey = `${query}_${type}`;
+
+                // Check cache first
+                if (this.searchCache.has(cacheKey)) {
+                    this.displaySearchResults(this.searchCache.get(cacheKey), query);
+                    return;
+                }
+
+                this.showSearchLoading(true);
+
+                try {
+                    // Fixed fetch configuration for CORS
+                    const response = await fetch(`${this.apiBase}/search?query=${encodeURIComponent(query)}&type=${type}&page=1`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        mode: 'cors',  // Always use CORS mode when accessing external API
+                        credentials: 'omit'  // Don't send cookies for cross-origin requests
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Search failed: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const results = data.results || [];
+
+                    // Cache results
+                    this.searchCache.set(cacheKey, results);
+
+                    // Limit cache size
+                    if (this.searchCache.size > 50) {
+                        const firstKey = this.searchCache.keys().next().value;
+                        this.searchCache.delete(firstKey);
+                    }
+
+                    this.displaySearchResults(results, query);
+
+                } catch (error) {
+                    console.error('Search error:', error);
+                    this.showToast('Search failed. Please try again.', 'error');
+                } finally {
+                    this.showSearchLoading(false);
+                }
+            }
+
+            displaySearchResults(results, query) {
+                const resultsContainer = document.getElementById('searchResults');
+                const resultsSection = document.getElementById('searchResultsSection');
+                const resultsCount = document.getElementById('resultsCount');
+
+                resultsSection.style.display = 'block';
+                resultsCount.textContent = `${results.length} results`;
+
+                if (results.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="no-results">
+                            <i data-feather="search"></i>
+                            <h5>No results found</h5>
+                            <p>Try different keywords or check spelling</p>
+                        </div>
+                    `;
+                    if (typeof feather !== 'undefined') {
+                        feather.replace();
+                    }
+                    return;
+                }
+
+                resultsContainer.innerHTML = results.map(item => this.createContentCard(item)).join('');
+
+                // Add click handlers
+                resultsContainer.querySelectorAll('.recommend-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const contentId = e.target.closest('.recommend-btn').dataset.contentId;
+                        const content = results.find(item => item.id == contentId);
+                        this.openRecommendationModal(content);
+                    });
+                });
+
+                if (typeof feather !== 'undefined') {
+                    feather.replace();
+                }
+            }
+
+            createContentCard(content) {
+                const posterUrl = content.poster_path
+                    ? (content.poster_path.startsWith('http')
+                        ? content.poster_path
+                        : `https://image.tmdb.org/t/p/w500${content.poster_path}`)
+                    : PLACEHOLDER_IMAGE;
+
+                const year = content.release_date ? new Date(content.release_date).getFullYear() : '';
+                const rating = content.rating ? content.rating.toFixed(1) : 'N/A';
+
+                const typeClass = content.content_type === 'movie' ? 'badge-movie' :
+                    content.content_type === 'tv' ? 'badge-tv' : 'badge-anime';
+
+                return `
+                    <div class="content-card">
+                        <div class="content-poster-wrapper">
+                            <img src="${posterUrl}" alt="${content.title}" class="content-poster"
+                                 onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';" loading="lazy">
+                            <div class="content-overlay">
+                                <button class="recommend-btn" data-content-id="${content.id}">
+                                    <i data-feather="star"></i>
+                                    <span>Recommend</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="content-info">
+                            <h5 class="content-title">${content.title}</h5>
+                            <div class="content-meta">
+                                <span class="meta-badge ${typeClass}">${content.content_type.toUpperCase()}</span>
+                                ${year ? `<span class="meta-year">${year}</span>` : ''}
+                                <div class="content-rating">
+                                    <i data-feather="star"></i>
+                                    <span>${rating}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            openRecommendationModal(content) {
+                this.selectedContent = content;
+
+                // Populate content preview
+                const preview = document.getElementById('contentPreview');
+                const posterUrl = content.poster_path
+                    ? (content.poster_path.startsWith('http')
+                        ? content.poster_path
+                        : `https://image.tmdb.org/t/p/w500${content.poster_path}`)
+                    : PLACEHOLDER_IMAGE;
+
+                preview.innerHTML = `
+                    <div class="preview-header">
+                        <img src="${posterUrl}" alt="${content.title}" class="preview-poster"
+                             onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
+                        <div class="preview-info">
+                            <h6 class="preview-title">${content.title}</h6>
+                            <p class="preview-type">${content.content_type.toUpperCase()}</p>
+                            ${content.release_date ? `<p class="preview-year">${new Date(content.release_date).getFullYear()}</p>` : ''}
+                        </div>
+                    </div>
+                    ${content.overview ? `<p class="preview-overview">${content.overview.substring(0, 200)}${content.overview.length > 200 ? '...' : ''}</p>` : ''}
+                `;
+
+                // Reset form
+                document.getElementById('recommendationForm').reset();
+                document.getElementById('submitText').textContent = 'Create Recommendation';
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('recommendationModal'));
+                modal.show();
+
+                if (typeof feather !== 'undefined') {
+                    feather.replace();
+                }
+            }
+
+            async submitRecommendation() {
+                const form = document.getElementById('recommendationForm');
+                const submitBtn = form.querySelector('.btn-submit');
+                const submitText = document.getElementById('submitText');
+
+                const formData = {
+                    content_id: this.selectedContent.id,
+                    recommendation_type: document.getElementById('recommendationType').value,
+                    description: document.getElementById('recommendationDescription').value.trim() || "Great content worth watching!"
+                };
+
+                // Validation - only check recommendation type
+                if (!formData.recommendation_type) {
+                    this.showToast('Please select a recommendation type.', 'warning');
+                    return;
+                }
+
+                // Show loading state
+                submitBtn.disabled = true;
+                submitText.innerHTML = '<div class="loading-spinner loading-spinner-small"></div>Creating...';
+
+                try {
+                    // Fixed fetch configuration for CORS
+                    const response = await fetch(`${this.apiBase}/admin/recommendations`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData),
+                        mode: 'cors',  // Always use CORS mode
+                        credentials: 'omit'  // Don't send cookies for cross-origin requests
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `Failed to create recommendation: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    // Show success message
+                    let message = 'Recommendation created successfully!';
+
+                    // Check if telegram posting was requested
+                    const postToTelegram = document.getElementById('postToTelegram').checked;
+                    if (postToTelegram && result.telegram_sent) {
+                        message += ' Posted to Telegram channel.';
+                    } else if (postToTelegram && !result.telegram_sent) {
+                        message += ' (Telegram post pending)';
+                    }
+
+                    this.showToast(message, 'success');
+
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('recommendationModal'));
+                    modal.hide();
+
+                    // Refresh recommendations list
+                    this.loadMyRecommendations();
+
+                } catch (error) {
+                    console.error('Create recommendation error:', error);
+                    this.showToast(error.message || 'Failed to create recommendation. Please try again.', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitText.textContent = 'Create Recommendation';
+                }
+            }
+
+            async loadMyRecommendations() {
+                const container = document.getElementById('myRecommendations');
+                const loading = document.getElementById('recommendationsLoading');
+                const count = document.getElementById('myRecommendationsCount');
+
+                loading.style.display = 'flex';
+
+                try {
+                    // Fixed fetch configuration for CORS
+                    const response = await fetch(`${this.apiBase}/admin/recommendations?page=1&per_page=50`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        mode: 'cors',  // Always use CORS mode
+                        credentials: 'omit'  // Don't send cookies for cross-origin requests
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to load recommendations: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const recommendations = data.recommendations || [];
+
+                    count.textContent = data.total || recommendations.length;
+
+                    if (recommendations.length === 0) {
+                        container.innerHTML = `
+                            <div class="no-results">
+                                <i data-feather="star"></i>
+                                <h5>No recommendations yet</h5>
+                                <p>Start recommending content to your users!</p>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = recommendations.map(rec => this.createRecommendationCard(rec)).join('');
+
+                        // Add event handlers for delete only
+                        container.querySelectorAll('.action-btn.delete').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                e.stopPropagation(); // Prevent event bubbling
+                                const recId = e.target.closest('.action-btn').dataset.recId;
+                                if (recId) {
+                                    this.deleteRecommendation(recId);
+                                }
+                            });
+                        });
+                    }
+
+                } catch (error) {
+                    console.error('Load recommendations error:', error);
+                    container.innerHTML = `
+                        <div class="no-results">
+                            <i data-feather="alert-triangle"></i>
+                            <h5>Failed to load recommendations</h5>
+                            <p>Please try refreshing the page.</p>
+                        </div>
+                    `;
+                } finally {
+                    loading.style.display = 'none';
+                    if (typeof feather !== 'undefined') {
+                        feather.replace();
+                    }
+                }
+            }
+
+            createRecommendationCard(recommendation) {
+                const createdDate = new Date(recommendation.created_at).toLocaleDateString();
+
+                return `
+                    <div class="recommendation-card">
+                        <div class="recommendation-header">
+                            <span class="recommendation-type">${recommendation.recommendation_type.replace(/_/g, ' ').toUpperCase()}</span>
+                            <span class="recommendation-date">${createdDate}</span>
+                        </div>
+                        <h6 class="recommendation-content-title">${recommendation.content.title}</h6>
+                        <p class="recommendation-description">${recommendation.description}</p>
+                        <div class="recommendation-actions">
+                            <button class="action-btn edit" onclick="recommendationManager.editRecommendation(${recommendation.id})">
+                                <i data-feather="edit-2"></i>
+                                <span>Edit</span>
+                            </button>
+                            <button class="action-btn delete" data-rec-id="${recommendation.id}">
+                                <i data-feather="trash-2"></i>
+                                <span>Delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            async deleteRecommendation(id) {
+                if (!id || this.isDeleting) {
+                    return;
+                }
+
+                if (!confirm('Are you sure you want to delete this recommendation?')) {
+                    return;
+                }
+
+                this.isDeleting = true;
+
+                try {
+                    // Fixed fetch configuration for CORS
+                    const response = await fetch(`${this.apiBase}/admin/recommendations/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        mode: 'cors',  // Always use CORS mode
+                        credentials: 'omit'  // Don't send cookies for cross-origin requests
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to delete recommendation');
+                    }
+
+                    this.showToast('Recommendation deleted successfully!', 'success');
+                    this.loadMyRecommendations();
+
+                } catch (error) {
+                    console.error('Delete recommendation error:', error);
+                    this.showToast('Failed to delete recommendation.', 'error');
+                } finally {
+                    this.isDeleting = false;
+                }
+            }
+
+            editRecommendation(id) {
+                // TODO: Implement edit functionality
+                this.showToast('Edit functionality coming soon!', 'info');
+            }
+
+            refreshMyRecommendations() {
+                this.loadMyRecommendations();
+                this.showToast('Refreshing recommendations...', 'info', 2000);
+            }
+
+            showSearchLoading(show) {
+                document.getElementById('searchLoading').style.display = show ? 'flex' : 'none';
+            }
+
+            hideSearchResults() {
+                document.getElementById('searchResultsSection').style.display = 'none';
+            }
+
+            updateAdminDropdown() {
+                const dropdown = document.getElementById('adminDropdown');
+                if (!dropdown) return;
+
+                dropdown.innerHTML = `
+                    <li><h6 class="dropdown-header">Admin: ${this.currentUser.username}</h6></li>
+                    <li><span class="dropdown-item-text"><span class="badge bg-danger">Administrator</span></span></li>
+                    <li><hr class="dropdown-divider"></li>
+                    
+                    <li><a class="dropdown-item dropdown-item-cinebrain" href="/admin/">
+                        <i data-feather="shield"></i> Dashboard
+                    </a></li>
+                    <li><a class="dropdown-item dropdown-item-cinebrain active" href="/admin/recommendations.html">
+                        <i data-feather="star"></i> Recommendations
+                    </a></li>
+                    <li><a class="dropdown-item dropdown-item-cinebrain" href="/admin/content.html">
+                        <i data-feather="film"></i> Content Manager
+                    </a></li>
+                    <li><a class="dropdown-item dropdown-item-cinebrain" href="/admin/Support Dashboard.html">
+                        <i data-feather="message-circle"></i> Support Center
+                    </a></li>
+                    
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item dropdown-item-cinebrain" href="/index.html">
+                        <i data-feather="home"></i> User View
+                    </a></li>
+                    
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item dropdown-item-cinebrain text-danger" href="#" onclick="recommendationManager.logout()">
+                        <i data-feather="log-out"></i> Sign Out
+                    </a></li>
+                `;
+
+                if (typeof feather !== 'undefined') {
+                    feather.replace();
+                }
+            }
+
+            showToast(message, type = 'info', duration = 5000) {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+
+                const icons = {
+                    success: 'check-circle',
+                    error: 'x-circle',
+                    warning: 'alert-triangle',
+                    info: 'info'
+                };
+
+                toast.innerHTML = `
+                    <div class="toast-content">
+                        <i data-feather="${icons[type]}"></i>
+                        <span>${message}</span>
+                    </div>
+                `;
+
+                container.appendChild(toast);
+
+                if (typeof feather !== 'undefined') {
+                    feather.replace();
+                }
+
+                // Animate in
+                requestAnimationFrame(() => {
+                    toast.classList.add('show');
+                });
+
+                // Auto remove
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            }
+
+            logout() {
+                localStorage.removeItem('cinebrain-token');
+                localStorage.removeItem('cinebrain-user');
+                localStorage.removeItem('cinebrain-role');
+                sessionStorage.clear();
+                window.location.href = '/auth/login.html';
+            }
+        }
+
+        // Initialize when DOM is ready
+        let recommendationManager;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fix navigation detection
+            if (window.mobileNav) {
+                // Update nav state to show recommendations as active
+                const currentPath = '/admin/recommendations.html';
+                window.history.replaceState({}, '', currentPath);
+            }
+
+            recommendationManager = new RecommendationManager();
+
+            // Expose globally for onclick handlers
+            window.recommendationManager = recommendationManager;
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (recommendationManager && recommendationManager.searchDebounceTimer) {
+                clearTimeout(recommendationManager.searchDebounceTimer);
+            }
+        });
+    </script>
+</body>
+
+</html>
