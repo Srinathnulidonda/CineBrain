@@ -29,36 +29,29 @@ class TemplateManager {
     }
 
     renderTemplateSelection(container) {
+        const templateIcons = {
+            'standard_movie': '🎬',
+            'standard_tv': '📺',
+            'standard_anime': '🎌',
+            'mind_bending': '🧠',
+            'hidden_gem': '💎',
+            'anime_gem': '🎌',
+            'top_list': '📝',
+            'scene_clip': '🎥'
+        };
+
+        const popularTemplates = ['mind_bending'];
+
         const templateCards = Object.entries(this.availableTemplates).map(([key, name]) => {
-            const promptInfo = this.templatePrompts[key] || {};
-            const fieldInfo = this.templateFields[key] || {};
-
-            const features = [];
-            if (fieldInfo.poster_support !== false) features.push('Poster');
-
-            const templateIcons = {
-                'standard_movie': '🎬',
-                'standard_tv': '📺',
-                'standard_anime': '🎌',
-                'mind_bending': '🔥',
-                'hidden_gem': '💎',
-                'anime_gem': '🎐',
-                'top_list': '🧠',
-                'scene_clip': '🎥'
-            };
+            const isPopular = popularTemplates.includes(key);
 
             return `
-                <div class="template-card" data-template="${key}" onclick="templateManager.selectTemplate('${key}')">
-                    <div class="template-card-header">
-                        <div class="template-card-icon">${templateIcons[key] || '📝'}</div>
-                        <h6 class="template-card-title">${name}</h6>
-                    </div>
-                    <p class="template-card-description">${promptInfo.purpose || 'Standard template'}</p>
-                    <div class="template-card-features">
-                        ${features.map(feature => `<span class="template-feature">${feature}</span>`).join('')}
-                    </div>
-                </div>
-            `;
+            <div class="template-card" data-template="${key}" onclick="templateManager.selectTemplate('${key}')">
+                <span class="template-card-icon">${templateIcons[key] || '📝'}</span>
+                <p class="template-card-title">${name.replace('Standard ', '').replace('Template', '')}</p>
+                ${isPopular ? '<span class="template-feature">Popular</span>' : ''}
+            </div>
+        `;
         }).join('');
 
         container.innerHTML = templateCards;
@@ -83,17 +76,32 @@ class TemplateManager {
     showTemplateGuidance() {
         const guidanceContainer = document.getElementById('templateGuidance');
         const guidanceContent = document.getElementById('guidanceContent');
+        const guidanceCard = guidanceContainer?.querySelector('.guidance-card');
 
         if (!guidanceContainer || !guidanceContent || !this.selectedTemplate) return;
 
         const promptInfo = this.templatePrompts[this.selectedTemplate] || {};
+        const templateName = this.availableTemplates[this.selectedTemplate] || 'Template';
 
-        guidanceContent.innerHTML = `
-            <p><strong>Purpose:</strong> ${promptInfo.purpose || 'General recommendation'}</p>
-            <p><strong>Best for:</strong> ${promptInfo.use_when || 'Various content types'}</p>
-        `;
+        const displayName = templateName.replace('Standard ', '').replace(' Template', '');
 
-        guidanceContainer.style.display = 'block';
+        if (guidanceCard) {
+            guidanceCard.classList.add('fade-out');
+
+            setTimeout(() => {
+                guidanceContent.innerHTML = `
+                <strong>${displayName}:</strong> ${promptInfo.purpose || 'General recommendation template for content curation.'}
+            `;
+
+                guidanceCard.classList.remove('fade-out');
+                guidanceCard.classList.add('fade-in');
+                guidanceContainer.style.display = 'block';
+
+                setTimeout(() => {
+                    guidanceCard.classList.remove('fade-in');
+                }, 300);
+            }, 100);
+        }
     }
 
     renderTemplateFields() {
@@ -120,15 +128,7 @@ class TemplateManager {
             return this.createFieldHTML(field);
         }).join('');
 
-        fieldsContainer.innerHTML = `
-            <div class="template-fields-container">
-                <h6 class="template-section-title">
-                    <i data-feather="edit-3"></i>
-                    Template Fields
-                </h6>
-                ${fieldsHTML}
-            </div>
-        `;
+        fieldsContainer.innerHTML = fieldsHTML;
 
         this.setupFieldEventListeners();
         this.recTelegram.refreshFeatherIcons();
@@ -469,6 +469,7 @@ class RecTelegram {
         this.manager = recommendationsManager;
         this.initializeContentElements();
         this.setupContentEventListeners();
+        this.setupCardClickHandlers();
 
         console.log('✅ RecTelegram content module initialized');
     }
@@ -494,7 +495,272 @@ class RecTelegram {
         };
     }
 
+    setupCardClickHandlers() {
+        document.addEventListener('click', (e) => {
+            const card = e.target.closest('.content-card');
+            if (card && !e.target.closest('.action-btn')) {
+                e.preventDefault();
+                this.handleCardClick(card);
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            const card = e.target.closest('.content-card');
+            if (card && (e.key === 'Enter' || e.key === ' ') && !e.target.closest('.action-btn')) {
+                e.preventDefault();
+                this.handleCardClick(card);
+            }
+        });
+    }
+
+    handleCardClick(card) {
+        try {
+            card.style.transform = 'scale(0.98)';
+            card.style.transition = 'transform 0.1s ease';
+
+            setTimeout(() => {
+                card.style.transform = '';
+
+                const contentData = this.extractContentDataFromCard(card);
+                if (contentData) {
+                    this.navigateToContentDetails(contentData);
+                } else {
+                    this.manager.showError('Unable to open content details');
+                }
+            }, 100);
+        } catch (error) {
+            console.error('Card click error:', error);
+            this.manager.showError('Navigation failed');
+        }
+    }
+
+    extractContentDataFromCard(card) {
+        try {
+            const contentId = card.dataset.contentId;
+            const recommendationId = card.dataset.recommendationId;
+
+            let content = null;
+
+            if (recommendationId) {
+                const recommendation = this.manager.state.upcomingRecommendations.find(r => r.id == recommendationId);
+                content = recommendation?.content;
+            } else if (contentId) {
+                content = this.manager.state.searchResults.find(c =>
+                    (c.id || c.tmdb_id || c.mal_id) == contentId
+                );
+            }
+
+            if (!content) {
+                const titleEl = card.querySelector('.card-title');
+                const typeEl = card.querySelector('.content-type-badge');
+                const yearEl = card.querySelector('.card-year');
+                const posterEl = card.querySelector('.card-poster');
+                const ratingEl = card.querySelector('.rating-badge span');
+
+                content = {
+                    id: contentId || Date.now(),
+                    title: titleEl?.textContent?.trim() || 'Unknown',
+                    content_type: typeEl?.textContent?.toLowerCase()?.trim() || 'movie',
+                    release_date: yearEl?.textContent ? `${yearEl.textContent}-01-01` : null,
+                    poster_path: posterEl?.getAttribute('data-src') || posterEl?.src || '',
+                    rating: ratingEl?.textContent && ratingEl.textContent !== 'N/A' ?
+                        parseFloat(ratingEl.textContent) : null,
+                    tmdb_id: card.dataset.tmdbId ? parseInt(card.dataset.tmdbId) : null
+                };
+            }
+
+            return content;
+        } catch (error) {
+            console.error('Error extracting content data from card:', error);
+            return null;
+        }
+    }
+
+    navigateToContentDetails(content) {
+        try {
+            this.showLoadingIndicator();
+
+            let slug = content.slug;
+
+            if (!slug && content.title) {
+                slug = this.generateContentSlug(content);
+            }
+
+            if (slug && slug.length >= 2) {
+                const cleanSlug = slug.replace(/[^a-z0-9\-]/gi, '').toLowerCase();
+                if (cleanSlug.length >= 2) {
+                    const targetUrl = `/explore/details.html?${encodeURIComponent(cleanSlug)}`;
+                    window.location.href = targetUrl;
+                    return;
+                }
+            }
+
+            if (content.id) {
+                const fallbackSlug = `content-${content.id}`;
+                window.location.href = `/explore/details.html?${encodeURIComponent(fallbackSlug)}`;
+                return;
+            }
+
+            if (content.title) {
+                const titleSlug = this.generateContentSlug(content);
+                if (titleSlug) {
+                    window.location.href = `/explore/details.html?${encodeURIComponent(titleSlug)}`;
+                    return;
+                }
+            }
+
+            throw new Error('No valid identifier for navigation');
+
+        } catch (error) {
+            console.error('Navigation error:', error);
+            this.manager.showError('Unable to open content details');
+        } finally {
+            this.hideLoadingIndicator();
+        }
+    }
+
+    generateContentSlug(content) {
+        try {
+            if (!content.title) return '';
+
+            const { cleanTitle, extractedYear } = this.extractYearFromTitle(content.title);
+            const finalTitle = cleanTitle || content.title;
+
+            let year = null;
+            if (content.release_date) {
+                year = this.extractYear(content.release_date);
+            } else if (extractedYear) {
+                year = extractedYear;
+            }
+
+            let slug = finalTitle.toLowerCase()
+                .trim()
+                .replace(/[^\w\s\-']/g, '')
+                .replace(/\s+/g, ' ')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            if (!slug || slug.length < 2) {
+                slug = this.manualSlugify(finalTitle);
+            }
+
+            const contentType = content.content_type || 'movie';
+            if (contentType === 'anime' && !slug.startsWith('anime-')) {
+                slug = `anime-${slug}`;
+            } else if (contentType === 'tv' && !slug.startsWith('tv-')) {
+                slug = `tv-${slug}`;
+            } else if (contentType === 'movie' && slug.length < 10) {
+                slug = `movie-${slug}`;
+            }
+
+            if (year && (contentType === 'movie' || contentType === 'anime') &&
+                year >= 1900 && year <= 2030) {
+                slug += `-${year}`;
+            }
+
+            if (content.tmdb_id && slug.length < 15) {
+                slug += `-${content.tmdb_id}`;
+            }
+
+            if (slug.length > 120) {
+                const parts = slug.substring(0, 117).split('-');
+                if (parts.length > 1) {
+                    parts.pop();
+                    slug = parts.join('-');
+                } else {
+                    slug = slug.substring(0, 117);
+                }
+            }
+
+            return slug || `content-${content.tmdb_id || content.id || Date.now()}`;
+
+        } catch (error) {
+            console.error('Slug generation error:', error);
+            return `content-${content.tmdb_id || content.id || Date.now()}`;
+        }
+    }
+
+    extractYearFromTitle(title) {
+        try {
+            const yearPatterns = [
+                /\((\d{4})\)$/,
+                /\s(\d{4})$/,
+                /-(\d{4})$/,
+                /\[(\d{4})\]$/
+            ];
+
+            for (const pattern of yearPatterns) {
+                const match = title.match(pattern);
+                if (match) {
+                    const year = parseInt(match[1]);
+                    if (year >= 1900 && year <= 2030) {
+                        const cleanTitle = title.replace(pattern, '').trim();
+                        return { cleanTitle, extractedYear: year };
+                    }
+                }
+            }
+
+            return { cleanTitle: title, extractedYear: null };
+        } catch (error) {
+            console.error('Year extraction error:', error);
+            return { cleanTitle: title, extractedYear: null };
+        }
+    }
+
+    manualSlugify(text) {
+        try {
+            if (!text) return '';
+            return text.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/[-\s]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .substring(0, 70);
+        } catch (error) {
+            return '';
+        }
+    }
+
+    showLoadingIndicator() {
+        const indicator = document.getElementById('page-loading-indicator');
+        if (indicator) {
+            indicator.style.transform = 'scaleX(1)';
+        }
+    }
+
+    hideLoadingIndicator() {
+        setTimeout(() => {
+            const indicator = document.getElementById('page-loading-indicator');
+            if (indicator) {
+                indicator.style.transform = 'scaleX(0)';
+            }
+        }, 300);
+    }
+
     setupContentEventListeners() {
+        const searchInput = document.getElementById('contentSearchInput');
+        const clearButton = document.getElementById('contentSearchClear');
+
+        if (searchInput && clearButton) {
+            searchInput.addEventListener('input', function () {
+                clearButton.style.display = this.value ? 'flex' : 'none';
+            });
+
+            clearButton.addEventListener('click', () => {
+                searchInput.value = '';
+                searchInput.focus();
+                clearButton.style.display = 'none';
+                this.clearSearch();
+            });
+
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.performContentSearch();
+                }
+            });
+        }
+
         this.elements.contentSearchInput?.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -634,7 +900,7 @@ class RecTelegram {
 
                 const searchClear = document.getElementById('contentSearchClear');
                 if (searchClear) {
-                    searchClear.style.display = 'block';
+                    searchClear.style.display = 'flex';
                 }
             }
         } catch (error) {
@@ -1261,36 +1527,49 @@ class RecTelegram {
         const year = this.extractYear(content.release_date || content.first_air_date);
         const contentType = content.content_type || content.media_type || 'movie';
         const contentId = content.id || content.tmdb_id || content.mal_id || Date.now();
+        const runtime = this.formatRuntime(content.runtime);
+        const genres = this.getGenres(content);
 
         return `
-            <div class="content-card" data-content-id="${contentId}" data-source="${content.source || 'tmdb'}">
-                <div class="content-card-image">
-                    <img data-src="${posterUrl}" alt="${this.manager.escapeHtml(content.title || content.name || 'Content')}" loading="lazy">
-                    <div class="content-card-type ${contentType}">
+            <div class="content-card" data-content-id="${contentId}" data-source="${content.source || 'tmdb'}" tabindex="0">
+                <div class="card-poster-container">
+                    <img class="card-poster" data-src="${posterUrl}" alt="${this.manager.escapeHtml(content.title || content.name || 'Content')}" loading="lazy">
+                    
+                    <div class="content-type-badge ${contentType}">
                         ${contentType.toUpperCase()}
                     </div>
-                    <div class="content-card-rating">
-                        <i data-feather="eye"></i> ${rating}
-                    </div>
-                    <div class="content-card-actions">
-                        <button class="content-card-action" onclick="window.recTelegram.previewContent('${contentId}')" 
-                                title="Preview">
-                            <i data-feather="eye"></i>
-                        </button>
-                        <button class="content-card-action save-recommend" onclick="window.recTelegram.saveRecommendation('${contentId}')" 
-                                title="Save as Upcoming">
-                            <i data-feather="bookmark"></i>
-                        </button>
-                        <button class="content-card-action" onclick="window.recTelegram.recommendContent('${contentId}')" 
-                                title="Recommend">
-                            <i data-feather="star"></i>
-                        </button>
+
+                    <div class="card-overlays">
+                        <div class="card-top-overlay"></div>
+                        <div class="card-bottom-overlay">
+                            <div class="rating-badge">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
+                                <span>${rating}</span>
+                            </div>
+                            <div class="card-actions">
+                                <button class="action-btn save-btn" onclick="window.recTelegram.saveRecommendation('${contentId}')" 
+                                        title="Save for Later" aria-label="Save for Later">
+                                    <i data-feather="bookmark"></i>
+                                </button>
+                                <button class="action-btn recommend-btn" onclick="window.recTelegram.recommendContent('${contentId}')" 
+                                        title="Recommend" aria-label="Recommend">
+                                    <i data-feather="star"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="content-card-body">
-                    <h3 class="content-card-title">${this.manager.escapeHtml(content.title || content.name || 'Unknown Title')}</h3>
-                    <div class="content-card-meta">
-                        ${year ? `<span class="content-card-year">${year}</span>` : ''}
+                
+                <div class="card-info">
+                    <div class="card-title">${this.manager.escapeHtml(content.title || content.name || 'Unknown Title')}</div>
+                    <div class="card-meta">
+                        ${year ? `<span class="card-year">${year}</span>` : ''}
+                        ${runtime ? `<span class="card-runtime">• ${runtime}</span>` : ''}
+                    </div>
+                    <div class="card-genres">
+                        ${genres.map(genre => `<span class="genre-chip">${genre}</span>`).join('')}
                     </div>
                 </div>
             </div>
@@ -1304,38 +1583,54 @@ class RecTelegram {
         const year = this.extractYear(content.release_date || content.first_air_date);
         const contentType = content.content_type || content.media_type || 'movie';
         const contentId = content.id || content.tmdb_id || content.mal_id || recommendation.id;
-        const statusColor = this.getRecommendationStatusColor(recommendation.recommendation_type);
+        const runtime = this.formatRuntime(content.runtime);
+        const genres = this.getGenres(content);
+        const recommendationType = this.formatRecommendationType(recommendation.recommendation_type);
 
         return `
-            <div class="content-card" data-content-id="${contentId}" data-recommendation-id="${recommendation.id}">
-                <div class="content-card-image">
-                    <img data-src="${posterUrl}" alt="${this.manager.escapeHtml(content.title || content.name || 'Content')}" loading="lazy">
-                    <div class="content-card-type" style="background: ${statusColor}">
-                        ${this.manager.capitalizeFirst(recommendation.recommendation_type)}
+            <div class="content-card" data-content-id="${contentId}" data-recommendation-id="${recommendation.id}" tabindex="0">
+                <div class="card-poster-container">
+                    <img class="card-poster" data-src="${posterUrl}" alt="${this.manager.escapeHtml(content.title || content.name || 'Content')}" loading="lazy">
+                    
+                    <div class="content-type-badge ${contentType}">
+                        ${contentType.toUpperCase()}
                     </div>
-                    <div class="content-card-rating">
-                        <i data-feather="star"></i> ${rating}
+                    
+                    <div class="recommendation-type-badge">
+                        ${recommendationType}
                     </div>
-                    <div class="content-card-actions">
-                        <button class="content-card-action" onclick="window.recTelegram.previewContent('${contentId}')" 
-                                title="Preview">
-                            <i data-feather="eye"></i>
-                        </button>
-                        <button class="content-card-action" onclick="window.recTelegram.publishRecommendation(${recommendation.id})" 
-                                title="Publish with Template">
-                            <i data-feather="send"></i>
-                        </button>
-                        <button class="content-card-action" onclick="window.recTelegram.editRecommendation(${recommendation.id})" 
-                                title="Edit">
-                            <i data-feather="edit"></i>
-                        </button>
+
+                    <div class="card-overlays">
+                        <div class="card-top-overlay"></div>
+                        <div class="card-bottom-overlay">
+                            <div class="rating-badge">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
+                                <span>${rating}</span>
+                            </div>
+                            <div class="card-actions">
+                                <button class="action-btn publish-btn" onclick="window.recTelegram.publishRecommendation(${recommendation.id})" 
+                                        title="Publish" aria-label="Publish">
+                                    <i data-feather="upload"></i>
+                                </button>
+                                <button class="action-btn edit-btn" onclick="window.recTelegram.editRecommendation(${recommendation.id})" 
+                                        title="Edit" aria-label="Edit">
+                                    <i data-feather="edit"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="content-card-body">
-                    <h3 class="content-card-title">${this.manager.escapeHtml(content.title || content.name || 'Unknown Title')}</h3>
-                    <div class="content-card-meta">
-                        ${year ? `<span class="content-card-year">${year}</span>` : ''}
-                        <span class="content-card-status">DRAFT</span>
+                
+                <div class="card-info">
+                    <div class="card-title">${this.manager.escapeHtml(content.title || content.name || 'Unknown Title')}</div>
+                    <div class="card-meta">
+                        ${year ? `<span class="card-year">${year}</span>` : ''}
+                        ${runtime ? `<span class="card-runtime">• ${runtime}</span>` : ''}
+                    </div>
+                    <div class="card-genres">
+                        ${genres.map(genre => `<span class="genre-chip">${genre}</span>`).join('')}
                     </div>
                 </div>
             </div>
@@ -1866,12 +2161,10 @@ class RecTelegram {
             if (this.elements.searchResultsGrid) {
                 this.elements.searchResultsGrid.innerHTML = Array(12).fill(0).map(() => `
                     <div class="skeleton-card">
-                        <div class="content-card-image">
-                            <div class="skeleton skeleton-poster">
-                                <div class="skeleton-shimmer"></div>
-                            </div>
+                        <div class="skeleton skeleton-poster">
+                            <div class="skeleton-shimmer"></div>
                         </div>
-                        <div class="content-card-body">
+                        <div class="skeleton-info">
                             <div class="skeleton skeleton-title">
                                 <div class="skeleton-shimmer"></div>
                             </div>
@@ -1891,6 +2184,7 @@ class RecTelegram {
     clearSearch() {
         if (this.elements.contentSearchInput) {
             this.elements.contentSearchInput.value = '';
+            this.elements.contentSearchInput.focus();
         }
         const searchClear = document.getElementById('contentSearchClear');
         if (searchClear) {
@@ -1968,6 +2262,51 @@ class RecTelegram {
     formatRating(rating) {
         if (!rating || rating === 0) return 'N/A';
         return Number(rating).toFixed(1);
+    }
+
+    formatRuntime(runtime) {
+        if (!runtime || runtime === 0) return '';
+        const hours = Math.floor(runtime / 60);
+        const minutes = runtime % 60;
+        if (hours > 0) {
+            return `${hours}h ${minutes > 0 ? minutes + 'm' : ''}`;
+        }
+        return `${minutes}m`;
+    }
+
+    getGenres(content) {
+        if (!content.genres && !content.genre_ids) return [];
+
+        if (content.genres && Array.isArray(content.genres)) {
+            return content.genres.map(g => g.name || g).slice(0, 3);
+        }
+
+        const genreMap = {
+            28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy',
+            80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family',
+            14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music',
+            9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi', 10770: 'TV Movie',
+            53: 'Thriller', 10752: 'War', 37: 'Western'
+        };
+
+        if (content.genre_ids && Array.isArray(content.genre_ids)) {
+            return content.genre_ids
+                .map(id => genreMap[id] || 'Unknown')
+                .slice(0, 3);
+        }
+
+        return [];
+    }
+
+    formatRecommendationType(type) {
+        const typeMap = {
+            'featured': 'Featured',
+            'trending': 'Trending',
+            'hidden_gem': 'Hidden Gem',
+            'classic': 'Classic',
+            'new_release': 'New Release'
+        };
+        return typeMap[type] || type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
     extractYear(dateString) {

@@ -34,8 +34,8 @@ class AdminRecommendations {
         this.charts = {};
         this.updateTimer = null;
         this.realtimeTimer = null;
-        this.updateInterval = 5000; // Real-time updates every 5 seconds
-        this.realtimeInterval = 2000; // Super real-time updates every 2 seconds
+        this.updateInterval = 5000;
+        this.realtimeInterval = 2000;
         this.placeholderImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgZmlsbD0iIzFhMWYzYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSIjNjY3IiBmb250LXNpemU9IjE4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2luZUJyYWluPC90ZXh0Pjwvc3ZnPg==';
 
         this.cache = {
@@ -53,6 +53,9 @@ class AdminRecommendations {
             lastUpdate: Date.now(),
             updateCount: 0
         };
+
+        this.touchStartX = 0;
+        this.touchEndX = 0;
 
         this.init();
         this.handleResize();
@@ -74,6 +77,8 @@ class AdminRecommendations {
             if (this.touchDevice) {
                 this.setupMobileFeatures();
             }
+
+            window.recommendationsManager = this;
 
             console.log('✅ CineBrain Admin Recommendations initialized with real-time updates');
 
@@ -98,6 +103,11 @@ class AdminRecommendations {
             setTimeout(() => {
                 this.reinitializeForDevice();
                 this.resizeCharts();
+
+                const activeTab = document.querySelector('.nav-tab.active');
+                if (activeTab && this.isMobile) {
+                    this.scrollTabIntoView(activeTab);
+                }
             }, 100);
         });
     }
@@ -155,7 +165,6 @@ class AdminRecommendations {
             jikanStatus: document.getElementById('jikanStatus'),
             lastSync: document.getElementById('lastSync'),
             quickStatsGrid: document.getElementById('quickStatsGrid'),
-            contentTabs: document.getElementById('contentTabs'),
             recommendationsCount: document.getElementById('recommendationsCount'),
             savedContentCount: document.getElementById('savedContentCount'),
             analyticsMetrics: document.getElementById('analyticsMetrics'),
@@ -166,11 +175,13 @@ class AdminRecommendations {
     }
 
     setupCoreEventListeners() {
-        this.elements.contentTabs?.addEventListener('click', (e) => {
-            if (e.target.matches('[data-bs-toggle="tab"]')) {
-                const targetId = e.target.getAttribute('data-bs-target')?.replace('#', '').replace('-content', '');
-                if (targetId) {
-                    this.switchTab(targetId);
+        const navTabsWrapper = document.querySelector('.nav-tabs-wrapper');
+        navTabsWrapper?.addEventListener('click', (e) => {
+            if (e.target.matches('.nav-tab') || e.target.closest('.nav-tab')) {
+                const button = e.target.matches('.nav-tab') ? e.target : e.target.closest('.nav-tab');
+                const tabName = button.getAttribute('data-tab');
+                if (tabName) {
+                    this.switchTab(tabName);
                 }
             }
         });
@@ -194,8 +205,54 @@ class AdminRecommendations {
                 }
             }
 
+            if (e.altKey) {
+                switch (e.key) {
+                    case '1':
+                        e.preventDefault();
+                        this.switchTab('search');
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        this.switchTab('recommendations');
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        this.switchTab('saved-content');
+                        break;
+                    case '4':
+                        e.preventDefault();
+                        this.switchTab('analytics');
+                        break;
+                }
+            }
+
             if (e.key === 'Escape') {
                 this.closeAllModals();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement && document.activeElement.classList.contains('nav-tab')) {
+                const tabs = Array.from(document.querySelectorAll('.nav-tab'));
+                const currentIndex = tabs.indexOf(document.activeElement);
+
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    let newIndex;
+
+                    if (e.key === 'ArrowLeft') {
+                        newIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1;
+                    } else {
+                        newIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0;
+                    }
+
+                    const newTab = tabs[newIndex];
+                    const tabName = newTab.getAttribute('data-tab');
+                    if (tabName) {
+                        this.switchTab(tabName);
+                        newTab.focus();
+                    }
+                }
             }
         });
 
@@ -204,6 +261,119 @@ class AdminRecommendations {
                 this.refreshCurrentTab();
             }
         });
+
+        this.setupTouchGestures();
+    }
+
+    setupTouchGestures() {
+        document.addEventListener('touchstart', (e) => {
+            this.touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            this.touchEndX = e.changedTouches[0].screenX;
+            this.handleSwipe();
+        }, { passive: true });
+
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('touchstart', function () {
+                this.style.transform = 'scale(0.95)';
+                this.style.opacity = '0.8';
+            }, { passive: true });
+
+            tab.addEventListener('touchend', function () {
+                this.style.transform = '';
+                this.style.opacity = '';
+            }, { passive: true });
+        });
+    }
+
+    handleSwipe() {
+        const swipeThreshold = 100;
+        const diff = this.touchStartX - this.touchEndX;
+
+        if (Math.abs(diff) > swipeThreshold && this.isMobile) {
+            const activeTab = document.querySelector('.nav-tab.active');
+            const tabs = Array.from(document.querySelectorAll('.nav-tab'));
+            const currentIndex = tabs.indexOf(activeTab);
+
+            let newIndex;
+            if (diff > 0) {
+                newIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0;
+            } else {
+                newIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1;
+            }
+
+            const newTab = tabs[newIndex];
+            const tabName = newTab.getAttribute('data-tab');
+            if (tabName) {
+                this.switchTab(tabName);
+            }
+        }
+    }
+
+    switchTab(tabName) {
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.classList.remove('active');
+            tab.setAttribute('aria-selected', 'false');
+        });
+
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.remove('active');
+        });
+
+        const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+        const activePane = document.getElementById(`${tabName}-content`) || document.getElementById(tabName);
+
+        if (activeTab && activePane) {
+            activeTab.classList.add('active');
+            activeTab.setAttribute('aria-selected', 'true');
+            activePane.classList.add('active');
+
+            if (this.isMobile) {
+                this.scrollTabIntoView(activeTab);
+            }
+        }
+
+        this.state.currentTab = tabName;
+
+        switch (tabName) {
+            case 'search':
+                break;
+            case 'recommendations':
+                if (this.state.recommendations.length === 0) {
+                    this.loadRecommendations();
+                } else if (window.recTelegram) {
+                    window.recTelegram.renderRecommendations();
+                }
+                break;
+            case 'saved-content':
+                if (this.state.upcomingRecommendations.length === 0) {
+                    this.loadUpcomingRecommendations();
+                } else if (window.recTelegram) {
+                    window.recTelegram.renderUpcomingRecommendations();
+                }
+                break;
+            case 'analytics':
+                this.loadAnalytics();
+                break;
+        }
+
+        this.refreshFeatherIcons();
+    }
+
+    scrollTabIntoView(tab) {
+        const navWrapper = document.querySelector('.nav-tabs-wrapper');
+        const tabRect = tab.getBoundingClientRect();
+        const wrapperRect = navWrapper.getBoundingClientRect();
+
+        if (tabRect.left < wrapperRect.left || tabRect.right > wrapperRect.right) {
+            tab.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'center',
+                block: 'nearest'
+            });
+        }
     }
 
     setupMobileFeatures() {
@@ -246,6 +416,13 @@ class AdminRecommendations {
     initializeCharts() {
         if (!this.elements.recommendationPerformanceChart && !this.elements.contentDistributionChart) {
             return;
+        }
+
+        if (this.charts.performance) {
+            this.charts.performance.destroy();
+        }
+        if (this.charts.distribution) {
+            this.charts.distribution.destroy();
         }
 
         const chartOptions = {
@@ -517,32 +694,6 @@ class AdminRecommendations {
         }
     }
 
-    switchTab(tabName) {
-        this.state.currentTab = tabName;
-
-        switch (tabName) {
-            case 'search':
-                break;
-            case 'recommendations':
-                if (this.state.recommendations.length === 0) {
-                    this.loadRecommendations();
-                } else if (window.recTelegram) {
-                    window.recTelegram.renderRecommendations();
-                }
-                break;
-            case 'saved-content':
-                if (this.state.upcomingRecommendations.length === 0) {
-                    this.loadUpcomingRecommendations();
-                } else if (window.recTelegram) {
-                    window.recTelegram.renderUpcomingRecommendations();
-                }
-                break;
-            case 'analytics':
-                this.loadAnalytics();
-                break;
-        }
-    }
-
     refreshCurrentTab() {
         switch (this.state.currentTab) {
             case 'search':
@@ -711,7 +862,6 @@ class AdminRecommendations {
     }
 
     startRealTimeUpdates() {
-        // Primary real-time updates every 5 seconds
         this.updateTimer = setInterval(() => {
             if (!document.hidden) {
                 this.loadQuickStats();
@@ -719,10 +869,8 @@ class AdminRecommendations {
             }
         }, this.updateInterval);
 
-        // Super real-time updates every 2 seconds
         this.realtimeTimer = setInterval(() => {
             if (!document.hidden) {
-                // Update current tab data if it's been more than 30 seconds
                 if (Date.now() - this.cache.lastUpdated[this.state.currentTab] > 30000) {
                     switch (this.state.currentTab) {
                         case 'recommendations':
@@ -850,7 +998,6 @@ class AdminRecommendations {
         });
     }
 
-    // Helper function to refresh Feather icons
     refreshFeatherIcons() {
         setTimeout(() => {
             if (typeof feather !== 'undefined') {
@@ -859,7 +1006,6 @@ class AdminRecommendations {
         }, 100);
     }
 
-    // Utility functions
     updateElement(id, value) {
         const element = document.getElementById(id);
         if (element) {
@@ -1023,8 +1169,22 @@ class AdminRecommendations {
     }
 }
 
-// Global instance
 let recommendationsManager;
 
-// Export for use in other modules
 window.AdminRecommendations = AdminRecommendations;
+
+document.addEventListener('DOMContentLoaded', () => {
+    recommendationsManager = new AdminRecommendations();
+
+    setTimeout(() => {
+        window.recTelegram = new RecTelegram(recommendationsManager);
+    }, 100);
+});
+
+window.addEventListener('beforeunload', () => {
+    if (recommendationsManager) {
+        recommendationsManager.destroy();
+    }
+});
+
+window.recommendationsManager = recommendationsManager;

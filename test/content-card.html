@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineBrain Content Cards</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+    <style>
+        /* CSS Custom Properties - Exact same as original */
+        :root {
+            --card-width: clamp(120px, 25vw, 200px);
+            --card-poster-ratio: 150%;
+            --card-border-radius: clamp(4px, 1vw, 8px);
+            --card-gap: clamp(8px, 2vw, 16px);
+            --card-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --carousel-scroll: smooth;
+
+            --cinebrain-primary: #113CCF;
+            --cinebrain-primary-light: #1E4FE5;
+
+            --rating-gold: #FFD700;
+            --rating-gold-light: #FFED4E;
+            --rating-gold-dark: #FFA500;
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --carousel-scroll: auto;
+                --card-width: clamp(130px, 40vw, 160px);
+            }
+
+            .carousel-nav,
+            .action-btn,
+            .rating-badge,
+            .content-type-badge,
+            .recommendation-type-badge {
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+
+            .content-card {
+                will-change: auto;
+                contain: layout style paint;
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                transition: none;
+            }
+
+            .content-card:hover {
+                transform: none;
+            }
+
+            .card-poster,
+            .card-overlays {
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+            }
+
+            .card-overlays {
+                background: none;
+            }
+
+            .card-bottom-overlay {
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 60%);
+            }
+
+            .action-btn:active {
+                transform: scale(0.95);
+                transition: transform 0.1s ease;
+            }
+
+            .cards-container {
+                gap: clamp(1rem, 4vw, 2rem);
+            }
+
+            .skeleton-shimmer {
+                animation-duration: 2s;
+            }
+        }
+
+        /* Dark Theme Variables */
+        [data-theme="dark"] {
+            --card-bg: #000000;
+            --card-hover-bg: rgba(255, 255, 255, 0.05);
+            --card-overlay-gradient: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 60%);
+            --skeleton-bg: rgba(255, 255, 255, 0.08);
+            --skeleton-shine: rgba(255, 255, 255, 0.12);
+            --row-title-color: #ffffff;
+            --see-all-color: #888888;
+            --see-all-hover-color: #ffffff;
+            --nav-button-bg: rgba(0, 0, 0, 0.7);
+            --nav-button-hover-bg: rgba(0, 0, 0, 0.9);
+            --nav-button-border: rgba(255, 255, 255, 0.2);
+            --nav-icon-color: #ffffff;
+            --badge-bg: rgba(0, 0, 0, 0.8);
+            --badge-text: #ffffff;
+            --badge-border: rgba(255, 255, 255, 0.1);
+            --recommendation-bg: rgba(17, 60, 207, 0.9);
+            --recommendation-text: #ffffff;
+            --recommendation-border: rgba(17, 60, 207, 0.3);
+            --action-btn-bg: rgba(0, 0, 0, 0.6);
+            --action-btn-border: rgba(255, 255, 255, 0.2);
+            --action-icon-color: #ffffff;
+            --action-active: var(--cinebrain-primary);
+            --recommend-active: var(--rating-gold);
+            --publish-active: #10B981;
+            --edit-active: #F59E0B;
+            --rating-star-color: var(--rating-gold);
+            --rating-text-color: var(--rating-gold-light);
+            --genre-chip-bg: rgba(255, 255, 255, 0.08);
+            --genre-chip-border: rgba(255, 255, 255, 0.1);
+            --genre-chip-text: #888888;
+            --genre-chip-hover-bg: rgba(255, 255, 255, 0.12);
+            --genre-chip-hover-text: #ffffff;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #666666;
+            --content-border: rgba(255, 255, 255, 0.05);
+            --body-bg: #0a0a0a;
+            --label-color: #ffffff;
+            --label-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Light Theme Variables */
+        [data-theme="light"] {
+            --card-bg: #ffffff;
+            --card-hover-bg: rgba(0, 0, 0, 0.02);
+            --card-overlay-gradient: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 60%);
+            --skeleton-bg: rgba(0, 0, 0, 0.06);
+            --skeleton-shine: rgba(0, 0, 0, 0.08);
+            --row-title-color: #000000;
+            --see-all-color: #666666;
+            --see-all-hover-color: #000000;
+            --nav-button-bg: rgba(255, 255, 255, 0.9);
+            --nav-button-hover-bg: rgba(255, 255, 255, 0.95);
+            --nav-button-border: rgba(0, 0, 0, 0.15);
+            --nav-icon-color: #000000;
+            --badge-bg: rgba(0, 0, 0, 0.8);
+            --badge-text: #ffffff;
+            --badge-border: transparent;
+            --recommendation-bg: rgba(17, 60, 207, 0.9);
+            --recommendation-text: #ffffff;
+            --recommendation-border: rgba(17, 60, 207, 0.2);
+            --action-btn-bg: rgba(255, 255, 255, 0.9);
+            --action-btn-border: rgba(0, 0, 0, 0.1);
+            --action-icon-color: #000000;
+            --action-active: var(--cinebrain-primary);
+            --recommend-active: var(--rating-gold-dark);
+            --publish-active: #059669;
+            --edit-active: #D97706;
+            --rating-star-color: var(--rating-gold-dark);
+            --rating-text-color: var(--rating-gold-dark);
+            --genre-chip-bg: rgba(0, 0, 0, 0.05);
+            --genre-chip-border: rgba(0, 0, 0, 0.08);
+            --genre-chip-text: #666666;
+            --genre-chip-hover-bg: rgba(0, 0, 0, 0.08);
+            --genre-chip-hover-text: #000000;
+            --text-primary: #000000;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --content-border: rgba(0, 0, 0, 0.05);
+            --body-bg: #f8f9fa;
+            --label-color: #000000;
+            --label-bg: rgba(0, 0, 0, 0.03);
+        }
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--body-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(1rem, 4vw, 2rem);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Controls */
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .control-btn {
+            padding: clamp(6px, 1.5vw, 8px) clamp(12px, 3vw, 16px);
+            background: var(--nav-button-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--nav-button-border);
+            border-radius: clamp(4px, 1vw, 6px);
+            color: var(--nav-icon-color);
+            cursor: pointer;
+            font-size: clamp(0.7rem, 1.8vw, 0.8rem);
+            font-weight: 500;
+            transition: var(--card-transition);
+        }
+
+        .control-btn:hover {
+            background: var(--nav-button-hover-bg);
+            transform: translateY(-1px);
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: clamp(36px, 8vw, 44px);
+            height: clamp(36px, 8vw, 44px);
+            background: var(--nav-button-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--nav-button-border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--card-transition);
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            background: var(--nav-button-hover-bg);
+            transform: scale(1.05);
+        }
+
+        .theme-icon {
+            width: 50%;
+            height: 50%;
+            stroke: var(--nav-icon-color);
+            transition: all 0.3s ease;
+        }
+
+        .theme-icon-light {
+            opacity: 1;
+        }
+
+        .theme-icon-dark {
+            opacity: 0;
+            position: absolute;
+        }
+
+        [data-theme="dark"] .theme-icon-light {
+            opacity: 0;
+        }
+
+        [data-theme="dark"] .theme-icon-dark {
+            opacity: 1;
+        }
+
+        /* Cards Container */
+        .cards-container {
+            display: flex;
+            align-items: flex-start;
+            gap: clamp(1rem, 4vw, 4rem);
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .card-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: clamp(0.5rem, 2vw, 1rem);
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-label {
+            font-size: clamp(0.8rem, 2vw, 1.1rem);
+            font-weight: 600;
+            color: var(--label-color);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: clamp(4px, 1vw, 8px) clamp(8px, 2vw, 16px);
+            background: var(--label-bg);
+            border-radius: clamp(4px, 1vw, 6px);
+            border: 1px solid var(--content-border);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            max-width: var(--card-width);
+        }
+
+        /* Content Card Styles - Exact same as original */
+        .content-card {
+            scroll-snap-align: start;
+            position: relative;
+            cursor: pointer;
+            transition: var(--card-transition), opacity 0.3s ease, transform 0.3s ease;
+            will-change: transform;
+            border-radius: var(--card-border-radius);
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+            width: var(--card-width);
+        }
+
+        .content-card:hover {
+            transform: scale(1.04);
+            z-index: 5;
+        }
+
+        .card-poster-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: var(--card-poster-ratio);
+            background: var(--skeleton-bg);
+            border-radius: var(--card-border-radius);
+            overflow: hidden;
+            border: 1px solid var(--content-border);
+        }
+
+        .content-card:hover .card-poster-container {
+            border-color: var(--nav-button-border);
+        }
+
+        .card-poster {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .content-type-badge {
+            position: absolute;
+            top: clamp(6px, 1.5vw, 8px);
+            left: clamp(6px, 1.5vw, 8px);
+            background: var(--badge-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--badge-border);
+            padding: clamp(2px, 0.5vw, 3px) clamp(6px, 1.5vw, 8px);
+            border-radius: clamp(2px, 0.5vw, 4px);
+            font-size: clamp(0.5rem, 1.3vw, 0.65rem);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            z-index: 3;
+            color: var(--badge-text);
+        }
+
+        .recommendation-type-badge {
+            position: absolute;
+            top: clamp(6px, 1.5vw, 8px);
+            right: clamp(6px, 1.5vw, 8px);
+            background: var(--recommendation-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--recommendation-border);
+            padding: clamp(2px, 0.5vw, 3px) clamp(6px, 1.5vw, 8px);
+            border-radius: clamp(2px, 0.5vw, 4px);
+            font-size: clamp(0.5rem, 1.3vw, 0.65rem);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            z-index: 3;
+            color: var(--recommendation-text);
+            display: flex;
+            align-items: center;
+            gap: clamp(2px, 0.5vw, 3px);
+        }
+
+        .recommendation-type-badge svg {
+            width: clamp(8px, 2vw, 10px);
+            height: clamp(8px, 2vw, 10px);
+            fill: var(--recommendation-text);
+        }
+
+        .card-overlays {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: clamp(6px, 1.5vw, 8px);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .card-top-overlay {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: all;
+        }
+
+        .card-bottom-overlay {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: all;
+            background: var(--card-overlay-gradient);
+            margin: 0 calc(clamp(6px, 1.5vw, 8px) * -1) calc(clamp(6px, 1.5vw, 8px) * -1);
+            padding: clamp(16px, 4vw, 20px) clamp(6px, 1.5vw, 8px) clamp(6px, 1.5vw, 8px);
+        }
+
+        /* Action buttons container */
+        .card-actions {
+            display: flex;
+            align-items: center;
+            gap: clamp(4px, 1vw, 6px);
+        }
+
+        .action-btn {
+            width: clamp(28px, 7vw, 32px);
+            height: clamp(28px, 7vw, 32px);
+            background: var(--action-btn-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--action-btn-border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--card-transition);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.1);
+            background: var(--nav-button-hover-bg);
+        }
+
+        .action-btn svg {
+            width: 55%;
+            height: 55%;
+            fill: none;
+            stroke: var(--action-icon-color);
+            stroke-width: 2;
+            transition: all 0.3s;
+        }
+
+        /* Specific button styles */
+        .save-btn.active svg {
+            fill: var(--action-active);
+            stroke: var(--action-active);
+        }
+
+        .recommend-btn.active svg {
+            fill: var(--recommend-active);
+            stroke: var(--recommend-active);
+            animation: starGlow 0.3s ease;
+        }
+
+        .publish-btn.active svg {
+            fill: var(--publish-active);
+            stroke: var(--publish-active);
+            animation: publishGlow 0.3s ease;
+        }
+
+        .edit-btn.active svg {
+            fill: var(--edit-active);
+            stroke: var(--edit-active);
+            animation: editGlow 0.3s ease;
+        }
+
+        @keyframes starGlow {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
+        @keyframes publishGlow {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
+        @keyframes editGlow {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
+        .rating-badge {
+            background: var(--badge-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--badge-border);
+            padding: clamp(2px, 0.5vw, 3px) clamp(6px, 1.5vw, 8px);
+            border-radius: clamp(2px, 0.5vw, 4px);
+            font-size: clamp(0.6rem, 1.5vw, 0.7rem);
+            font-weight: 600;
+            color: var(--rating-text-color);
+            display: flex;
+            align-items: center;
+            gap: clamp(2px, 0.5vw, 3px);
+            transition: var(--card-transition);
+        }
+
+        .rating-badge svg {
+            width: clamp(10px, 2.5vw, 11px);
+            height: clamp(10px, 2.5vw, 11px);
+            fill: var(--rating-star-color);
+        }
+
+        .card-info {
+            padding: clamp(8px, 2vw, 10px) clamp(6px, 1.5vw, 8px);
+            background: var(--card-bg);
+        }
+
+        .card-title {
+            font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+            font-weight: 500;
+            line-height: 1.3;
+            margin-bottom: clamp(2px, 0.5vw, 3px);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-primary);
+            min-height: 2.6em;
+        }
+
+        .card-meta {
+            display: flex;
+            align-items: center;
+            gap: clamp(4px, 1vw, 6px);
+            margin-bottom: clamp(4px, 1vw, 6px);
+            font-size: clamp(0.6rem, 1.5vw, 0.7rem);
+        }
+
+        .card-year {
+            color: var(--text-secondary);
+        }
+
+        .card-runtime {
+            color: var(--text-muted);
+        }
+
+        .card-genres {
+            display: flex;
+            flex-wrap: wrap;
+            gap: clamp(2px, 0.5vw, 3px);
+        }
+
+        .genre-chip {
+            background: var(--genre-chip-bg);
+            border: 1px solid var(--genre-chip-border);
+            padding: clamp(1px, 0.25vw, 2px) clamp(4px, 1vw, 6px);
+            border-radius: clamp(2px, 0.5vw, 3px);
+            font-size: clamp(0.55rem, 1.4vw, 0.65rem);
+            color: var(--genre-chip-text);
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .genre-chip:hover {
+            background: var(--genre-chip-hover-bg);
+            color: var(--genre-chip-hover-text);
+        }
+
+        /* Skeleton Loading Styles - Exact same as original */
+        .skeleton {
+            background: linear-gradient(90deg,
+                    var(--skeleton-bg) 0%,
+                    var(--skeleton-shine) 50%,
+                    var(--skeleton-bg) 100%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+        }
+
+        @keyframes skeleton-loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .skeleton-card {
+            scroll-snap-align: start;
+            width: var(--card-width);
+            opacity: 0;
+            animation: skeletonFadeIn 0.5s ease forwards;
+        }
+
+        @keyframes skeletonFadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .skeleton-poster {
+            position: relative;
+            width: 100%;
+            padding-bottom: var(--card-poster-ratio);
+            border-radius: var(--card-border-radius);
+            overflow: hidden;
+            background: var(--skeleton-bg);
+        }
+
+        .skeleton-info {
+            padding: clamp(8px, 2vw, 10px) clamp(6px, 1.5vw, 8px);
+        }
+
+        .skeleton-title {
+            height: clamp(12px, 3vw, 14px);
+            margin-bottom: clamp(4px, 1vw, 6px);
+            border-radius: 2px;
+            width: 80%;
+            background: var(--skeleton-bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skeleton-meta {
+            height: clamp(10px, 2.5vw, 12px);
+            border-radius: 2px;
+            width: 60%;
+            background: var(--skeleton-bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skeleton-shimmer {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    var(--skeleton-shine) 50%,
+                    transparent 100%);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        /* Hide content when in skeleton mode */
+        .skeleton-mode .content-card {
+            display: none;
+        }
+
+        .skeleton-mode .skeleton-card {
+            display: block;
+        }
+
+        .skeleton-card {
+            display: none;
+        }
+
+        /* Focus styles */
+        .content-card:focus-visible,
+        .action-btn:focus-visible,
+        .theme-toggle:focus-visible,
+        .control-btn:focus-visible {
+            outline: 2px solid var(--cinebrain-primary);
+            outline-offset: 2px;
+        }
+
+        /* Responsive breakpoints - exact same as original */
+        @media (min-width: 480px) {
+            :root {
+                --card-width: clamp(140px, 20vw, 200px);
+            }
+        }
+
+        @media (min-width: 640px) {
+            :root {
+                --card-width: clamp(160px, 18vw, 200px);
+            }
+        }
+
+        @media (min-width: 768px) {
+            :root {
+                --card-width: clamp(170px, 16vw, 200px);
+            }
+
+            .cards-container {
+                gap: clamp(2rem, 5vw, 4rem);
+            }
+
+            .card-section {
+                gap: 1rem;
+            }
+
+            .card-label {
+                font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+                padding: clamp(6px, 1.5vw, 8px) clamp(12px, 3vw, 16px);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            :root {
+                --card-width: clamp(180px, 14vw, 200px);
+            }
+        }
+
+        @media (min-width: 1280px) {
+            :root {
+                --card-width: clamp(190px, 12vw, 200px);
+            }
+        }
+
+        @media (min-width: 1536px) {
+            :root {
+                --card-width: 200px;
+            }
+        }
+
+        @media (hover: none) {
+            .content-card:active {
+                transform: scale(0.98);
+            }
+
+            .action-btn:active {
+                transform: scale(0.9);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+
+            :root {
+                --carousel-scroll: auto;
+            }
+
+            .content-card {
+                transition: none;
+            }
+
+            .skeleton-shimmer {
+                animation: none;
+            }
+
+            .skeleton-card {
+                animation: none;
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Controls -->
+    <div class="controls">
+        <button class="control-btn" id="toggleSkeleton">Show Skeleton</button>
+        <button class="control-btn" id="simulateLoading">Simulate Loading</button>
+    </div>
+
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light theme">
+        <i data-feather="sun" class="theme-icon theme-icon-light" aria-hidden="true"></i>
+        <i data-feather="moon" class="theme-icon theme-icon-dark" aria-hidden="true"></i>
+    </button>
+
+    <!-- Cards Container -->
+    <div class="cards-container" id="cardsContainer">
+        <!-- Search Content Card -->
+        <div class="card-section">
+            <div class="card-label">Search Content</div>
+
+            <!-- Real Content Card -->
+            <div class="content-card" data-content-id="12345">
+                <div class="card-poster-container">
+                    <img class="card-poster" src="https://image.tmdb.org/t/p/w500/pFlaoHTZeyNkG83vxsAJiGzfSsa.jpg"
+                        alt="Interstellar">
+
+                    <div class="content-type-badge movie">MOVIE</div>
+
+                    <div class="card-overlays">
+                        <div class="card-top-overlay"></div>
+                        <div class="card-bottom-overlay">
+                            <div class="rating-badge">
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
+                                <span>8.6</span>
+                            </div>
+                            <div class="card-actions">
+                                <button class="action-btn save-btn" data-content-id="12345" title="Save for Later"
+                                    aria-label="Save for Later">
+                                    <i data-feather="bookmark"></i>
+                                </button>
+                                <button class="action-btn recommend-btn" data-content-id="12345" title="Recommend"
+                                    aria-label="Recommend">
+                                    <i data-feather="star"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-info">
+                    <div class="card-title">Interstellar</div>
+                    <div class="card-meta">
+                        <span class="card-year">2014</span>
+                        <span class="card-runtime">• 2h 49m</span>
+                    </div>
+                    <div class="card-genres">
+                        <span class="genre-chip">Drama</span>
+                        <span class="genre-chip">Sci-Fi</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skeleton Card -->
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-poster">
+                    <div class="skeleton-shimmer"></div>
+                </div>
+                <div class="skeleton-info">
+                    <div class="skeleton skeleton-title">
+                        <div class="skeleton-shimmer"></div>
+                    </div>
+                    <div class="skeleton skeleton-meta">
+                        <div class="skeleton-shimmer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Content Card -->
+        <div class="card-section">
+            <div class="card-label">Upcoming</div>
+
+            <!-- Real Content Card -->
+            <div class="content-card" data-content-id="67890">
+                <div class="card-poster-container">
+                    <img class="card-poster" src="https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg"
+                        alt="Oppenheimer">
+
+                    <div class="content-type-badge movie">MOVIE</div>
+                    <div class="recommendation-type-badge">
+                        Hidden Gem
+                    </div>
+
+                    <div class="card-overlays">
+                        <div class="card-top-overlay"></div>
+                        <div class="card-bottom-overlay">
+                            <div class="rating-badge">
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
+                                <span>8.4</span>
+                            </div>
+                            <div class="card-actions">
+                                <button class="action-btn publish-btn" data-content-id="67890" title="Publish"
+                                    aria-label="Publish">
+                                    <i data-feather="upload"></i>
+                                </button>
+                                <button class="action-btn edit-btn" data-content-id="67890" title="Edit"
+                                    aria-label="Edit">
+                                    <i data-feather="edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-info">
+                    <div class="card-title">Oppenheimer</div>
+                    <div class="card-meta">
+                        <span class="card-year">2023</span>
+                        <span class="card-runtime">• 3h 0m</span>
+                    </div>
+                    <div class="card-genres">
+                        <span class="genre-chip">Biography</span>
+                        <span class="genre-chip">Drama</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skeleton Card -->
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-poster">
+                    <div class="skeleton-shimmer"></div>
+                </div>
+                <div class="skeleton-info">
+                    <div class="skeleton skeleton-title">
+                        <div class="skeleton-shimmer"></div>
+                    </div>
+                    <div class="skeleton skeleton-meta">
+                        <div class="skeleton-shimmer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Management and Card Functionality
+        (function () {
+            let isSkeletonMode = false;
+
+            function initTheme() {
+                try {
+                    const savedTheme = localStorage.getItem('cinebrain-theme');
+                    const theme = (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
+                    document.documentElement.setAttribute('data-theme', theme);
+                } catch (e) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            }
+
+            function toggleTheme() {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+                document.documentElement.setAttribute('data-theme', newTheme);
+
+                try {
+                    localStorage.setItem('cinebrain-theme', newTheme);
+                } catch (e) {
+                    console.warn('Could not save theme preference');
+                }
+            }
+
+            function toggleSkeleton() {
+                const container = document.getElementById('cardsContainer');
+                const toggleBtn = document.getElementById('toggleSkeleton');
+
+                isSkeletonMode = !isSkeletonMode;
+
+                if (isSkeletonMode) {
+                    container.classList.add('skeleton-mode');
+                    toggleBtn.textContent = 'Show Content';
+                } else {
+                    container.classList.remove('skeleton-mode');
+                    toggleBtn.textContent = 'Show Skeleton';
+                }
+            }
+
+            function simulateLoading() {
+                const container = document.getElementById('cardsContainer');
+                const simulateBtn = document.getElementById('simulateLoading');
+
+                // Show skeleton
+                container.classList.add('skeleton-mode');
+                simulateBtn.textContent = 'Loading...';
+                simulateBtn.disabled = true;
+
+                // Simulate loading time
+                setTimeout(() => {
+                    container.classList.remove('skeleton-mode');
+                    simulateBtn.textContent = 'Simulate Loading';
+                    simulateBtn.disabled = false;
+                    isSkeletonMode = false;
+                    document.getElementById('toggleSkeleton').textContent = 'Show Skeleton';
+                }, 2000);
+            }
+
+            // Initialize theme
+            initTheme();
+
+            // Setup event listeners
+            document.addEventListener('DOMContentLoaded', function () {
+                const themeToggle = document.getElementById('themeToggle');
+                const skeletonToggle = document.getElementById('toggleSkeleton');
+                const simulateBtn = document.getElementById('simulateLoading');
+
+                if (themeToggle) {
+                    themeToggle.addEventListener('click', toggleTheme);
+                }
+
+                if (skeletonToggle) {
+                    skeletonToggle.addEventListener('click', toggleSkeleton);
+                }
+
+                if (simulateBtn) {
+                    simulateBtn.addEventListener('click', simulateLoading);
+                }
+
+                // Initialize Feather icons
+                if (typeof feather !== 'undefined') {
+                    feather.replace();
+                }
+
+                // Add click handlers for search content action buttons
+                const saveBtn = document.querySelector('.save-btn');
+                const recommendBtn = document.querySelector('.recommend-btn');
+
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        this.classList.toggle('active');
+
+                        const isActive = this.classList.contains('active');
+                        this.setAttribute('title', isActive ? 'Remove from Saved' : 'Save for Later');
+                        this.setAttribute('aria-label', isActive ? 'Remove from Saved' : 'Save for Later');
+
+                        console.log('Search Content - ' + (isActive ? 'Saved for later' : 'Removed from saved'));
+                    });
+                }
+
+                if (recommendBtn) {
+                    recommendBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        this.classList.toggle('active');
+
+                        const isActive = this.classList.contains('active');
+                        this.setAttribute('title', isActive ? 'Remove Recommendation' : 'Recommend');
+                        this.setAttribute('aria-label', isActive ? 'Remove Recommendation' : 'Recommend');
+
+                        console.log('Search Content - ' + (isActive ? 'Recommended' : 'Recommendation removed'));
+                    });
+                }
+
+                // Add click handlers for upcoming content action buttons
+                const publishBtn = document.querySelector('.publish-btn');
+                const editBtn = document.querySelector('.edit-btn');
+
+                if (publishBtn) {
+                    publishBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        this.classList.toggle('active');
+
+                        const isActive = this.classList.contains('active');
+                        this.setAttribute('title', isActive ? 'Unpublish' : 'Publish');
+                        this.setAttribute('aria-label', isActive ? 'Unpublish' : 'Publish');
+
+                        console.log('Upcoming Content - ' + (isActive ? 'Published' : 'Unpublished'));
+                    });
+                }
+
+                if (editBtn) {
+                    editBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        console.log('Upcoming Content - Edit clicked');
+                        // Edit doesn't toggle, just triggers edit action
+                    });
+                }
+
+                // Add click handlers for content cards
+                const contentCards = document.querySelectorAll('.content-card');
+                contentCards.forEach(card => {
+                    card.addEventListener('click', function (e) {
+                        if (!e.target.closest('.action-btn')) {
+                            this.style.transform = 'scale(0.98)';
+                            this.style.transition = 'transform 0.1s ease';
+
+                            const cardType = this.closest('.card-section').querySelector('.card-label').textContent;
+
+                            setTimeout(() => {
+                                this.style.transform = '';
+                                console.log(`Navigate to ${cardType} details`);
+                            }, 100);
+                        }
+                    });
+                });
+            });
+        })();
+    </script>
+</body>
+
+</html>
