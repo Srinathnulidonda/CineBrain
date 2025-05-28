@@ -83,6 +83,7 @@ class RecSearch {
             }
         });
 
+        // Setup card click handlers
         this.setupCardClickHandlers();
     }
 
@@ -340,7 +341,7 @@ class RecSearch {
                 params.append('type', type);
             }
 
-            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/search?${params}`);
+            const response = await this.manager.makeAuthenticatedRequest(`/admin/search?${params}`);
 
             if (response.ok) {
                 const data = await response.json();
@@ -572,6 +573,7 @@ class RecSearch {
     }
 
     hideSearchLoading() {
+        // Loading state handled by renderSearchResults
     }
 
     clearSearch() {
@@ -637,6 +639,7 @@ class RecSearch {
         }, 300);
     }
 
+    // Updated methods for template modal workflow
     async saveRecommendation(contentId) {
         try {
             const content = this.findContentById(contentId);
@@ -645,6 +648,7 @@ class RecSearch {
                 return;
             }
 
+            // Directly open enhanced template modal instead of quick save
             this.manager.state.selectedContent = content;
             if (window.recUpcoming) {
                 window.recUpcoming.showEnhancedCreateRecommendationModal(content);
@@ -689,4 +693,5 @@ class RecSearch {
     }
 }
 
+// Initialize and expose globally
 window.recSearch = null;

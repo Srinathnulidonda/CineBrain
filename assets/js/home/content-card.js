@@ -789,7 +789,8 @@ class CineBrainContentCardManager {
                 release_date: year ? `${year}-01-01` : null,
                 content_type: contentType,
                 tmdb_id: tmdbId,
-                overview: ''
+                overview: '',
+                slug: card.dataset.contentSlug || null
             };
         } catch (error) {
             console.warn('Failed to extract content info:', error);
@@ -830,88 +831,262 @@ class CineBrainContentCardManager {
             if (button.disabled) return;
             button.disabled = true;
 
-            const isCurrentlyInFavorites = button.classList.contains('active');
+            let numericContentId;
+            try {
+                if (typeof contentId === 'string') {
+                    if (contentId.includes('tmdb_') || contentId.includes('mal_') || contentId.includes('imdb_')) {
+                        console.warn('CineBrain: External ID format detected, cannot process:', contentId);
+                        this.showNotification('Unable to process this content format', 'warning');
+                        return;
+                    }
+                    numericContentId = parseInt(contentId, 10);
+                } else {
+                    numericContentId = parseInt(contentId, 10);
+                }
 
+                if (isNaN(numericContentId) || numericContentId <= 0) {
+                    throw new Error('Invalid content ID');
+                }
+            } catch (error) {
+                console.error('CineBrain: Invalid content ID format:', contentId, error);
+                this.showNotification('Invalid content ID format', 'error');
+                return;
+            }
+
+            const isCurrentlyInFavorites = button.classList.contains('active');
             const card = button.closest('.content-card');
-            const contentInfo = this.extractContentInfo(card, contentId);
+            const contentInfo = this.extractContentInfo(card, numericContentId);
+
+            let actualContentId = card.dataset.actualContentId ? parseInt(card.dataset.actualContentId) : numericContentId;
 
             const originalState = {
                 isActive: isCurrentlyInFavorites,
-                inFavorites: this.userFavorites.has(contentId),
-                interactionState: this.interactionStates.get(contentId)
+                inFavorites: this.userFavorites.has(numericContentId),
+                interactionState: this.interactionStates.get(numericContentId)
             };
 
             if (isCurrentlyInFavorites) {
                 button.classList.remove('active');
-                this.userFavorites.delete(contentId);
-                this.interactionStates.delete(contentId);
+                this.userFavorites.delete(numericContentId);
+                this.interactionStates.delete(numericContentId);
                 button.setAttribute('title', 'Add to CineBrain Favorites');
                 button.setAttribute('aria-label', 'Add to CineBrain Favorites');
             } else {
                 button.classList.add('active');
-                this.userFavorites.add(contentId);
-                this.interactionStates.set(contentId, 'favorite');
+                this.userFavorites.add(numericContentId);
+                this.interactionStates.set(numericContentId, 'favorite');
                 button.setAttribute('title', 'Remove from CineBrain Favorites');
                 button.setAttribute('aria-label', 'Remove from CineBrain Favorites');
             }
 
-            const response = await fetch(`${this.apiBase}/interactions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.authToken}`
-                },
-                body: JSON.stringify({
-                    content_id: contentId,
-                    interaction_type: isCurrentlyInFavorites ? 'remove_favorite' : 'favorite',
-                    metadata: {
-                        content_info: contentInfo,
-                        source: 'content_card_interaction',
-                        timestamp: new Date().toISOString()
-                    }
-                }),
-                signal: AbortSignal.timeout(15000)
-            });
+            let response;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-            if (response.ok) {
-                const result = await response.json();
-                this.showNotification(
-                    isCurrentlyInFavorites ? 'Removed from CineBrain favorites' : 'Added to CineBrain favorites',
-                    'success'
-                );
-                console.log('CineBrain favorites updated successfully:', result);
-            } else {
-                this.rollbackFavoriteState(button, contentId, originalState);
+            try {
+                if (isCurrentlyInFavorites) {
+                    console.log(`CineBrain: Attempting to remove favorite with ID ${actualContentId} (original: ${numericContentId})`);
 
-                const errorData = await response.json().catch(() => ({}));
-                console.error('CineBrain favorites update failed:', errorData);
-
-                if (response.status === 401) {
-                    this.handleAuthFailure();
-                    this.showNotification('Please login again', 'warning');
-                } else if (response.status === 404) {
-                    this.showNotification('Content not available for favorites', 'warning');
+                    response = await fetch(`${this.apiBase}/user/favorites/${actualContentId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${this.authToken}`
+                        },
+                        signal: controller.signal
+                    });
                 } else {
-                    this.showNotification(errorData.error || 'Failed to update CineBrain favorites', 'error');
+                    response = await fetch(`${this.apiBase}/user/favorites`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.authToken}`
+                        },
+                        body: JSON.stringify({
+                            content_id: numericContentId,
+                            rating: null,
+                            metadata: {
+                                content_info: contentInfo,
+                                source: 'content_card_interaction',
+                                timestamp: new Date().toISOString()
+                            }
+                        }),
+                        signal: controller.signal
+                    });
+                }
+
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const result = await response.json();
+
+                    if (!isCurrentlyInFavorites && result.actual_content_id && result.actual_content_id !== numericContentId) {
+                        card.dataset.actualContentId = result.actual_content_id;
+                        console.log(`CineBrain: Mapped content ID ${numericContentId} to ${result.actual_content_id}`);
+
+                        this.userFavorites.delete(numericContentId);
+                        this.userFavorites.add(result.actual_content_id);
+                        this.interactionStates.delete(numericContentId);
+                        this.interactionStates.set(result.actual_content_id, 'favorite');
+
+                        button.dataset.contentId = result.actual_content_id;
+                    }
+
+                    if (isCurrentlyInFavorites && result.actual_content_id && result.actual_content_id !== numericContentId) {
+                        this.userFavorites.delete(numericContentId);
+                        this.userFavorites.delete(result.actual_content_id);
+                        this.interactionStates.delete(numericContentId);
+                        this.interactionStates.delete(result.actual_content_id);
+                    }
+
+                    this.showNotification(
+                        isCurrentlyInFavorites ? 'Removed from CineBrain favorites' : 'Added to CineBrain favorites',
+                        'success'
+                    );
+                    console.log('CineBrain favorites updated successfully:', result);
+
+                    try {
+                        const interactionController = new AbortController();
+                        const interactionTimeoutId = setTimeout(() => interactionController.abort(), 10000);
+
+                        const interactionContentId = result.actual_content_id || numericContentId;
+
+                        await fetch(`${this.apiBase}/interactions`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${this.authToken}`
+                            },
+                            body: JSON.stringify({
+                                content_id: interactionContentId,
+                                interaction_type: isCurrentlyInFavorites ? 'remove_favorite' : 'favorite',
+                                metadata: {
+                                    content_info: {
+                                        ...contentInfo,
+                                        id: interactionContentId,
+                                        original_id: numericContentId !== interactionContentId ? numericContentId : undefined
+                                    },
+                                    source: 'content_card_interaction',
+                                    timestamp: new Date().toISOString(),
+                                    id_mapping: numericContentId !== interactionContentId ? {
+                                        frontend_id: numericContentId,
+                                        backend_id: interactionContentId
+                                    } : undefined
+                                }
+                            }),
+                            signal: interactionController.signal
+                        });
+
+                        clearTimeout(interactionTimeoutId);
+                        console.log('CineBrain interaction tracking updated successfully');
+                        // In the catch block for interaction tracking
+                    } catch (interactionError) {
+                        // Don't show error to user if it's just a 404 on removal
+                        if (isCurrentlyInFavorites && interactionError.message && interactionError.message.includes('404')) {
+                            console.log('CineBrain: Interaction record already removed, continuing');
+                        } else {
+                            console.warn('CineBrain: Failed to update interaction tracking:', interactionError);
+                        }
+                        // Don't fail the main operation if interaction tracking fails
+                    }
+
+                    if (!isCurrentlyInFavorites && result.actual_content_id && result.actual_content_id !== numericContentId) {
+                        try {
+                            const allCards = document.querySelectorAll(`[data-content-id="${numericContentId}"]`);
+                            allCards.forEach(otherCard => {
+                                if (otherCard !== card) {
+                                    otherCard.dataset.actualContentId = result.actual_content_id;
+                                    const otherButton = otherCard.querySelector('.wishlist-btn');
+                                    if (otherButton) {
+                                        otherButton.dataset.contentId = result.actual_content_id;
+                                        otherButton.classList.add('active');
+                                        otherButton.setAttribute('title', 'Remove from CineBrain Favorites');
+                                        otherButton.setAttribute('aria-label', 'Remove from CineBrain Favorites');
+                                    }
+                                }
+                            });
+                            console.log(`CineBrain: Updated ${allCards.length} cards with mapped ID`);
+                        } catch (updateError) {
+                            console.warn('CineBrain: Failed to update other cards:', updateError);
+                        }
+                    }
+
+                    if (isCurrentlyInFavorites) {
+                        try {
+                            const searchIds = [numericContentId];
+                            if (result.actual_content_id && result.actual_content_id !== numericContentId) {
+                                searchIds.push(result.actual_content_id);
+                            }
+
+                            searchIds.forEach(searchId => {
+                                const allCards = document.querySelectorAll(`[data-content-id="${searchId}"], [data-actual-content-id="${searchId}"]`);
+                                allCards.forEach(otherCard => {
+                                    const otherButton = otherCard.querySelector('.wishlist-btn');
+                                    if (otherButton) {
+                                        otherButton.classList.remove('active');
+                                        otherButton.setAttribute('title', 'Add to CineBrain Favorites');
+                                        otherButton.setAttribute('aria-label', 'Add to CineBrain Favorites');
+                                    }
+                                });
+                            });
+                        } catch (updateError) {
+                            console.warn('CineBrain: Failed to update other cards for removal:', updateError);
+                        }
+                    }
+
+                    console.log('CineBrain favorites operation completed:', {
+                        operation: isCurrentlyInFavorites ? 'remove' : 'add',
+                        frontend_id: numericContentId,
+                        backend_id: result.actual_content_id,
+                        mapped: numericContentId !== result.actual_content_id,
+                        content_title: contentInfo.title
+                    });
+                } else {
+                    this.rollbackFavoriteState(button, numericContentId, originalState);
+
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('CineBrain favorites update failed:', errorData);
+
+                    if (response.status === 401) {
+                        this.handleAuthFailure();
+                        this.showNotification('Please login again', 'warning');
+                    } else if (response.status === 404) {
+                        this.showNotification('Content not available', 'warning');
+                    } else if (response.status === 400 && errorData.message) {
+                        this.showNotification(errorData.message, 'warning');
+                    } else {
+                        this.showNotification(errorData.error || 'Failed to update CineBrain favorites', 'error');
+                    }
+                }
+
+            } catch (fetchError) {
+                clearTimeout(timeoutId);
+
+                this.rollbackFavoriteState(button, numericContentId, originalState);
+
+                if (fetchError.name === 'AbortError') {
+                    this.showNotification('Request timeout - please try again', 'warning');
+                } else {
+                    console.error('CineBrain fetch error:', fetchError);
+                    this.showNotification('Failed to update CineBrain favorites', 'error');
                 }
             }
 
         } catch (error) {
             console.error('CineBrain error updating favorites:', error);
 
-            this.rollbackFavoriteState(button, contentId, {
-                isActive: !isCurrentlyInFavorites,
-                inFavorites: !this.userFavorites.has(contentId)
-            });
-
-            if (error.name === 'AbortError') {
-                this.showNotification('Request timeout - please try again', 'warning');
-            } else {
-                this.showNotification('Failed to update CineBrain favorites', 'error');
+            if (typeof numericContentId !== 'undefined') {
+                this.rollbackFavoriteState(button, numericContentId, {
+                    isActive: !button.classList.contains('active'),
+                    inFavorites: !this.userFavorites.has(numericContentId),
+                    interactionState: this.interactionStates.get(numericContentId)
+                });
             }
+
+            this.showNotification('Failed to update CineBrain favorites', 'error');
         } finally {
             setTimeout(() => {
-                button.disabled = false;
+                if (button && !button.disabled) return;
+                if (button) button.disabled = false;
             }, 300);
         }
     }
