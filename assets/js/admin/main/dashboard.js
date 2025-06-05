@@ -1360,18 +1360,28 @@ class AdminDashboard {
             section.style.display = 'block';
             if (icon) {
                 icon.setAttribute('data-feather', 'chevron-up');
-                feather.replace();
+                if (typeof feather !== 'undefined') feather.replace();
             }
 
-            if (this.emailPreferences) {
-                await this.emailPreferences.loadAndRender();
+            // Initialize the full EmailPreferences class if not already done
+            if (!window.emailPreferencesInstance) {
+                window.emailPreferencesInstance = new EmailPreferences();
+                await window.emailPreferencesInstance.init();
+            } else {
+                // If already initialized, just load and render
+                if (!window.emailPreferencesInstance.initialized) {
+                    await window.emailPreferencesInstance.init();
+                } else {
+                    await window.emailPreferencesInstance.loadPreferences();
+                    window.emailPreferencesInstance.renderPreferences();
+                }
             }
         } else {
             // Hide
             section.style.display = 'none';
             if (icon) {
                 icon.setAttribute('data-feather', 'chevron-down');
-                feather.replace();
+                if (typeof feather !== 'undefined') feather.replace();
             }
         }
     }
