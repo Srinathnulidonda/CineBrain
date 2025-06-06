@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>CineBrain User Management - Real-time Analytics & User Administration</title>
+    
+    <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com;
+    style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: blob: https: http:;
+    connect-src 'self' https://cinebrain.onrender.com https://api.themoviedb.org https://api.jikan.moe https://localhost:5000 http://127.0.0.1:5000 ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* ws://cinebrain.onrender.com wss://cinebrain.onrender.com https://cdn.jsdelivr.net;
+    base-uri 'self';
+    form-action 'self';
+    object-src 'none';
+  ">
+    
+    <meta name="description" content="CineBrain User Management - Comprehensive user administration, analytics, and real-time monitoring">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="author" content="CineBrain">
+
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-icon-180x180.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="/assets/css/components/theme.css">
+    <link rel="stylesheet" href="/assets/css/components/topbar.css">
+    <link rel="stylesheet" href="/assets/css/components/mobile-nav.css">
+    <link rel="stylesheet" href="/assets/css/components/footer.css">
+
+    <link rel="stylesheet" href="/assets/css/admin/users/users.css">
+
+    <script>
+        (function () {
+            try {
+                const savedTheme = localStorage.getItem('cinebrain-theme');
+                const theme = (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+        })();
+    </script>
+</head>
+
+<body class="admin-users">
+    <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
+
+    <div id="page-loading-indicator" class="page-loading-indicator"></div>
+
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-cinebrain fixed-top" role="navigation" aria-label="Main navigation">
+            <div class="container-fluid">
+                <div class="navbar-brand-wrapper">
+                    <a href="/admin/" style="text-decoration: none;" aria-label="CineBrain Admin Home">
+                        <h1 class="navbar-brand-cinebrain">CineBrain</h1>
+                        <div class="tagline">
+                            <span class="tagline-full d-none d-md-block">User Management</span>
+                            <span class="tagline-medium d-none d-sm-block d-md-none">Users</span>
+                            <span class="tagline-short d-sm-none">Users</span>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="search-container desktop-search d-none d-lg-block" id="desktopSearchContainer">
+                    <div class="search-wrapper">
+                        <div class="search-bar-wrapper">
+                            <div class="search-input-wrapper">
+                                <i data-feather="search" class="search-icon" aria-hidden="true"></i>
+                                <input type="text" class="form-control search-input" id="desktopSearchInput"
+                                    placeholder="Search users..." autocomplete="off"
+                                    aria-label="Search users" maxlength="100">
+                                <button class="search-clear" id="searchClear" aria-label="Clear search"
+                                    style="display: none;">
+                                    <i data-feather="x" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="search-results" id="desktopSearchResults" role="listbox" aria-live="polite">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-icons-section">
+                    <button class="icon-button mobile-search-trigger d-lg-none" id="mobileSearchTrigger"
+                        aria-label="Open search">
+                        <i data-feather="search" aria-hidden="true"></i>
+                    </button>
+
+                    <button class="icon-button theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                        <i data-feather="sun" class="theme-icon theme-icon-light" aria-hidden="true"></i>
+                        <i data-feather="moon" class="theme-icon theme-icon-dark" aria-hidden="true"></i>
+                    </button>
+
+                    <button class="icon-button notification-bell" id="notificationBell"
+                        aria-label="Admin notifications">
+                        <i data-feather="bell" aria-hidden="true"></i>
+                    </button>
+
+                    <div class="dropdown">
+                        <button class="avatar-menu" data-bs-toggle="dropdown" aria-expanded="false" id="avatarMenu">
+                            <i data-feather="user" aria-hidden="true"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-cinebrain" id="userDropdown">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="mobile-search-overlay" id="mobileSearchOverlay">
+        <div class="container">
+            <div class="mobile-search-header">
+                <button class="btn-back" id="closeMobileSearch">
+                    <i data-feather="arrow-left"></i>
+                </button>
+                <div class="mobile-search-input-wrapper">
+                    <i data-feather="search" class="search-icon"></i>
+                    <input type="text" class="form-control search-input" id="mobileSearchInput"
+                        placeholder="Search users..." autocomplete="off" autofocus>
+                </div>
+            </div>
+            <div class="search-results mobile-results" id="mobileSearchResults">
+            </div>
+        </div>
+    </div>
+
+    <main id="main-content" class="admin-main" role="main">
+        <div class="container-fluid admin-container">
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="users-header">
+                        <div class="users-header-content">
+                            <h1 class="users-title">
+                                <i data-feather="users"></i>
+                                User Management
+                            </h1>
+                            <p class="users-subtitle">Manage users, view analytics, and monitor user activity in real-time</p>
+                        </div>
+                        <div class="users-actions">
+                            <button class="btn btn-outline-success" id="exportUsers">
+                                <i data-feather="download"></i>
+                                <span class="d-none d-sm-inline">Export</span>
+                            </button>
+                            <button class="btn btn-primary" id="addUser">
+                                <i data-feather="user-plus"></i>
+                                <span class="d-none d-sm-inline">Add User</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i data-feather="bar-chart-2"></i>
+                            User Statistics
+                        </h2>
+                        <div class="section-actions">
+                            <select class="form-select form-select-sm" id="statsTimeframe">
+                                <option value="today">Today</option>
+                                <option value="week" selected>7 Days</option>
+                                <option value="month">30 Days</option>
+                                <option value="year">1 Year</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4" id="userStatsCards">
+            </div>
+
+            <div class="row mb-3 d-md-none">
+                <div class="col-12">
+                    <div class="mobile-stats-scroll">
+                        <div class="mobile-stats-cards" id="mobileUserStatsCards">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="users-toolbar">
+                        <div class="users-filters">
+                            <div class="filter-group">
+                                <label class="filter-label">Status:</label>
+                                <select class="form-select form-select-sm" id="filterStatus">
+                                    <option value="">All Users</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="new">New (7 days)</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label class="filter-label">Role:</label>
+                                <select class="form-select form-select-sm" id="filterRole">
+                                    <option value="">All Roles</option>
+                                    <option value="user">Users</option>
+                                    <option value="admin">Admins</option>
+                                </select>
+                            </div>
+                            <div class="filter-group d-none d-md-block">
+                                <label class="filter-label">Registration:</label>
+                                <select class="form-select form-select-sm" id="filterRegistration">
+                                    <option value="">All Time</option>
+                                    <option value="today">Today</option>
+                                    <option value="week">This Week</option>
+                                    <option value="month">This Month</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="users-actions-toolbar">
+                            <button class="btn btn-outline-secondary btn-sm" id="clearFilters">
+                                <i data-feather="x"></i>
+                                Clear
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" id="refreshUsers">
+                                <i data-feather="refresh-cw"></i>
+                                <span class="d-none d-sm-inline">Refresh</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3" id="bulkActionsBar" style="display: none;">
+                <div class="col-12">
+                    <div class="bulk-actions-container">
+                        <div class="bulk-selection-info">
+                            <span id="selectedCount">0</span> users selected
+                        </div>
+                        <div class="bulk-actions">
+                            <button class="btn btn-outline-secondary btn-sm" id="deselectAll">
+                                <i data-feather="x"></i>
+                                Deselect All
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm" id="bulkSuspend">
+                                <i data-feather="pause-circle"></i>
+                                Suspend
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" id="bulkActivate">
+                                <i data-feather="play-circle"></i>
+                                Activate
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" id="bulkDelete">
+                                <i data-feather="trash-2"></i>
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="users-table-container">
+                        <div class="users-table-header">
+                            <div class="table-info">
+                                <span class="table-count" id="userTableCount">Loading users...</span>
+                            </div>
+                            <div class="table-controls">
+                                <select class="form-select form-select-sm" id="usersPerPage">
+                                    <option value="10">10 per page</option>
+                                    <option value="25" selected>25 per page</option>
+                                    <option value="50">50 per page</option>
+                                    <option value="100">100 per page</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="users-table-wrapper">
+                            <div class="table-responsive-mobile">
+                                <table class="users-table" id="usersTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="select-column">
+                                                <input type="checkbox" id="selectAllUsers" aria-label="Select all users">
+                                            </th>
+                                            <th class="sortable" data-sort="username">
+                                                <span class="sort-header">
+                                                    User
+                                                    <span class="sort-indicator"></span>
+                                                </span>
+                                            </th>
+                                            <th class="sortable d-none d-md-table-cell" data-sort="email">
+                                                <span class="sort-header">
+                                                    Email
+                                                    <span class="sort-indicator"></span>
+                                                </span>
+                                            </th>
+                                            <th class="sortable d-none d-lg-table-cell" data-sort="role">
+                                                <span class="sort-header">
+                                                    Role
+                                                    <span class="sort-indicator"></span>
+                                                </span>
+                                            </th>
+                                            <th class="sortable" data-sort="status">
+                                                <span class="sort-header">
+                                                    Status
+                                                    <span class="sort-indicator"></span>
+                                                </span>
+                                            </th>
+                                            <th class="sortable d-none d-sm-table-cell" data-sort="created_at">
+                                                <span class="sort-header">
+                                                    Joined
+                                                    <span class="sort-indicator"></span>
+                                                </span>
+                                            </th>
+                                            <th class="actions-column">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="usersTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="users-table-footer">
+                            <div class="pagination-info" id="paginationInfo">
+                            </div>
+                            <nav aria-label="Users pagination">
+                                <ul class="pagination pagination-sm" id="usersPagination">
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12 col-xl-8 mb-3 mb-xl-0">
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i data-feather="activity"></i>
+                                User Activity Trends
+                            </h3>
+                            <div class="card-actions">
+                                <select class="form-select form-select-sm" id="activityChartPeriod">
+                                    <option value="7d">7 days</option>
+                                    <option value="30d" selected>30 days</option>
+                                    <option value="90d">90 days</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="userActivityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-4">
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i data-feather="pie-chart"></i>
+                                User Engagement
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="engagement-metrics" id="engagementMetrics">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div class="modal fade" id="userDetailsModal" tabindex="-1" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userDetailsModalLabel">
+                        <i data-feather="user"></i>
+                        User Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="userDetailsModalBody">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="editUserBtn">Edit User</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editUserModalLabel">
+                        <i data-feather="edit"></i>
+                        Edit User
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editUserForm">
+                    <div class="modal-body">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <nav class="mobile-bottom-nav d-md-none" id="mobileBottomNav">
+        <div class="mobile-nav-container" id="mobileNavContainer">
+        </div>
+    </nav>
+
+    <aside class="mobile-menu-overlay" id="mobileMenuOverlay">
+        <div class="menu-handle"></div>
+        <div class="menu-header">
+            <h3 class="menu-title">Admin Menu</h3>
+            <button class="menu-close-btn" id="mobileMenuClose">
+                <i data-feather="x"></i>
+            </button>
+        </div>
+        <section class="menu-section">
+            <div class="mobile-menu-grid" id="mobileMenuGrid">
+            </div>
+        </section>
+        <section class="menu-section">
+            <h4 class="menu-section-title">Admin Tools</h4>
+            <div class="mobile-menu-list" id="mobileMenuList">
+            </div>
+        </section>
+    </aside>
+
+    <div class="mobile-backdrop" id="mobileBackdrop"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/components/theme-manager.js"></script>
+    <script src="/assets/js/components/topbar.js"></script>
+    <script src="/assets/js/components/mobile-nav.js"></script>
+
+    <script src="/assets/js/admin/users/users.js"></script>
+
+    <script>
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    </script>
+</body>
+
+</html>
