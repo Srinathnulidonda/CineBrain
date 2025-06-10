@@ -160,6 +160,15 @@ class TemplateManager {
                     placeholder: 'Inception, Dark, Predestination, The Matrix',
                     description: '2-4 similar brain-breaking movies (comma separated)',
                     maxLength: 150
+                },
+                {
+                    key: 'hashtags',
+                    label: 'Hashtags',
+                    type: 'text',
+                    required: false,
+                    placeholder: '#MindBending #SciFi #Thriller #MustWatch',
+                    description: 'Relevant hashtags for the recommendation (space or comma separated)',
+                    maxLength: 200
                 }
             ],
             'hidden_gem': [
@@ -180,6 +189,15 @@ class TemplateManager {
                     placeholder: 'Similar hidden gems or mainstream movies...',
                     description: '2-3 movies with similar tone (comma separated)',
                     maxLength: 100
+                },
+                {
+                    key: 'hashtags',
+                    label: 'Hashtags',
+                    type: 'text',
+                    required: false,
+                    placeholder: '#HiddenGem #Underrated #Drama #Cinema',
+                    description: 'Relevant hashtags for the recommendation',
+                    maxLength: 200
                 }
             ],
             'anime_gem': [
@@ -200,6 +218,15 @@ class TemplateManager {
                     placeholder: 'A time-loop tragedy that hits harder the more you think about it',
                     description: '1 strong emotional line that captures the impact',
                     maxLength: 80
+                },
+                {
+                    key: 'hashtags',
+                    label: 'Hashtags',
+                    type: 'text',
+                    required: false,
+                    placeholder: '#AnimeGem #Psychological #Drama #Anime',
+                    description: 'Relevant hashtags for the anime recommendation',
+                    maxLength: 200
                 }
             ],
             'scene_clip': [
@@ -211,6 +238,15 @@ class TemplateManager {
                     placeholder: 'This scene will hook you instantly',
                     description: 'Punchy line creating curiosity about the clip',
                     maxLength: 60
+                },
+                {
+                    key: 'hashtags',
+                    label: 'Hashtags',
+                    type: 'text',
+                    required: false,
+                    placeholder: '#SceneClip #Epic #Viral #Cinema',
+                    description: 'Relevant hashtags for the clip',
+                    maxLength: 200
                 }
             ],
             'top_list': [
@@ -230,11 +266,46 @@ class TemplateManager {
                     required: true,
                     description: '5-10 items MAX with title, year, and hook',
                     maxItems: 10
+                },
+                {
+                    key: 'hashtags',
+                    label: 'Hashtags',
+                    type: 'text',
+                    required: false,
+                    placeholder: '#TopList #MustWatch #Cinema #Recommendations',
+                    description: 'Relevant hashtags for the list',
+                    maxLength: 200
                 }
             ]
         };
 
-        return fieldConfigs[templateType] || [];
+        const standardTemplates = ['standard_movie', 'standard_tv', 'standard_anime'];
+        standardTemplates.forEach(template => {
+            if (!fieldConfigs[template]) {
+                fieldConfigs[template] = [];
+            }
+            fieldConfigs[template].push({
+                key: 'hashtags',
+                label: 'Hashtags',
+                type: 'text',
+                required: false,
+                placeholder: '#Movie #Recommendations #Cinema #MustWatch',
+                description: 'Relevant hashtags for the recommendation',
+                maxLength: 200
+            });
+        });
+
+        return fieldConfigs[templateType] || [
+            {
+                key: 'hashtags',
+                label: 'Hashtags',
+                type: 'text',
+                required: false,
+                placeholder: '#Recommendations #Cinema #MustWatch',
+                description: 'Relevant hashtags for the recommendation',
+                maxLength: 200
+            }
+        ];
     }
 
     createFieldHTML(field) {
@@ -434,19 +505,16 @@ class TemplateManager {
     getTemplateParams() {
         const params = {};
 
-        // Collect all template field inputs
         document.querySelectorAll('.template-field-input').forEach(input => {
             if (input.name && input.value.trim()) {
                 params[input.name] = input.value.trim();
             }
         });
 
-        // Handle special cases for specific templates
         if (this.selectedTemplate === 'top_list') {
             params.items = this.getListItems();
         }
 
-        // Log what we're collecting for debugging
         console.log('🎯 Collecting template params:', params);
 
         return params;
@@ -474,7 +542,6 @@ class TemplateManager {
         return items;
     }
 
-    // Enhanced preload method
     preloadTemplateFields(templateFields) {
         console.log('🔄 Preloading template fields:', templateFields);
 
@@ -484,14 +551,12 @@ class TemplateManager {
                 if (field && fieldValue) {
                     field.value = fieldValue;
 
-                    // Update character count if exists
                     const countElement = document.getElementById(`count_${fieldKey}`);
                     if (countElement) {
                         const maxLength = field.maxLength || 200;
                         countElement.textContent = `${fieldValue.length}/${maxLength}`;
                     }
 
-                    // Trigger input event to update internal state
                     field.dispatchEvent(new Event('input', { bubbles: true }));
 
                     console.log(`✅ Preloaded field ${fieldKey}:`, fieldValue);
@@ -500,12 +565,10 @@ class TemplateManager {
                 }
             });
 
-            // Handle list items if present
             if (templateFields.items && Array.isArray(templateFields.items) && templateFields.items.length > 0) {
                 this.preloadListItems(templateFields.items);
             }
 
-            // Store the loaded data in templateData
             this.templateData = { ...templateFields };
 
             window.recUtils.refreshFeatherIcons();
@@ -513,20 +576,16 @@ class TemplateManager {
         }, 200);
     }
 
-    // NEW: Preload list items method
     preloadListItems(items) {
         const container = document.getElementById('listItemsContainer');
         if (!container) return;
 
         console.log('🔄 Preloading list items:', items);
 
-        // Clear existing items
         container.innerHTML = '';
 
-        // Add saved items
         items.forEach((item, index) => {
             if (index === 0) {
-                // Create first item
                 const firstItem = document.createElement('div');
                 firstItem.className = 'list-item';
                 firstItem.innerHTML = `
@@ -544,7 +603,6 @@ class TemplateManager {
                 `;
                 container.appendChild(firstItem);
             } else {
-                // Add additional items
                 this.addListItem();
                 const newItem = container.lastElementChild;
                 const inputs = newItem.querySelectorAll('.list-item-input');
@@ -560,7 +618,6 @@ class TemplateManager {
         console.log(`✅ Preloaded ${items.length} list items`);
     }
 
-    // NEW: HTML escape utility
     escapeHtml(text) {
         if (!text) return '';
         const map = {
@@ -635,7 +692,6 @@ class RecUpcoming {
                 return;
             }
 
-            // Filter out any null/undefined recommendations
             const validRecommendations = this.manager.state.upcomingRecommendations.filter(rec => rec && rec.id);
 
             this.elements.upcomingGrid.innerHTML = validRecommendations.map(rec => {
@@ -665,7 +721,6 @@ class RecUpcoming {
 
     createUpcomingContentCard(recommendation) {
         try {
-            // Add comprehensive null checking
             if (!recommendation) {
                 console.warn('createUpcomingContentCard: recommendation is null/undefined');
                 return '';
@@ -680,12 +735,10 @@ class RecUpcoming {
             const runtime = window.recUtils.formatRuntime(content.runtime);
             const genres = window.recUtils.getGenres(content);
 
-            // FIX: Safe handling of recommendation type
             const recommendationType = window.recUtils.formatRecommendationType(
                 recommendation.recommendation_type || 'general'
             );
 
-            // Enhanced template indicator with field count
             const hasTemplateData = recommendation.template_data?.template_fields ||
                 recommendation.hook_text ||
                 recommendation.if_you_like ||
@@ -693,13 +746,13 @@ class RecUpcoming {
                 recommendation.emotion_hook ||
                 recommendation.scene_caption ||
                 recommendation.list_title ||
-                recommendation.list_items;
+                recommendation.list_items ||
+                recommendation.hashtags;
 
             let templateFieldCount = 0;
             if (recommendation.template_data?.template_fields) {
                 templateFieldCount = Object.keys(recommendation.template_data.template_fields).length;
             }
-            // Add individual field count as backup
             templateFieldCount += [
                 recommendation.hook_text,
                 recommendation.if_you_like,
@@ -707,7 +760,8 @@ class RecUpcoming {
                 recommendation.emotion_hook,
                 recommendation.scene_caption,
                 recommendation.list_title,
-                recommendation.list_items
+                recommendation.list_items,
+                recommendation.hashtags
             ].filter(Boolean).length;
 
             const templateIndicator = hasTemplateData ?
@@ -795,7 +849,6 @@ class RecUpcoming {
             return;
         }
 
-        // Reset modal title for creating
         const modalTitle = modal.querySelector('.modal-title');
         if (modalTitle) {
             modalTitle.innerHTML = `
@@ -827,7 +880,6 @@ class RecUpcoming {
             window.templateManager.renderTemplateSelection(templateGrid);
         }
 
-        // Reset modal buttons for creating
         const modalFooter = modal.querySelector('.modal-footer');
         if (modalFooter) {
             modalFooter.innerHTML = `
@@ -914,12 +966,10 @@ class RecUpcoming {
         try {
             this.manager.showToast('Creating recommendation with template...', 'info');
 
-            // FIX: Validate contentData before sending
             if (!contentData || !contentData.id) {
                 throw new Error('Invalid content data');
             }
 
-            // Enhanced template params logging
             console.log('🎯 Template params being saved:', templateParams);
 
             const requestData = {
@@ -931,7 +981,6 @@ class RecUpcoming {
                 recommendation_type: templateType || 'general',
                 description: this.generateDescriptionFromTemplate(templateType, templateParams),
 
-                // Enhanced template data structure
                 template_data: {
                     selected_template: templateType,
                     template_fields: templateParams,
@@ -956,7 +1005,6 @@ class RecUpcoming {
                     this.manager.showToast(`Draft saved with ${templateType} template! (${Object.keys(templateParams).length} fields saved)`, 'success');
                 }
 
-                // Close modal and refresh data
                 const modal = document.getElementById('enhancedCreateRecommendationModal');
                 if (modal) {
                     bootstrap.Modal.getInstance(modal)?.hide();
@@ -978,7 +1026,6 @@ class RecUpcoming {
         }
     }
 
-    // NEW: Generate description from template
     generateDescriptionFromTemplate(templateType, templateParams) {
         const descriptions = {
             'mind_bending': `Mind-bending recommendation${templateParams.overview ? ' with custom overview' : ''}`,
@@ -1005,7 +1052,6 @@ class RecUpcoming {
 
             const recommendation = await response.json();
 
-            // Use enhanced template modal for editing
             this.showEnhancedEditModal(recommendation);
 
         } catch (error) {
@@ -1014,7 +1060,6 @@ class RecUpcoming {
         }
     }
 
-    // Enhanced edit modal using the same design as create recommendation
     showEnhancedEditModal(recommendation) {
         if (!window.templateManager) {
             window.templateManager = new TemplateManager(this);
@@ -1033,7 +1078,6 @@ class RecUpcoming {
             return;
         }
 
-        // Update modal title for editing
         const modalTitle = modal.querySelector('.modal-title');
         if (modalTitle) {
             modalTitle.innerHTML = `
@@ -1042,7 +1086,6 @@ class RecUpcoming {
             `;
         }
 
-        // Update content preview
         const contentPreview = document.getElementById('modalContentPreview');
         if (contentPreview) {
             contentPreview.innerHTML = `
@@ -1068,16 +1111,13 @@ class RecUpcoming {
             `;
         }
 
-        // Render template selection
         const templateGrid = document.getElementById('templateGrid');
         if (templateGrid) {
             window.templateManager.renderTemplateSelection(templateGrid);
 
-            // Enhanced template preselection
             setTimeout(() => {
-                let templateToSelect = 'standard_movie'; // Default
+                let templateToSelect = 'standard_movie';
 
-                // Try to get template from multiple sources
                 if (recommendation.template_data?.selected_template) {
                     templateToSelect = recommendation.template_data.selected_template;
                     console.log('✅ Found template in template_data:', templateToSelect);
@@ -1089,19 +1129,15 @@ class RecUpcoming {
                     console.log('✅ Using recommendation_type as template:', templateToSelect);
                 }
 
-                // Select the template
                 window.templateManager.selectTemplate(templateToSelect);
 
-                // Enhanced field preloading
                 let fieldsToPreload = {};
 
-                // Get fields from template_fields first (priority)
                 if (recommendation.template_data?.template_fields) {
                     fieldsToPreload = { ...recommendation.template_data.template_fields };
                     console.log('✅ Found template_fields in template_data:', fieldsToPreload);
                 }
 
-                // Also check individual database columns as backup
                 const individualFields = {};
                 if (recommendation.hook_text) individualFields.hook = recommendation.hook_text;
                 if (recommendation.if_you_like) individualFields.if_you_like = recommendation.if_you_like;
@@ -1110,8 +1146,8 @@ class RecUpcoming {
                 if (recommendation.scene_caption) individualFields.caption = recommendation.scene_caption;
                 if (recommendation.list_title) individualFields.list_title = recommendation.list_title;
                 if (recommendation.list_items) individualFields.items = recommendation.list_items;
+                if (recommendation.hashtags) individualFields.hashtags = recommendation.hashtags;
 
-                // Merge fields (template_fields takes priority)
                 fieldsToPreload = { ...individualFields, ...fieldsToPreload };
 
                 console.log('🔄 Final fields to preload:', fieldsToPreload);
@@ -1125,7 +1161,6 @@ class RecUpcoming {
             }, 100);
         }
 
-        // Update modal buttons for editing
         const modalFooter = modal.querySelector('.modal-footer');
         if (modalFooter) {
             modalFooter.innerHTML = `
@@ -1175,7 +1210,6 @@ class RecUpcoming {
                 return;
             }
 
-            // Use enhanced template modal for publishing
             this.showEnhancedPublishModal(recommendation);
 
         } catch (error) {
@@ -1184,7 +1218,6 @@ class RecUpcoming {
         }
     }
 
-    // Enhanced publish modal using the same design as create recommendation
     showEnhancedPublishModal(recommendation) {
         if (!window.templateManager) {
             window.templateManager = new TemplateManager(this);
@@ -1203,7 +1236,6 @@ class RecUpcoming {
             return;
         }
 
-        // Update modal title for publishing
         const modalTitle = modal.querySelector('.modal-title');
         if (modalTitle) {
             modalTitle.innerHTML = `
@@ -1212,7 +1244,6 @@ class RecUpcoming {
             `;
         }
 
-        // Update content preview
         const contentPreview = document.getElementById('modalContentPreview');
         if (contentPreview) {
             const templateFieldCount = recommendation.template_data?.field_count ||
@@ -1243,17 +1274,14 @@ class RecUpcoming {
             `;
         }
 
-        // Render template selection
         const templateGrid = document.getElementById('templateGrid');
         if (templateGrid) {
             window.templateManager.renderTemplateSelection(templateGrid);
 
-            // Pre-select template if saved with recommendation
             if (recommendation.template_data?.selected_template) {
                 setTimeout(() => {
                     window.templateManager.selectTemplate(recommendation.template_data.selected_template);
 
-                    // Pre-fill template fields if saved
                     if (recommendation.template_data?.template_fields) {
                         window.templateManager.preloadTemplateFields(recommendation.template_data.template_fields);
                     }
@@ -1261,7 +1289,6 @@ class RecUpcoming {
             }
         }
 
-        // Update modal buttons for publishing
         const modalFooter = modal.querySelector('.modal-footer');
         if (modalFooter) {
             modalFooter.innerHTML = `
@@ -1294,7 +1321,6 @@ class RecUpcoming {
         window.recUtils.refreshFeatherIcons();
     }
 
-    // Setup event listeners for enhanced publish modal
     setupEnhancedPublishEventListeners(recommendation) {
         const updateDraftBtn = document.getElementById('updateDraftBtn');
         const publishNowBtn = document.getElementById('publishNowBtn');
@@ -1332,7 +1358,6 @@ class RecUpcoming {
         });
     }
 
-    // Setup event listeners for enhanced edit modal
     setupEnhancedEditEventListeners(recommendation) {
         const deleteBtn = document.getElementById('deleteRecommendationBtn');
         const saveChangesBtn = document.getElementById('saveChangesBtn');
@@ -1377,7 +1402,6 @@ class RecUpcoming {
         });
     }
 
-    // Update recommendation with template data
     async updateRecommendationWithTemplate(recommendationId, templateType, publishNow, templateParams = {}) {
         try {
             this.manager.showToast(publishNow ? 'Publishing recommendation...' : 'Updating recommendation...', 'info');
@@ -1402,7 +1426,6 @@ class RecUpcoming {
 
             if (response.ok) {
                 if (publishNow) {
-                    // Also publish to Telegram
                     const publishResponse = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}/publish`, {
                         method: 'POST',
                         body: JSON.stringify({
@@ -1446,7 +1469,6 @@ class RecUpcoming {
         }
     }
 
-    // Delete recommendation method
     async deleteRecommendation(recommendationId) {
         try {
             this.manager.showToast('Deleting recommendation...', 'info');
@@ -1668,7 +1690,6 @@ class RecUpcoming {
     }
 
     extractContentData(content) {
-        // FIX: Better data extraction with validation
         if (!content) {
             throw new Error('Content data is required');
         }
@@ -1741,6 +1762,5 @@ class RecUpcoming {
     }
 }
 
-// Initialize and expose globally
 window.recUpcoming = null;
 window.templateManager = null;
