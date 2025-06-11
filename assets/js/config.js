@@ -1,5 +1,5 @@
 const CineBrainConfig = {
-    apiBase: 'https://cinebrain.onrender.com/api',
+    apiBase: 'https://cinebrain-server-1.onrender.com/api',
     posterBase: 'https://image.tmdb.org/t/p/w500',
     backdropBase: 'https://image.tmdb.org/t/p/w1280'
 };

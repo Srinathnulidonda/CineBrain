@@ -2,7 +2,7 @@
 
 class CineBrainHelpCenter {
     constructor() {
-        this.apiBase = window.CineBrainConfig?.apiBase || 'https://cinebrain.onrender.com/api';
+        this.apiBase = window.CineBrainConfig.apiBase;
         this.helpCategories = [];
         this.helpArticles = [];
         this.popularArticles = [];

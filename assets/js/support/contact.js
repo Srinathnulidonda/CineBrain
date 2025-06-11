@@ -2,7 +2,7 @@
 
 class CineBrainContactForm {
     constructor() {
-        this.apiBase = window.CineBrainConfig?.apiBase || 'https://cinebrain.onrender.com/api';
+        this.apiBase = window.CineBrainConfig.apiBase;
         this.form = null;
         this.submitBtn = null;
         this.isSubmitting = false;
