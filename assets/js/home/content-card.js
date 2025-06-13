@@ -11,11 +11,14 @@ class CineBrainContentCardManager {
         this.interactionStates = new Map();
         this.loadingStates = new Map();
         this.preloadedContent = new Map();
+        this.renderedContentIds = new Map();
 
         this.loadingControllers = new Map();
         this.isInitialLoad = true;
         this.backgroundLoader = null;
         this.loadingFavorites = false;
+
+        this.languagePriority = ['telugu', 'hindi', 'tamil', 'malayalam', 'kannada', 'english', 'japanese', 'korean'];
 
         this.contentRows = [
             {
@@ -33,7 +36,8 @@ class CineBrainContentCardManager {
                 params: { limit: 40 },
                 priority: 1,
                 cached: true,
-                cinebrain_service: true
+                cinebrain_service: true,
+                dedupe: true
             },
             {
                 id: 'critics-choice',
@@ -244,6 +248,140 @@ class CineBrainContentCardManager {
         }
     }
 
+    clearRowCache(rowId) {
+        const keysToDelete = [];
+        for (const key of this.contentCache.keys()) {
+            if (key.includes(rowId) || key.includes('new-releases')) {
+                keysToDelete.push(key);
+            }
+        }
+        keysToDelete.forEach(key => {
+            this.contentCache.delete(key);
+            console.log(`CineBrain: Cleared cache for ${key}`);
+        });
+    }
+
+    getLanguagePriority(languages) {
+        if (!Array.isArray(languages) || languages.length === 0) {
+            return 999;
+        }
+
+        let bestPriority = 999;
+        for (const lang of languages) {
+            if (!lang) continue;
+            const langLower = String(lang).toLowerCase().trim();
+            const priority = this.languagePriority.findIndex(l =>
+                langLower === l || langLower.includes(l) || l.includes(langLower)
+            );
+            if (priority !== -1) {
+                bestPriority = Math.min(bestPriority, priority);
+            }
+        }
+        return bestPriority;
+    }
+
+    sortByDateThenLanguage(content) {
+        if (!Array.isArray(content) || content.length === 0) {
+            console.log('CineBrain: No content to sort');
+            return [];
+        }
+
+        console.log(`CineBrain: Sorting ${content.length} items by date first, then language priority`);
+
+        try {
+            const sorted = [...content].sort((a, b) => {
+                const dateStrA = a.release_date || '1900-01-01';
+                const dateStrB = b.release_date || '1900-01-01';
+
+                const dateA = new Date(dateStrA);
+                const dateB = new Date(dateStrB);
+
+                const dateOnlyA = dateStrA.substring(0, 10);
+                const dateOnlyB = dateStrB.substring(0, 10);
+
+                if (dateOnlyA !== dateOnlyB) {
+                    return dateB.getTime() - dateA.getTime();
+                }
+
+                const langPriorityA = this.getLanguagePriority(a.languages || []);
+                const langPriorityB = this.getLanguagePriority(b.languages || []);
+
+                if (langPriorityA !== langPriorityB) {
+                    return langPriorityA - langPriorityB;
+                }
+
+                return (b.popularity || 0) - (a.popularity || 0);
+            });
+
+            console.log('CineBrain: Sort preview (first 10 items):');
+            sorted.slice(0, 10).forEach((item, index) => {
+                const date = item.release_date ? item.release_date.substring(0, 10) : 'unknown';
+                const primaryLang = item.languages?.[0] || 'unknown';
+                const langPriority = this.getLanguagePriority(item.languages || []);
+                console.log(`  ${index + 1}. ${item.title} | Date: ${date} | Lang: ${primaryLang} (P:${langPriority}) | Pop: ${Math.round(item.popularity || 0)}`);
+            });
+
+            return sorted;
+        } catch (error) {
+            console.error('CineBrain: Error sorting content:', error);
+            return content;
+        }
+    }
+
+
+    deduplicateNewReleases(content) {
+        if (!Array.isArray(content)) return [];
+
+        const seenIds = new Set();
+        const seenTitles = new Set();
+        const seenTmdbIds = new Set();
+        const uniqueContent = [];
+
+        console.log(`CineBrain: Deduplicating ${content.length} new releases items`);
+
+        content.forEach((item, index) => {
+            if (!item || !item.id) {
+                console.warn(`CineBrain: Invalid item at index ${index}:`, item);
+                return;
+            }
+
+            const idKey = `id_${item.id}`;
+            const titleKey = `${item.title?.toLowerCase()?.trim()}_${item.content_type}_${item.release_date}`;
+            const tmdbKey = item.tmdb_id ? `tmdb_${item.tmdb_id}` : null;
+
+            let isDuplicate = false;
+
+            if (seenIds.has(idKey)) {
+                console.warn(`CineBrain: Duplicate ID found: ${item.title} (ID: ${item.id})`);
+                isDuplicate = true;
+            }
+
+            if (seenTitles.has(titleKey)) {
+                console.warn(`CineBrain: Duplicate title+date found: ${item.title} (${item.release_date})`);
+                isDuplicate = true;
+            }
+
+            if (tmdbKey && seenTmdbIds.has(tmdbKey)) {
+                console.warn(`CineBrain: Duplicate TMDB ID found: ${item.title} (TMDB: ${item.tmdb_id})`);
+                isDuplicate = true;
+            }
+
+            if (!isDuplicate) {
+                seenIds.add(idKey);
+                seenTitles.add(titleKey);
+                if (tmdbKey) seenTmdbIds.add(tmdbKey);
+                uniqueContent.push(item);
+            }
+        });
+
+        const removedCount = content.length - uniqueContent.length;
+        if (removedCount > 0) {
+            console.log(`CineBrain: Removed ${removedCount} duplicate items from new releases`);
+        }
+
+        return uniqueContent;
+    }
+
     displayContent(rowId, content) {
         const row = document.getElementById(rowId);
         if (!row) return;
@@ -255,16 +393,36 @@ class CineBrainContentCardManager {
 
         if (!content || !Array.isArray(content) || content.length === 0) {
             wrapper.innerHTML = `
-                <div class="error-message">
-                    <h3>No CineBrain content available</h3>
-                    <p>Check back later for updates</p>
-                </div>
-            `;
+            <div class="error-message">
+                <h3>No CineBrain content available</h3>
+                <p>Check back later for updates</p>
+            </div>
+        `;
             return;
         }
 
-        content.forEach((item, index) => {
+        let finalContent = content;
+
+        if (rowId === 'new-releases') {
+            console.log(`CineBrain: Displaying ${finalContent.length} unique new releases (already sorted)`);
+        } else {
+            finalContent = this.deduplicateContent(content);
+        }
+
+        if (!this.renderedContentIds.has(rowId)) {
+            this.renderedContentIds.set(rowId, new Set());
+        }
+
+        const renderedIds = this.renderedContentIds.get(rowId);
+        renderedIds.clear();
+
+        finalContent.forEach((item, index) => {
+            if (renderedIds.has(item.id)) {
+                return;
+            }
+
             const card = this.createContentCard(item);
+            renderedIds.add(item.id);
 
             card.style.opacity = '0';
             card.style.transform = 'translateY(20px)';
@@ -278,7 +436,7 @@ class CineBrainContentCardManager {
         });
 
         this.setupCarouselNavigation(row);
-        console.log(`CineBrain: Displayed ${content.length} items for ${rowId}`);
+        console.log(`CineBrain: Successfully displayed ${finalContent.length} unique items for ${rowId}`);
     }
 
     getCacheKey(rowConfig) {
@@ -978,15 +1136,12 @@ class CineBrainContentCardManager {
 
                         clearTimeout(interactionTimeoutId);
                         console.log('CineBrain interaction tracking updated successfully');
-                        // In the catch block for interaction tracking
                     } catch (interactionError) {
-                        // Don't show error to user if it's just a 404 on removal
                         if (isCurrentlyInFavorites && interactionError.message && interactionError.message.includes('404')) {
                             console.log('CineBrain: Interaction record already removed, continuing');
                         } else {
                             console.warn('CineBrain: Failed to update interaction tracking:', interactionError);
                         }
-                        // Don't fail the main operation if interaction tracking fails
                     }
 
                     if (!isCurrentlyInFavorites && result.actual_content_id && result.actual_content_id !== numericContentId) {
@@ -1100,6 +1255,10 @@ class CineBrainContentCardManager {
 
         try {
             this.setRowLoadingState(rowConfig.id, 'loading');
+
+            if (rowConfig.id === 'new-releases') {
+                this.clearRowCache(rowConfig.id);
+            }
 
             const cacheKey = this.getCacheKey(rowConfig);
             let content;
@@ -1274,7 +1433,19 @@ class CineBrainContentCardManager {
 
                 if (data.cinebrain_service === 'new_releases' || endpoint.includes('new-releases')) {
                     console.log('CineBrain: Processing new releases with', cineBrainData.priority_content?.length || 0, 'priority items');
-                    return cineBrainData.priority_content || cineBrainData.all_content || [];
+
+                    let rawContent = cineBrainData.priority_content || cineBrainData.all_content || [];
+
+                    if (!Array.isArray(rawContent)) {
+                        console.warn('CineBrain: Invalid content format, expected array');
+                        return [];
+                    }
+
+                    let uniqueContent = this.deduplicateNewReleases(rawContent);
+                    let sortedContent = this.sortByDateThenLanguage(uniqueContent);
+
+                    console.log(`CineBrain: Final new releases count: ${sortedContent.length} (from ${rawContent.length} raw items)`);
+                    return sortedContent;
                 }
 
                 if (data.cinebrain_service === 'critics_choice' || endpoint.includes('critics-choice')) {
