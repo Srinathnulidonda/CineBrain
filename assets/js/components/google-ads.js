@@ -102,9 +102,22 @@ class CineBrainGoogleAds {
     async loadGoogleAds() {
         if (this.isGoogleAdsLoaded) return;
 
+        if (window.adsbygoogle && window.adsbygoogle.loaded) {
+            this.isGoogleAdsLoaded = true;
+            console.log('CineBrain: Google Ads already loaded');
+            return Promise.resolve();
+        }
+
         return new Promise((resolve, reject) => {
             try {
-                // Load Google AdSense script
+                const existingScript = document.querySelector('script[src*="adsbygoogle"]');
+                if (existingScript) {
+                    this.isGoogleAdsLoaded = true;
+                    console.log('CineBrain: Google Ads script already exists');
+                    resolve();
+                    return;
+                }
+
                 const script = document.createElement('script');
                 script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
                 script.async = true;
@@ -117,20 +130,6 @@ class CineBrainGoogleAds {
                 script.onload = () => {
                     this.isGoogleAdsLoaded = true;
                     console.log('CineBrain: Google Ads script loaded');
-
-                    // Initialize AdSense
-                    if (window.adsbygoogle) {
-                        try {
-                            (window.adsbygoogle = window.adsbygoogle || []).push({
-                                google_ad_client: this.config.publisherId,
-                                enable_page_level_ads: true,
-                                overlays: { bottom: true }
-                            });
-                        } catch (e) {
-                            console.warn('CineBrain: AdSense auto ads initialization failed:', e);
-                        }
-                    }
-
                     resolve();
                 };
 
@@ -141,7 +140,6 @@ class CineBrainGoogleAds {
 
                 document.head.appendChild(script);
 
-                // Fallback timeout
                 setTimeout(() => {
                     if (!this.isGoogleAdsLoaded) {
                         console.warn('CineBrain: Google Ads loading timeout');
