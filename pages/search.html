@@ -1,243 +1,540 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search - CineStream</title>
-    
-    <!-- CSS Frameworks -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="../css/main.css">
-    <link rel="stylesheet" href="../css/components.css">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        netflix: {
-                            red: '#E50914',
-                            dark: '#141414',
-                            gray: '#564D4D',
-                            light: '#F3F3F3'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="bg-netflix-dark text-white">
-    <!-- Header -->
-    <header id="main-header" class="sticky-header"></header>
-
-    <!-- Main Content -->
-    <main class="main-content pt-20">
-        <div class="container mx-auto px-4 py-8">
-            <!-- Search Section -->
-            <section class="search-section mb-8">
-                <div class="search-header text-center mb-6">
-                    <h1 class="text-4xl font-bold mb-4">
-                        <i class="fas fa-search text-netflix-red"></i>
-                        Discover Movies & TV Shows
-                    </h1>
-                    <p class="text-xl text-netflix-light">Find your next favorite from millions of titles</p>
+<div class="search-page">
+    <div class="search-header">
+        <div class="container">
+            <div class="search-bar-wrapper">
+                <div class="search-bar">
+                    <div class="search-input-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input 
+                            type="text" 
+                            id="search-input" 
+                            class="search-input" 
+                            placeholder="Search for movies, TV shows, or people..."
+                            autocomplete="off"
+                        >
+                        <button class="search-clear" id="search-clear" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <button class="search-btn" id="search-btn">
+                        <i class="fas fa-search"></i>
+                        <span>Search</span>
+                    </button>
                 </div>
-
-                <div class="search-form-container max-w-4xl mx-auto">
-                    <form class="search-form" id="main-search-form">
-                        <div class="search-input-group">
-                            <input 
-                                type="text" 
-                                class="search-input-main" 
-                                placeholder="Search for movies, TV shows, actors..."
-                                id="main-search-input"
-                                autocomplete="off"
-                            >
-                            <button type="submit" class="search-btn-main">
-                                <i class="fas fa-search"></i>
+                
+                <div class="search-filters">
+                    <div class="filter-group">
+                        <label>Type:</label>
+                        <select id="content-type-filter" class="filter-select">
+                            <option value="all">All</option>
+                            <option value="movie">Movies</option>
+                            <option value="tv">TV Shows</option>
+                            <option value="anime">Anime</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Genre:</label>
+                        <select id="genre-filter" class="filter-select">
+                            <option value="all">All Genres</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Year:</label>
+                        <select id="year-filter" class="filter-select">
+                            <option value="all">Any Year</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Language:</label>
+                        <select id="language-filter" class="filter-select">
+                            <option value="all">All Languages</option>
+                            <option value="en">English</option>
+                            <option value="hi">Hindi</option>
+                            <option value="te">Telugu</option>
+                            <option value="ta">Tamil</option>
+                            <option value="kn">Kannada</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn btn-outline" id="clear-filters">
+                        <i class="fas fa-filter"></i>
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="search-content">
+        <div class="container">
+            <!-- Search Suggestions -->
+            <div class="search-suggestions" id="search-suggestions" style="display: none;">
+                <div class="suggestions-header">
+                    <h3>Search Suggestions</h3>
+                </div>
+                <div class="suggestions-list" id="suggestions-list">
+                    <!-- Suggestions will be populated dynamically -->
+                </div>
+            </div>
+            
+            <!-- Recent Searches -->
+            <div class="recent-searches" id="recent-searches">
+                <div class="recent-header">
+                    <h3>Recent Searches</h3>
+                    <button class="btn-ghost" id="clear-recent">Clear All</button>
+                </div>
+                <div class="recent-list" id="recent-list">
+                    <!-- Recent searches will be populated dynamically -->
+                </div>
+            </div>
+            
+            <!-- Search Results -->
+            <div class="search-results" id="search-results" style="display: none;">
+                <div class="results-header">
+                    <h2 id="results-title">Search Results</h2>
+                    <div class="results-meta">
+                        <span id="results-count">0 results</span>
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="grid" title="Grid View">
+                                <i class="fas fa-th"></i>
+                            </button>
+                            <button class="view-btn" data-view="list" title="List View">
+                                <i class="fas fa-list"></i>
                             </button>
                         </div>
-                    </form>
-
-                    <!-- Search Filters -->
-                    <div class="search-filters mt-4">
-                        <div class="filter-group">
-                            <label class="filter-label">Type:</label>
-                            <select class="filter-select" id="type-filter">
-                                <option value="">All</option>
-                                <option value="movie">Movies</option>
-                                <option value="tv">TV Shows</option>
-                                <option value="anime">Anime</option>
-                            </select>
-                        </div>
-
-                        <div class="filter-group">
-                            <label class="filter-label">Genre:</label>
-                            <select class="filter-select" id="genre-filter">
-                                <option value="">All Genres</option>
-                                <option value="28">Action</option>
-                                <option value="35">Comedy</option>
-                                <option value="18">Drama</option>
-                                <option value="27">Horror</option>
-                                <option value="10749">Romance</option>
-                                <option value="878">Sci-Fi</option>
-                                <option value="53">Thriller</option>
-                            </select>
-                        </div>
-
-                        <div class="filter-group">
-                            <label class="filter-label">Year:</label>
-                            <select class="filter-select" id="year-filter">
-                                <option value="">Any Year</option>
-                                <option value="2024">2024</option>
-                                <option value="2023">2023</option>
-                                <option value="2022">2022</option>
-                                <option value="2021">2021</option>
-                                <option value="2020">2020</option>
-                            </select>
-                        </div>
-
-                        <div class="filter-group">
-                            <label class="filter-label">Rating:</label>
-                            <select class="filter-select" id="rating-filter">
-                                <option value="">Any Rating</option>
-                                <option value="9">9+ Stars</option>
-                                <option value="8">8+ Stars</option>
-                                <option value="7">7+ Stars</option>
-                                <option value="6">6+ Stars</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
-            </section>
-
-            <!-- Search Suggestions -->
-            <section class="search-suggestions mb-8" id="search-suggestions">
-                <div class="suggestions-header mb-4">
-                    <h2 class="text-2xl font-semibold">
-                        <i class="fas fa-lightbulb text-netflix-red"></i>
-                        Popular Searches
-                    </h2>
+                
+                <div class="results-container">
+                    <div class="results-grid" id="results-grid">
+                        <!-- Search results will be populated dynamically -->
+                    </div>
+                    
+                    <div class="results-list" id="results-list" style="display: none;">
+                        <!-- List view results will be populated dynamically -->
+                    </div>
                 </div>
-                <div class="suggestions-grid" id="suggestions-grid">
-                    <!-- Popular search terms will be loaded here -->
-                </div>
-            </section>
-
-            <!-- Search History -->
-            <section class="search-history mb-8 user-only" id="search-history-section">
-                <div class="history-header mb-4">
-                    <h2 class="text-2xl font-semibold">
-                        <i class="fas fa-history text-netflix-red"></i>
-                        Recent Searches
-                    </h2>
-                    <button class="btn-secondary btn-sm" id="clear-history-btn">
-                        <i class="fas fa-trash"></i> Clear History
+                
+                <div class="load-more-container" id="load-more-container" style="display: none;">
+                    <button class="btn btn-outline" id="load-more-btn">
+                        <i class="fas fa-plus"></i>
+                        Load More Results
                     </button>
                 </div>
-                <div class="history-list" id="history-list">
-                    <!-- Search history will be loaded here -->
-                </div>
-            </section>
-
-            <!-- Search Results -->
-            <section class="search-results" id="search-results-section" style="display: none;">
-                <div class="results-header mb-6">
-                    <h2 class="text-2xl font-semibold" id="results-title">Search Results</h2>
-                    <div class="results-meta" id="results-meta"></div>
-                </div>
-
-                <!-- View Toggle -->
-                <div class="view-toggle mb-4">
-                    <button class="view-btn active" data-view="grid">
-                        <i class="fas fa-th"></i> Grid
-                    </button>
-                    <button class="view-btn" data-view="list">
-                        <i class="fas fa-list"></i> List
-                    </button>
-                </div>
-
-                <!-- Results Grid -->
-                <div class="results-grid" id="results-grid">
-                    <!-- Search results will be displayed here -->
-                </div>
-
-                <!-- Load More Button -->
-                <div class="load-more-container text-center mt-8">
-                    <button class="btn-primary" id="load-more-btn" style="display: none;">
-                        <i class="fas fa-plus"></i> Load More Results
-                    </button>
-                </div>
-            </section>
-
+            </div>
+            
             <!-- No Results -->
-            <section class="no-results" id="no-results-section" style="display: none;">
-                <div class="empty-state">
-                    <div class="empty-state-icon">
-                        <i class="fas fa-search"></i>
+            <div class="no-results" id="no-results" style="display: none;">
+                <div class="no-results-content">
+                    <i class="fas fa-search no-results-icon"></i>
+                    <h3>No results found</h3>
+                    <p>Try adjusting your search terms or filters</p>
+                    <div class="no-results-suggestions">
+                        <h4>Suggestions:</h4>
+                        <ul>
+                            <li>Check your spelling</li>
+                            <li>Try different keywords</li>
+                            <li>Use fewer words</li>
+                            <li>Try broader search terms</li>
+                        </ul>
                     </div>
-                    <h2 class="empty-state-title">No Results Found</h2>
-                    <p class="empty-state-description">
-                        Try adjusting your search terms or filters to find what you're looking for.
-                    </p>
-                    <button class="btn-primary" onclick="document.getElementById('main-search-input').focus()">
-                        <i class="fas fa-search"></i> Try Another Search
-                    </button>
                 </div>
-            </section>
-
-            <!-- Trending Searches -->
-            <section class="trending-searches mb-8">
-                <div class="trending-header mb-4">
-                    <h2 class="text-2xl font-semibold">
-                        <i class="fas fa-fire text-netflix-red"></i>
-                        Trending Now
-                    </h2>
+            </div>
+            
+            <!-- Loading State -->
+            <div class="search-loading" id="search-loading" style="display: none;">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <p>Searching...</p>
                 </div>
-                <div class="trending-content" id="trending-content">
-                    <!-- Trending content will be loaded here -->
-                </div>
-            </section>
+            </div>
         </div>
-    </main>
+    </div>
+</div>
 
-    <!-- Bottom Navigation (Mobile) -->
-    <nav id="bottom-nav" class="bottom-navigation d-md-none"></nav>
+<style>
+.search-page {
+    min-height: calc(100vh - 80px);
+}
 
-    <!-- Modal Container -->
-    <div id="modal-container"></div>
+.search-header {
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-2xl) 0;
+    position: sticky;
+    top: 80px;
+    z-index: 100;
+}
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../js/services/storage.js"></script>
-    <script src="../js/services/auth.js"></script>
-    <script src="../js/services/api.js"></script>
-    <script src="../js/components/header.js"></script>
-    <script src="../js/components/movieCard.js"></script>
-    <script src="../js/components/modal.js"></script>
-    <script src="../js/components/bottomNav.js"></script>
-    <script src="../js/pages/search.js"></script>
+.search-bar-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.search-bar {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.search-input-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    left: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: var(--font-size-lg);
+}
+
+.search-input {
+    width: 100%;
+    padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-lg) 3rem;
+    font-size: var(--font-size-lg);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.1);
+}
+
+.search-clear {
+    position: absolute;
+    right: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: var(--spacing-sm);
+    border-radius: 50%;
+    transition: all var(--transition-fast);
+}
+
+.search-clear:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.search-btn {
+    padding: var(--spacing-lg) var(--spacing-2xl);
+    background-color: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-xl);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.search-btn:hover {
+    background-color: var(--accent-secondary);
+    transform: translateY(-1px);
+}
+
+.search-filters {
+    display: flex;
+    gap: var(--spacing-lg);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.filter-group label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.filter-select {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+}
+
+.search-content {
+    padding: var(--spacing-2xl) 0;
+}
+
+.search-suggestions,
+.recent-searches {
+    margin-bottom: var(--spacing-3xl);
+}
+
+.suggestions-header,
+.recent-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.suggestions-header h3,
+.recent-header h3 {
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.suggestions-list,
+.recent-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.suggestion-tag,
+.recent-tag {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.suggestion-tag:hover,
+.recent-tag:hover {
+    background-color: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-2xl);
+}
+
+.results-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.results-count {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.view-toggle {
+    display: flex;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.view-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.view-btn.active,
+.view-btn:hover {
+    background-color: var(--accent-primary);
+    color: white;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.results-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.result-item-list {
+    display: flex;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.result-item-list:hover {
+    background-color: var(--bg-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.result-poster-list {
+    width: 80px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+}
+
+.result-info-list {
+    flex: 1;
+}
+
+.result-title-list {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.result-meta-list {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.result-overview-list {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.load-more-container {
+    text-align: center;
+    margin-top: var(--spacing-3xl);
+}
+
+.no-results {
+    text-align: center;
+    padding: var(--spacing-3xl) 0;
+}
+
+.no-results-content {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.no-results-icon {
+    font-size: 4rem;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-xl);
+}
+
+.no-results-content h3 {
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.no-results-content p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xl);
+}
+
+.no-results-suggestions {
+    text-align: left;
+}
+
+.no-results-suggestions h4 {
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.no-results-suggestions ul {
+    color: var(--text-secondary);
+    list-style-position: inside;
+}
+
+.search-loading {
+    text-align: center;
+    padding: var(--spacing-3xl) 0;
+}
+
+.loading-content {
+    max-width: 200px;
+    margin: 0 auto;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto var(--spacing-lg);
+}
+
+@media (max-width: 768px) {
+    .search-bar {
+        flex-direction: column;
+    }
     
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize services
-            window.storageService = new StorageService();
-            window.authService = new AuthService();
-            window.apiService = new APIService();
-
-            // Initialize components
-            new HeaderComponent();
-            new BottomNavComponent();
-            window.modalComponent = new ModalComponent();
-
-            // Initialize search page
-            window.searchController = new SearchPageController();
-        });
-    </script>
-</body>
-</html>
+    .search-filters {
+        gap: var(--spacing-md);
+    }
+    
+    .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
+    }
+    
+    .results-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: stretch;
+    }
+    
+    .results-meta {
+        justify-content: space-between;
+    }
+    
+    .results-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: var(--spacing-md);
+    }
+    
+    .result-item-list {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .result-poster-list {
+        width: 100px;
+        height: 150px;
+        margin: 0 auto;
+    }
+}
+</style>

@@ -1,0 +1,712 @@
+<div class="watchlist-page">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="header-content">
+                <h1 class="page-title">
+                    <i class="fas fa-bookmark"></i>
+                    My Watchlist
+                </h1>
+                <p class="page-subtitle">Movies and shows you want to watch</p>
+            </div>
+            
+            <div class="header-actions">
+                <div class="view-controls">
+                    <button class="view-btn active" data-view="grid" title="Grid View">
+                        <i class="fas fa-th"></i>
+                    </button>
+                    <button class="view-btn" data-view="list" title="List View">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+                
+                <div class="sort-controls">
+                    <select id="sort-select" class="form-select">
+                        <option value="added_desc">Recently Added</option>
+                        <option value="added_asc">Oldest First</option>
+                        <option value="title_asc">Title (A-Z)</option>
+                        <option value="title_desc">Title (Z-A)</option>
+                        <option value="rating_desc">Highest Rated</option>
+                        <option value="rating_asc">Lowest Rated</option>
+                        <option value="release_desc">Newest Releases</option>
+                        <option value="release_asc">Oldest Releases</option>
+                    </select>
+                </div>
+                
+                <div class="filter-controls">
+                    <button class="btn btn-outline" id="filter-btn">
+                        <i class="fas fa-filter"></i>
+                        Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Panel -->
+        <div class="filters-panel" id="filters-panel" style="display: none;">
+            <div class="filters-content">
+                <div class="filter-group">
+                    <label>Content Type:</label>
+                    <select id="type-filter" class="form-select">
+                        <option value="all">All</option>
+                        <option value="movie">Movies</option>
+                        <option value="tv">TV Shows</option>
+                        <option value="anime">Anime</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Genre:</label>
+                    <select id="genre-filter" class="form-select">
+                        <option value="all">All Genres</option>
+                        <!-- Genres will be populated dynamically -->
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Year:</label>
+                    <div class="year-range">
+                        <input type="number" id="year-from" class="form-input" placeholder="From" min="1900" max="2030">
+                        <span>to</span>
+                        <input type="number" id="year-to" class="form-input" placeholder="To" min="1900" max="2030">
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Rating:</label>
+                    <div class="rating-range">
+                        <input type="range" id="rating-min" min="0" max="10" step="0.5" value="0">
+                        <input type="range" id="rating-max" min="0" max="10" step="0.5" value="10">
+                        <div class="rating-labels">
+                            <span id="rating-min-label">0.0</span>
+                            <span id="rating-max-label">10.0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="filter-actions">
+                    <button class="btn btn-outline" id="clear-filters-btn">Clear All</button>
+                    <button class="btn btn-primary" id="apply-filters-btn">Apply Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Watchlist Stats -->
+        <div class="watchlist-stats">
+            <div class="stat-card">
+                <i class="fas fa-film"></i>
+                <div>
+                    <span class="stat-number" id="total-items">0</span>
+                    <span class="stat-label">Total Items</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-clock"></i>
+                <div>
+                    <span class="stat-number" id="total-runtime">0h 0m</span>
+                    <span class="stat-label">Total Runtime</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-star"></i>
+                <div>
+                    <span class="stat-number" id="avg-rating">0.0</span>
+                    <span class="stat-label">Avg Rating</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-calendar"></i>
+                <div>
+                    <span class="stat-number" id="this-month">0</span>
+                    <span class="stat-label">Added This Month</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-section">
+            <div class="search-bar">
+                <i class="fas fa-search search-icon"></i>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    class="search-input" 
+                    placeholder="Search your watchlist..."
+                >
+                <button class="search-clear" id="search-clear" style="display: none;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Watchlist Content -->
+        <div class="watchlist-content">
+            <!-- Empty State -->
+            <div class="empty-state" id="empty-state" style="display: none;">
+                <div class="empty-icon">
+                    <i class="fas fa-bookmark"></i>
+                </div>
+                <h3>Your watchlist is empty</h3>
+                <p>Start building your watchlist by adding movies and shows you want to watch.</p>
+                <button class="btn btn-primary" onclick="window.app.navigateTo('search')">
+                    <i class="fas fa-search"></i>
+                    Browse Content
+                </button>
+            </div>
+
+            <!-- Grid View -->
+            <div class="watchlist-grid" id="watchlist-grid">
+                <!-- Items will be populated dynamically -->
+            </div>
+
+            <!-- List View -->
+            <div class="watchlist-list" id="watchlist-list" style="display: none;">
+                <!-- Items will be populated dynamically -->
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading-state" id="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Loading your watchlist...</p>
+            </div>
+
+            <!-- No Results -->
+            <div class="no-results" id="no-results" style="display: none;">
+                <div class="no-results-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3>No items found</h3>
+                <p>Try adjusting your search or filters.</p>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-container" id="pagination-container" style="display: none;">
+            <div class="pagination">
+                <button class="pagination-btn" id="prev-page" disabled>
+                    <i class="fas fa-chevron-left"></i>
+                    Previous
+                </button>
+                
+                <div class="pagination-info">
+                    <span id="page-info">Page 1 of 1</span>
+                </div>
+                
+                <button class="pagination-btn" id="next-page" disabled>
+                    Next
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div class="bulk-actions" id="bulk-actions" style="display: none;">
+            <div class="bulk-actions-content">
+                <div class="selected-count">
+                    <span id="selected-count">0</span> items selected
+                </div>
+                <div class="bulk-buttons">
+                    <button class="btn btn-outline" id="select-all-btn">Select All</button>
+                    <button class="btn btn-outline" id="clear-selection-btn">Clear Selection</button>
+                    <button class="btn btn-primary" id="move-to-favorites-btn">
+                        <i class="fas fa-heart"></i>
+                        Move to Favorites
+                    </button>
+                    <button class="btn btn-danger" id="remove-selected-btn">
+                        <i class="fas fa-trash"></i>
+                        Remove Selected
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.watchlist-page {
+    min-height: calc(100vh - 80px);
+    padding: var(--spacing-2xl) 0;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-2xl);
+    padding: var(--spacing-2xl);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-color);
+}
+
+.header-content h1 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    font-size: var(--font-size-3xl);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.header-content h1 i {
+    color: var(--accent-primary);
+}
+
+.page-subtitle {
+    color: var(--text-secondary);
+    font-size: var(--font-size-lg);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.view-controls {
+    display: flex;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.view-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--bg-primary);
+    color: var(--text-secondary);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.view-btn:hover,
+.view-btn.active {
+    background-color: var(--accent-primary);
+    color: white;
+}
+
+.filters-panel {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-xl);
+    overflow: hidden;
+}
+
+.filters-content {
+    padding: var(--spacing-xl);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+    align-items: end;
+}
+
+.filter-group label {
+    display: block;
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-bottom: var(--spacing-sm);
+}
+
+.year-range {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.year-range input {
+    flex: 1;
+}
+
+.year-range span {
+    color: var(--text-secondary);
+}
+
+.rating-range {
+    position: relative;
+}
+
+.rating-range input[type="range"] {
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+}
+
+.rating-labels {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.filter-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+}
+
+.watchlist-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-xl);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+.stat-card i {
+    font-size: var(--font-size-2xl);
+    color: var(--accent-primary);
+}
+
+.stat-number {
+    display: block;
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.search-section {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.search-bar {
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.search-icon {
+    position: absolute;
+    left: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+.search-input {
+    width: 100%;
+    padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) 3rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    font-size: var(--font-size-lg);
+}
+
+.search-clear {
+    position: absolute;
+    right: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: var(--spacing-sm);
+    border-radius: 50%;
+}
+
+.empty-state,
+.no-results {
+    text-align: center;
+    padding: var(--spacing-3xl);
+    color: var(--text-secondary);
+}
+
+.empty-icon,
+.no-results-icon {
+    font-size: 4rem;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-xl);
+}
+
+.empty-state h3,
+.no-results h3 {
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.watchlist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.watchlist-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.watchlist-item {
+    position: relative;
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+    border: 1px solid var(--border-color);
+}
+
+.watchlist-item:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.watchlist-item-list {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-fast);
+}
+
+.watchlist-item-list:hover {
+    background-color: var(--bg-hover);
+}
+
+.item-checkbox {
+    position: absolute;
+    top: var(--spacing-md);
+    left: var(--spacing-md);
+    z-index: 2;
+}
+
+.item-poster {
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+}
+
+.item-poster-list {
+    width: 80px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+}
+
+.item-info {
+    padding: var(--spacing-md);
+}
+
+.item-info-list {
+    flex: 1;
+    min-width: 0;
+}
+
+.item-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.2;
+}
+
+.item-title-list {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.2;
+}
+
+.item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.item-overview {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.item-actions {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
+.watchlist-item:hover .item-actions {
+    opacity: 1;
+}
+
+.item-actions-list {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-shrink: 0;
+}
+
+.loading-state {
+    text-align: center;
+    padding: var(--spacing-3xl);
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto var(--spacing-lg);
+}
+
+.pagination-container {
+    margin-top: var(--spacing-2xl);
+}
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+.pagination-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.bulk-actions {
+    position: fixed;
+    bottom: var(--spacing-lg);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    padding: var(--spacing-lg);
+}
+
+.bulk-actions-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.selected-count {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.bulk-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: var(--spacing-lg);
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        flex-wrap: wrap;
+        justify-content: space-between;
+    }
+    
+    .filters-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .watchlist-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .watchlist-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: var(--spacing-md);
+    }
+    
+    .watchlist-item-list {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .item-poster-list {
+        width: 100px;
+        height: 150px;
+    }
+    
+    .bulk-actions {
+        left: var(--spacing-md);
+        right: var(--spacing-md);
+        transform: none;
+    }
+    
+    .bulk-actions-content {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .bulk-buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+</style>
