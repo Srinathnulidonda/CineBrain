@@ -1,23 +1,26 @@
 const CACHE_NAME = 'movierec-v1';
 const urlsToCache = [
     '/',
+    '/index.html',
+    '/login.html',
     '/assets/css/main.css',
     '/assets/css/components.css',
-    '/assets/css/utilities.css',
-    '/assets/js/main.js',
-    '/assets/js/config.js',
+    '/assets/js/app.js',
     '/assets/js/api.js',
     '/assets/js/auth.js',
+    '/assets/js/components.js',
     '/assets/js/utils.js',
-    '/assets/images/placeholders/no-poster.png',
-    '/assets/images/placeholders/no-image.png'
+    '/assets/images/placeholder.jpg'
 ];
 
-// Install event
+// Install service worker
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(urlsToCache))
+            .then(cache => {
+                console.log('Opened cache');
+                return cache.addAll(urlsToCache);
+            })
     );
 });
 
@@ -30,22 +33,22 @@ self.addEventListener('fetch', event => {
                 if (response) {
                     return response;
                 }
-
+                
                 return fetch(event.request).then(
                     response => {
                         // Check if valid response
                         if (!response || response.status !== 200 || response.type !== 'basic') {
                             return response;
                         }
-
+                        
                         // Clone the response
                         const responseToCache = response.clone();
-
+                        
                         caches.open(CACHE_NAME)
                             .then(cache => {
                                 cache.put(event.request, responseToCache);
                             });
-
+                        
                         return response;
                     }
                 );

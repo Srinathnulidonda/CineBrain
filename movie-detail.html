@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Details - MovieRec</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#141414">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Bootstrap Grid Only -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap-grid.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/components.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container-fluid">
+            <div class="row align-items-center w-100">
+                <div class="col-auto">
+                    <a href="/" class="navbar-brand">
+                        <h1 class="text-2xl font-bold text-red-600">MovieRec</h1>
+                    </a>
+                </div>
+                <div class="col">
+                    <div class="navbar-nav">
+                        <a href="/" class="nav-link">
+                            <i class="fas fa-arrow-left"></i> Back to Home
+                        </a>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="navbar-actions">
+                        <div id="authButtons">
+                            <a href="login.html" class="btn btn-outline">Sign In</a>
+                        </div>
+                        <div id="userMenu" style="display: none;">
+                            <div class="dropdown">
+                                <button class="user-avatar" id="userDropdown">
+                                    <i class="fas fa-user"></i>
+                                </button>
+                                <div class="dropdown-menu" id="dropdownMenu">
+                                    <a href="profile.html" class="dropdown-item">
+                                        <i class="fas fa-user-circle"></i> Profile
+                                    </a>
+                                    <a href="#" class="dropdown-item" id="adminLink" style="display: none;">
+                                        <i class="fas fa-cog"></i> Admin Panel
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <a href="#" class="dropdown-item" id="logoutBtn">
+                                        <i class="fas fa-sign-out-alt"></i> Logout
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Loading State -->
+        <div class="loading-container" id="loadingContainer">
+            <div class="container-fluid py-5">
+                <div class="skeleton-hero"></div>
+            </div>
+        </div>
+
+        <!-- Movie Details -->
+        <div class="movie-details-container" id="movieDetailsContainer" style="display: none;">
+            <!-- Hero Section -->
+            <section class="movie-hero" id="movieHero">
+                <!-- Backdrop will be set as background -->
+            </section>
+
+            <!-- Content Section -->
+            <section class="movie-content">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <!-- Overview -->
+                            <div class="content-block">
+                                <h2>Overview</h2>
+                                <p class="movie-overview" id="movieOverview"></p>
+                            </div>
+
+                            <!-- Videos -->
+                            <div class="content-block" id="videosSection" style="display: none;">
+                                <h2>Trailers & Videos</h2>
+                                <div class="videos-grid" id="videosGrid"></div>
+                            </div>
+
+                            <!-- Reviews -->
+                            <div class="content-block" id="reviewsSection" style="display: none;">
+                                <h2>User Reviews</h2>
+                                <div class="reviews-container" id="reviewsContainer"></div>
+                                
+                                <!-- Add Review (for logged-in users) -->
+                                <div class="add-review" id="addReviewSection" style="display: none;">
+                                    <h3>Rate this movie</h3>
+                                    <div class="rating-input" id="ratingInput">
+                                        <div class="rating-component">
+                                            <i class="rating-star fas fa-star" data-rating="1"></i>
+                                            <i class="rating-star fas fa-star" data-rating="2"></i>
+                                            <i class="rating-star fas fa-star" data-rating="3"></i>
+                                            <i class="rating-star fas fa-star" data-rating="4"></i>
+                                            <i class="rating-star fas fa-star" data-rating="5"></i>
+                                        </div>
+                                        <button class="btn btn-primary" id="submitRating">Submit Rating</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <!-- Movie Info Sidebar -->
+                            <div class="movie-sidebar">
+                                <div class="movie-poster-large">
+                                    <img id="moviePosterLarge" src="" alt="">
+                                </div>
+
+                                <div class="movie-meta-details" id="movieMetaDetails">
+                                    <!-- Will be populated with movie details -->
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="movie-actions" id="movieActions">
+                                    <button class="btn btn-primary btn-block" id="playTrailerBtn">
+                                        <i class="fas fa-play"></i> Play Trailer
+                                    </button>
+                                    <div class="action-buttons">
+                                        <button class="action-btn" id="favoriteBtn" title="Add to Favorites">
+                                            <i class="fas fa-heart"></i>
+                                        </button>
+                                        <button class="action-btn" id="wishlistBtn" title="Add to Wishlist">
+                                            <i class="fas fa-bookmark"></i>
+                                        </button>
+                                        <button class="action-btn" id="shareBtn" title="Share">
+                                            <i class="fas fa-share"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Similar Movies -->
+            <section class="similar-movies" id="similarMoviesSection" style="display: none;">
+                <div class="container-fluid">
+                    <h2 class="section-title">Similar Movies</h2>
+                    <div class="carousel-container" id="similarMoviesCarousel"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Error State -->
+    <div class="error-container" id="errorContainer" style="display: none;">
+        <div class="container-fluid text-center py-5">
+            <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
+            <h2>Movie Not Found</h2>
+            <p class="text-secondary mb-4">The movie you're looking for doesn't exist or has been removed.</p>
+            <a href="/" class="btn btn-primary">Go Back Home</a>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+        class MovieDetailPage {
+            constructor() {
+                this.movieId = utils.getQueryParam('id');
+                this.movieData = null;
+                this.currentRating = 0;
+                this.init();
+            }
+
+            async init() {
+                if (!this.movieId) {
+                    this.showError();
+                    return;
+                }
+
+                this.setupAuth();
+                await this.loadMovieDetails();
+                this.setupInteractions();
+            }
+
+            setupAuth() {
+                const authButtons = document.getElementById('authButtons');
+                const userMenu = document.getElementById('userMenu');
+                const adminLink = document.getElementById('adminLink');
+
+                if (auth.isAuthenticated) {
+                    authButtons.style.display = 'none';
+                    userMenu.style.display = 'block';
+                    
+                    if (auth.isAdmin) {
+                        adminLink.style.display = 'block';
+                        adminLink.href = '/admin/';
+                    }
+
+                    // Show add review section
+                    document.getElementById('addReviewSection').style.display = 'block';
+                }
+
+                // Logout handler
+                document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    auth.logout();
+                });
+
+                // Dropdown toggle
+                const userDropdown = document.getElementById('userDropdown');
+                const dropdownMenu = document.getElementById('dropdownMenu');
+                
+                userDropdown?.addEventListener('click', () => {
+                    dropdownMenu.classList.toggle('show');
+                });
+            }
+
+            async loadMovieDetails() {
+                try {
+                    this.movieData = await api.getContentDetails(this.movieId);
+                    this.renderMovieDetails();
+                    this.hideLoading();
+                } catch (error) {
+                    console.error('Failed to load movie details:', error);
+                    this.showError();
+                }
+            }
+
+            renderMovieDetails() {
+                const movie = this.movieData.content;
+                const details = this.movieData.tmdb_details;
+                
+                // Set page title
+                document.title = `${movie.title} - MovieRec`;
+
+                // Render hero section
+                this.renderHero(movie, details);
+                
+                // Render overview
+                document.getElementById('movieOverview').textContent = movie.overview || 'No overview available.';
+                
+                // Render poster
+                document.getElementById('moviePosterLarge').src = movie.poster_path || '/assets/images/placeholder.jpg';
+                document.getElementById('moviePosterLarge').alt = movie.title;
+                
+                // Render meta details
+                this.renderMetaDetails(movie, details);
+                
+                // Render videos
+                this.renderVideos();
+                
+                // Render reviews
+                this.renderReviews();
+                
+                // Render similar movies
+                this.renderSimilarMovies();
+            }
+
+            renderHero(movie, details) {
+                const heroSection = document.getElementById('movieHero');
+                const backdropUrl = movie.backdrop_path || movie.poster_path || '';
+                
+                heroSection.style.backgroundImage = `url(${backdropUrl})`;
+                heroSection.innerHTML = `
+                    <div class="hero-overlay">
+                        <div class="container-fluid">
+                            <div class="hero-content">
+                                <h1 class="movie-title">${movie.title}</h1>
+                                ${movie.original_title && movie.original_title !== movie.title ? 
+                                    `<p class="original-title">${movie.original_title}</p>` : ''}
+                                <div class="movie-meta">
+                                    ${movie.rating ? `<span class="rating"><i class="fas fa-star"></i> ${movie.rating.toFixed(1)}</span>` : ''}
+                                    ${movie.release_date ? `<span>${new Date(movie.release_date).getFullYear()}</span>` : ''}
+                                    ${details.runtime ? `<span>${utils.formatRuntime(details.runtime)}</span>` : ''}
+                                </div>
+                                ${movie.genre_names ? `
+                                    <div class="genres">
+                                        ${movie.genre_names.slice(0, 3).map(g => `<span class="genre-tag">${g}</span>`).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderMetaDetails(movie, details) {
+                const container = document.getElementById('movieMetaDetails');
+                const cast = details.credits?.cast?.slice(0, 5) || [];
+                const crew = details.credits?.crew || [];
+                const director = crew.find(person => person.job === 'Director');
+                
+                container.innerHTML = `
+                    <div class="meta-item">
+                        <strong>Release Date:</strong>
+                        <span>${movie.release_date ? utils.formatDate(movie.release_date) : 'N/A'}</span>
+                    </div>
+                    ${details.runtime ? `
+                        <div class="meta-item">
+                            <strong>Runtime:</strong>
+                            <span>${utils.formatRuntime(details.runtime)}</span>
+                        </div>
+                    ` : ''}
+                    ${movie.language ? `
+                        <div class="meta-item">
+                            <strong>Language:</strong>
+                            <span>${movie.language.toUpperCase()}</span>
+                        </div>
+                    ` : ''}
+                    ${director ? `
+                        <div class="meta-item">
+                            <strong>Director:</strong>
+                            <span>${director.name}</span>
+                        </div>
+                    ` : ''}
+                    ${cast.length > 0 ? `
+                        <div class="meta-item">
+                            <strong>Cast:</strong>
+                            <span>${cast.map(actor => actor.name).join(', ')}</span>
+                        </div>
+                    ` : ''}
+                    ${details.budget ? `
+                        <div class="meta-item">
+                            <strong>Budget:</strong>
+                            <span>$${utils.formatNumber(details.budget)}</span>
+                        </div>
+                    ` : ''}
+                    ${details.revenue ? `
+                        <div class="meta-item">
+                            <strong>Revenue:</strong>
+                            <span>$${utils.formatNumber(details.revenue)}</span>
+                        </div>
+                    ` : ''}
+                `;
+            }
+
+            renderVideos() {
+                const videos = this.movieData.youtube_videos;
+                if (!videos || (!videos.trailers?.length && !videos.teasers?.length)) return;
+
+                const videosSection = document.getElementById('videosSection');
+                const videosGrid = document.getElementById('videosGrid');
+                
+                videosSection.style.display = 'block';
+                
+                const allVideos = [...(videos.trailers || []), ...(videos.teasers || [])];
+                
+                videosGrid.innerHTML = allVideos.slice(0, 6).map(video => `
+                    <div class="video-card" onclick="this.playVideo('${video.video_id}')">
+                        <div class="video-thumbnail">
+                            <img src="${video.thumbnail}" alt="${video.title}">
+                            <div class="play-overlay">
+                                <i class="fas fa-play"></i>
+                            </div>
+                        </div>
+                        <h4 class="video-title">${video.title}</h4>
+                    </div>
+                `).join('');
+            }
+
+            renderReviews() {
+                const reviews = this.movieData.user_reviews;
+                if (!reviews?.length) return;
+
+                const reviewsSection = document.getElementById('reviewsSection');
+                const reviewsContainer = document.getElementById('reviewsContainer');
+                
+                reviewsSection.style.display = 'block';
+                
+                reviewsContainer.innerHTML = reviews.map(review => `
+                    <div class="review-item">
+                        <div class="review-header">
+                            <strong>${review.username}</strong>
+                            <div class="review-rating">
+                                ${Array(5).fill(0).map((_, i) => 
+                                    `<i class="fas fa-star ${i < review.rating ? 'active' : ''}"></i>`
+                                ).join('')}
+                            </div>
+                        </div>
+                        <div class="review-date">${utils.formatDate(review.created_at)}</div>
+                    </div>
+                `).join('');
+            }
+
+            renderSimilarMovies() {
+                const similar = this.movieData.similar_content;
+                if (!similar?.length) return;
+
+                const similarSection = document.getElementById('similarMoviesSection');
+                similarSection.style.display = 'block';
+                
+                const carousel = new Carousel(
+                    'similarMoviesCarousel',
+                    similar,
+                    (item) => new MovieCard(item, { size: 'medium' }).render()
+                );
+                carousel.render();
+            }
+
+            setupInteractions() {
+                // Play trailer
+                document.getElementById('playTrailerBtn').addEventListener('click', () => {
+                    movieActions.play(this.movieId);
+                });
+
+                // Favorite button
+                document.getElementById('favoriteBtn').addEventListener('click', () => {
+                    movieActions.toggleFavorite(this.movieId);
+                });
+
+                // Wishlist button
+                document.getElementById('wishlistBtn').addEventListener('click', () => {
+                    movieActions.toggleWishlist(this.movieId);
+                });
+
+                // Share button
+                document.getElementById('shareBtn').addEventListener('click', () => {
+                    movieActions.share(this.movieId);
+                });
+
+                // Rating system
+                this.setupRatingSystem();
+            }
+
+            setupRatingSystem() {
+                const stars = document.querySelectorAll('.rating-star');
+                const submitBtn = document.getElementById('submitRating');
+
+                stars.forEach(star => {
+                    star.addEventListener('click', () => {
+                        this.currentRating = parseInt(star.dataset.rating);
+                        this.updateStars();
+                    });
+
+                    star.addEventListener('mouseenter', () => {
+                        const rating = parseInt(star.dataset.rating);
+                        this.highlightStars(rating);
+                    });
+                });
+
+                document.getElementById('ratingInput').addEventListener('mouseleave', () => {
+                    this.updateStars();
+                });
+
+                submitBtn.addEventListener('click', async () => {
+                    if (this.currentRating > 0) {
+                        try {
+                            await api.recordInteraction({
+                                content_id: this.movieId,
+                                interaction_type: 'like',
+                                rating: this.currentRating
+                            });
+                            new Toast('Rating submitted successfully!', 'success').show();
+                            submitBtn.disabled = true;
+                            submitBtn.textContent = 'Rating Submitted';
+                        } catch (error) {
+                            new Toast('Failed to submit rating', 'error').show();
+                        }
+                    }
+                });
+            }
+
+            highlightStars(rating) {
+                const stars = document.querySelectorAll('.rating-star');
+                stars.forEach((star, index) => {
+                    if (index < rating) {
+                        star.classList.add('active');
+                    } else {
+                        star.classList.remove('active');
+                    }
+                });
+            }
+
+            updateStars() {
+                this.highlightStars(this.currentRating);
+            }
+
+            playVideo(videoId) {
+                const modal = new Modal({
+                    content: `
+                        <div class="video-container">
+                            <iframe src="https://www.youtube.com/embed/${videoId}" 
+                                    frameborder="0" 
+                                    allowfullscreen></iframe>
+                        </div>
+                    `,
+                    size: 'large'
+                });
+                modal.show();
+            }
+
+            hideLoading() {
+                document.getElementById('loadingContainer').style.display = 'none';
+                document.getElementById('movieDetailsContainer').style.display = 'block';
+            }
+
+            showError() {
+                document.getElementById('loadingContainer').style.display = 'none';
+                document.getElementById('errorContainer').style.display = 'block';
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new MovieDetailPage();
+        });
+    </script>
+
+    <style>
+        .movie-hero {
+            height: 60vh;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            display: flex;
+            align-items: end;
+        }
+
+        .hero-overlay {
+            background: linear-gradient(to top, rgba(20, 20, 20, 1), rgba(20, 20, 20, 0.3));
+            width: 100%;
+            padding: 4rem 0;
+        }
+
+        .movie-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .original-title {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .movie-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+
+        .movie-meta .rating {
+            color: #ffc107;
+        }
+
+        .genres {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .genre-tag {
+            background: var(--tertiary-bg);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+        }
+
+        .movie-content {
+            padding: 3rem 0;
+        }
+
+        .content-block {
+            margin-bottom: 3rem;
+        }
+
+        .content-block h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: 0.5rem;
+        }
+
+        .movie-sidebar {
+            background: var(--secondary-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: sticky;
+            top: 100px;
+        }
+
+        .movie-poster-large {
+            margin-bottom: 1.5rem;
+        }
+
+        .movie-poster-large img {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .meta-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .meta-item:last-child {
+            border-bottom: none;
+        }
+
+        .movie-actions {
+            margin-top: 1.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .videos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .video-card {
+            cursor: pointer;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .video-card:hover {
+            transform: scale(1.05);
+        }
+
+        .video-thumbnail {
+            position: relative;
+        }
+
+        .video-thumbnail img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+
+        .play-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-card:hover .play-overlay {
+            opacity: 1;
+        }
+
+        .play-overlay i {
+            font-size: 2rem;
+            color: white;
+        }
+
+        .video-title {
+            padding: 0.75rem;
+            font-size: 0.875rem;
+            background: var(--secondary-bg);
+        }
+
+        .review-item {
+            background: var(--secondary-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .review-rating .fa-star.active {
+            color: #ffc107;
+        }
+
+        .review-date {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .add-review {
+            background: var(--secondary-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .rating-input {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .movie-title {
+                font-size: 2rem;
+            }
+            
+            .movie-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .videos-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</body>
+</html>

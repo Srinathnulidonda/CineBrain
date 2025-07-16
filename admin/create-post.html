@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Post - MovieRec Admin</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Bootstrap Grid Only -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap-grid.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/admin.css">
+</head>
+<body>
+    <!-- Admin Navigation -->
+    <nav class="admin-navbar">
+        <div class="container-fluid">
+            <div class="row align-items-center w-100">
+                <div class="col-auto">
+                    <a href="/" class="navbar-brand">
+                        <h1 class="text-2xl font-bold text-red-600">MovieRec</h1>
+                        <span class="admin-badge">Admin</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <div class="navbar-nav">
+                        <a href="index.html" class="nav-link">Dashboard</a>
+                        <a href="browse-content.html" class="nav-link">Browse Content</a>
+                        <a href="create-post.html" class="nav-link active">Create Post</a>
+                        <a href="analytics.html" class="nav-link">Analytics</a>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="navbar-actions">
+                        <a href="/" class="btn btn-outline">
+                            <i class="fas fa-home"></i> Back to Site
+                        </a>
+                        <button class="btn btn-danger" id="logoutBtn">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="dashboard-header">
+                <h1 id="pageTitle">Create Admin Post</h1>
+                <p>Create curated content recommendations for your users</p>
+            </div>
+
+            <div class="row">
+                <!-- Main Form -->
+                <div class="col-lg-8">
+                    <form class="admin-form" id="createPostForm">
+                        <!-- Content Selection -->
+                        <div class="form-section">
+                            <h3>Select Content</h3>
+                            
+                            <!-- Search for Content -->
+                            <div class="content-search" id="contentSearch">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="contentSearchInput">Search for content</label>
+                                        <input type="text" id="contentSearchInput" class="form-control" placeholder="Search movies, TV shows, anime...">
+                                    </div>
+                                    <div class="form-group">
+                                        <button type="button" class="btn btn-outline" id="browseContentBtn" style="margin-top: 1.75rem;">
+                                            <i class="fas fa-search"></i> Browse Content
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="search-results" id="searchResults"></div>
+                            </div>
+
+                            <!-- Selected Content Display -->
+                            <div class="selected-content" id="selectedContent" style="display: none;">
+                                <h4>Selected Content</h4>
+                                <div class="content-preview" id="contentPreview"></div>
+                                <button type="button" class="btn btn-outline" id="changeContentBtn">
+                                    <i class="fas fa-edit"></i> Change Content
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Post Details -->
+                        <div class="form-section">
+                            <h3>Post Details</h3>
+                            
+                            <div class="form-group">
+                                <label for="postTitle">Post Title *</label>
+                                <input type="text" id="postTitle" class="form-control" required placeholder="e.g., Must-Watch Thriller of the Year">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="postDescription">Description</label>
+                                <textarea id="postDescription" class="form-control" rows="4" placeholder="Write a compelling description for this recommendation..."></textarea>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="priority">Priority</label>
+                                    <select id="priority" class="form-control">
+                                        <option value="1">Low</option>
+                                        <option value="2">Normal</option>
+                                        <option value="3" selected>High</option>
+                                        <option value="4">Critical</option>
+                                        <option value="5">Featured</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="expiresAt">Expires On (Optional)</label>
+                                    <input type="date" id="expiresAt" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom Tags -->
+                        <div class="form-section">
+                            <h3>Custom Tags</h3>
+                            <div class="form-group">
+                                <label for="customTags">Add custom tags (press Enter to add)</label>
+                                <input type="text" id="customTags" class="form-control" placeholder="e.g., award-winning, critically-acclaimed, trending">
+                                <div class="tags-container" id="tagsContainer"></div>
+                            </div>
+                        </div>
+
+                        <!-- Publishing Options -->
+                        <div class="form-section">
+                            <h3>Publishing Options</h3>
+                            
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="postToWebsite" checked>
+                                    <span>Publish to website</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="postToTelegram">
+                                    <span>Send to Telegram channel</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Form Errors -->
+                        <div id="formErrors"></div>
+
+                        <!-- Submit Buttons -->
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline" onclick="window.history.back()">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </button>
+                            <button type="button" class="btn btn-outline" id="saveAsDraftBtn">
+                                <i class="fas fa-save"></i> Save as Draft
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="publishBtn">
+                                <i class="fas fa-paper-plane"></i> Publish Post
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <!-- Preview -->
+                    <div class="admin-card">
+                        <div class="card-header">
+                            <h3>Live Preview</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="post-preview" id="postPreview">
+                                <p class="text-muted">Select content and fill in the details to see a preview</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Publishing Guidelines -->
+                    <div class="admin-card">
+                        <div class="card-header">
+                            <h3>Publishing Guidelines</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="guidelines">
+                                <div class="guideline-item">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span>Write engaging, descriptive titles</span>
+                                </div>
+                                <div class="guideline-item">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span>Keep descriptions concise but informative</span>
+                                </div>
+                                <div class="guideline-item">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span>Use relevant custom tags</span>
+                                </div>
+                                <div class="guideline-item">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span>Set appropriate priority levels</span>
+                                </div>
+                                <div class="guideline-item">
+                                    <i class="fas fa-info-circle text-blue-500"></i>
+                                    <span>High priority posts appear first</span>
+                                </div>
+                                <div class="guideline-item">
+                                    <i class="fas fa-info-circle text-blue-500"></i>
+                                    <span>Telegram posts notify subscribers</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Posts -->
+                    <div class="admin-card">
+                        <div class="card-header">
+                            <h3>Recent Posts</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="recent-posts" id="recentPosts">
+                                <div class="loading-placeholder">Loading recent posts...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="../assets/js/utils.js"></script>
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/auth.js"></script>
+    <script src="../assets/js/components.js"></script>
+    <script src="../assets/js/admin.js"></script>
+    <script>
+        class CreatePostPage {
+            constructor() {
+                this.selectedContent = null;
+                this.customTags = [];
+                this.isEditing = false;
+                this.editingPostId = null;
+                this.init();
+            }
+
+            async init() {
+                if (!auth.requireAdmin()) return;
+
+                this.setupEventListeners();
+                this.setupContentSearch();
+                this.setupTagsInput();
+                this.checkEditMode();
+                await this.loadRecentPosts();
+                this.updatePreview();
+            }
+
+            checkEditMode() {
+                const urlParams = new URLSearchParams(window.location.search);
+                this.editingPostId = urlParams.get('edit');
+                
+                if (this.editingPostId) {
+                    this.isEditing = true;
+                    document.getElementById('pageTitle').textContent = 'Edit Admin Post';
+                    document.getElementById('publishBtn').innerHTML = '<i class="fas fa-save"></i> Update Post';
+                    this.loadPostForEditing();
+                }
+
+                // Check if content is pre-selected
+                const contentId = urlParams.get('contentId');
+                const source = urlParams.get('source');
+                if (contentId && source) {
+                    this.loadPreselectedContent(contentId, source);
+                }
+            }
+
+            setupEventListeners() {
+                // Logout
+                document.getElementById('logoutBtn').addEventListener('click', () => {
+                    auth.logout();
+                });
+
+                // Form submission
+                document.getElementById('createPostForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleSubmit();
+                });
+
+                // Save as draft
+                document.getElementById('saveAsDraftBtn').addEventListener('click', () => {
+                    this.saveAsDraft();
+                });
+
+                // Browse content
+                document.getElementById('browseContentBtn').addEventListener('click', () => {
+                    window.open('browse-content.html', '_blank');
+                });
+
+                // Change content
+                document.getElementById('changeContentBtn').addEventListener('click', () => {
+                    this.showContentSearch();
+                });
+
+                // Form inputs for live preview
+                ['postTitle', 'postDescription', 'priority'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', () => {
+                        this.updatePreview();
+                    });
+                });
+            }
+
+            setupContentSearch() {
+                const searchInput = document.getElementById('contentSearchInput');
+                const searchResults = document.getElementById('searchResults');
+
+                const debouncedSearch = utils.debounce(async (query) => {
+                    if (query.length < 2) {
+                        searchResults.innerHTML = '';
+                        return;
+                    }
+
+                    try {
+                        searchResults.innerHTML = '<div class="loading-placeholder">Searching...</div>';
+                        
+                        const results = await api.searchContent(query);
+                        const allResults = [...results.database_results, ...results.tmdb_results];
+                        
+                        if (allResults.length === 0) {
+                            searchResults.innerHTML = '<p class="text-muted">No results found</p>';
+                            return;
+                        }
+
+                        searchResults.innerHTML = allResults.slice(0, 5).map(item => this.createSearchResultItem(item)).join('');
+                    } catch (error) {
+                        searchResults.innerHTML = '<p class="text-danger">Search failed</p>';
+                    }
+                }, 300);
+
+                searchInput.addEventListener('input', (e) => {
+                    debouncedSearch(e.target.value.trim());
+                });
+            }
+
+            createSearchResultItem(item) {
+                const title = item.title || item.name;
+                const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
+                const poster = item.poster_path ? 
+                    (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w200${item.poster_path}`) : 
+                    '../assets/images/placeholder.jpg';
+
+                return `
+                    <div class="search-result-item" onclick="createPost.selectContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                        <img src="${poster}" alt="${title}" class="result-poster" onerror="this.src='../assets/images/placeholder.jpg'">
+                        <div class="result-info">
+                            <h4>${title}</h4>
+                            <p>${year ? `${year} • ` : ''}${item.vote_average ? `⭐ ${item.vote_average.toFixed(1)}` : ''}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            selectContent(item) {
+                this.selectedContent = item;
+                this.showSelectedContent();
+                this.updatePreview();
+                
+                // Auto-fill title if empty
+                const titleInput = document.getElementById('postTitle');
+                if (!titleInput.value) {
+                    titleInput.value = `Don't Miss: ${item.title || item.name}`;
+                    this.updatePreview();
+                }
+            }
+
+            showContentSearch() {
+                document.getElementById('contentSearch').style.display = 'block';
+                document.getElementById('selectedContent').style.display = 'none';
+            }
+
+            showSelectedContent() {
+                if (!this.selectedContent) return;
+
+                const preview = document.getElementById('contentPreview');
+                const title = this.selectedContent.title || this.selectedContent.name;
+                const year = this.selectedContent.release_date ? new Date(this.selectedContent.release_date).getFullYear() : '';
+                const poster = this.selectedContent.poster_path ? 
+                    (this.selectedContent.poster_path.startsWith('http') ? this.selectedContent.poster_path : `https://image.tmdb.org/t/p/w200${this.selectedContent.poster_path}`) : 
+                    '../assets/images/placeholder.jpg';
+
+                preview.innerHTML = `
+                    <div class="content-preview-item">
+                        <img src="${poster}" alt="${title}" class="preview-poster" onerror="this.src='../assets/images/placeholder.jpg'">
+                        <div class="preview-info">
+                            <h4>${title}</h4>
+                            <p>${year ? `${year} • ` : ''}${this.selectedContent.vote_average ? `⭐ ${this.selectedContent.vote_average.toFixed(1)}` : ''}</p>
+                            <p class="preview-overview">${(this.selectedContent.overview || 'No description available.').substring(0, 150)}...</p>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('contentSearch').style.display = 'none';
+                document.getElementById('selectedContent').style.display = 'block';
+                document.getElementById('searchResults').innerHTML = '';
+                document.getElementById('contentSearchInput').value = '';
+            }
+
+            setupTagsInput() {
+                const input = document.getElementById('customTags');
+                const container = document.getElementById('tagsContainer');
+
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && input.value.trim()) {
+                        e.preventDefault();
+                        this.addTag(input.value.trim());
+                        input.value = '';
+                        this.updatePreview();
+                    }
+                });
+
+                input.addEventListener('blur', () => {
+                    if (input.value.trim()) {
+                        this.addTag(input.value.trim());
+                        input.value = '';
+                        this.updatePreview();
+                    }
+                });
+            }
+
+            addTag(tag) {
+                if (!this.customTags.includes(tag)) {
+                    this.customTags.push(tag);
+                    this.renderTags();
+                }
+            }
+
+            removeTag(tag) {
+                this.customTags = this.customTags.filter(t => t !== tag);
+                this.renderTags();
+                this.updatePreview();
+            }
+
+            renderTags() {
+                const container = document.getElementById('tagsContainer');
+                container.innerHTML = this.customTags.map(tag => `
+                    <span class="tag-item">
+                        ${tag}
+                        <button type="button" onclick="createPost.removeTag('${tag}')" class="tag-remove">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                `).join('');
+            }
+
+            updatePreview() {
+                const preview = document.getElementById('postPreview');
+                
+                if (!this.selectedContent) {
+                    preview.innerHTML = '<p class="text-muted">Select content to see preview</p>';
+                    return;
+                }
+
+                const title = document.getElementById('postTitle').value || 'Post Title';
+                const description = document.getElementById('postDescription').value || 'Post description...';
+                const priority = document.getElementById('priority').value;
+                const content = this.selectedContent;
+
+                const priorityLabels = {
+                    '1': 'Low',
+                    '2': 'Normal', 
+                    '3': 'High',
+                    '4': 'Critical',
+                    '5': 'Featured'
+                };
+
+                const poster = content.poster_path ? 
+                    (content.poster_path.startsWith('http') ? content.poster_path : `https://image.tmdb.org/t/p/w300${content.poster_path}`) : 
+                    '../assets/images/placeholder.jpg';
+
+                preview.innerHTML = `
+                    <div class="post-preview-card">
+                        <div class="preview-badge">Priority: ${priorityLabels[priority]}</div>
+                        <div class="preview-poster">
+                            <img src="${poster}" alt="${content.title || content.name}">
+                        </div>
+                        <div class="preview-content">
+                            <h3>${title}</h3>
+                            <h4>${content.title || content.name}</h4>
+                            <p>${description}</p>
+                            ${this.customTags.length > 0 ? `
+                                <div class="preview-tags">
+                                    ${this.customTags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            async loadRecentPosts() {
+                try {
+                    const response = await api.adminGetPosts();
+                    const posts = response.posts.slice(0, 3);
+                    
+                    const container = document.getElementById('recentPosts');
+                    
+                    if (posts.length === 0) {
+                        container.innerHTML = '<p class="text-muted">No recent posts</p>';
+                        return;
+                    }
+
+                    container.innerHTML = posts.map(post => `
+                        <div class="recent-post-item">
+                            <h5>${post.title}</h5>
+                            <p class="post-meta">
+                                ${post.content.title} • ${utils.formatDate(post.created_at)}
+                            </p>
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    document.getElementById('recentPosts').innerHTML = '<p class="text-muted">Failed to load posts</p>';
+                }
+            }
+
+            async loadPostForEditing() {
+                try {
+                    const response = await api.adminGetPosts();
+                    const post = response.posts.find(p => p.id == this.editingPostId);
+                    
+                    if (!post) {
+                        admin.showError('Post not found');
+                        return;
+                    }
+
+                    // Fill form with existing data
+                    document.getElementById('postTitle').value = post.title;
+                    document.getElementById('postDescription').value = post.description || '';
+                    document.getElementById('priority').value = post.priority;
+                    document.getElementById('postToWebsite').checked = post.post_to_website;
+                    document.getElementById('postToTelegram').checked = post.post_to_telegram;
+                    
+                    if (post.expires_at) {
+                        document.getElementById('expiresAt').value = post.expires_at.split('T')[0];
+                    }
+
+                    // Set custom tags
+                    this.customTags = post.custom_tags || [];
+                    this.renderTags();
+
+                    // Set selected content
+                    this.selectedContent = post.content;
+                    this.showSelectedContent();
+                    
+                } catch (error) {
+                    admin.showError('Failed to load post for editing');
+                }
+            }
+
+            async loadPreselectedContent(contentId, source) {
+                try {
+                    // This would fetch content details from the browse API
+                    admin.showLoading('Loading content...');
+                    
+                    // Simulate loading content
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    admin.hideLoading();
+                    
+                    // For now, just show the content search
+                    this.showContentSearch();
+                    
+                } catch (error) {
+                    admin.hideLoading();
+                    admin.showError('Failed to load content');
+                }
+            }
+
+            validateForm() {
+                const errors = [];
+
+                if (!this.selectedContent) {
+                    errors.push('Please select content for this post');
+                }
+
+                const title = document.getElementById('postTitle').value.trim();
+                if (!title) {
+                    errors.push('Post title is required');
+                }
+
+                const postToWebsite = document.getElementById('postToWebsite').checked;
+                const postToTelegram = document.getElementById('postToTelegram').checked;
+                
+                if (!postToWebsite && !postToTelegram) {
+                    errors.push('Please select at least one publishing option');
+                }
+
+                return errors;
+            }
+
+            async handleSubmit() {
+                const errors = this.validateForm();
+                
+                if (errors.length > 0) {
+                    admin.showFormErrors(errors);
+                    return;
+                }
+
+                const formData = this.getFormData();
+                formData.is_active = true; // Published posts are active
+
+                try {
+                    admin.showLoading(this.isEditing ? 'Updating post...' : 'Publishing post...');
+                    
+                    let response;
+                    if (this.isEditing) {
+                        response = await api.adminUpdatePost(this.editingPostId, formData);
+                    } else {
+                        response = await api.adminCreatePost(formData);
+                    }
+                    
+                    admin.hideLoading();
+                    
+                    const message = this.isEditing ? 'Post updated successfully!' : 'Post published successfully!';
+                    admin.showSuccess(message);
+                    
+                    // Redirect to dashboard after a delay
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                    
+                } catch (error) {
+                    admin.hideLoading();
+                    admin.showError(this.isEditing ? 'Failed to update post' : 'Failed to publish post');
+                }
+            }
+
+            async saveAsDraft() {
+                const errors = this.validateForm();
+                
+                if (errors.length > 0) {
+                    admin.showFormErrors(errors);
+                    return;
+                }
+
+                const formData = this.getFormData();
+                formData.is_active = false; // Drafts are inactive
+
+                try {
+                    admin.showLoading('Saving draft...');
+                    
+                    let response;
+                    if (this.isEditing) {
+                        response = await api.adminUpdatePost(this.editingPostId, formData);
+                    } else {
+                        response = await api.adminCreatePost(formData);
+                    }
+                    
+                    admin.hideLoading();
+                    admin.showSuccess('Draft saved successfully!');
+                    
+                } catch (error) {
+                    admin.hideLoading();
+                    admin.showError('Failed to save draft');
+                }
+            }
+
+            getFormData() {
+                const expiresAt = document.getElementById('expiresAt').value;
+                
+                return {
+                    content_id: this.selectedContent.id,
+                    tmdb_id: this.selectedContent.id,
+                    tmdb_data: this.selectedContent,
+                    title: document.getElementById('postTitle').value.trim(),
+                    description: document.getElementById('postDescription').value.trim(),
+                    custom_tags: this.customTags,
+                    priority: parseInt(document.getElementById('priority').value),
+                    post_to_website: document.getElementById('postToWebsite').checked,
+                    post_to_telegram: document.getElementById('postToTelegram').checked,
+                    expires_at: expiresAt || null
+                };
+            }
+        }
+
+        // Global instance
+        let createPost;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            createPost = new CreatePostPage();
+        });
+    </script>
+
+    <style>
+        .search-result-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-result-item:hover {
+            border-color: var(--accent-primary);
+            background: var(--hover-bg);
+        }
+
+        .result-poster {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .result-info h4 {
+            margin-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+
+        .result-info p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        .content-preview-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--tertiary-bg);
+        }
+
+        .preview-poster {
+            width: 80px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .preview-info h4 {
+            margin-bottom: 0.5rem;
+            font-size: 1.125rem;
+        }
+
+        .preview-overview {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .tags-container {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .tag-item {
+            background: var(--accent-primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tag-remove {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0;
+            font-size: 0.75rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .post-preview-card {
+            background: var(--tertiary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--accent-primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            z-index: 10;
+        }
+
+        .preview-poster {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+        }
+
+        .preview-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-content {
+            padding: 1rem;
+        }
+
+        .preview-content h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.125rem;
+            color: var(--accent-primary);
+        }
+
+        .preview-content h4 {
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .preview-tags {
+            display: flex;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+
+        .preview-tags .tag {
+            background: var(--secondary-bg);
+            padding: 0.125rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .guidelines {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .guideline-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .recent-post-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .recent-post-item:last-child {
+            border-bottom: none;
+        }
+
+        .recent-post-item h5 {
+            margin-bottom: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .post-meta {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin: 0;
+        }
+
+        @media (max-width: 768px) {
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .content-preview-item,
+            .search-result-item {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .preview-poster,
+            .result-poster {
+                width: 100px;
+                align-self: center;
+            }
+        }
+    </style>
+</body>
+</html>

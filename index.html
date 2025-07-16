@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MovieRec - Your Personal Movie Recommendation System</title>
-    <meta name="description" content="Discover movies and TV shows tailored to your taste">
     
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
@@ -16,62 +15,346 @@
     <!-- Bootstrap Grid Only -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap-grid.min.css" rel="stylesheet">
     
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="stylesheet" href="assets/css/components.css">
-    <link rel="stylesheet" href="assets/css/utilities.css">
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-primary-bg text-text-primary">
-    <div id="app">
-        <!-- Header will be injected here -->
-        <div id="header"></div>
-        
-        <!-- Main content -->
-        <main id="main-content" class="min-h-screen">
-            <!-- Page content will be injected here -->
-        </main>
-        
-        <!-- Footer will be injected here -->
-        <div id="footer"></div>
-        
-        <!-- Modal container -->
-        <div id="modal-container"></div>
-        
-        <!-- Toast container -->
-        <div id="toast-container" class="fixed top-20 right-4 z-50"></div>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container-fluid">
+            <div class="row align-items-center w-100">
+                <div class="col-auto">
+                    <a href="/" class="navbar-brand">
+                        <h1 class="text-2xl font-bold text-red-600">MovieRec</h1>
+                    </a>
+                </div>
+                <div class="col">
+                    <div class="navbar-nav">
+                        <a href="#home" class="nav-link active">Home</a>
+                        <a href="#movies" class="nav-link">Movies</a>
+                        <a href="#tv" class="nav-link">TV Shows</a>
+                        <a href="#anime" class="nav-link">Anime</a>
+                        <a href="#my-list" class="nav-link" id="myListLink" style="display: none;">My List</a>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="navbar-actions">
+                        <button class="search-trigger" id="searchTrigger">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <div id="authButtons">
+                            <a href="login.html" class="btn btn-outline">Sign In</a>
+                        </div>
+                        <div id="userMenu" style="display: none;">
+                            <div class="dropdown">
+                                <button class="user-avatar" id="userDropdown">
+                                    <i class="fas fa-user"></i>
+                                </button>
+                                <div class="dropdown-menu" id="dropdownMenu">
+                                    <a href="profile.html" class="dropdown-item">
+                                        <i class="fas fa-user-circle"></i> Profile
+                                    </a>
+                                    <a href="#" class="dropdown-item" id="adminLink" style="display: none;">
+                                        <i class="fas fa-cog"></i> Admin Panel
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <a href="#" class="dropdown-item" id="logoutBtn">
+                                        <i class="fas fa-sign-out-alt"></i> Logout
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Search Overlay -->
+    <div class="search-overlay" id="searchOverlay">
+        <div class="search-container">
+            <div class="search-header">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search movies, TV shows, anime...">
+                <button class="search-close" id="searchClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="search-results" id="searchResults"></div>
+        </div>
     </div>
-    
-    <!-- Core Scripts -->
-    <script src="assets/js/config.js"></script>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero-section" id="heroSection">
+            <div class="hero-skeleton">
+                <div class="skeleton-hero"></div>
+            </div>
+        </section>
+
+        <!-- Trending Section -->
+        <section class="content-section">
+            <div class="container-fluid">
+                <h2 class="section-title">Trending Now</h2>
+                <div class="content-tabs">
+                    <button class="tab-btn active" data-tab="movies">Movies</button>
+                    <button class="tab-btn" data-tab="tv">TV Shows</button>
+                    <button class="tab-btn" data-tab="anime">Anime</button>
+                </div>
+                <div class="carousel-container" id="trendingCarousel">
+                    <div class="loading-skeleton">
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- What's Hot Section -->
+        <section class="content-section">
+            <div class="container-fluid">
+                <h2 class="section-title">
+                    <i class="fas fa-fire text-orange-500"></i> What's Hot
+                </h2>
+                <div class="carousel-container" id="whatsHotCarousel">
+                    <div class="loading-skeleton">
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Personalized Recommendations (for logged-in users) -->
+        <section class="content-section" id="personalizedSection" style="display: none;">
+            <div class="container-fluid">
+                <h2 class="section-title">Recommended For You</h2>
+                <div class="carousel-container" id="personalizedCarousel">
+                    <div class="loading-skeleton">
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Critics' Choice -->
+        <section class="content-section">
+            <div class="container-fluid">
+                <h2 class="section-title">
+                    <i class="fas fa-award text-yellow-500"></i> Critics' Choice
+                </h2>
+                <div class="carousel-container" id="criticsChoiceCarousel">
+                    <div class="loading-skeleton">
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Regional Content -->
+        <section class="content-section">
+            <div class="container-fluid">
+                <h2 class="section-title">Regional Cinema</h2>
+                <div class="regional-tabs">
+                    <button class="tab-btn active" data-region="Telugu">Telugu</button>
+                    <button class="tab-btn" data-region="Hindi">Hindi</button>
+                    <button class="tab-btn" data-region="Tamil">Tamil</button>
+                    <button class="tab-btn" data-region="Kannada">Kannada</button>
+                </div>
+                <div class="carousel-container" id="regionalCarousel">
+                    <div class="loading-skeleton">
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Curated -->
+        <section class="content-section" id="adminCuratedSection">
+            <div class="container-fluid">
+                <h2 class="section-title">
+                    <i class="fas fa-star text-purple-500"></i> Editor's Picks
+                </h2>
+                <div class="grid-container" id="adminCuratedGrid">
+                    <div class="loading-skeleton">
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-4">
+                    <h3 class="footer-title">MovieRec</h3>
+                    <p class="footer-text">Your personal movie recommendation system powered by AI.</p>
+                </div>
+                <div class="col-md-4">
+                    <h4 class="footer-subtitle">Quick Links</h4>
+                    <ul class="footer-links">
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#privacy">Privacy Policy</a></li>
+                        <li><a href="#terms">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h4 class="footer-subtitle">Connect</h4>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 MovieRec. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
     <script src="assets/js/utils.js"></script>
     <script src="assets/js/api.js"></script>
     <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
+```
+
+### login.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MovieRec</title>
     
-    <!-- Components -->
-    <script src="components/shared/header.js"></script>
-    <script src="components/shared/footer.js"></script>
-    <script src="components/shared/modal.js"></script>
-    <script src="components/shared/toast.js"></script>
-    <script src="components/shared/loading.js"></script>
-    <script src="components/shared/carousel.js"></script>
-    <script src="components/content/content-card.js"></script>
-    <script src="components/content/content-grid.js"></script>
-    <script src="components/content/content-slider.js"></script>
-    <script src="components/forms/login-form.js"></script>
-    <script src="components/forms/register-form.js"></script>
-    <script src="components/forms/search-form.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Pages -->
-    <script src="pages/home.js"></script>
-    <script src="pages/detail.js"></script>
-    <script src="pages/profile.js"></script>
-    <script src="pages/search.js"></script>
-    <script src="pages/admin/dashboard.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Main App -->
-    <script src="assets/js/main.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body class="auth-body">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <a href="/" class="auth-logo">
+                    <h1 class="text-3xl font-bold text-red-600">MovieRec</h1>
+                </a>
+                <p class="auth-subtitle">Welcome back! Please login to continue.</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Login</button>
+                <button class="auth-tab" data-tab="register">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <form class="auth-form" id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Username or Email</label>
+                    <input type="text" id="loginUsername" name="username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" name="password" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="remember">
+                        <span>Remember me</span>
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    <span class="btn-text">Login</span>
+                    <span class="btn-loading" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i> Logging in...
+                    </span>
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form class="auth-form" id="registerForm" style="display: none;">
+                <div class="form-group">
+                    <label for="registerUsername">Username</label>
+                    <input type="text" id="registerUsername" name="username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" name="password" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    <span class="btn-text">Create Account</span>
+                    <span class="btn-loading" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i> Creating account...
+                    </span>
+                </button>
+            </form>
+
+            <div class="alert alert-error" id="authError" style="display: none;"></div>
+            <div class="alert alert-success" id="authSuccess" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        // Tab switching
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                if (tabName === 'login') {
+                    document.getElementById('loginForm').style.display = 'block';
+                    document.getElementById('registerForm').style.display = 'none';
+                } else {
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('registerForm').style.display = 'block';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
