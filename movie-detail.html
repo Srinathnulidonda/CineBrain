@@ -4,522 +4,1004 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Details - MovieRec</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/responsive.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Movie Detail Specific Styles */
+        .movie-hero {
+            position: relative;
+            min-height: 70vh;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+            overflow: hidden;
+        }
+
+        .movie-hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+        }
+
+        .movie-hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                45deg,
+                rgba(20, 20, 20, 0.9) 0%,
+                rgba(20, 20, 20, 0.7) 50%,
+                rgba(20, 20, 20, 0.9) 100%
+            );
+        }
+
+        .movie-hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: var(--large);
+            margin: 0 auto;
+            padding: 120px var(--spacing-lg) var(--spacing-2xl);
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: var(--spacing-2xl);
+            align-items: start;
+        }
+
+        .movie-poster {
+            position: relative;
+            aspect-ratio: 2/3;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .movie-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .movie-info {
+            flex: 1;
+        }
+
+        .movie-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+            line-height: 1.1;
+        }
+
+        .movie-tagline {
+            font-size: var(--font-size-xl);
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .movie-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            padding: var(--spacing-lg);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .meta-item {
+            text-align: center;
+        }
+
+        .meta-value {
+            display: block;
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--accent-red);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .meta-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .movie-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+        }
+
+        .play-btn {
+            background: var(--accent-red);
+            color: var(--text-primary);
+            border: none;
+            padding: var(--spacing-lg) var(--spacing-2xl);
+            border-radius: 8px;
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            transition: all var(--transition-fast);
+        }
+
+        .play-btn:hover {
+            background: var(--accent-red-hover);
+            transform: translateY(-2px);
+        }
+
+        .action-button {
+            background: var(--card-hover);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            transition: all var(--transition-fast);
+        }
+
+        .action-button:hover {
+            border-color: var(--accent-red);
+            background: var(--accent-red);
+        }
+
+        .action-button.active {
+            background: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+
+        .movie-overview {
+            font-size: var(--font-size-lg);
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .content-tabs-detail {
+            background: var(--secondary-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: var(--spacing-2xl);
+        }
+
+        .tab-nav-detail {
+            display: flex;
+            background: var(--card-hover);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab-btn-detail {
+            flex: 1;
+            padding: var(--spacing-lg);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-align: center;
+        }
+
+        .tab-btn-detail.active {
+            background: var(--secondary-bg);
+            color: var(--accent-red);
+            border-bottom: 2px solid var(--accent-red);
+        }
+
+        .tab-content-detail {
+            padding: var(--spacing-xl);
+        }
+
+        .cast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .cast-member {
+            text-align: center;
+            background: var(--card-hover);
+            border-radius: 12px;
+            padding: var(--spacing-lg);
+            transition: transform var(--transition-fast);
+        }
+
+        .cast-member:hover {
+            transform: translateY(-4px);
+        }
+
+        .cast-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--border-color);
+            margin: 0 auto var(--spacing-md);
+            overflow: hidden;
+        }
+
+        .cast-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .cast-name {
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .cast-character {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .video-card {
+            background: var(--card-hover);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform var(--transition-fast);
+        }
+
+        .video-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .video-thumbnail {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: var(--border-color);
+        }
+
+        .video-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-play-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(229, 9, 20, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .video-play-btn:hover {
+            background: var(--accent-red);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .video-info {
+            padding: var(--spacing-md);
+        }
+
+        .video-title {
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .video-type {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .review-item {
+            background: var(--card-hover);
+            border-radius: 12px;
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .review-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .review-author {
+            font-weight: 600;
+        }
+
+        .review-rating {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            color: var(--warning-color);
+        }
+
+        .review-content {
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .rating-section {
+            background: var(--card-hover);
+            border-radius: 12px;
+            padding: var(--spacing-xl);
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .user-rating {
+            margin-top: var(--spacing-lg);
+        }
+
+        .rating-stars {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            margin: var(--spacing-md) 0;
+        }
+
+        .star-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: var(--border-color);
+            cursor: pointer;
+            transition: color var(--transition-fast);
+        }
+
+        .star-btn.active,
+        .star-btn:hover {
+            color: var(--warning-color);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .movie-hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: var(--spacing-xl);
+                padding: 100px var(--spacing-md) var(--spacing-xl);
+            }
+
+            .movie-poster {
+                max-width: 250px;
+                margin: 0 auto;
+            }
+
+            .movie-meta-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .movie-actions {
+                justify-content: center;
+            }
+
+            .tab-nav-detail {
+                flex-direction: column;
+            }
+
+            .cast-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
-<body class="bg-primary text-white">
+<body class="movie-detail-page">
     <!-- Navigation -->
-    <nav class="fixed top-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-sm border-b border-border-color">
-        <div class="container mx-auto px-4 py-3">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <a href="index.html" class="text-2xl font-bold text-accent-red">MovieRec</a>
-                    <button onclick="history.back()" class="btn-ghost">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Back
-                    </button>
-                </div>
-                
-                <div class="flex items-center space-x-4">
-                    <div class="auth-buttons">
-                        <button id="loginBtn" class="btn-secondary mr-2">Login</button>
-                        <button id="signupBtn" class="btn-primary">Sign Up</button>
-                    </div>
-                    
-                    <div id="userMenu" class="user-menu hidden">
-                        <button id="userMenuToggle" class="flex items-center space-x-2 p-2 hover:bg-secondary-bg rounded-lg">
-                            <div class="user-avatar"></div>
-                            <span id="userName"></span>
-                        </button>
-                        <div id="userDropdown" class="user-dropdown hidden">
-                            <a href="dashboard.html" class="dropdown-item">Dashboard</a>
-                            <a href="profile.html" class="dropdown-item">Profile</a>
-                            <button id="logoutBtn" class="dropdown-item w-full text-left">Logout</button>
-                        </div>
-                    </div>
-                </div>
+    <nav class="navbar navbar-transparent">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="index.html">
+                    <h2>MovieRec</h2>
+                </a>
             </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="dashboard.html" class="nav-link">Dashboard</a>
+                <a href="#" class="nav-link">Browse</a>
+            </div>
+            <div class="nav-actions">
+                <button class="search-btn" id="search-toggle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </button>
+                <div class="user-menu" id="user-menu" style="display: none;">
+                    <button class="user-avatar" id="user-menu-toggle">
+                        <span id="user-initial">U</span>
+                    </button>
+                    <div class="user-dropdown" id="user-dropdown">
+                        <a href="profile.html" class="dropdown-item">Profile</a>
+                        <a href="#settings" class="dropdown-item">Settings</a>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="logout-btn">Sign Out</button>
+                    </div>
+                </div>
+                <a href="login.html" class="btn btn-primary" id="login-link">Sign In</a>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <!-- Search Overlay -->
+        <div class="search-overlay" id="search-overlay">
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search movies, TV shows..." class="search-input">
+                <button class="search-close" id="search-close">&times;</button>
+            </div>
+            <div class="search-results" id="search-results"></div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="pt-20">
-        <!-- Loading State -->
-        <div id="loadingSpinner" class="loading-spinner min-h-screen">
-            <div class="spinner"></div>
-            <p>Loading movie details...</p>
-        </div>
-
-        <!-- Movie Details -->
-        <div id="movieContent" class="hidden">
-            <!-- Hero Section -->
-            <section id="heroSection" class="relative min-h-[70vh] flex items-end">
-                <div class="hero-overlay absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-                <div class="container mx-auto px-4 py-12 relative z-10">
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-end">
-                        <div class="lg:col-span-1">
-                            <img id="moviePoster" src="" alt="" class="w-full max-w-sm mx-auto lg:mx-0 rounded-lg shadow-xl">
-                        </div>
-                        <div class="lg:col-span-2 space-y-6">
-                            <div>
-                                <h1 id="movieTitle" class="text-4xl md:text-6xl font-bold mb-4"></h1>
-                                <p id="movieOriginalTitle" class="text-xl text-text-secondary mb-4 hidden"></p>
-                                <div class="flex flex-wrap items-center gap-4 mb-4">
-                                    <div id="movieRating" class="flex items-center space-x-2">
-                                        <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                                        </svg>
-                                        <span id="ratingValue" class="text-lg font-semibold"></span>
-                                    </div>
-                                    <span id="movieYear" class="text-lg"></span>
-                                    <span id="movieRuntime" class="text-lg"></span>
-                                </div>
-                                <div id="movieGenres" class="flex flex-wrap gap-2 mb-6">
-                                    <!-- Dynamic genre tags -->
-                                </div>
-                            </div>
-                            
-                            <p id="movieOverview" class="text-lg leading-relaxed max-w-3xl"></p>
-                            
-                            <!-- Action Buttons -->
-                            <div id="actionButtons" class="flex flex-wrap gap-4">
-                                <button id="favoriteBtn" class="btn-primary">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                                    </svg>
-                                    Add to Favorites
-                                </button>
-                                <button id="wishlistBtn" class="btn-secondary">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
-                                    </svg>
-                                    Wishlist
-                                </button>
-                                <button id="shareBtn" class="btn-ghost">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
-                                    </svg>
-                                    Share
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+    <!-- Movie Hero Section -->
+    <section class="movie-hero" id="movie-hero">
+        <div class="movie-hero-bg" id="movie-hero-bg"></div>
+        <div class="movie-hero-overlay"></div>
+        <div class="movie-hero-content">
+            <div class="movie-poster">
+                <img id="movie-poster" src="" alt="" loading="eager">
+            </div>
+            <div class="movie-info">
+                <h1 class="movie-title" id="movie-title">Loading...</h1>
+                <p class="movie-tagline" id="movie-tagline"></p>
+                
+                <div class="movie-meta-grid" id="movie-meta">
+                    <!-- Meta information will be populated here -->
                 </div>
-            </section>
 
-            <!-- Content Sections -->
-            <div class="container mx-auto px-4 py-12 space-y-12">
-                <!-- User Rating Section -->
-                <section id="userRatingSection" class="bg-secondary-bg rounded-lg p-6">
-                    <h3 class="text-xl font-bold mb-4">Rate This Movie</h3>
-                    <div class="flex items-center space-x-4">
-                        <div class="rating-stars" id="userRating">
-                            <button class="rating-star" data-rating="1">★</button>
-                            <button class="rating-star" data-rating="2">★</button>
-                            <button class="rating-star" data-rating="3">★</button>
-                            <button class="rating-star" data-rating="4">★</button>
-                            <button class="rating-star" data-rating="5">★</button>
-                        </div>
-                        <span id="ratingText" class="text-text-secondary">Click to rate</span>
-                    </div>
-                </section>
+                <div class="movie-actions">
+                    <button class="play-btn" id="play-btn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        Play Trailer
+                    </button>
+                    <button class="action-button" id="favorite-btn" data-action="favorite">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                        </svg>
+                        Add to Favorites
+                    </button>
+                    <button class="action-button" id="watchlist-btn" data-action="watchlist">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+                            <path d="m9 12 2 2 4-4"/>
+                        </svg>
+                        Add to Watchlist
+                    </button>
+                </div>
 
-                <!-- Videos Section -->
-                <section id="videosSection" class="hidden">
-                    <h3 class="text-2xl font-bold mb-6">Videos & Trailers</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="videosGrid">
-                        <!-- Dynamic video content -->
-                    </div>
-                </section>
-
-                <!-- Cast & Crew -->
-                <section id="castSection" class="hidden">
-                    <h3 class="text-2xl font-bold mb-6">Cast & Crew</h3>
-                    <div class="content-carousel" id="castCarousel">
-                        <!-- Dynamic cast content -->
-                    </div>
-                </section>
-
-                <!-- User Reviews -->
-                <section id="reviewsSection">
-                    <h3 class="text-2xl font-bold mb-6">User Reviews</h3>
-                    <div id="reviewsContainer" class="space-y-4">
-                        <!-- Dynamic reviews -->
-                    </div>
-                </section>
-
-                <!-- Similar Movies -->
-                <section id="similarSection">
-                    <h3 class="text-2xl font-bold mb-6">Similar Movies</h3>
-                    <div class="content-carousel" id="similarCarousel">
-                        <!-- Dynamic similar content -->
-                    </div>
-                </section>
+                <p class="movie-overview" id="movie-overview">
+                    Loading movie details...
+                </p>
             </div>
         </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Content Tabs -->
+        <section class="content-section">
+            <div class="content-tabs-detail">
+                <div class="tab-nav-detail">
+                    <button class="tab-btn-detail active" data-tab="videos">Videos</button>
+                    <button class="tab-btn-detail" data-tab="cast">Cast & Crew</button>
+                    <button class="tab-btn-detail" data-tab="reviews">Reviews</button>
+                    <button class="tab-btn-detail" data-tab="details">Details</button>
+                </div>
+
+                <!-- Videos Tab -->
+                <div class="tab-content-detail" id="videos-tab">
+                    <h3>Trailers & Videos</h3>
+                    <div class="video-grid" id="videos-grid">
+                        <!-- Videos will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Cast Tab -->
+                <div class="tab-content-detail hidden" id="cast-tab">
+                    <h3>Cast & Crew</h3>
+                    <div class="cast-grid" id="cast-grid">
+                        <!-- Cast will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Reviews Tab -->
+                <div class="tab-content-detail hidden" id="reviews-tab">
+                    <h3>User Reviews</h3>
+                    
+                    <!-- Rating Section -->
+                    <div class="rating-section" id="rating-section">
+                        <h4>Rate This Movie</h4>
+                        <div class="rating-stars" id="rating-stars">
+                            <button class="star-btn" data-rating="1">★</button>
+                            <button class="star-btn" data-rating="2">★</button>
+                            <button class="star-btn" data-rating="3">★</button>
+                            <button class="star-btn" data-rating="4">★</button>
+                            <button class="star-btn" data-rating="5">★</button>
+                        </div>
+                        <button class="btn btn-primary" id="submit-rating">Submit Rating</button>
+                    </div>
+
+                    <div id="reviews-list">
+                        <!-- Reviews will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Details Tab -->
+                <div class="tab-content-detail hidden" id="details-tab">
+                    <h3>Movie Details</h3>
+                    <div id="movie-details">
+                        <!-- Detailed information will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Similar Movies -->
+        <section class="content-section">
+            <h2 class="section-title">Similar Movies</h2>
+            <div class="content-carousel" id="similar-movies">
+                <!-- Similar movies will be populated here -->
+            </div>
+        </section>
+
+        <!-- Recommendations -->
+        <section class="content-section">
+            <h2 class="section-title">You Might Also Like</h2>
+            <div class="content-carousel" id="recommendations">
+                <!-- Recommendations will be populated here -->
+            </div>
+        </section>
     </main>
 
-    <!-- Scripts -->
+    <!-- Video Modal -->
+    <div class="modal-overlay" id="video-modal">
+        <div class="modal-content" style="max-width: 90vw; max-height: 90vh;">
+            <div class="modal-header">
+                <h3 id="video-modal-title">Video</h3>
+                <button class="modal-close" id="video-modal-close">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <div id="video-player" style="aspect-ratio: 16/9; background: #000;">
+                    <!-- Video player will be embedded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Loading movie details...</p>
+    </div>
+
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/components.js"></script>
     <script>
+        // Movie Detail Page Initialization
         class MovieDetailPage {
             constructor() {
-                this.movieId = null;
+                this.movieId = Utils.getUrlParam('id');
                 this.movieData = null;
                 this.userRating = 0;
                 this.init();
             }
 
-            init() {
-                this.movieId = Utils.getUrlParameter('id');
+            async init() {
                 if (!this.movieId) {
                     window.location.href = 'index.html';
                     return;
                 }
 
-                this.initEventListeners();
-                this.loadMovieDetails();
+                this.setupAuth();
+                this.setupTabs();
+                this.setupRating();
+                this.setupActions();
+                await this.loadMovieDetails();
+                this.hideLoadingScreen();
             }
 
-            initEventListeners() {
-                // Auth buttons
-                const loginBtn = document.getElementById('loginBtn');
-                const signupBtn = document.getElementById('signupBtn');
-                const logoutBtn = document.getElementById('logoutBtn');
-
-                if (loginBtn) loginBtn.addEventListener('click', () => window.location.href = 'login.html');
-                if (signupBtn) signupBtn.addEventListener('click', () => window.location.href = 'login.html');
-                if (logoutBtn) logoutBtn.addEventListener('click', () => authManager.logout());
-
-                // User menu
-                const userMenuToggle = document.getElementById('userMenuToggle');
-                const userDropdown = document.getElementById('userDropdown');
-
-                if (userMenuToggle && userDropdown) {
-                    userMenuToggle.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        userDropdown.classList.toggle('hidden');
-                    });
-
-                    document.addEventListener('click', () => {
-                        userDropdown.classList.add('hidden');
-                    });
+            setupAuth() {
+                if (Auth.isAuthenticated()) {
+                    document.getElementById('user-menu').style.display = 'block';
+                    document.getElementById('login-link').style.display = 'none';
+                    Auth.updateUserDisplay();
+                    Auth.setupLogout();
+                } else {
+                    document.getElementById('user-menu').style.display = 'none';
+                    document.getElementById('login-link').style.display = 'block';
                 }
-
-                // Action buttons
-                document.getElementById('favoriteBtn')?.addEventListener('click', () => {
-                    this.handleInteraction('favorite');
-                });
-
-                document.getElementById('wishlistBtn')?.addEventListener('click', () => {
-                    this.handleInteraction('wishlist');
-                });
-
-                document.getElementById('shareBtn')?.addEventListener('click', () => {
-                    this.shareMovie();
-                });
-
-                // Rating system
-                this.initRatingSystem();
-            }
-
-            initRatingSystem() {
-                const ratingStars = document.querySelectorAll('.rating-star');
-                const ratingText = document.getElementById('ratingText');
-
-                ratingStars.forEach(star => {
-                    star.addEventListener('click', async () => {
-                        if (!authManager.isLoggedIn) {
-                            UIComponents.showToast('Please login to rate movies', 'warning');
-                            return;
-                        }
-
-                        const rating = parseInt(star.getAttribute('data-rating'));
-                        this.userRating = rating;
-                        
-                        // Update visual state
-                        ratingStars.forEach((s, index) => {
-                            if (index < rating) {
-                                s.classList.add('filled');
-                                s.classList.remove('empty');
-                            } else {
-                                s.classList.remove('filled');
-                                s.classList.add('empty');
-                            }
-                        });
-
-                        ratingText.textContent = `You rated: ${rating}/5`;
-
-                        // Submit rating
-                        try {
-                            await apiService.recordInteraction({
-                                content_id: this.movieId,
-                                interaction_type: 'view',
-                                rating: rating
-                            });
-                            UIComponents.showToast('Rating saved!', 'success');
-                        } catch (error) {
-                            console.error('Failed to save rating:', error);
-                            UIComponents.showToast('Failed to save rating', 'error');
-                        }
-                    });
-
-                    star.addEventListener('mouseover', () => {
-                        const rating = parseInt(star.getAttribute('data-rating'));
-                        ratingStars.forEach((s, index) => {
-                            if (index < rating) {
-                                s.style.color = '#fbbf24';
-                            } else {
-                                s.style.color = '';
-                            }
-                        });
-                    });
-                });
-
-                document.getElementById('userRating')?.addEventListener('mouseleave', () => {
-                    ratingStars.forEach((s, index) => {
-                        if (index < this.userRating) {
-                            s.style.color = '#fbbf24';
-                        } else {
-                            s.style.color = '';
-                        }
-                    });
-                });
             }
 
             async loadMovieDetails() {
                 try {
-                    showLoader(true, 'Loading movie details...');
+                    const data = await API.getEnhancedContentDetails(this.movieId);
+                    this.movieData = data.content;
                     
-                    const details = await apiService.getContentDetails(this.movieId);
-                    this.movieData = details;
-                    
-                    this.renderMovieDetails();
-                    
+                    this.renderMovieInfo(data);
+                    this.renderVideos(data.youtube_videos || {});
+                    this.renderCast(data.tmdb_details?.credits?.cast || []);
+                    this.renderReviews(data.user_reviews || []);
+                    this.renderDetails(data.tmdb_details || {});
+                    this.renderSimilarMovies(data.similar_content || []);
+
                     // Record view interaction
-                    if (authManager.isLoggedIn) {
-                        apiService.recordInteraction({
+                    if (Auth.isAuthenticated()) {
+                        API.recordInteraction({
                             content_id: this.movieId,
                             interaction_type: 'view'
-                        }).catch(console.error);
+                        });
                     }
-                    
-                    showLoader(false);
-                    document.getElementById('loadingSpinner').classList.add('hidden');
-                    document.getElementById('movieContent').classList.remove('hidden');
-                    
                 } catch (error) {
-                    showLoader(false);
                     console.error('Failed to load movie details:', error);
-                    
-                    document.getElementById('loadingSpinner').innerHTML = `
-                        <div class="text-center py-12">
-                            <svg class="w-16 h-16 text-text-secondary mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <h3 class="text-lg font-medium text-white mb-2">Movie not found</h3>
-                            <p class="text-text-secondary mb-4">The movie you're looking for doesn't exist or has been removed.</p>
-                            <button onclick="window.location.href='index.html'" class="btn-primary">Go Back Home</button>
-                        </div>
-                    `;
+                    Toast.show('Failed to load movie details', 'error');
                 }
             }
 
-            renderMovieDetails() {
-                if (!this.movieData) return;
-
-                const { content, youtube_videos, similar_content, user_reviews } = this.movieData;
-
-                // Update page title
-                document.title = `${content.title} - MovieRec`;
-
-                // Basic movie info
-                document.getElementById('movieTitle').textContent = content.title;
-                document.getElementById('moviePoster').src = content.poster_path || '/assets/images/placeholder-poster.jpg';
-                document.getElementById('moviePoster').alt = content.title;
-
-                if (content.original_title !== content.title) {
-                    document.getElementById('movieOriginalTitle').textContent = content.original_title;
-                    document.getElementById('movieOriginalTitle').classList.remove('hidden');
-                }
-
-                // Rating
-                if (content.rating) {
-                    document.getElementById('ratingValue').textContent = content.rating.toFixed(1);
-                } else {
-                    document.getElementById('movieRating').style.display = 'none';
-                }
-
-                // Year and runtime
-                if (content.release_date) {
-                    document.getElementById('movieYear').textContent = new Date(content.release_date).getFullYear();
-                }
-
-                if (content.runtime) {
-                    document.getElementById('movieRuntime').textContent = Utils.formatDuration(content.runtime);
-                }
-
-                // Genres
-                if (content.genre_names && content.genre_names.length > 0) {
-                    const genresContainer = document.getElementById('movieGenres');
-                    genresContainer.innerHTML = content.genre_names.map(genre => 
-                        `<span class="genre-tag">${genre}</span>`
-                    ).join('');
-                }
-
-                // Overview
-                if (content.overview) {
-                    document.getElementById('movieOverview').textContent = content.overview;
-                }
-
-                // Set backdrop
+            renderMovieInfo(data) {
+                const content = data.content;
+                
+                document.getElementById('movie-title').textContent = content.title;
+                document.getElementById('movie-poster').src = Utils.getImageUrl(content.poster_path);
+                document.getElementById('movie-poster').alt = content.title;
+                
                 if (content.backdrop_path) {
-                    const heroSection = document.getElementById('heroSection');
-                    heroSection.style.backgroundImage = `url(${content.backdrop_path})`;
-                    heroSection.style.backgroundSize = 'cover';
-                    heroSection.style.backgroundPosition = 'center';
+                    const herobg = document.getElementById('movie-hero-bg');
+                    heroBg.style.backgroundImage = `url(${Utils.getBackdropUrl(content.backdrop_path)})`;
                 }
 
-                // Show action buttons only for logged-in users
-                if (authManager.isLoggedIn) {
-                    document.getElementById('actionButtons').classList.remove('hidden');
-                    document.getElementById('userRatingSection').classList.remove('hidden');
-                } else {
-                    document.getElementById('actionButtons').classList.add('hidden');
-                    document.getElementById('userRatingSection').classList.add('hidden');
+                if (data.tmdb_details?.tagline) {
+                    document.getElementById('movie-tagline').textContent = data.tmdb_details.tagline;
                 }
 
-                // Render videos
-                this.renderVideos(youtube_videos);
+                document.getElementById('movie-overview').textContent = content.overview || 'No overview available.';
 
-                // Render similar content
-                this.renderSimilarContent(similar_content);
+                // Render meta information
+                const metaContainer = document.getElementById('movie-meta');
+                metaContainer.innerHTML = '';
 
-                // Render reviews
-                this.renderReviews(user_reviews);
+                const metaItems = [
+                    { label: 'Rating', value: content.rating ? `${content.rating}/10` : 'N/A' },
+                    { label: 'Release Year', value: content.release_date ? new Date(content.release_date).getFullYear() : 'N/A' },
+                    { label: 'Runtime', value: Utils.formatRuntime(content.runtime) || 'N/A' },
+                    { label: 'Language', value: content.language?.toUpperCase() || 'N/A' }
+                ];
+
+                metaItems.forEach(item => {
+                    if (item.value !== 'N/A') {
+                        const metaItem = document.createElement('div');
+                        metaItem.className = 'meta-item';
+                        metaItem.innerHTML = `
+                            <span class="meta-value">${item.value}</span>
+                            <span class="meta-label">${item.label}</span>
+                        `;
+                        metaContainer.appendChild(metaItem);
+                    }
+                });
             }
 
             renderVideos(videos) {
-                if (!videos || (!videos.trailers?.length && !videos.teasers?.length)) {
-                    document.getElementById('videosSection').classList.add('hidden');
+                const videosGrid = document.getElementById('videos-grid');
+                videosGrid.innerHTML = '';
+
+                const allVideos = [...(videos.trailers || []), ...(videos.teasers || [])];
+
+                if (allVideos.length === 0) {
+                    videosGrid.innerHTML = '<p>No videos available</p>';
                     return;
                 }
 
-                const videosGrid = document.getElementById('videosGrid');
-                const allVideos = [...(videos.trailers || []), ...(videos.teasers || [])];
-
-                videosGrid.innerHTML = allVideos.slice(0, 6).map(video => `
-                    <div class="bg-secondary-bg rounded-lg overflow-hidden hover:scale-105 transition-transform">
-                        <img src="${video.thumbnail}" alt="${video.title}" class="w-full h-32 object-cover">
-                        <div class="p-4">
-                            <h4 class="font-medium mb-2 line-clamp-2">${video.title}</h4>
-                            <a href="${video.url}" target="_blank" class="btn-primary text-sm">
-                                Watch on YouTube
-                            </a>
+                allVideos.forEach(video => {
+                    const videoCard = document.createElement('div');
+                    videoCard.className = 'video-card';
+                    videoCard.innerHTML = `
+                        <div class="video-thumbnail">
+                            <img src="${video.thumbnail}" alt="${video.title}">
+                            <button class="video-play-btn">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </button>
                         </div>
-                    </div>
-                `).join('');
+                        <div class="video-info">
+                            <h4 class="video-title">${video.title}</h4>
+                            <p class="video-type">${video.type}</p>
+                        </div>
+                    `;
 
-                document.getElementById('videosSection').classList.remove('hidden');
+                    videoCard.addEventListener('click', () => this.playVideo(video));
+                    videosGrid.appendChild(videoCard);
+                });
             }
 
-            renderSimilarContent(similarContent) {
-                if (!similarContent || similarContent.length === 0) return;
+            renderCast(cast) {
+                const castGrid = document.getElementById('cast-grid');
+                castGrid.innerHTML = '';
 
-                UIComponents.createCarousel('similarCarousel', similarContent);
+                if (cast.length === 0) {
+                    castGrid.innerHTML = '<p>Cast information not available</p>';
+                    return;
+                }
+
+                cast.slice(0, 12).forEach(member => {
+                    const castMember = document.createElement('div');
+                    castMember.className = 'cast-member';
+                    
+                    const profilePath = member.profile_path ? 
+                        `https://image.tmdb.org/t/p/w185${member.profile_path}` : 
+                        '/assets/images/default-avatar.png';
+
+                    castMember.innerHTML = `
+                        <div class="cast-photo">
+                            <img src="${profilePath}" alt="${member.name}" loading="lazy">
+                        </div>
+                        <h4 class="cast-name">${member.name}</h4>
+                        <p class="cast-character">${member.character}</p>
+                    `;
+
+                    castGrid.appendChild(castMember);
+                });
             }
 
             renderReviews(reviews) {
-                const reviewsContainer = document.getElementById('reviewsContainer');
-                
-                if (!reviews || reviews.length === 0) {
-                    reviewsContainer.innerHTML = `
-                        <div class="text-center py-8 text-text-secondary">
-                            <p>No reviews yet. Be the first to share your thoughts!</p>
-                        </div>
-                    `;
+                const reviewsList = document.getElementById('reviews-list');
+                reviewsList.innerHTML = '';
+
+                if (reviews.length === 0) {
+                    reviewsList.innerHTML = '<p>No reviews available</p>';
                     return;
                 }
 
-                reviewsContainer.innerHTML = reviews.map(review => `
-                    <div class="bg-secondary-bg rounded-lg p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-10 h-10 bg-accent-red rounded-full flex items-center justify-center">
-                                    ${review.username.charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">${review.username}</h4>
-                                    <div class="flex items-center space-x-1">
-                                        ${Array(5).fill().map((_, i) => 
-                                            `<span class="text-${i < review.rating ? 'yellow' : 'gray'}-400">★</span>`
-                                        ).join('')}
-                                    </div>
-                                </div>
+                reviews.forEach(review => {
+                    const reviewItem = document.createElement('div');
+                    reviewItem.className = 'review-item';
+                    reviewItem.innerHTML = `
+                        <div class="review-header">
+                            <span class="review-author">${review.username}</span>
+                            <div class="review-rating">
+                                ${Utils.getStarRating(review.rating * 2)}
+                                <span>${review.rating}/5</span>
                             </div>
-                            <span class="text-text-secondary text-sm">
-                                ${Utils.formatDate(review.created_at)}
-                            </span>
                         </div>
-                        ${review.content ? `<p class="text-text-secondary leading-relaxed">${review.content}</p>` : ''}
+                        <div class="review-content">
+                            Great movie! Really enjoyed watching it.
+                        </div>
+                    `;
+                    reviewsList.appendChild(reviewItem);
+                });
+            }
+
+            renderDetails(details) {
+                const detailsContainer = document.getElementById('movie-details');
+                
+                const detailsData = [
+                    { label: 'Genres', value: this.movieData.genre_names?.join(', ') || 'N/A' },
+                    { label: 'Production Companies', value: details.production_companies?.map(c => c.name).join(', ') || 'N/A' },
+                    { label: 'Production Countries', value: details.production_countries?.map(c => c.name).join(', ') || 'N/A' },
+                    { label: 'Budget', value: details.budget ? `$${Utils.formatNumber(details.budget)}` : 'N/A' },
+                    { label: 'Revenue', value: details.revenue ? `$${Utils.formatNumber(details.revenue)}` : 'N/A' },
+                    { label: 'Status', value: details.status || 'N/A' }
+                ];
+
+                detailsContainer.innerHTML = detailsData.map(item => `
+                    <div style="margin-bottom: 1rem;">
+                        <strong>${item.label}:</strong> ${item.value}
                     </div>
                 `).join('');
             }
 
-            async handleInteraction(type) {
-                if (!authManager.isLoggedIn) {
-                    UIComponents.showToast('Please login to interact with movies', 'warning');
+            renderSimilarMovies(movies) {
+                const container = document.getElementById('similar-movies');
+                container.innerHTML = '';
+
+                movies.forEach(movie => {
+                    const movieCard = UIComponents.createMovieCard(movie, {
+                        showActions: Auth.isAuthenticated()
+                    });
+                    container.appendChild(movieCard);
+                });
+            }
+
+            setupTabs() {
+                const tabButtons = document.querySelectorAll('.tab-btn-detail');
+                const tabContents = document.querySelectorAll('.tab-content-detail');
+
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const targetTab = button.dataset.tab;
+                        
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        
+                        tabContents.forEach(content => {
+                            content.classList.add('hidden');
+                            if (content.id === `${targetTab}-tab`) {
+                                content.classList.remove('hidden');
+                            }
+                        });
+                    });
+                });
+            }
+
+            setupRating() {
+                const stars = document.querySelectorAll('.star-btn');
+                const submitBtn = document.getElementById('submit-rating');
+
+                stars.forEach(star => {
+                    star.addEventListener('click', () => {
+                        this.userRating = parseInt(star.dataset.rating);
+                        this.updateStarDisplay();
+                    });
+
+                    star.addEventListener('mouseenter', () => {
+                        const rating = parseInt(star.dataset.rating);
+                        this.highlightStars(rating);
+                    });
+                });
+
+                document.getElementById('rating-stars').addEventListener('mouseleave', () => {
+                    this.updateStarDisplay();
+                });
+
+                submitBtn.addEventListener('click', () => this.submitRating());
+            }
+
+            updateStarDisplay() {
+                const stars = document.querySelectorAll('.star-btn');
+                stars.forEach((star, index) => {
+                    star.classList.toggle('active', index < this.userRating);
+                });
+            }
+
+            highlightStars(rating) {
+                const stars = document.querySelectorAll('.star-btn');
+                stars.forEach((star, index) => {
+                    star.classList.toggle('active', index < rating);
+                });
+            }
+
+            async submitRating() {
+                if (!Auth.isAuthenticated()) {
+                    Toast.show('Please sign in to rate movies', 'warning');
+                    return;
+                }
+
+                if (this.userRating === 0) {
+                    Toast.show('Please select a rating', 'warning');
                     return;
                 }
 
                 try {
-                    await apiService.recordInteraction({
-                        content_id: this.movieId,
-                        interaction_type: type
-                    });
-
-                    const messages = {
-                        favorite: 'Added to favorites!',
-                        wishlist: 'Added to wishlist!',
-                        like: 'Liked!'
-                    };
-
-                    UIComponents.showToast(messages[type], 'success');
+                    await API.rateContent(this.movieId, this.userRating);
+                    Toast.show('Rating submitted successfully!', 'success');
                 } catch (error) {
-                    console.error('Interaction failed:', error);
-                    UIComponents.showToast('Failed to save interaction', 'error');
+                    Toast.show('Failed to submit rating', 'error');
                 }
             }
 
-            async shareMovie() {
-                const shareData = {
-                    title: this.movieData.content.title,
-                    text: `Check out ${this.movieData.content.title} on MovieRec!`,
-                    url: window.location.href
+            setupActions() {
+                const favoriteBtn = document.getElementById('favorite-btn');
+                const watchlistBtn = document.getElementById('watchlist-btn');
+                const playBtn = document.getElementById('play-btn');
+
+                favoriteBtn?.addEventListener('click', () => this.handleAction('favorite'));
+                watchlistBtn?.addEventListener('click', () => this.handleAction('watchlist'));
+                playBtn?.addEventListener('click', () => this.playFirstVideo());
+            }
+
+            async handleAction(action) {
+                if (!Auth.isAuthenticated()) {
+                    Toast.show('Please sign in to add to favorites or watchlist', 'warning');
+                    return;
+                }
+
+                try {
+                    if (action === 'favorite') {
+                        await API.addToFavorites(this.movieId);
+                        Toast.show('Added to favorites!', 'success');
+                        document.getElementById('favorite-btn').classList.add('active');
+                    } else if (action === 'watchlist') {
+                        await API.addToWatchlist(this.movieId);
+                        Toast.show('Added to watchlist!', 'success');
+                        document.getElementById('watchlist-btn').classList.add('active');
+                    }
+                } catch (error) {
+                    Toast.show('Action failed. Please try again.', 'error');
+                }
+            }
+
+            playFirstVideo() {
+                const firstVideo = document.querySelector('.video-card');
+                if (firstVideo) {
+                    firstVideo.click();
+                } else {
+                    Toast.show('No videos available', 'info');
+                }
+            }
+
+            playVideo(video) {
+                const modal = document.getElementById('video-modal');
+                const title = document.getElementById('video-modal-title');
+                const player = document.getElementById('video-player');
+                const closeBtn = document.getElementById('video-modal-close');
+
+                title.textContent = video.title;
+                player.innerHTML = `
+                    <iframe 
+                        width="100%" 
+                        height="100%" 
+                        src="https://www.youtube.com/embed/${video.video_id}?autoplay=1" 
+                        frameborder="0" 
+                        allowfullscreen>
+                    </iframe>
+                `;
+
+                modal.classList.add('active');
+
+                closeBtn.onclick = () => {
+                    modal.classList.remove('active');
+                    player.innerHTML = '';
                 };
 
-                if (await Utils.shareContent(shareData)) {
-                    UIComponents.showToast('Movie shared!', 'success');
-                } else {
-                    UIComponents.showToast('Link copied to clipboard!', 'success');
-                }
+                modal.onclick = (e) => {
+                    if (e.target === modal) {
+                        modal.classList.remove('active');
+                        player.innerHTML = '';
+                    }
+                };
+            }
+
+            hideLoadingScreen() {
+                const loadingScreen = document.getElementById('loading-screen');
+                setTimeout(() => {
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                    }, 300);
+                }, 1000);
             }
         }
 
-        // Initialize movie detail page
+        // Initialize page
         document.addEventListener('DOMContentLoaded', () => {
-            // Update auth UI
-            authManager.updateUI();
-            
-            // Initialize movie detail page
             new MovieDetailPage();
         });
     </script>

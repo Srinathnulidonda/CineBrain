@@ -1,400 +1,739 @@
-// Main application logic
-class MovieApp {
+// Main Application Class
+class MovieRecApp {
     constructor() {
-        this.homepageData = null;
-        this.currentRegion = 'Telugu';
-        this.searchTimeout = null;
+        this.api = API;
+        this.auth = Auth;
+        this.currentPage = this.getCurrentPage();
+        this.isLoading = false;
+        this.cache = new Map();
+        
         this.init();
     }
 
+    // Initialize the application
     async init() {
-        this.initEventListeners();
-        await this.loadHomepageData();
-        this.initSearch();
-        this.initNavigation();
+        try {
+            this.setupGlobalEventListeners();
+            await this.loadPageContent();
+            this.setupNavigation();
+            this.setupSearch();
+            this.hideLoadingScreen();
+        } catch (error) {
+            console.error('App initialization error:', error);
+            this.handleError(error);
+        }
     }
 
-    initEventListeners() {
-        // Auth buttons
-        const loginBtn = document.getElementById('loginBtn');
-        const signupBtn = document.getElementById('signupBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
+    // Get current page from URL
+    getCurrentPage() {
+        const path = window.location.pathname;
+        const page = path.split('/').pop().replace('.html', '') || 'index';
+        return page;
+    }
 
-        if (loginBtn) {
-            loginBtn.addEventListener('click', () => {
-                window.location.href = 'login.html';
+    // Setup global event listeners
+    setupGlobalEventListeners() {
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'k':
+                        e.preventDefault();
+                        this.openSearch();
+                        break;
+                    case '/':
+                        e.preventDefault();
+                        this.openSearch();
+                        break;
+                }
+            }
+            
+            if (e.key === 'Escape') {
+                this.closeAllModals();
+            }
+        });
+
+        // Handle network status changes
+        window.addEventListener('online', () => {
+            Toast.show('Connection restored', 'success');
+            this.retryFailedRequests();
+        });
+
+        window.addEventListener('offline', () => {
+            Toast.show('Connection lost. Some features may be limited.', 'warning', 0);
+        });
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.auth.isAuthenticated()) {
+                this.refreshUserData();
+            }
+        });
+
+        // Smooth scroll for anchor links
+        document.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href')?.startsWith('#')) {
+                e.preventDefault();
+                const targetId = e.target.getAttribute('href').slice(1);
+                Utils.scrollToElement(targetId, 80);
+            }
+        });
+    }
+
+    // Load page-specific content
+    async loadPageContent() {
+        Utils.performanceTimer.start('pageLoad');
+        
+        switch (this.currentPage) {
+            case 'index':
+                await this.loadHomepage();
+                break;
+            case 'dashboard':
+                if (!this.auth.requireAuth()) return;
+                await this.loadDashboard();
+                break;
+            case 'movie-detail':
+                await this.loadMovieDetail();
+                break;
+            case 'profile':
+                if (!this.auth.requireAuth()) return;
+                await this.loadProfile();
+                break;
+            case 'admin':
+                if (!this.auth.requireAdmin()) return;
+                await this.loadAdminDashboard();
+                break;
+        }
+        
+        Utils.performanceTimer.end('pageLoad');
+    }
+
+    // Load homepage content
+    async loadHomepage() {
+        try {
+            this.showLoadingState();
+            
+            const data = await this.api.getCachedRequest('homepage', 
+                () => this.api.getHomepage(), 
+                300000 // 5 minutes cache
+            );
+
+            this.renderTrendingContent(data.trending);
+            this.renderWhatsHot(data.whats_hot);
+            this.renderCriticsChoice(data.critics_choice);
+            this.renderRegionalContent(data.regional);
+            this.renderUserFavorites(data.user_favorites);
+            this.renderAdminCurated(data.admin_curated);
+
+            this.setupContentTabs();
+            this.setupRegionalTabs();
+            
+        } catch (error) {
+            console.error('Homepage load error:', error);
+            this.showErrorState('Failed to load content. Please try again.');
+        } finally {
+            this.hideLoadingState();
+        }
+    }
+
+    // Load dashboard content
+    async loadDashboard() {
+        try {
+            this.showLoadingState();
+            
+            // Load personalized recommendations
+            const recommendations = await this.api.getPersonalizedRecommendations();
+            
+            this.renderPersonalizedRecommendations(recommendations);
+            this.updateUserStats();
+            this.setupPreferenceTuning();
+            
+        } catch (error) {
+            console.error('Dashboard load error:', error);
+            this.showErrorState('Failed to load your recommendations.');
+        } finally {
+            this.hideLoadingState();
+        }
+    }
+
+    // Render trending content
+    renderTrendingContent(trending) {
+        const containers = {
+            'trending-movies': trending.movies || [],
+            'trending-tv': trending.tv || [],
+            'trending-anime': trending.anime || []
+        };
+
+        Object.entries(containers).forEach(([containerId, items]) => {
+            const container = document.getElementById(containerId);
+            if (!container || !items.length) return;
+
+            container.innerHTML = '';
+            
+            items.forEach(item => {
+                const movieCard = UIComponents.createMovieCard(item, {
+                    showActions: false,
+                    onAction: (action, movie) => this.handleMovieAction(action, movie)
+                });
+                container.appendChild(movieCard);
             });
+        });
+    }
+
+    // Render what's hot section
+    renderWhatsHot(items) {
+        const container = document.getElementById('whats-hot');
+        if (!container || !items?.length) return;
+
+        container.innerHTML = '';
+        
+        items.forEach(item => {
+            const movieCard = UIComponents.createMovieCard(item, {
+                showActions: false
+            });
+            container.appendChild(movieCard);
+        });
+    }
+
+    // Render critics' choice
+    renderCriticsChoice(items) {
+        const container = document.getElementById('critics-choice');
+        if (!container || !items?.length) return;
+
+        container.innerHTML = '';
+        
+        items.forEach(item => {
+            const movieCard = UIComponents.createMovieCard(item, {
+                showActions: false
+            });
+            container.appendChild(movieCard);
+        });
+    }
+
+    // Render regional content
+    renderRegionalContent(regional) {
+        const container = document.getElementById('regional-content');
+        if (!container || !regional) return;
+
+        // Start with Telugu content
+        const teluguContent = regional.Telugu || [];
+        this.renderMovieGrid(container, teluguContent);
+    }
+
+    // Render user favorites
+    renderUserFavorites(items) {
+        const container = document.getElementById('user-favorites');
+        if (!container || !items?.length) return;
+
+        container.innerHTML = '';
+        
+        items.forEach(item => {
+            const movieCard = UIComponents.createMovieCard(item, {
+                showActions: false
+            });
+            container.appendChild(movieCard);
+        });
+    }
+
+    // Render admin curated content
+    renderAdminCurated(items) {
+        const container = document.getElementById('admin-curated');
+        if (!container || !items?.length) return;
+
+        container.innerHTML = '';
+        
+        items.forEach(item => {
+            const curatedCard = UIComponents.createCuratedCard(item);
+            container.appendChild(curatedCard);
+        });
+    }
+
+    // Render personalized recommendations
+    renderPersonalizedRecommendations(recommendations) {
+        const sections = [
+            { id: 'personalized-recs', data: recommendations.hybrid_recommendations, title: 'Recommended For You' },
+            { id: 'recent-activity-recs', data: recommendations.watch_history_based, title: 'Based on Your Recent Activity' },
+            { id: 'genre-based-recs', data: recommendations.favorites_based, title: 'More Like What You Love' },
+            { id: 'favorites-based-recs', data: recommendations.wishlist_influenced, title: 'Similar to Your Favorites' },
+            { id: 'collaborative-recs', data: recommendations.collaborative_filtering, title: 'People with Similar Taste Also Liked' }
+        ];
+
+        sections.forEach(section => {
+            const container = document.getElementById(section.id);
+            if (!container || !section.data?.length) return;
+
+            this.renderMovieGrid(container, section.data);
+        });
+    }
+
+    // Generic method to render movie grid
+    renderMovieGrid(container, items) {
+        container.innerHTML = '';
+        
+        items.forEach(item => {
+            const movieCard = UIComponents.createMovieCard(item, {
+                showActions: this.auth.isAuthenticated(),
+                onAction: (action, movie) => this.handleMovieAction(action, movie)
+            });
+            container.appendChild(movieCard);
+        });
+
+        // Initialize lazy loading for new images
+        lazyLoader.observeAll();
+    }
+
+    // Handle movie card actions
+    async handleMovieAction(action, movie) {
+        if (!this.auth.isAuthenticated()) {
+            this.showAuthPrompt();
+            return;
         }
 
-        if (signupBtn) {
-            signupBtn.addEventListener('click', () => {
-                window.location.href = 'login.html';
-            });
+        try {
+            switch (action) {
+                case 'play':
+                    window.location.href = `movie-detail.html?id=${movie.id}`;
+                    break;
+                    
+                case 'favorite':
+                    await this.api.addToFavorites(movie.id);
+                    Toast.show(`Added "${movie.title}" to favorites`, 'success');
+                    break;
+                    
+                case 'watchlist':
+                    await this.api.addToWatchlist(movie.id);
+                    Toast.show(`Added "${movie.title}" to watchlist`, 'success');
+                    break;
+            }
+        } catch (error) {
+            console.error(`Action ${action} failed:`, error);
+            Toast.show('Action failed. Please try again.', 'error');
         }
+    }
 
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                authManager.logout();
+    // Setup content tabs
+    setupContentTabs() {
+        const tabButtons = document.querySelectorAll('.content-tabs .tab-btn');
+        const tabContents = document.querySelectorAll('.content-carousel');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.dataset.tab;
+                
+                // Update button states
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Update content visibility
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                    if (content.id === targetTab) {
+                        content.classList.remove('hidden');
+                    }
+                });
             });
-        }
+        });
+    }
+
+    // Setup regional tabs
+    setupRegionalTabs() {
+        const regionalTabs = document.querySelectorAll('.regional-tabs .tab-btn');
+        const regionalContainer = document.getElementById('regional-content');
+
+        regionalTabs.forEach(button => {
+            button.addEventListener('click', async () => {
+                const language = button.dataset.lang;
+                
+                // Update button states
+                regionalTabs.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Load regional content
+                try {
+                    const data = await this.api.getCachedRequest(`homepage`, 
+                        () => this.api.getHomepage()
+                    );
+                    
+                    const regionalContent = data.regional[language] || [];
+                    this.renderMovieGrid(regionalContainer, regionalContent);
+                } catch (error) {
+                    console.error('Regional content load error:', error);
+                    Toast.show('Failed to load regional content', 'error');
+                }
+            });
+        });
+    }
+
+    // Setup navigation
+    setupNavigation() {
+        // Mobile menu toggle
+        const hamburger = document.getElementById('hamburger');
+        const navMenu = document.getElementById('nav-menu');
+
+        hamburger?.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navMenu?.classList.toggle('active');
+        });
 
         // User menu toggle
-        const userMenuToggle = document.getElementById('userMenuToggle');
-        const userDropdown = document.getElementById('userDropdown');
+        const userMenuToggle = document.getElementById('user-menu-toggle');
+        const userDropdown = document.getElementById('user-dropdown');
 
-        if (userMenuToggle && userDropdown) {
-            userMenuToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                userDropdown.classList.toggle('hidden');
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', () => {
-                userDropdown.classList.add('hidden');
-            });
-        }
-
-        // Mobile menu
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const mobileMenu = document.getElementById('mobileMenu');
-
-        if (mobileMenuBtn && mobileMenu) {
-            mobileMenuBtn.addEventListener('click', () => {
-                mobileMenu.classList.toggle('hidden');
-            });
-        }
-
-        // Mobile search
-        const mobileSearchBtn = document.getElementById('mobileSearchBtn');
-        const mobileSearch = document.getElementById('mobileSearch');
-
-        if (mobileSearchBtn && mobileSearch) {
-            mobileSearchBtn.addEventListener('click', () => {
-                mobileSearch.classList.toggle('hidden');
-                if (!mobileSearch.classList.contains('hidden')) {
-                    const searchInput = mobileSearch.querySelector('input');
-                    if (searchInput) searchInput.focus();
-                }
-            });
-        }
-
-        // Region tabs
-        const regionTabs = document.querySelectorAll('.region-tab');
-        regionTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                this.switchRegion(tab.getAttribute('data-region'));
-            });
+        userMenuToggle?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userDropdown?.classList.toggle('active');
         });
 
-        // Hero buttons
-        const exploreBtn = document.getElementById('exploreBtn');
-        if (exploreBtn) {
-            exploreBtn.addEventListener('click', () => {
-                document.getElementById('trending')?.scrollIntoView({ behavior: 'smooth' });
-            });
-        }
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', () => {
+            userDropdown?.classList.remove('active');
+            navMenu?.classList.remove('active');
+            hamburger?.classList.remove('active');
+        });
 
-        // View All buttons
-        const viewAllBtns = document.querySelectorAll('.view-all-btn');
-        viewAllBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const section = e.target.closest('.content-section');
-                if (section) {
-                    const carousel = section.querySelector('.content-carousel');
-                    if (carousel) {
-                        carousel.scrollTo({ left: carousel.scrollWidth, behavior: 'smooth' });
-                    }
-                }
-            });
+        // Navbar scroll effect
+        let lastScrollY = window.scrollY;
+        const navbar = document.querySelector('.navbar');
+
+        window.addEventListener('scroll', Utils.throttle(() => {
+            const currentScrollY = window.scrollY;
+            
+            if (currentScrollY > 100) {
+                navbar?.classList.add('scrolled');
+            } else {
+                navbar?.classList.remove('scrolled');
+            }
+
+            // Hide/show navbar on scroll
+            if (currentScrollY > lastScrollY && currentScrollY > 200) {
+                navbar?.style.setProperty('transform', 'translateY(-100%)');
+            } else {
+                navbar?.style.setProperty('transform', 'translateY(0)');
+            }
+
+            lastScrollY = currentScrollY;
+        }, 100));
+    }
+
+    // Setup search functionality
+    setupSearch() {
+        const searchToggle = document.getElementById('search-toggle');
+        const searchOverlay = document.getElementById('search-overlay');
+        const searchInput = document.getElementById('search-input');
+        const searchClose = document.getElementById('search-close');
+        const searchResults = document.getElementById('search-results');
+
+        searchToggle?.addEventListener('click', () => {
+            this.openSearch();
+        });
+
+        searchClose?.addEventListener('click', () => {
+            this.closeSearch();
+        });
+
+        searchOverlay?.addEventListener('click', (e) => {
+            if (e.target === searchOverlay) {
+                this.closeSearch();
+            }
+        });
+
+        // Search input with debouncing
+        searchInput?.addEventListener('input', Utils.debounce(async (e) => {
+            const query = e.target.value.trim();
+            
+            if (query.length >= 2) {
+                await this.performSearch(query);
+            } else {
+                searchResults.innerHTML = '';
+            }
+        }, 300));
+
+        // Search keyboard navigation
+        searchInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeSearch();
+            }
         });
     }
 
-    async loadHomepageData() {
+    // Open search overlay
+    openSearch() {
+        const searchOverlay = document.getElementById('search-overlay');
+        const searchInput = document.getElementById('search-input');
+        
+        searchOverlay?.classList.add('active');
+        searchInput?.focus();
+    }
+
+    // Close search overlay
+    closeSearch() {
+        const searchOverlay = document.getElementById('search-overlay');
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        
+        searchOverlay?.classList.remove('active');
+        searchInput.value = '';
+        searchResults.innerHTML = '';
+    }
+
+    // Perform search
+    async performSearch(query) {
+        const searchResults = document.getElementById('search-results');
+        
         try {
-            UIComponents.showLoading('loadingSpinner', 'Loading amazing content...');
+            searchResults.innerHTML = '<div class="search-loading">Searching...</div>';
             
-            const data = await apiService.getHomepage();
-            this.homepageData = data;
+            const results = await this.api.searchContent(query);
             
-            this.renderHomepageContent();
+            searchResults.innerHTML = '';
             
-            // Hide loading spinner
-            const loadingSpinner = document.getElementById('loadingSpinner');
-            if (loadingSpinner) {
-                loadingSpinner.classList.add('hidden');
+            if (results.database_results?.length > 0 || results.tmdb_results?.length > 0) {
+                const allResults = [...(results.database_results || []), ...(results.tmdb_results || [])];
+                const uniqueResults = this.deduplicateResults(allResults);
+                
+                uniqueResults.forEach(result => {
+                    const resultElement = UIComponents.createSearchResult(result);
+                    searchResults.appendChild(resultElement);
+                });
+            } else {
+                searchResults.innerHTML = '<div class="search-empty">No results found</div>';
             }
-            
         } catch (error) {
-            console.error('Failed to load homepage data:', error);
-            UIComponents.showToast('Failed to load content. Please refresh the page.', 'error');
-            
-            // Hide loading spinner and show error
-            const loadingSpinner = document.getElementById('loadingSpinner');
-            if (loadingSpinner) {
-                loadingSpinner.innerHTML = `
-                    <div class="text-center py-12">
-                        <svg class="w-16 h-16 text-text-secondary mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <h3 class="text-lg font-medium text-white mb-2">Unable to load content</h3>
-                        <p class="text-text-secondary mb-4">Please check your connection and try again.</p>
-                        <button onclick="window.location.reload()" class="btn-primary">Retry</button>
-                    </div>
-                `;
+            console.error('Search error:', error);
+            searchResults.innerHTML = '<div class="search-error">Search failed. Please try again.</div>';
+        }
+    }
+
+    // Deduplicate search results
+    deduplicateResults(results) {
+        const seen = new Set();
+        return results.filter(result => {
+            const key = `${result.title || result.name}_${result.release_date || result.first_air_date}`;
+            if (seen.has(key)) {
+                return false;
             }
-        }
-    }
-
-    renderHomepageContent() {
-        if (!this.homepageData) return;
-
-        const { trending, whats_hot, critics_choice, regional, user_favorites, admin_curated } = this.homepageData;
-
-        // What's Hot
-        if (whats_hot && whats_hot.length > 0) {
-            UIComponents.createCarousel('whatsHotCarousel', whats_hot);
-        }
-
-        // Trending Movies
-        if (trending?.movies && trending.movies.length > 0) {
-            UIComponents.createCarousel('trendingMoviesCarousel', trending.movies);
-        }
-
-        // Trending TV Shows
-        if (trending?.tv && trending.tv.length > 0) {
-            UIComponents.createCarousel('trendingTVCarousel', trending.tv);
-        }
-
-        // Critics' Choice
-        if (critics_choice && critics_choice.length > 0) {
-            UIComponents.createCarousel('criticsChoiceCarousel', critics_choice);
-        }
-
-        // Regional Content
-        if (regional && regional[this.currentRegion]) {
-            UIComponents.createCarousel('regionalCarousel', regional[this.currentRegion]);
-        }
-
-        // User Favorites
-        if (user_favorites && user_favorites.length > 0) {
-            UIComponents.createCarousel('userFavoritesCarousel', user_favorites);
-        }
-
-        // Admin Curated
-        if (admin_curated && admin_curated.length > 0) {
-            UIComponents.createCarousel('adminCuratedCarousel', admin_curated, { 
-                cardType: 'featured',
-                showGenres: false 
-            });
-        }
-
-        // Update hero section with featured content
-        this.updateHeroSection();
-    }
-
-    updateHeroSection() {
-        const heroSection = document.getElementById('heroSection');
-        if (!heroSection || !this.homepageData?.whats_hot?.[0]) return;
-
-        const featuredContent = this.homepageData.whats_hot[0];
-        const backdropUrl = featuredContent.backdrop_path;
-
-        if (backdropUrl) {
-            heroSection.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url(${backdropUrl})`;
-            heroSection.style.backgroundSize = 'cover';
-            heroSection.style.backgroundPosition = 'center';
-        }
-    }
-
-    switchRegion(region) {
-        this.currentRegion = region;
-        
-        // Update tab states
-        document.querySelectorAll('.region-tab').forEach(tab => {
-            tab.classList.remove('active');
+            seen.add(key);
+            return true;
         });
-        document.querySelector(`[data-region="${region}"]`)?.classList.add('active');
+    }
+
+    // Update user stats
+    async updateUserStats() {
+        // This would typically come from an API call
+        // For now, we'll use placeholder data
+        const stats = {
+            watched: 42,
+            wishlist: 15,
+            favorites: 8
+        };
+
+        document.getElementById('watched-count').textContent = stats.watched;
+        document.getElementById('wishlist-count').textContent = stats.wishlist;
+        document.getElementById('favorites-count').textContent = stats.favorites;
+    }
+
+    // Setup preference tuning
+    setupPreferenceTuning() {
+        const tuneBtn = document.getElementById('tune-preferences');
+        const modal = document.getElementById('preferences-modal');
+        const closeBtn = document.getElementById('preferences-close');
+        const saveBtn = document.getElementById('preferences-save');
+
+        tuneBtn?.addEventListener('click', () => {
+            modal?.classList.add('active');
+            this.loadUserPreferences();
+        });
+
+        closeBtn?.addEventListener('click', () => {
+            modal?.classList.remove('active');
+        });
+
+        saveBtn?.addEventListener('click', () => {
+            this.saveUserPreferences();
+        });
+    }
+
+    // Load user preferences
+    loadUserPreferences() {
+        const preferences = Utils.getStorage('user_preferences', {
+            genres: [],
+            languages: ['English'],
+            types: ['Movie', 'TV Show']
+        });
+
+        // Populate genre preferences
+        const genreGrid = document.getElementById('genre-preferences');
+        if (genreGrid) {
+            const genres = ['Action', 'Comedy', 'Drama', 'Horror', 'Romance', 'Sci-Fi', 'Thriller', 'Animation', 'Documentary', 'Fantasy'];
+            
+            genreGrid.innerHTML = '';
+            genres.forEach(genre => {
+                const genreOption = document.createElement('div');
+                genreOption.className = `genre-option ${preferences.genres.includes(genre) ? 'selected' : ''}`;
+                genreOption.textContent = genre;
+                genreOption.addEventListener('click', () => {
+                    genreOption.classList.toggle('selected');
+                });
+                genreGrid.appendChild(genreOption);
+            });
+        }
+
+        // Populate language preferences
+        const languageOptions = document.getElementById('language-preferences');
+        if (languageOptions) {
+            const languages = ['English', 'Hindi', 'Telugu', 'Tamil', 'Kannada'];
+            
+            languageOptions.innerHTML = '';
+            languages.forEach(language => {
+                const langOption = document.createElement('div');
+                langOption.className = `language-option ${preferences.languages.includes(language) ? 'selected' : ''}`;
+                langOption.textContent = language;
+                langOption.addEventListener('click', () => {
+                    langOption.classList.toggle('selected');
+                });
+                languageOptions.appendChild(langOption);
+            });
+        }
+
+        // Populate type preferences
+        const typeOptions = document.getElementById('type-preferences');
+        if (typeOptions) {
+            const types = ['Movie', 'TV Show', 'Anime', 'Documentary'];
+            
+            typeOptions.innerHTML = '';
+            types.forEach(type => {
+                const typeOption = document.createElement('div');
+                typeOption.className = `type-option ${preferences.types.includes(type) ? 'selected' : ''}`;
+                typeOption.textContent = type;
+                typeOption.addEventListener('click', () => {
+                    typeOption.classList.toggle('selected');
+                });
+                typeOptions.appendChild(typeOption);
+            });
+        }
+    }
+
+    // Save user preferences
+    saveUserPreferences() {
+        const selectedGenres = Array.from(document.querySelectorAll('.genre-option.selected'))
+            .map(el => el.textContent);
+        const selectedLanguages = Array.from(document.querySelectorAll('.language-option.selected'))
+            .map(el => el.textContent);
+        const selectedTypes = Array.from(document.querySelectorAll('.type-option.selected'))
+            .map(el => el.textContent);
+
+        const preferences = {
+            genres: selectedGenres,
+            languages: selectedLanguages,
+            types: selectedTypes
+        };
+
+        Utils.setStorage('user_preferences', preferences);
         
-        // Update carousel content
-        if (this.homepageData?.regional?.[region]) {
-            UIComponents.createCarousel('regionalCarousel', this.homepageData.regional[region]);
+        const modal = document.getElementById('preferences-modal');
+        modal?.classList.remove('active');
+        
+        Toast.show('Preferences saved! Your recommendations will be updated.', 'success');
+        
+        // Refresh recommendations
+        if (this.currentPage === 'dashboard') {
+            this.loadDashboard();
         }
     }
 
-    initSearch() {
-        const searchInput = document.getElementById('searchInput');
-        const mobileSearchInput = document.getElementById('mobileSearchInput');
-        const searchResults = document.getElementById('searchResults');
-        const mobileSearchResults = document.getElementById('mobileSearchResults');
+    // Show authentication prompt
+    showAuthPrompt() {
+        const modal = UIComponents.createModal(
+            'Sign In Required',
+            `
+            <p>Please sign in to add movies to your favorites and watchlist.</p>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="login.html" class="btn btn-primary">Sign In</a>
+            </div>
+            `,
+            { closable: true }
+        );
+    }
 
-        // Desktop search
-        if (searchInput && searchResults) {
-            searchInput.addEventListener('input', (e) => {
-                this.handleSearch(e.target.value, searchResults);
-            });
+    // Loading states
+    showLoadingState() {
+        const loadingScreen = document.getElementById('loading-screen');
+        loadingScreen?.classList.remove('hidden');
+    }
 
-            searchInput.addEventListener('focus', () => {
-                if (searchInput.value.trim()) {
-                    searchResults.classList.remove('hidden');
-                }
-            });
+    hideLoadingState() {
+        const loadingScreen = document.getElementById('loading-screen');
+        loadingScreen?.classList.add('hidden');
+    }
 
-            // Hide results when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.search-container')) {
-                    searchResults.classList.add('hidden');
-                }
-            });
-        }
-
-        // Mobile search
-        if (mobileSearchInput && mobileSearchResults) {
-            mobileSearchInput.addEventListener('input', (e) => {
-                this.handleSearch(e.target.value, mobileSearchResults);
-            });
+    hideLoadingScreen() {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            setTimeout(() => {
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 300);
+            }, 1000);
         }
     }
 
-    async handleSearch(query, resultsContainer) {
-        // Clear previous timeout
-        if (this.searchTimeout) {
-            clearTimeout(this.searchTimeout);
-        }
+    // Error handling
+    showErrorState(message) {
+        Toast.show(message, 'error');
+    }
 
-        if (!query.trim()) {
-            resultsContainer.classList.add('hidden');
-            return;
-        }
+    handleError(error) {
+        console.error('Application error:', error);
+        Toast.show('Something went wrong. Please refresh the page.', 'error');
+    }
 
-        // Debounce search
-        this.searchTimeout = setTimeout(async () => {
+    // Close all modals
+    closeAllModals() {
+        const modals = document.querySelectorAll('.modal-overlay.active');
+        modals.forEach(modal => {
+            modal.classList.remove('active');
+        });
+
+        const searchOverlay = document.getElementById('search-overlay');
+        if (searchOverlay?.classList.contains('active')) {
+            this.closeSearch();
+        }
+    }
+
+    // Refresh user data
+    async refreshUserData() {
+        if (this.auth.isAuthenticated() && this.currentPage === 'dashboard') {
             try {
-                resultsContainer.innerHTML = '<div class="p-4 text-center"><div class="spinner mx-auto"></div></div>';
-                resultsContainer.classList.remove('hidden');
-
-                const results = await apiService.searchContent(query);
-                
-                // Combine database and TMDB results
-                const allResults = [
-                    ...(results.database_results || []),
-                    ...(results.tmdb_results || [])
-                ];
-
-                UIComponents.createSearchResults(allResults.slice(0, 10), resultsContainer);
-                
+                await this.updateUserStats();
             } catch (error) {
-                console.error('Search error:', error);
-                resultsContainer.innerHTML = '<div class="p-4 text-center text-red-400">Search failed. Please try again.</div>';
+                console.error('User data refresh error:', error);
             }
-        }, 300);
-    }
-
-    initNavigation() {
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-
-        // Update navigation on scroll
-        window.addEventListener('scroll', () => {
-            this.updateNavigationOnScroll();
-        });
-    }
-
-    updateNavigationOnScroll() {
-        const nav = document.querySelector('nav');
-        if (!nav) return;
-
-        if (window.scrollY > 100) {
-            nav.classList.add('bg-primary');
-            nav.classList.remove('bg-primary/95');
-        } else {
-            nav.classList.remove('bg-primary');
-            nav.classList.add('bg-primary/95');
         }
     }
 
-    // Utility methods
-    async refreshHomepage() {
-        await this.loadHomepageData();
-        UIComponents.showToast('Content refreshed!', 'success');
-    }
-
-    goToContentDetail(contentId) {
-        window.location.href = `movie-detail.html?id=${contentId}`;
-    }
-
-    async loadPersonalizedContent() {
-        if (!authManager.isLoggedIn) {
-            window.location.href = 'login.html';
-            return;
-        }
-
-        try {
-            showLoader(true, 'Loading your personalized recommendations...');
-            
-            const recommendations = await apiService.getPersonalizedRecommendations();
-            
-            // Add personalized sections to homepage
-            this.renderPersonalizedSections(recommendations);
-            
-            showLoader(false);
-            UIComponents.showToast('Personalized content loaded!', 'success');
-            
-        } catch (error) {
-            showLoader(false);
-            console.error('Failed to load personalized content:', error);
-            UIComponents.showToast('Failed to load personalized content', 'error');
-        }
-    }
-
-    renderPersonalizedSections(recommendations) {
-        // This would add personalized sections to the homepage
-        // Implementation depends on specific UI requirements
-        console.log('Personalized recommendations:', recommendations);
+    // Retry failed requests
+    async retryFailedRequests() {
+        // Implement retry logic for failed requests
+        // This could involve re-executing the last failed API calls
     }
 }
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.movieApp = new MovieApp();
-    
-    // Initialize auth UI
-    if (window.authManager) {
-        authManager.updateUI();
+    window.app = new MovieRecApp();
+});
+
+// Initialize dashboard-specific functionality
+async function initializeDashboard() {
+    if (!Auth.isAuthenticated()) {
+        window.location.href = 'login.html';
+        return;
     }
 
-    // Check if we need to redirect authenticated users
-    const isAuthPage = window.location.pathname.includes('login.html');
-    if (isAuthPage && authManager.isLoggedIn) {
-        window.location.href = 'dashboard.html';
-    }
-});
+    Auth.updateUserDisplay();
+    await window.app.loadDashboard();
+}
 
-// Global functions for template usage
-window.openContentModal = openContentModal;
-window.handleInteraction = handleInteraction;
-
-// Error handling
-window.addEventListener('error', (e) => {
-    console.error('Global error:', e.error);
-    UIComponents.showToast('An unexpected error occurred', 'error');
-});
-
-// Online/Offline handling
-window.addEventListener('online', () => {
-    UIComponents.showToast('Connection restored', 'success');
-});
-
-window.addEventListener('offline', () => {
-    UIComponents.showToast('You are offline. Some features may not work.', 'warning');
-});
+// Export for global access
+export default MovieRecApp;
