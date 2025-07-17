@@ -1,1045 +1,846 @@
-// API Configuration
-const API_BASE = 'https://backend-app-970m.onrender.com/api';
-
-// API Service Class
-class APIService {
+// Reusable UI Components
+class UIComponents {
     constructor() {
-        this.token = localStorage.getItem('auth_token');
-        this.baseHeaders = {
-            'Content-Type': 'application/json',
-            'Authorization': this.token ? `Bearer ${this.token}` : ''
-        };
+        this.toastContainer = null;
+        this.loadingSpinner = null;
+        this.modalStack = [];
+        
+        this.initializeComponents();
     }
-
-    updateToken(token) {
-        this.token = token;
-        localStorage.setItem('auth_token', token);
-        this.baseHeaders.Authorization = `Bearer ${token}`;
+    
+    initializeComponents() {
+        // Create toast container if it doesn't exist
+        if (!document.getElementById('toastContainer')) {
+            this.createToastContainer();
+        }
+        
+        // Create loading spinner if it doesn't exist
+        if (!document.getElementById('loadingSpinner')) {
+            this.createLoadingSpinner();
+        }
+        
+        // Setup global event listeners
+        this.setupGlobalListeners();
     }
-
-    clearToken() {
-        this.token = null;
-        localStorage.removeItem('auth_token');
-        delete this.baseHeaders.Authorization;
+    
+    createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'fixed top-4 right-4 z-50 space-y-2';
+        document.body.appendChild(container);
+        this.toastContainer = container;
     }
-
-    async makeRequest(url, options = {}) {
-        try {
-            const response = await fetch(`${API_BASE}${url}`, {
-                ...options,
-                headers: {
-                    ...this.baseHeaders,
-                    ...options.headers
+    
+    createLoadingSpinner() {
+        const spinner = document.createElement('div');
+        spinner.id = 'loadingSpinner';
+        spinner.className = 'fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center';
+        spinner.innerHTML = '<div class="spinner"></div>';
+        document.body.appendChild(spinner);
+        this.loadingSpinner = spinner;
+    }
+    
+    setupGlobalListeners() {
+                // Close modals on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.modalStack.length > 0) {
+                this.closeTopModal();
+            }
+        });
+        
+        // Close modals on backdrop click
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-backdrop')) {
+                this.closeTopModal();
+            }
+        });
+        
+        // Handle swipe gestures on touch devices
+        this.setupSwipeGestures();
+        
+        // Setup intersection observer for lazy loading
+        this.setupLazyLoading();
+    }
+    
+    setupSwipeGestures() {
+        let startX = 0;
+        let startY = 0;
+        let endX = 0;
+        let endY = 0;
+        
+        document.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            endX = e.changedTouches[0].clientX;
+            endY = e.changedTouches[0].clientY;
+            
+            const deltaX = endX - startX;
+            const deltaY = endY - startY;
+            
+            // Detect swipe direction
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+                if (deltaX > 0) {
+                    this.handleSwipeRight(e.target);
+                } else {
+                    this.handleSwipeLeft(e.target);
+                }
+            }
+        });
+    }
+    
+    handleSwipeLeft(target) {
+        // Find carousel container
+        const carousel = target.closest('.carousel-container');
+        if (carousel) {
+            const carouselId = carousel.closest('[id]')?.id;
+            if (carouselId) {
+                slideCarousel(carouselId.replace('Carousel', ''), 1);
+            }
+        }
+    }
+    
+    handleSwipeRight(target) {
+        // Find carousel container
+        const carousel = target.closest('.carousel-container');
+        if (carousel) {
+            const carouselId = carousel.closest('[id]')?.id;
+            if (carouselId) {
+                slideCarousel(carouselId.replace('Carousel', ''), -1);
+            }
+        }
+    }
+    
+    setupLazyLoading() {
+        this.imageObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    const src = img.dataset.src;
+                    if (src) {
+                        img.src = src;
+                        img.removeAttribute('data-src');
+                        this.imageObserver.unobserve(img);
+                    }
                 }
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('API request failed:', error);
-            throw error;
-        }
-    }
-
-    // Authentication endpoints
-    async login(credentials) {
-        return this.makeRequest('/login', {
-            method: 'POST',
-            body: JSON.stringify(credentials)
+        }, {
+            rootMargin: '50px'
         });
     }
-
-    async register(userData) {
-        return this.makeRequest('/register', {
-            method: 'POST',
-            body: JSON.stringify(userData)
-        });
+    
+    // Toast Notifications
+    showToast(message, type = 'info', duration = 5000) {
+        const toast = this.createToast(message, type);
+        this.toastContainer.appendChild(toast);
+        
+        // Auto remove
+        setTimeout(() => {
+            this.removeToast(toast);
+        }, duration);
+        
+        return toast;
     }
-
-    // Content endpoints
-    async getHomepage() {
-        return this.makeRequest('/homepage');
-    }
-
-    async getRecommendations() {
-        return this.makeRequest('/recommendations');
-    }
-
-    async getPersonalizedRecommendations() {
-        return this.makeRequest('/recommendations/personalized');
-    }
-
-    async getContentDetails(id) {
-        return this.makeRequest(`/content/${id}/details`);
-    }
-
-    async searchContent(query) {
-        return this.makeRequest(`/search?q=${encodeURIComponent(query)}`);
-    }
-
-    // User interactions
-    async recordInteraction(data) {
-        return this.makeRequest('/interact', {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
-    }
-
-    // Admin endpoints
-    async adminBrowseContent(params) {
-        const queryString = new URLSearchParams(params).toString();
-        return this.makeRequest(`/admin/enhanced-browse?${queryString}`);
-    }
-
-    async adminCreatePost(data) {
-        return this.makeRequest('/admin/create-post', {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
-    }
-
-    async adminGetPosts() {
-        return this.makeRequest('/admin/posts');
-    }
-
-    async adminAnalytics() {
-        return this.makeRequest('/admin/analytics');
-    }
-}
-
-// Initialize API service
-const apiService = new APIService();
-
-// UI Components
-class UIComponents {
-    static showLoading() {
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) {
-            overlay.classList.remove('hidden');
-        }
-    }
-
-    static hideLoading() {
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) {
-            overlay.classList.add('hidden');
-        }
-    }
-
-    static showToast(message, type = 'info') {
+    
+    createToast(message, type) {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         
         const icons = {
-            success: '✓',
-                        error: '✗',
-            warning: '⚠',
-            info: 'ℹ'
+            success: 'fas fa-check-circle',
+            error: 'fas fa-exclamation-circle',
+            warning: 'fas fa-exclamation-triangle',
+            info: 'fas fa-info-circle'
         };
-
+        
         toast.innerHTML = `
             <div class="toast-content">
-                <span class="toast-icon">${icons[type]}</span>
-                <span class="toast-message">${message}</span>
-                <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                <i class="toast-icon ${icons[type] || icons.info}"></i>
+                <div class="toast-message">${message}</div>
+                <button class="toast-close" onclick="this.closest('.toast').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
         `;
-
-        document.body.appendChild(toast);
         
-        // Show toast
-        setTimeout(() => toast.classList.add('show'), 100);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 5000);
+        return toast;
     }
-
-    static createMovieCard(movie) {
+    
+    removeToast(toast) {
+        if (toast && toast.parentNode) {
+            toast.classList.add('removing');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }
+    }
+    
+    // Loading Spinner
+    showLoading(show = true) {
+        if (this.loadingSpinner) {
+            this.loadingSpinner.classList.toggle('hidden', !show);
+        }
+    }
+    
+    // Modal Management
+    openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('hidden');
+            this.modalStack.push(modalId);
+            document.body.style.overflow = 'hidden';
+        }
+    }
+    
+    closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+            this.modalStack = this.modalStack.filter(id => id !== modalId);
+            
+            if (this.modalStack.length === 0) {
+                document.body.style.overflow = '';
+            }
+        }
+    }
+    
+    closeTopModal() {
+        if (this.modalStack.length > 0) {
+            const topModalId = this.modalStack[this.modalStack.length - 1];
+            this.closeModal(topModalId);
+        }
+    }
+    
+    // Movie Card Component
+    createMovieCard(movie, options = {}) {
         const card = document.createElement('div');
-        card.className = 'movie-card animate-fadeIn';
-        card.onclick = () => navigateToMovie(movie.id);
+        card.className = 'movie-card';
+        card.onclick = () => this.openMovieDetail(movie.id);
         
-        const posterUrl = movie.poster_path || '/api/placeholder/200/300';
-        const title = movie.title || movie.name || 'Unknown Title';
+        const posterUrl = movie.poster_path || '/api/placeholder/300/450';
+        const rating = movie.rating ? movie.rating.toFixed(1) : 'N/A';
         const year = movie.release_date ? new Date(movie.release_date).getFullYear() : '';
-        const rating = movie.rating ? movie.rating.toFixed(1) : '';
-
+        
         card.innerHTML = `
-            <img src="${posterUrl}" alt="${title}" class="movie-card-poster" loading="lazy">
-            <div class="movie-card-info">
-                <h3 class="movie-card-title">${title}</h3>
+            <img class="movie-card-image" 
+                 ${options.lazy ? `data-src="${posterUrl}"` : `src="${posterUrl}"`}
+                 alt="${movie.title}"
+                 loading="lazy">
+            <div class="movie-card-content">
+                <h3 class="movie-card-title">${movie.title}</h3>
                 <div class="movie-card-meta">
-                    <span class="movie-card-year">${year}</span>
-                    ${rating ? `<span class="movie-card-rating">${rating}</span>` : ''}
+                    <span>${year}</span>
+                    <div class="movie-card-rating">
+                        <i class="fas fa-star"></i>
+                        <span>${rating}</span>
+                    </div>
+                </div>
+                <div class="movie-card-actions">
+                    <button class="movie-card-action" onclick="event.stopPropagation(); toggleWatchlist(${movie.id})" title="Add to Watchlist">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button class="movie-card-action" onclick="event.stopPropagation(); toggleFavorite(${movie.id})" title="Add to Favorites">
+                        <i class="far fa-heart"></i>
+                    </button>
+                    <button class="movie-card-action" onclick="event.stopPropagation(); shareMovie(${movie.id})" title="Share">
+                        <i class="fas fa-share"></i>
+                    </button>
                 </div>
             </div>
         `;
-
+        
+        // Setup lazy loading
+        if (options.lazy) {
+            const img = card.querySelector('img');
+            this.imageObserver.observe(img);
+        }
+        
         return card;
     }
-
-    static createCuratedCard(item) {
-        const card = document.createElement('div');
-        card.className = 'curated-card animate-scaleIn';
-        card.onclick = () => navigateToMovie(item.id);
-        
-        const imageUrl = item.poster_path || item.backdrop_path || '/api/placeholder/250/200';
-        
-        card.innerHTML = `
-            <img src="${imageUrl}" alt="${item.title}" class="curated-card-image" loading="lazy">
-            <div class="curated-card-content">
-                <h3 class="curated-card-title">${item.admin_title || 'Staff Pick'}</h3>
-                <h4 class="curated-card-subtitle">${item.title}</h4>
-                <p class="curated-card-description">${item.admin_description || item.overview || ''}</p>
-                ${item.custom_tags ? `
-                    <div class="curated-card-tags">
-                        ${item.custom_tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-                    </div>
-                ` : ''}
-            </div>
-        `;
-
-        return card;
-    }
-
-    static createContinueWatchingCard(item) {
-        const card = document.createElement('div');
-        card.className = 'continue-watching-card animate-slideInLeft';
-        card.onclick = () => navigateToMovie(item.content_id);
-        
-        const posterUrl = item.poster_path || '/api/placeholder/300/180';
-        const progress = item.progress || Math.random() * 80 + 10; // Mock progress
-        
-        card.innerHTML = `
-            <img src="${posterUrl}" alt="${item.title}" class="continue-watching-poster" loading="lazy">
-            <div class="continue-watching-info">
-                <h3 class="continue-watching-title">${item.title}</h3>
-                <div class="continue-watching-progress">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${progress}%"></div>
-                    </div>
-                </div>
-                <p class="continue-watching-time">${Math.floor(progress)}% watched</p>
-            </div>
-        `;
-
-        return card;
-    }
-
-    static createVideoCard(video) {
+    
+    // Video Card Component
+    createVideoCard(video) {
         const card = document.createElement('div');
         card.className = 'video-card';
-        card.onclick = () => openVideoModal(video);
+        card.onclick = () => this.playVideo(video.video_id);
         
         card.innerHTML = `
-            <div class="video-thumbnail">
-                <img src="${video.thumbnail}" alt="${video.title}" loading="lazy">
-                <button class="video-play-btn">▶</button>
+            <img class="video-thumbnail" src="${video.thumbnail}" alt="${video.title}">
+            <div class="video-overlay">
+                <button class="video-play-btn">
+                    <i class="fas fa-play"></i>
+                </button>
             </div>
             <div class="video-info">
                 <h4 class="video-title">${video.title}</h4>
-                <p class="video-type">${video.type}</p>
+                <span class="video-type">${video.type}</span>
             </div>
         `;
-
+        
         return card;
     }
-
-    static createCastCard(person) {
+    
+    // Cast Card Component
+    createCastCard(person) {
         const card = document.createElement('div');
         card.className = 'cast-card';
         
-        const photoUrl = person.profile_path ? 
-            `https://image.tmdb.org/t/p/w185${person.profile_path}` : 
-            '/api/placeholder/120/120';
+        const photoUrl = person.profile_path 
+            ? `https://image.tmdb.org/t/p/w200${person.profile_path}`
+            : '/api/placeholder/150/200';
         
         card.innerHTML = `
-            <img src="${photoUrl}" alt="${person.name}" class="cast-photo" loading="lazy">
-            <h4 class="cast-name">${person.name}</h4>
-            <p class="cast-character">${person.character || person.job || ''}</p>
+            <img class="cast-photo" src="${photoUrl}" alt="${person.name}">
+            <div class="cast-info">
+                <h4 class="cast-name">${person.name}</h4>
+                <p class="cast-character">${person.character || person.job || ''}</p>
+            </div>
         `;
-
+        
         return card;
     }
-
-    static createReviewCard(review) {
+    
+    // Review Card Component
+    createReviewCard(review) {
         const card = document.createElement('div');
         card.className = 'review-card';
         
-        const userInitial = review.username ? review.username.charAt(0).toUpperCase() : 'U';
-        const rating = review.rating || 0;
-        const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+        const stars = this.createStarRating(review.rating, false);
+        const initials = review.username.substring(0, 2).toUpperCase();
+        const date = new Date(review.created_at).toLocaleDateString();
         
         card.innerHTML = `
             <div class="review-header">
                 <div class="review-user">
-                    <div class="review-avatar">${userInitial}</div>
-                    <span class="review-username">${review.username || 'Anonymous'}</span>
+                    <div class="review-avatar">${initials}</div>
+                    <div>
+                        <div class="review-username">${review.username}</div>
+                        <div class="review-date">${date}</div>
+                    </div>
                 </div>
-                <div class="review-rating">${stars} ${rating}/5</div>
+                <div class="review-rating">${stars}</div>
             </div>
-            <p class="review-text">${review.review_text || 'No review text provided.'}</p>
-            <p class="review-date">${new Date(review.created_at).toLocaleDateString()}</p>
-        `;
-
-        return card;
-    }
-
-    static createSkeletonCard() {
-        const card = document.createElement('div');
-        card.className = 'movie-card skeleton';
-        card.innerHTML = `
-            <div class="movie-card-poster skeleton"></div>
-            <div class="movie-card-info">
-                <div class="movie-card-title skeleton" style="height: 1.2rem; margin-bottom: 0.5rem;"></div>
-                <div class="movie-card-meta skeleton" style="height: 1rem;"></div>
+            <p class="review-text">${review.review_text || 'No written review'}</p>
+            <div class="review-actions">
+                <button class="review-action" onclick="likeReview(${review.id})">
+                    <i class="far fa-thumbs-up"></i>
+                    <span>Helpful</span>
+                </button>
+                <button class="review-action" onclick="reportReview(${review.id})">
+                    <i class="fas fa-flag"></i>
+                    <span>Report</span>
+                </button>
             </div>
         `;
-        return card;
-    }
-
-    static createEmptyState(title, description, actionText = null, actionCallback = null) {
-        const container = document.createElement('div');
-        container.className = 'empty-state';
         
-        container.innerHTML = `
-            <div class="empty-state-icon">📽️</div>
-            <h3 class="empty-state-title">${title}</h3>
-            <p class="empty-state-description">${description}</p>
-            ${actionText ? `<button class="btn-primary" onclick="${actionCallback}">${actionText}</button>` : ''}
-        `;
-
-        return container;
+        return card;
     }
-
-    static createErrorState(title, description, actionText = 'Try Again', actionCallback = 'location.reload()') {
+    
+    // Star Rating Component
+    createStarRating(rating, interactive = true) {
+        const container = document.createElement('div');
+        container.className = 'star-rating';
+        
+        for (let i = 1; i <= 5; i++) {
+            const star = document.createElement('button');
+            star.type = 'button';
+            star.className = `rating-star ${i <= rating ? 'active' : ''}`;
+            star.innerHTML = '<i class="fas fa-star"></i>';
+            
+            if (interactive) {
+                star.dataset.rating = i;
+                star.onclick = () => this.setRating(container, i);
+            } else {
+                star.disabled = true;
+                star.style.cursor = 'default';
+            }
+            
+            container.appendChild(star);
+        }
+        
+        return container.outerHTML;
+    }
+    
+    setRating(container, rating) {
+        const stars = container.querySelectorAll('.rating-star');
+        stars.forEach((star, index) => {
+            star.classList.toggle('active', index < rating);
+        });
+        
+        // Trigger custom event
+        container.dispatchEvent(new CustomEvent('ratingChanged', {
+            detail: { rating }
+        }));
+    }
+    
+    // Skeleton Loading Component
+    createSkeletonCard() {
+        const card = document.createElement('div');
+        card.className = 'skeleton-card skeleton';
+        return card;
+    }
+    
+    createSkeletonText(width = 'full') {
+        const text = document.createElement('div');
+        text.className = `skeleton-text skeleton ${width}`;
+        return text;
+    }
+    
+    // Error State Component
+    createErrorState(message, actionText = 'Try Again', actionCallback = null) {
         const container = document.createElement('div');
         container.className = 'error-state';
         
         container.innerHTML = `
-            <div class="error-state-icon">⚠️</div>
-            <h3 class="error-state-title">${title}</h3>
-            <p class="error-state-description">${description}</p>
-            <button class="btn-primary" onclick="${actionCallback}">${actionText}</button>
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="error-title">Oops! Something went wrong</h3>
+            <p class="error-message">${message}</p>
+            ${actionCallback ? `<button class="error-action" onclick="(${actionCallback})()">${actionText}</button>` : ''}
         `;
-
+        
         return container;
     }
-}
-
-// Carousel Management
-class CarouselManager {
-    constructor() {
-        this.carousels = new Map();
-        this.touchStartX = 0;
-        this.touchEndX = 0;
-        this.isScrolling = false;
-    }
-
-    initializeCarousel(carouselId, trackId) {
-        const carousel = document.getElementById(carouselId);
-        const track = document.getElementById(trackId);
+    
+    // Empty State Component
+    createEmptyState(title, message, actionText = null, actionCallback = null) {
+        const container = document.createElement('div');
+        container.className = 'empty-state';
         
-        if (!carousel || !track) return;
-
-        this.carousels.set(carouselId, {
-            carousel,
-            track,
-            currentIndex: 0,
-            itemWidth: 220, // Default item width + gap
-            visibleItems: this.calculateVisibleItems(carousel)
-        });
-
-        // Add touch event listeners
-        track.addEventListener('touchstart', (e) => this.handleTouchStart(e, carouselId));
-        track.addEventListener('touchmove', (e) => this.handleTouchMove(e));
-        track.addEventListener('touchend', (e) => this.handleTouchEnd(e, carouselId));
-
-        // Add resize listener
-        window.addEventListener('resize', () => this.updateVisibleItems(carouselId));
-    }
-
-    calculateVisibleItems(carousel) {
-        const containerWidth = carousel.offsetWidth;
-        return Math.floor(containerWidth / 220); // 200px card + 20px gap
-    }
-
-    updateVisibleItems(carouselId) {
-        const carouselData = this.carousels.get(carouselId);
-        if (carouselData) {
-            carouselData.visibleItems = this.calculateVisibleItems(carouselData.carousel);
-        }
-    }
-
-    scrollCarousel(carouselId, direction) {
-        const carouselData = this.carousels.get(carouselId);
-        if (!carouselData || this.isScrolling) return;
-
-        const { track, currentIndex, itemWidth, visibleItems } = carouselData;
-        const totalItems = track.children.length;
-        const maxIndex = Math.max(0, totalItems - visibleItems);
-
-        let newIndex = currentIndex + (direction * visibleItems);
-        newIndex = Math.max(0, Math.min(newIndex, maxIndex));
-
-        if (newIndex !== currentIndex) {
-            this.isScrolling = true;
-            carouselData.currentIndex = newIndex;
-            
-            const translateX = -newIndex * itemWidth;
-            track.style.transform = `translateX(${translateX}px)`;
-
-            setTimeout(() => {
-                this.isScrolling = false;
-            }, 300);
-        }
-    }
-
-    handleTouchStart(e, carouselId) {
-        this.touchStartX = e.touches[0].clientX;
-    }
-
-    handleTouchMove(e) {
-        e.preventDefault(); // Prevent scrolling
-    }
-
-    handleTouchEnd(e, carouselId) {
-        this.touchEndX = e.changedTouches[0].clientX;
-        this.handleSwipe(carouselId);
-    }
-
-    handleSwipe(carouselId) {
-        const swipeThreshold = 50;
-        const diff = this.touchStartX - this.touchEndX;
-
-        if (Math.abs(diff) > swipeThreshold) {
-            if (diff > 0) {
-                // Swipe left - next
-                this.scrollCarousel(carouselId, 1);
-            } else {
-                // Swipe right - previous
-                this.scrollCarousel(carouselId, -1);
-            }
-        }
-    }
-
-    populateCarousel(trackId, items, createCardFunction) {
-        const track = document.getElementById(trackId);
-        if (!track) return;
-
-        // Clear existing content
-        track.innerHTML = '';
-
-        if (!items || items.length === 0) {
-            const emptyState = UIComponents.createEmptyState(
-                'No Content Available',
-                'Check back later for new recommendations.'
-            );
-            track.appendChild(emptyState);
-            return;
-        }
-
-        // Add items to carousel
-        items.forEach(item => {
-            const card = createCardFunction(item);
-            track.appendChild(card);
-        });
-
-        // Initialize carousel if not already done
-        const carouselId = trackId.replace('-track', '-carousel');
-        if (!this.carousels.has(carouselId)) {
-            this.initializeCarousel(carouselId, trackId);
-        }
-    }
-}
-
-// Initialize carousel manager
-const carouselManager = new CarouselManager();
-
-// Modal Management
-class ModalManager {
-    static openModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-            
-            // Focus trap
-            const focusableElements = modal.querySelectorAll(
-                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-            );
-            if (focusableElements.length > 0) {
-                focusableElements[0].focus();
-            }
-        }
-    }
-
-    static closeModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.classList.add('hidden');
-            document.body.style.overflow = '';
-            
-            // Stop any videos
-            const videoContainer = modal.querySelector('#video-container');
-            if (videoContainer) {
-                videoContainer.innerHTML = '';
-            }
-        }
-    }
-
-    static closeAllModals() {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            modal.classList.add('hidden');
-        });
-        document.body.style.overflow = '';
-    }
-}
-
-// Search Management
-class SearchManager {
-    constructor() {
-        this.searchTimeout = null;
-        this.searchResults = [];
-        this.isSearching = false;
-    }
-
-    initializeSearch() {
-        const searchInput = document.getElementById('search-input');
-        const searchResults = document.getElementById('search-results');
-        
-        if (!searchInput) return;
-
-        searchInput.addEventListener('input', (e) => {
-            this.handleSearchInput(e.target.value);
-        });
-
-        searchInput.addEventListener('focus', () => {
-            if (this.searchResults.length > 0) {
-                searchResults?.classList.remove('hidden');
-            }
-        });
-
-        // Close search results when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.search-container')) {
-                searchResults?.classList.add('hidden');
-            }
-        });
-    }
-
-    handleSearchInput(query) {
-        clearTimeout(this.searchTimeout);
-        
-        if (query.length < 2) {
-            this.hideSearchResults();
-            return;
-        }
-
-        this.searchTimeout = setTimeout(() => {
-            this.performSearch(query);
-        }, 300);
-    }
-
-    async performSearch(query) {
-        if (this.isSearching) return;
-        
-        this.isSearching = true;
-        
-        try {
-            const results = await apiService.searchContent(query);
-            this.searchResults = [
-                ...(results.database_results || []),
-                ...(results.tmdb_results || [])
-            ];
-            
-            this.displaySearchResults();
-        } catch (error) {
-            console.error('Search failed:', error);
-            UIComponents.showToast('Search failed. Please try again.', 'error');
-        } finally {
-            this.isSearching = false;
-        }
-    }
-
-    displaySearchResults() {
-        const searchResults = document.getElementById('search-results');
-        if (!searchResults) return;
-
-        searchResults.innerHTML = '';
-
-                if (this.searchResults.length === 0) {
-            searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
-        } else {
-            this.searchResults.slice(0, 8).forEach(item => {
-                const resultItem = this.createSearchResultItem(item);
-                searchResults.appendChild(resultItem);
-            });
-        }
-
-        searchResults.classList.remove('hidden');
-    }
-
-    createSearchResultItem(item) {
-        const resultItem = document.createElement('div');
-        resultItem.className = 'search-result-item';
-        resultItem.onclick = () => {
-            this.hideSearchResults();
-            navigateToMovie(item.id || item.tmdb_id);
-        };
-
-        const posterUrl = item.poster_path ? 
-            (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w92${item.poster_path}`) :
-            '/api/placeholder/50/75';
-        
-        const title = item.title || item.name || 'Unknown Title';
-        const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
-        const type = item.content_type || (item.first_air_date ? 'TV Show' : 'Movie');
-
-        resultItem.innerHTML = `
-            <img src="${posterUrl}" alt="${title}" class="search-result-poster" loading="lazy">
-            <div class="search-result-info">
-                <h4>${title} ${year ? `(${year})` : ''}</h4>
-                <p>${type}</p>
+        container.innerHTML = `
+            <div class="empty-icon">
+                <i class="fas fa-film"></i>
             </div>
+            <h3 class="empty-title">${title}</h3>
+            <p class="empty-message">${message}</p>
+            ${actionText && actionCallback ? `<button class="empty-action" onclick="(${actionCallback})()">${actionText}</button>` : ''}
         `;
-
-        return resultItem;
-    }
-
-    hideSearchResults() {
-        const searchResults = document.getElementById('search-results');
-        if (searchResults) {
-            searchResults.classList.add('hidden');
-        }
-    }
-}
-
-// Initialize search manager
-const searchManager = new SearchManager();
-
-// User Management
-class UserManager {
-    constructor() {
-        this.currentUser = null;
-        this.loadUserFromStorage();
-    }
-
-    loadUserFromStorage() {
-        const token = localStorage.getItem('auth_token');
-        const userData = localStorage.getItem('user_data');
         
-        if (token && userData) {
-            try {
-                this.currentUser = JSON.parse(userData);
-                apiService.updateToken(token);
-            } catch (error) {
-                console.error('Failed to load user data:', error);
-                this.logout();
-            }
-        }
+        return container;
     }
-
-    async login(credentials) {
-        try {
-            UIComponents.showLoading();
-            const response = await apiService.login(credentials);
-            
-            this.currentUser = {
-                id: response.user_id,
-                username: response.username
-            };
-            
-            localStorage.setItem('user_data', JSON.stringify(this.currentUser));
-            apiService.updateToken(response.token);
-            
-            UIComponents.showToast('Login successful!', 'success');
-            
-            // Redirect to dashboard
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 1000);
-            
-        } catch (error) {
-            console.error('Login failed:', error);
-            UIComponents.showToast('Login failed. Please check your credentials.', 'error');
-        } finally {
-            UIComponents.hideLoading();
-        }
-    }
-
-    async register(userData) {
-        try {
-            UIComponents.showLoading();
-            const response = await apiService.register(userData);
-            
-            this.currentUser = {
-                id: response.user_id,
-                username: response.username
-            };
-            
-            localStorage.setItem('user_data', JSON.stringify(this.currentUser));
-            apiService.updateToken(response.token);
-            
-            UIComponents.showToast('Registration successful!', 'success');
-            
-            // Redirect to dashboard
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 1000);
-            
-        } catch (error) {
-            console.error('Registration failed:', error);
-            UIComponents.showToast('Registration failed. Please try again.', 'error');
-        } finally {
-            UIComponents.hideLoading();
-        }
-    }
-
-    logout() {
-        this.currentUser = null;
-        localStorage.removeItem('user_data');
-        apiService.clearToken();
+    
+    // Progress Bar Component
+    createProgressBar(progress = 0, showText = true) {
+        const container = document.createElement('div');
+        container.className = 'progress-container';
         
-        UIComponents.showToast('Logged out successfully', 'info');
+        container.innerHTML = `
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: ${progress}%"></div>
+            </div>
+            ${showText ? `<div class="progress-text">${progress}%</div>` : ''}
+        `;
         
-        // Redirect to home
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1000);
+        return container;
     }
-
-    isLoggedIn() {
-        return this.currentUser !== null;
-    }
-
-    updateUserDisplay() {
-        const usernameDisplay = document.getElementById('username-display');
-        const userInitial = document.getElementById('user-initial');
+    
+    updateProgress(container, progress) {
+        const fill = container.querySelector('.progress-fill');
+        const text = container.querySelector('.progress-text');
         
-        if (this.currentUser) {
-            if (usernameDisplay) {
-                usernameDisplay.textContent = this.currentUser.username;
-            }
-            if (userInitial) {
-                userInitial.textContent = this.currentUser.username.charAt(0).toUpperCase();
-            }
-        }
+        if (fill) fill.style.width = `${progress}%`;
+        if (text) text.textContent = `${progress}%`;
     }
-
-    async recordInteraction(contentId, interactionType, rating = null) {
-        if (!this.isLoggedIn()) return;
-
-        try {
-            await apiService.recordInteraction({
-                content_id: contentId,
-                interaction_type: interactionType,
-                rating: rating
-            });
-        } catch (error) {
-            console.error('Failed to record interaction:', error);
-        }
-    }
-}
-
-// Initialize user manager
-const userManager = new UserManager();
-
-// Navigation Functions
-function navigateToMovie(movieId) {
-    if (movieId) {
+    
+    // Utility Methods
+    openMovieDetail(movieId) {
         window.location.href = `movie-detail.html?id=${movieId}`;
     }
-}
-
-function scrollToSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.scrollIntoView({ behavior: 'smooth' });
+    
+    playVideo(videoId) {
+        const modal = document.getElementById('videoModal');
+        const player = document.getElementById('videoPlayer');
+        
+        if (modal && player) {
+            player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+            this.openModal('videoModal');
+        }
+    }
+    
+    closeVideoModal() {
+        const player = document.getElementById('videoPlayer');
+        if (player) {
+            player.src = '';
+        }
+        this.closeModal('videoModal');
+    }
+    
+    // Carousel Management
+    initializeCarousel(carouselId) {
+        const carousel = document.getElementById(carouselId);
+        if (!carousel) return;
+        
+        const track = carousel.querySelector('.carousel-track');
+        const prevBtn = carousel.querySelector('.carousel-btn-prev');
+        const nextBtn = carousel.querySelector('.carousel-btn-next');
+        
+        if (!track) return;
+        
+        let currentIndex = 0;
+        const itemWidth = 200; // Approximate item width
+        const visibleItems = Math.floor(carousel.offsetWidth / itemWidth);
+                const totalItems = track.children.length;
+        const maxIndex = Math.max(0, totalItems - visibleItems);
+        
+        const updateButtons = () => {
+            if (prevBtn) prevBtn.disabled = currentIndex <= 0;
+            if (nextBtn) nextBtn.disabled = currentIndex >= maxIndex;
+        };
+        
+        const slide = (direction) => {
+            currentIndex = Math.max(0, Math.min(maxIndex, currentIndex + direction));
+            const translateX = -currentIndex * itemWidth;
+            track.style.transform = `translateX(${translateX}px)`;
+            updateButtons();
+        };
+        
+        if (prevBtn) prevBtn.onclick = () => slide(-1);
+        if (nextBtn) nextBtn.onclick = () => slide(1);
+        
+        updateButtons();
+        
+        // Store carousel state
+        carousel.carouselState = {
+            currentIndex,
+            slide,
+            updateButtons
+        };
+    }
+    
+    // Form Validation
+    validateForm(form) {
+        const errors = [];
+        const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+        
+        inputs.forEach(input => {
+            if (!input.value.trim()) {
+                errors.push(`${input.name || input.id} is required`);
+                input.classList.add('error');
+            } else {
+                input.classList.remove('error');
+            }
+            
+            // Email validation
+            if (input.type === 'email' && input.value) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(input.value)) {
+                    errors.push('Please enter a valid email address');
+                    input.classList.add('error');
+                }
+            }
+            
+            // Password validation
+            if (input.type === 'password' && input.value && input.value.length < 6) {
+                errors.push('Password must be at least 6 characters long');
+                input.classList.add('error');
+            }
+        });
+        
+        return {
+            isValid: errors.length === 0,
+            errors
+        };
+    }
+    
+    // Search Functionality
+    setupSearch(inputId, resultsContainerId, searchFunction) {
+        const input = document.getElementById(inputId);
+        const resultsContainer = document.getElementById(resultsContainerId);
+        
+        if (!input || !resultsContainer) return;
+        
+        let searchTimeout;
+        
+        input.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+            
+            if (query.length < 2) {
+                resultsContainer.innerHTML = '';
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+            
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const results = await searchFunction(query);
+                    this.displaySearchResults(results, resultsContainer);
+                } catch (error) {
+                    console.error('Search error:', error);
+                    resultsContainer.innerHTML = '<div class="p-4 text-center text-gray-400">Search failed. Please try again.</div>';
+                }
+            }, 300);
+        });
+        
+        // Hide results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !resultsContainer.contains(e.target)) {
+                resultsContainer.classList.add('hidden');
+            }
+        });
+    }
+    
+    displaySearchResults(results, container) {
+        if (!results || results.length === 0) {
+            container.innerHTML = '<div class="p-4 text-center text-gray-400">No results found</div>';
+            container.classList.remove('hidden');
+            return;
+        }
+        
+        container.innerHTML = results.map(item => `
+            <div class="search-result-item" onclick="openMovieDetail(${item.id})">
+                <img class="search-result-poster" 
+                     src="${item.poster_path || '/api/placeholder/60/80'}" 
+                     alt="${item.title}">
+                <div class="search-result-info">
+                    <h4 class="search-result-title">${item.title}</h4>
+                    <div class="search-result-meta">
+                        <span class="search-result-type">${item.content_type || 'movie'}</span>
+                        <span>${item.release_date ? new Date(item.release_date).getFullYear() : ''}</span>
+                        ${item.rating ? `<span>★ ${item.rating.toFixed(1)}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        container.classList.remove('hidden');
+    }
+    
+    // Infinite Scroll
+    setupInfiniteScroll(container, loadMoreFunction) {
+        let loading = false;
+        let page = 1;
+        
+        const observer = new IntersectionObserver(async (entries) => {
+            const lastEntry = entries[0];
+            
+            if (lastEntry.isIntersecting && !loading) {
+                loading = true;
+                
+                try {
+                    const newItems = await loadMoreFunction(page + 1);
+                    if (newItems && newItems.length > 0) {
+                        page++;
+                        // Append new items to container
+                        newItems.forEach(item => {
+                            container.appendChild(this.createMovieCard(item, { lazy: true }));
+                        });
+                    }
+                } catch (error) {
+                    console.error('Load more error:', error);
+                } finally {
+                    loading = false;
+                }
+            }
+        }, {
+            rootMargin: '100px'
+        });
+        
+        // Observe the last item in the container
+        const observeLastItem = () => {
+            const items = container.children;
+            if (items.length > 0) {
+                observer.observe(items[items.length - 1]);
+            }
+        };
+        
+        // Initial observation
+        observeLastItem();
+        
+        // Re-observe when new items are added
+        const mutationObserver = new MutationObserver(observeLastItem);
+        mutationObserver.observe(container, { childList: true });
+        
+        return { observer, mutationObserver };
+    }
+    
+    // Local Storage Helpers
+    saveToStorage(key, data) {
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+        } catch (error) {
+            console.error('Failed to save to storage:', error);
+        }
+    }
+    
+    loadFromStorage(key, defaultValue = null) {
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : defaultValue;
+        } catch (error) {
+            console.error('Failed to load from storage:', error);
+            return defaultValue;
+        }
+    }
+    
+    removeFromStorage(key) {
+        try {
+            localStorage.removeItem(key);
+        } catch (error) {
+            console.error('Failed to remove from storage:', error);
+        }
+    }
+    
+    // Theme Management
+    setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        this.saveToStorage('theme', theme);
+    }
+    
+    getTheme() {
+        return this.loadFromStorage('theme', 'dark');
+    }
+    
+    initializeTheme() {
+        const savedTheme = this.getTheme();
+        this.setTheme(savedTheme);
+    }
+    
+    // Accessibility Helpers
+    announceToScreenReader(message) {
+        const announcement = document.createElement('div');
+        announcement.setAttribute('aria-live', 'polite');
+        announcement.setAttribute('aria-atomic', 'true');
+        announcement.className = 'sr-only';
+        announcement.textContent = message;
+        
+        document.body.appendChild(announcement);
+        
+        setTimeout(() => {
+            document.body.removeChild(announcement);
+        }, 1000);
+    }
+    
+    trapFocus(element) {
+        const focusableElements = element.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        
+        element.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                if (e.shiftKey) {
+                    if (document.activeElement === firstElement) {
+                        lastElement.focus();
+                        e.preventDefault();
+                    }
+                } else {
+                    if (document.activeElement === lastElement) {
+                        firstElement.focus();
+                        e.preventDefault();
+                    }
+                }
+            }
+        });
+        
+        firstElement?.focus();
+    }
+    
+    // Performance Monitoring
+    measurePerformance(name, fn) {
+        const start = performance.now();
+        const result = fn();
+        const end = performance.now();
+        
+        console.log(`${name} took ${end - start} milliseconds`);
+        return result;
+    }
+    
+    // Debounce Utility
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
+    // Throttle Utility
+    throttle(func, limit) {
+        let inThrottle;
+        return function(...args) {
+            if (!inThrottle) {
+                func.apply(this, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
     }
 }
 
-function scrollCarousel(carouselId, direction) {
-    carouselManager.scrollCarousel(carouselId, direction);
+// Create global UI components instance
+const ui = new UIComponents();
+
+// Global utility functions
+function showToast(message, type = 'info', duration = 5000) {
+    return ui.showToast(message, type, duration);
 }
 
-function performSearch() {
-    const searchInput = document.getElementById('search-input');
-    if (searchInput && searchInput.value.trim()) {
-        searchManager.performSearch(searchInput.value.trim());
-    }
+function showLoading(show = true) {
+    ui.showLoading(show);
 }
 
-// Modal Functions
 function openModal(modalId) {
-    ModalManager.openModal(modalId);
+    ui.openModal(modalId);
 }
 
 function closeModal(modalId) {
-    ModalManager.closeModal(modalId);
+    ui.closeModal(modalId);
 }
 
-function openVideoModal(video) {
-    const modal = document.getElementById('video-modal');
-    const title = document.getElementById('video-title');
-    const container = document.getElementById('video-container');
-    
-    if (modal && title && container) {
-        title.textContent = video.title;
-        
-        // Create YouTube embed
-        const videoId = video.video_id || video.url.split('v=')[1]?.split('&')[0];
-        if (videoId) {
-            container.innerHTML = `
-                <iframe 
-                    src="https://www.youtube.com/embed/${videoId}?autoplay=1" 
-                    frameborder="0" 
-                    allowfullscreen
-                    allow="autoplay; encrypted-media">
-                </iframe>
-            `;
-        }
-        
-        ModalManager.openModal('video-modal');
+function createMovieCard(movie, options = {}) {
+    return ui.createMovieCard(movie, options);
+}
+
+function createVideoCard(video) {
+    return ui.createVideoCard(video);
+}
+
+function createCastCard(person) {
+    return ui.createCastCard(person);
+}
+
+function createReviewCard(review) {
+    return ui.createReviewCard(review);
+}
+
+function slideCarousel(carouselName, direction) {
+    const carousel = document.getElementById(`${carouselName}Carousel`);
+    if (carousel && carousel.carouselState) {
+        carousel.carouselState.slide(direction);
     }
 }
 
-// Authentication Functions
-function logout() {
-    userManager.logout();
+function openMovieDetail(movieId) {
+    ui.openMovieDetail(movieId);
 }
 
-// Mobile Menu Functions
-function initializeMobileMenu() {
-    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-    const mobileMenu = document.getElementById('mobile-menu');
-    
-    if (mobileMenuBtn && mobileMenu) {
-        mobileMenuBtn.addEventListener('click', () => {
-            mobileMenuBtn.classList.toggle('active');
-            mobileMenu.classList.toggle('active');
-        });
-        
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.navbar')) {
-                mobileMenuBtn.classList.remove('active');
-                mobileMenu.classList.remove('active');
-            }
-        });
-    }
+function playVideo(videoId) {
+    ui.playVideo(videoId);
 }
 
-// User Menu Functions
-function initializeUserMenu() {
-    const userMenuBtn = document.getElementById('user-menu-btn');
-    const userDropdown = document.getElementById('user-dropdown');
-    
-    if (userMenuBtn && userDropdown) {
-        userMenuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            userDropdown.classList.toggle('hidden');
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', () => {
-            userDropdown.classList.add('hidden');
-        });
-    }
+function closeVideoModal() {
+    ui.closeVideoModal();
 }
 
-// Tab Management
-function initializeTabs() {
-    // Content tabs
-    const contentTabs = document.querySelectorAll('.tab-btn');
-    contentTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Remove active class from all tabs
-            contentTabs.forEach(t => t.classList.remove('active'));
-            // Add active class to clicked tab
-            tab.classList.add('active');
-            
-            // Handle tab content switching
-            const tabType = tab.dataset.tab;
-            handleTabSwitch(tabType);
-        });
-    });
-    
-    // Regional tabs
-    const regionalTabs = document.querySelectorAll('.regional-tab');
-    regionalTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Remove active class from all tabs
-            regionalTabs.forEach(t => t.classList.remove('active'));
-            // Add active class to clicked tab
-            tab.classList.add('active');
-            
-            // Handle regional content switching
-            const region = tab.dataset.region;
-            handleRegionalSwitch(region);
-        });
-    });
-}
-
-function handleTabSwitch(tabType) {
-    // This will be implemented in app.js based on current page context
-    console.log('Tab switched to:', tabType);
-}
-
-function handleRegionalSwitch(region) {
-    // This will be implemented in app.js based on current page context
-    console.log('Regional content switched to:', region);
-}
-
-// Utility Functions
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
+// Export for use in other modules
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { 
+        ui, 
+        showToast, 
+        showLoading, 
+        openModal, 
+        closeModal, 
+        createMovieCard, 
+        slideCarousel 
     };
 }
-
-function throttle(func, limit) {
-    let inThrottle;
-    return function() {
-        const args = arguments;
-        const context = this;
-        if (!inThrottle) {
-            func.apply(context, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    };
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
-
-function formatRuntime(minutes) {
-    if (!minutes) return '';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-}
-
-function getGenreNames(genreIds) {
-    const genreMap = {
-        28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
-        99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
-        27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Science Fiction",
-        10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western"
-    };
-    
-    return genreIds.map(id => genreMap[id] || 'Unknown').filter(Boolean);
-}
-
-// Error Handling
-function handleError(error, context = 'Operation') {
-    console.error(`${context} failed:`, error);
-    
-    let message = 'Something went wrong. Please try again.';
-    
-    if (error.message.includes('401')) {
-        message = 'Please log in to continue.';
-        userManager.logout();
-    } else if (error.message.includes('403')) {
-        message = 'You do not have permission to perform this action.';
-    } else if (error.message.includes('404')) {
-        message = 'The requested content was not found.';
-    } else if (error.message.includes('500')) {
-        message = 'Server error. Please try again later.';
-    }
-    
-    UIComponents.showToast(message, 'error');
-}
-
-// Intersection Observer for Lazy Loading
-function initializeLazyLoading() {
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.classList.remove('lazy');
-                observer.unobserve(img);
-            }
-        });
-    });
-
-    const lazyImages = document.querySelectorAll('img[data-src]');
-    lazyImages.forEach(img => imageObserver.observe(img));
-}
-
-// Performance Monitoring
-function initializePerformanceMonitoring() {
-    // Monitor page load time
-    window.addEventListener('load', () => {
-        const loadTime = performance.now();
-        console.log(`Page loaded in ${loadTime.toFixed(2)}ms`);
-        
-        // Report slow loads
-        if (loadTime > 3000) {
-            console.warn('Slow page load detected');
-        }
-    });
-    
-    // Monitor API response times
-    const originalFetch = window.fetch;
-    window.fetch = function(...args) {
-        const start = performance.now();
-        return originalFetch.apply(this, args).then(response => {
-            const duration = performance.now() - start;
-            console.log(`API call to ${args[0]} took ${duration.toFixed(2)}ms`);
-            return response;
-        });
-    };
-}
-
-// Initialize all components when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    initializeMobileMenu();
-    initializeUserMenu();
-    initializeTabs();
-    searchManager.initializeSearch();
-    userManager.updateUserDisplay();
-    initializeLazyLoading();
-    initializePerformanceMonitoring();
-    
-    // Close modals on escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            ModalManager.closeAllModals();
-        }
-    });
-    
-    // Handle back button for modals
-    window.addEventListener('popstate', () => {
-        ModalManager.closeAllModals();
-    });
-});
-
-// Export for use in other files
-window.UIComponents = UIComponents;
-window.carouselManager = carouselManager;
-window.ModalManager = ModalManager;
-window.searchManager = searchManager;
-window.userManager = userManager;
-window.apiService = apiService;

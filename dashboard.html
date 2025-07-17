@@ -4,201 +4,356 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - MovieRec</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/responsive.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
-<body class="dashboard-page">
+<body class="bg-black text-white">
     <!-- Navigation -->
-    <nav class="navbar navbar-dashboard">
-        <div class="nav-container">
-            <div class="nav-logo">
-                <h2>MovieRec</h2>
-            </div>
-            <div class="nav-menu" id="nav-menu">
-                <a href="#home" class="nav-link active">Home</a>
-                <a href="#recommendations" class="nav-link">For You</a>
-                <a href="#watchlist" class="nav-link">My List</a>
-                <a href="#browse" class="nav-link">Browse</a>
-            </div>
-            <div class="nav-actions">
-                <button class="search-btn" id="search-toggle">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                </button>
-                <div class="user-menu">
-                    <button class="user-avatar" id="user-menu-toggle">
-                        <span id="user-initial">U</span>
-                    </button>
-                    <div class="user-dropdown" id="user-dropdown">
-                        <a href="profile.html" class="dropdown-item">Profile</a>
-                        <a href="#settings" class="dropdown-item">Settings</a>
-                        <div class="dropdown-divider"></div>
-                        <button class="dropdown-item" id="logout-btn">Sign Out</button>
+    <nav class="fixed top-0 w-full z-50 bg-black bg-opacity-90 backdrop-blur-md">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <!-- Logo -->
+                <div class="flex items-center space-x-2">
+                    <div class="text-red-600 text-2xl">
+                        <i class="fas fa-film"></i>
+                    </div>
+                    <h1 class="text-xl font-bold">MovieRec</h1>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="dashboard.html" class="nav-link active">Dashboard</a>
+                    <a href="#recommendations" class="nav-link">For You</a>
+                    <a href="#watchlist" class="nav-link">Watchlist</a>
+                    <a href="#history" class="nav-link">History</a>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="hidden md:flex items-center flex-1 max-w-md mx-6">
+                    <div class="relative w-full">
+                        <input type="text" 
+                               id="searchInput" 
+                               placeholder="Search your content..." 
+                               class="w-full bg-gray-800 text-white px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-red-600">
+                        <button class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
                 </div>
+
+                <!-- User Menu -->
+                <div class="flex items-center space-x-4">
+                    <button class="relative text-gray-400 hover:text-white">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="absolute -top-1 -right-1 bg-red-600 text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
+                    </button>
+                    
+                    <div class="relative" id="userMenuContainer">
+                        <button onclick="toggleUserMenu()" class="flex items-center space-x-2 text-white hover:text-red-400 transition-colors">
+                            <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span id="usernameDisplay" class="hidden md:block"></span>
+                            <i class="fas fa-chevron-down text-sm"></i>
+                        </button>
+                        
+                        <div id="userMenu" class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg hidden">
+                            <a href="profile.html" class="block px-4 py-2 hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-user mr-2"></i>Profile
+                            </a>
+                            <a href="#settings" class="block px-4 py-2 hover:bg-gray-700 transition-colors">
+                                                                <i class="fas fa-cog mr-2"></i>Settings
+                            </a>
+                            <hr class="border-gray-700 my-1">
+                            <button onclick="logout()" class="w-full text-left px-4 py-2 hover:bg-gray-700 transition-colors text-red-400">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Sign Out
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile Menu Button -->
+                    <button class="md:hidden text-white" onclick="toggleMobileMenu()">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
             </div>
-            <div class="hamburger" id="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
+
+            <!-- Mobile Navigation -->
+            <div id="mobileMenu" class="md:hidden hidden mt-4 pb-4">
+                <div class="flex flex-col space-y-4">
+                    <div class="relative">
+                        <input type="text" 
+                               placeholder="Search..." 
+                               class="w-full bg-gray-800 text-white px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-red-600">
+                        <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <a href="dashboard.html" class="nav-link">Dashboard</a>
+                    <a href="#recommendations" class="nav-link">For You</a>
+                    <a href="#watchlist" class="nav-link">Watchlist</a>
+                    <a href="#history" class="nav-link">History</a>
+                </div>
             </div>
-        </div>
-        
-        <!-- Search Overlay -->
-        <div class="search-overlay" id="search-overlay">
-            <div class="search-container">
-                <input type="text" id="search-input" placeholder="Search your library..." class="search-input">
-                <button class="search-close" id="search-close">&times;</button>
-            </div>
-            <div class="search-results" id="search-results"></div>
         </div>
     </nav>
 
-    <!-- Welcome Banner -->
-    <section class="welcome-banner">
-        <div class="welcome-content">
-            <h1 class="welcome-title">Welcome back, <span id="username">User</span>!</h1>
-            <div class="welcome-stats">
-                <div class="stat-item">
-                    <span class="stat-number" id="watched-count">0</span>
-                    <span class="stat-label">Watched</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number" id="wishlist-count">0</span>
-                    <span class="stat-label">In Wishlist</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number" id="favorites-count">0</span>
-                    <span class="stat-label">Favorites</span>
+    <!-- Main Content -->
+    <main class="pt-20 min-h-screen">
+        <!-- Welcome Banner -->
+        <section class="bg-gradient-to-r from-red-900 to-gray-900 py-12">
+            <div class="container mx-auto px-4">
+                <div class="flex flex-col md:flex-row items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold mb-2">
+                            Welcome back, <span id="welcomeUsername"></span>!
+                        </h1>
+                        <p class="text-gray-300 text-lg">Ready to discover your next favorite?</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex flex-col md:flex-row gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-red-400" id="watchedCount">0</div>
+                            <div class="text-sm text-gray-400">Watched</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-400" id="watchlistCount">0</div>
+                            <div class="text-sm text-gray-400">Watchlist</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-400" id="favoritesCount">0</div>
+                            <div class="text-sm text-gray-400">Favorites</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="quick-actions">
-            <button class="action-btn" id="random-pick">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
-                    <path d="m9 12 2 2 4-4"/>
-                </svg>
-                Surprise Me
-            </button>
-            <button class="action-btn" id="tune-preferences">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                    <path d="M12 1v6m0 10v6m-7-7h6m10 0h6"/>
-                </svg>
-                Tune Preferences
-            </button>
-        </div>
-    </section>
+        </section>
 
-    <!-- Main Dashboard Content -->
-    <main class="dashboard-content">
         <!-- Continue Watching -->
-        <section class="content-section" id="continue-watching-section">
-            <h2 class="section-title">Continue Watching</h2>
-            <div class="continue-watching-carousel" id="continue-watching"></div>
-        </section>
-
-        <!-- Personalized Recommendations -->
-        <section class="content-section" id="recommendations">
-            <h2 class="section-title">📍 Recommended For You</h2>
-            <div class="content-carousel" id="personalized-recs"></div>
-        </section>
-
-        <!-- Recent Activity Based -->
-        <section class="content-section">
-            <h2 class="section-title">🔄 Based on Your Recent Activity</h2>
-            <div class="content-carousel" id="recent-activity-recs"></div>
-        </section>
-
-        <!-- Genre Preferences -->
-        <section class="content-section">
-            <h2 class="section-title">🎭 More Like What You Love</h2>
-            <div class="content-carousel" id="genre-based-recs"></div>
-        </section>
-
-        <!-- Similar to Favorites -->
-        <section class="content-section">
-            <h2 class="section-title">❤️ Similar to Your Favorites</h2>
-            <div class="content-carousel" id="favorites-based-recs"></div>
-        </section>
-
-        <!-- Watchlist Quick Access -->
-        <section class="content-section" id="watchlist">
-            <h2 class="section-title">📋 Your Watchlist</h2>
-            <div class="content-carousel" id="watchlist-items"></div>
-        </section>
-
-        <!-- Recently Added in Preferred Genres -->
-        <section class="content-section">
-            <h2 class="section-title">🆕 New in Your Genres</h2>
-            <div class="content-carousel" id="new-in-genres"></div>
-        </section>
-
-        <!-- Regional Suggestions -->
-        <section class="content-section">
-            <h2 class="section-title">🌍 Regional Picks for You</h2>
-            <div class="regional-tabs">
-                <button class="tab-btn active" data-lang="Telugu">Telugu</button>
-                <button class="tab-btn" data-lang="Hindi">Hindi</button>
-                <button class="tab-btn" data-lang="Tamil">Tamil</button>
-                <button class="tab-btn" data-lang="Kannada">Kannada</button>
+        <section id="continueWatching" class="py-8 bg-gray-900">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-play-circle text-red-600 mr-3"></i>
+                    Continue Watching
+                </h2>
+                <div id="continueWatchingCarousel" class="relative">
+                    <div class="carousel-container overflow-hidden">
+                        <div class="carousel-track flex transition-transform duration-500 ease-in-out" id="continueWatchingTrack">
+                            <!-- Content will be loaded dynamically -->
+                        </div>
+                    </div>
+                    
+                    <button class="carousel-btn carousel-btn-prev" onclick="slideCarousel('continueWatching', -1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="carousel-btn carousel-btn-next" onclick="slideCarousel('continueWatching', 1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
             </div>
-            <div class="content-carousel" id="regional-suggestions"></div>
         </section>
 
-        <!-- Collaborative Filtering -->
-        <section class="content-section">
-            <h2 class="section-title">👥 People with Similar Taste Also Liked</h2>
-            <div class="content-carousel" id="collaborative-recs"></div>
+        <!-- Recommended For You -->
+        <section id="recommendations" class="py-8 bg-black">
+            <div class="container mx-auto px-4">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-magic text-purple-600 mr-3"></i>
+                        Recommended For You
+                    </h2>
+                    <button onclick="refreshRecommendations()" class="text-red-400 hover:text-red-300 transition-colors">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        Refresh
+                    </button>
+                </div>
+                
+                <!-- Recommendation Categories -->
+                <div class="space-y-8">
+                    <!-- Hybrid Recommendations -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 text-gray-300">Perfect Matches</h3>
+                        <div id="hybridRecommendations" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            <!-- Content will be loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Based on Recent Activity -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 text-gray-300">Based on Your Recent Activity</h3>
+                        <div id="recentActivityRecs" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            <!-- Content will be loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Genre-based -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 text-gray-300">More Like What You Love</h3>
+                        <div id="genreBasedRecs" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            <!-- Content will be loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Your Watchlist -->
+        <section id="watchlist" class="py-8 bg-gray-900">
+            <div class="container mx-auto px-4">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-bookmark text-yellow-600 mr-3"></i>
+                        Your Watchlist
+                    </h2>
+                    <div class="flex items-center space-x-4">
+                        <select id="watchlistSort" class="bg-gray-800 text-white px-3 py-1 rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-red-600">
+                            <option value="added">Recently Added</option>
+                            <option value="title">Title A-Z</option>
+                            <option value="rating">Rating</option>
+                            <option value="release">Release Date</option>
+                        </select>
+                        <button onclick="clearWatchlist()" class="text-red-400 hover:text-red-300 transition-colors text-sm">
+                            <i class="fas fa-trash mr-1"></i>
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+                <div id="watchlistGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <!-- Watchlist content will be loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Watch History -->
+        <section id="history" class="py-8 bg-black">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-history text-blue-600 mr-3"></i>
+                    Recently Watched
+                </h2>
+                <div id="historyGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <!-- History content will be loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section class="py-8 bg-gray-900">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-bolt text-yellow-500 mr-3"></i>
+                    Quick Actions
+                </h2>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <button onclick="openPreferenceTuner()" class="quick-action-card bg-gradient-to-r from-purple-600 to-blue-600 p-6 rounded-lg hover:scale-105 transition-transform">
+                        <i class="fas fa-sliders-h text-3xl mb-3"></i>
+                        <h3 class="font-bold mb-2">Tune Preferences</h3>
+                        <p class="text-sm opacity-90">Adjust your recommendation settings</p>
+                    </button>
+                    
+                    <button onclick="exploreGenres()" class="quick-action-card bg-gradient-to-r from-green-600 to-teal-600 p-6 rounded-lg hover:scale-105 transition-transform">
+                        <i class="fas fa-compass text-3xl mb-3"></i>
+                        <h3 class="font-bold mb-2">Explore Genres</h3>
+                        <p class="text-sm opacity-90">Discover new categories</p>
+                    </button>
+                    
+                    <button onclick="viewStats()" class="quick-action-card bg-gradient-to-r from-red-600 to-pink-600 p-6 rounded-lg hover:scale-105 transition-transform">
+                        <i class="fas fa-chart-bar text-3xl mb-3"></i>
+                        <h3 class="font-bold mb-2">Your Stats</h3>
+                        <p class="text-sm opacity-90">View your watching statistics</p>
+                    </button>
+                </div>
+            </div>
         </section>
     </main>
 
-    <!-- Preference Tuning Modal -->
-    <div class="modal-overlay" id="preferences-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Tune Your Preferences</h3>
-                <button class="modal-close" id="preferences-close">&times;</button>
+    <!-- Preference Tuner Modal -->
+    <div id="preferenceTunerModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-gray-900 rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold">Tune Your Preferences</h3>
+                <button onclick="closePreferenceTuner()" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
             </div>
-            <div class="modal-body">
-                <div class="preference-section">
-                    <h4>Favorite Genres</h4>
-                    <div class="genre-grid" id="genre-preferences"></div>
-                </div>
-                <div class="preference-section">
-                    <h4>Content Languages</h4>
-                    <div class="language-options" id="language-preferences"></div>
-                </div>
-                <div class="preference-section">
-                    <h4>Content Types</h4>
-                    <div class="type-options" id="type-preferences"></div>
+            
+            <!-- Genre Preferences -->
+            <div class="mb-6">
+                <h4 class="text-lg font-semibold mb-4">Favorite Genres</h4>
+                <div id="genrePreferences" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <!-- Genre checkboxes will be loaded dynamically -->
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="preferences-cancel">Cancel</button>
-                <button class="btn btn-primary" id="preferences-save">Save Preferences</button>
+            
+            <!-- Content Type Preferences -->
+            <div class="mb-6">
+                <h4 class="text-lg font-semibold mb-4">Content Types</h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="prefMovies" class="form-checkbox text-red-600">
+                        <span>Movies</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="prefTVShows" class="form-checkbox text-red-600">
+                        <span>TV Shows</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="prefAnime" class="form-checkbox text-red-600">
+                        <span>Anime</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="prefDocumentaries" class="form-checkbox text-red-600">
+                        <span>Documentaries</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Language Preferences -->
+            <div class="mb-6">
+                <h4 class="text-lg font-semibold mb-4">Preferred Languages</h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="langEnglish" class="form-checkbox text-red-600">
+                        <span>English</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="langHindi" class="form-checkbox text-red-600">
+                        <span>Hindi</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="langTelugu" class="form-checkbox text-red-600">
+                        <span>Telugu</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="langTamil" class="form-checkbox text-red-600">
+                        <span>Tamil</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-4">
+                <button onclick="closePreferenceTuner()" class="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button onclick="savePreferences()" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+                    Save Preferences
+                </button>
             </div>
         </div>
     </div>
 
-    <script src="js/utils.js"></script>
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2">
+        <!-- Toast notifications will appear here -->
+    </div>
+
+        <!-- Scripts -->
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/components.js"></script>
-    <script>
-        // Dashboard-specific initialization
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!Auth.isAuthenticated()) {
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            initializeDashboard();
-        });
-    </script>
+    <script src="js/dashboard.js"></script>
 </body>
 </html>
