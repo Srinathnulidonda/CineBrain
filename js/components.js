@@ -1,619 +1,1045 @@
-// UI Components Library
-class UIComponents {
-    // Create movie card component
-    static createMovieCard(movie, options = {}) {
-        const {
-            showActions = true,
-            size = 'normal',
-            onAction = null
-        } = options;
+// API Configuration
+const API_BASE = 'https://backend-app-970m.onrender.com/api';
 
-        const cardElement = document.createElement('div');
-        cardElement.className = `movie-card ${size}`;
-        cardElement.dataset.movieId = movie.id;
+// API Service Class
+class APIService {
+    constructor() {
+        this.token = localStorage.getItem('auth_token');
+        this.baseHeaders = {
+            'Content-Type': 'application/json',
+            'Authorization': this.token ? `Bearer ${this.token}` : ''
+        };
+    }
 
-        const posterUrl = Utils.getImageUrl(movie.poster_path);
-        const rating = Utils.formatRating(movie.rating);
-        const year = movie.release_date ? new Date(movie.release_date).getFullYear() : '';
-        const genres = movie.genre_names?.slice(0, 3) || [];
+    updateToken(token) {
+        this.token = token;
+        localStorage.setItem('auth_token', token);
+        this.baseHeaders.Authorization = `Bearer ${token}`;
+    }
 
-        cardElement.innerHTML = `
-            <div class="movie-card-image">
-                <img src="${posterUrl}" alt="${movie.title}" loading="lazy" onerror="this.src='/assets/images/no-poster.jpg'">
-                ${showActions ? `
-                <div class="movie-card-overlay">
-                    <div class="movie-card-actions">
-                        <button class="action-btn" data-action="play" title="Play">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M8 5v14l11-7z"/>
-                            </svg>
-                        </button>
-                        <button class="action-btn" data-action="favorite" title="Add to Favorites">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                            </svg>
-                        </button>
-                        <button class="action-btn" data-action="watchlist" title="Add to Watchlist">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-            <div class="movie-card-content">
-                <h3 class="movie-card-title">${movie.title}</h3>
-                <div class="movie-card-meta">
-                    ${rating ? `
-                    <div class="movie-card-rating">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
-                        <span>${rating}</span>
-                    </div>
-                    ` : ''}
-                    ${year ? `<span class="movie-card-year">${year}</span>` : ''}
-                </div>
-                ${genres.length > 0 ? `
-                <div class="movie-card-genres">
-                    ${genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
-                </div>
-                ` : ''}
-                ${movie.overview ? `
-                <p class="movie-card-overview">${Utils.truncateText(movie.overview, 120)}</p>
-                ` : ''}
-            </div>
-        `;
+    clearToken() {
+        this.token = null;
+        localStorage.removeItem('auth_token');
+        delete this.baseHeaders.Authorization;
+    }
 
-        // Add event listeners
-        if (showActions && onAction) {
-            const actionButtons = cardElement.querySelectorAll('.action-btn');
-            actionButtons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const action = button.dataset.action;
-                    onAction(action, movie);
-                });
+    async makeRequest(url, options = {}) {
+        try {
+            const response = await fetch(`${API_BASE}${url}`, {
+                ...options,
+                headers: {
+                    ...this.baseHeaders,
+                    ...options.headers
+                }
             });
-        }
 
-        // Add click handler for card
-        cardElement.addEventListener('click', () => {
-            window.location.href = `movie-detail.html?id=${movie.id}`;
-        });
-
-        return cardElement;
-    }
-
-    // Create continue watching card
-    static createContinueWatchingCard(item) {
-        const cardElement = document.createElement('div');
-        cardElement.className = 'continue-watching-card';
-        cardElement.dataset.movieId = item.id;
-
-        const backdropUrl = Utils.getBackdropUrl(item.backdrop_path);
-        const progress = item.progress || Math.random() * 80 + 10; // Mock progress if not available
-
-        cardElement.innerHTML = `
-            <div class="continue-watching-image">
-                <img src="${backdropUrl}" alt="${item.title}" loading="lazy" onerror="this.src='/assets/images/no-backdrop.jpg'">
-                <div class="continue-progress">
-                    <div class="progress-bar" style="width: ${progress}%"></div>
-                </div>
-            </div>
-            <div class="continue-watching-content">
-                <h3 class="continue-watching-title">${item.title}</h3>
-                ${item.episode ? `
-                <p class="continue-watching-episode">${item.episode}</p>
-                ` : ''}
-                <p class="continue-watching-time">${Math.floor(progress)}% complete</p>
-            </div>
-        `;
-
-        cardElement.addEventListener('click', () => {
-            window.location.href = `movie-detail.html?id=${item.id}`;
-        });
-
-        return cardElement;
-    }
-
-    // Create curated content card
-    static createCuratedCard(item) {
-        const cardElement = document.createElement('div');
-        cardElement.className = 'curated-card';
-        cardElement.dataset.movieId = item.content?.id || item.id;
-
-        const content = item.content || item;
-        const backdropUrl = Utils.getBackdropUrl(content.backdrop_path);
-
-        cardElement.innerHTML = `
-            <div class="curated-card-image">
-                <img src="${backdropUrl}" alt="${content.title}" loading="lazy" onerror="this.src='/assets/images/no-backdrop.jpg'">
-                <div class="curated-card-badge">Staff Pick</div>
-            </div>
-            <div class="curated-card-content">
-                <h3 class="curated-card-title">${item.admin_title || content.title}</h3>
-                <p class="curated-card-description">${Utils.truncateText(item.admin_description || content.overview, 150)}</p>
-                ${item.custom_tags && item.custom_tags.length > 0 ? `
-                <div class="curated-card-tags">
-                    ${item.custom_tags.map(tag => `<span class="curated-tag">${tag}</span>`).join('')}
-                </div>
-                ` : ''}
-            </div>
-        `;
-
-        cardElement.addEventListener('click', () => {
-            window.location.href = `movie-detail.html?id=${content.id}`;
-        });
-
-        return cardElement;
-    }
-
-    // Create search result item
-    static createSearchResult(item) {
-        const resultElement = document.createElement('div');
-        resultElement.className = 'search-result';
-        resultElement.dataset.movieId = item.id;
-
-        const posterUrl = Utils.getImageUrl(item.poster_path);
-        const rating = Utils.formatRating(item.rating || item.vote_average);
-        const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
-        const type = item.content_type || (item.first_air_date ? 'TV' : 'Movie');
-
-        resultElement.innerHTML = `
-            <div class="search-result-image">
-                <img src="${posterUrl}" alt="${item.title || item.name}" loading="lazy" onerror="this.src='/assets/images/no-poster.jpg'">
-            </div>
-            <div class="search-result-content">
-                <h3 class="search-result-title">${item.title || item.name}</h3>
-                <div class="search-result-meta">
-                    <span class="search-result-type">${type}</span>
-                    ${year ? `<span class="search-result-year">${year}</span>` : ''}
-                    ${rating ? `
-                    <div class="search-result-rating">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
-                        <span>${rating}</span>
-                    </div>
-                    ` : ''}
-                </div>
-                ${item.overview ? `
-                <p class="search-result-overview">${Utils.truncateText(item.overview, 200)}</p>
-                ` : ''}
-            </div>
-        `;
-
-        resultElement.addEventListener('click', () => {
-            window.location.href = `movie-detail.html?id=${item.id}`;
-        });
-
-        return resultElement;
-    }
-
-    // Create loading skeleton
-    static createLoadingSkeleton(type = 'card', count = 1) {
-        const container = document.createElement('div');
-        container.className = 'skeleton-container';
-
-        for (let i = 0; i < count; i++) {
-            const skeleton = document.createElement('div');
-            
-            switch (type) {
-                case 'card':
-                    skeleton.className = 'skeleton skeleton-card';
-                    break;
-                case 'text':
-                    skeleton.className = 'skeleton skeleton-text';
-                    break;
-                case 'continue-watching':
-                    skeleton.className = 'skeleton continue-watching-skeleton';
-                    skeleton.style.aspectRatio = '16/9';
-                    break;
-                default:
-                    skeleton.className = 'skeleton skeleton-card';
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
-            container.appendChild(skeleton);
+
+            return await response.json();
+        } catch (error) {
+            console.error('API request failed:', error);
+            throw error;
         }
+    }
+
+    // Authentication endpoints
+    async login(credentials) {
+        return this.makeRequest('/login', {
+            method: 'POST',
+            body: JSON.stringify(credentials)
+        });
+    }
+
+    async register(userData) {
+        return this.makeRequest('/register', {
+            method: 'POST',
+            body: JSON.stringify(userData)
+        });
+    }
+
+    // Content endpoints
+    async getHomepage() {
+        return this.makeRequest('/homepage');
+    }
+
+    async getRecommendations() {
+        return this.makeRequest('/recommendations');
+    }
+
+    async getPersonalizedRecommendations() {
+        return this.makeRequest('/recommendations/personalized');
+    }
+
+    async getContentDetails(id) {
+        return this.makeRequest(`/content/${id}/details`);
+    }
+
+    async searchContent(query) {
+        return this.makeRequest(`/search?q=${encodeURIComponent(query)}`);
+    }
+
+    // User interactions
+    async recordInteraction(data) {
+        return this.makeRequest('/interact', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    }
+
+    // Admin endpoints
+    async adminBrowseContent(params) {
+        const queryString = new URLSearchParams(params).toString();
+        return this.makeRequest(`/admin/enhanced-browse?${queryString}`);
+    }
+
+    async adminCreatePost(data) {
+        return this.makeRequest('/admin/create-post', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    }
+
+    async adminGetPosts() {
+        return this.makeRequest('/admin/posts');
+    }
+
+    async adminAnalytics() {
+        return this.makeRequest('/admin/analytics');
+    }
+}
+
+// Initialize API service
+const apiService = new APIService();
+
+// UI Components
+class UIComponents {
+    static showLoading() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+        }
+    }
+
+    static hideLoading() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
+    }
+
+    static showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        const icons = {
+            success: '✓',
+                        error: '✗',
+            warning: '⚠',
+            info: 'ℹ'
+        };
+
+        toast.innerHTML = `
+            <div class="toast-content">
+                <span class="toast-icon">${icons[type]}</span>
+                <span class="toast-message">${message}</span>
+                <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+        
+        // Show toast
+        setTimeout(() => toast.classList.add('show'), 100);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+
+    static createMovieCard(movie) {
+        const card = document.createElement('div');
+        card.className = 'movie-card animate-fadeIn';
+        card.onclick = () => navigateToMovie(movie.id);
+        
+        const posterUrl = movie.poster_path || '/api/placeholder/200/300';
+        const title = movie.title || movie.name || 'Unknown Title';
+        const year = movie.release_date ? new Date(movie.release_date).getFullYear() : '';
+        const rating = movie.rating ? movie.rating.toFixed(1) : '';
+
+        card.innerHTML = `
+            <img src="${posterUrl}" alt="${title}" class="movie-card-poster" loading="lazy">
+            <div class="movie-card-info">
+                <h3 class="movie-card-title">${title}</h3>
+                <div class="movie-card-meta">
+                    <span class="movie-card-year">${year}</span>
+                    ${rating ? `<span class="movie-card-rating">${rating}</span>` : ''}
+                </div>
+            </div>
+        `;
+
+        return card;
+    }
+
+    static createCuratedCard(item) {
+        const card = document.createElement('div');
+        card.className = 'curated-card animate-scaleIn';
+        card.onclick = () => navigateToMovie(item.id);
+        
+        const imageUrl = item.poster_path || item.backdrop_path || '/api/placeholder/250/200';
+        
+        card.innerHTML = `
+            <img src="${imageUrl}" alt="${item.title}" class="curated-card-image" loading="lazy">
+            <div class="curated-card-content">
+                <h3 class="curated-card-title">${item.admin_title || 'Staff Pick'}</h3>
+                <h4 class="curated-card-subtitle">${item.title}</h4>
+                <p class="curated-card-description">${item.admin_description || item.overview || ''}</p>
+                ${item.custom_tags ? `
+                    <div class="curated-card-tags">
+                        ${item.custom_tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        return card;
+    }
+
+    static createContinueWatchingCard(item) {
+        const card = document.createElement('div');
+        card.className = 'continue-watching-card animate-slideInLeft';
+        card.onclick = () => navigateToMovie(item.content_id);
+        
+        const posterUrl = item.poster_path || '/api/placeholder/300/180';
+        const progress = item.progress || Math.random() * 80 + 10; // Mock progress
+        
+        card.innerHTML = `
+            <img src="${posterUrl}" alt="${item.title}" class="continue-watching-poster" loading="lazy">
+            <div class="continue-watching-info">
+                <h3 class="continue-watching-title">${item.title}</h3>
+                <div class="continue-watching-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                </div>
+                <p class="continue-watching-time">${Math.floor(progress)}% watched</p>
+            </div>
+        `;
+
+        return card;
+    }
+
+    static createVideoCard(video) {
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        card.onclick = () => openVideoModal(video);
+        
+        card.innerHTML = `
+            <div class="video-thumbnail">
+                <img src="${video.thumbnail}" alt="${video.title}" loading="lazy">
+                <button class="video-play-btn">▶</button>
+            </div>
+            <div class="video-info">
+                <h4 class="video-title">${video.title}</h4>
+                <p class="video-type">${video.type}</p>
+            </div>
+        `;
+
+        return card;
+    }
+
+    static createCastCard(person) {
+        const card = document.createElement('div');
+        card.className = 'cast-card';
+        
+        const photoUrl = person.profile_path ? 
+            `https://image.tmdb.org/t/p/w185${person.profile_path}` : 
+            '/api/placeholder/120/120';
+        
+        card.innerHTML = `
+            <img src="${photoUrl}" alt="${person.name}" class="cast-photo" loading="lazy">
+            <h4 class="cast-name">${person.name}</h4>
+            <p class="cast-character">${person.character || person.job || ''}</p>
+        `;
+
+        return card;
+    }
+
+    static createReviewCard(review) {
+        const card = document.createElement('div');
+        card.className = 'review-card';
+        
+        const userInitial = review.username ? review.username.charAt(0).toUpperCase() : 'U';
+        const rating = review.rating || 0;
+        const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+        
+        card.innerHTML = `
+            <div class="review-header">
+                <div class="review-user">
+                    <div class="review-avatar">${userInitial}</div>
+                    <span class="review-username">${review.username || 'Anonymous'}</span>
+                </div>
+                <div class="review-rating">${stars} ${rating}/5</div>
+            </div>
+            <p class="review-text">${review.review_text || 'No review text provided.'}</p>
+            <p class="review-date">${new Date(review.created_at).toLocaleDateString()}</p>
+        `;
+
+        return card;
+    }
+
+    static createSkeletonCard() {
+        const card = document.createElement('div');
+        card.className = 'movie-card skeleton';
+        card.innerHTML = `
+            <div class="movie-card-poster skeleton"></div>
+            <div class="movie-card-info">
+                <div class="movie-card-title skeleton" style="height: 1.2rem; margin-bottom: 0.5rem;"></div>
+                <div class="movie-card-meta skeleton" style="height: 1rem;"></div>
+            </div>
+        `;
+        return card;
+    }
+
+    static createEmptyState(title, description, actionText = null, actionCallback = null) {
+        const container = document.createElement('div');
+        container.className = 'empty-state';
+        
+        container.innerHTML = `
+            <div class="empty-state-icon">📽️</div>
+            <h3 class="empty-state-title">${title}</h3>
+            <p class="empty-state-description">${description}</p>
+            ${actionText ? `<button class="btn-primary" onclick="${actionCallback}">${actionText}</button>` : ''}
+        `;
 
         return container;
     }
 
-    // Create tab component
-    static createTabs(tabsData, activeTab = 0) {
-        const tabsContainer = document.createElement('div');
-        tabsContainer.className = 'tabs-component';
-
-        const tabButtons = document.createElement('div');
-        tabButtons.className = 'tab-buttons';
-
-        const tabContents = document.createElement('div');
-        tabContents.className = 'tab-contents';
-
-        tabsData.forEach((tab, index) => {
-            // Create tab button
-            const button = document.createElement('button');
-            button.className = `tab-btn ${index === activeTab ? 'active' : ''}`;
-            button.textContent = tab.label;
-            button.dataset.tabIndex = index;
-            tabButtons.appendChild(button);
-
-            // Create tab content
-            const content = document.createElement('div');
-            content.className = `tab-content ${index === activeTab ? 'active' : 'hidden'}`;
-            content.dataset.tabIndex = index;
-            
-            if (typeof tab.content === 'string') {
-                content.innerHTML = tab.content;
-            } else if (tab.content instanceof HTMLElement) {
-                content.appendChild(tab.content);
-            }
-            
-            tabContents.appendChild(content);
-        });
-
-        // Add event listeners
-        tabButtons.addEventListener('click', (e) => {
-            if (e.target.classList.contains('tab-btn')) {
-                const newActiveIndex = parseInt(e.target.dataset.tabIndex);
-                this.switchTab(tabsContainer, newActiveIndex);
-            }
-        });
-
-        tabsContainer.appendChild(tabButtons);
-        tabsContainer.appendChild(tabContents);
-
-        return tabsContainer;
-    }
-
-    static switchTab(tabsContainer, activeIndex) {
-        const buttons = tabsContainer.querySelectorAll('.tab-btn');
-        const contents = tabsContainer.querySelectorAll('.tab-content');
-
-        buttons.forEach((btn, index) => {
-            btn.classList.toggle('active', index === activeIndex);
-        });
-
-        contents.forEach((content, index) => {
-            content.classList.toggle('active', index === activeIndex);
-            content.classList.toggle('hidden', index !== activeIndex);
-        });
-    }
-
-    // Create modal component
-    static createModal(title, content, options = {}) {
-        const {
-            closable = true,
-            size = 'medium',
-            onClose = null,
-            footer = null
-        } = options;
-
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-        overlay.id = Utils.generateId('modal');
-
-        const modal = document.createElement('div');
-        modal.className = `modal-content modal-${size}`;
-
-        // Header
-        const header = document.createElement('div');
-        header.className = 'modal-header';
-        header.innerHTML = `
-            <h3>${title}</h3>
-            ${closable ? '<button class="modal-close">&times;</button>' : ''}
+    static createErrorState(title, description, actionText = 'Try Again', actionCallback = 'location.reload()') {
+        const container = document.createElement('div');
+        container.className = 'error-state';
+        
+        container.innerHTML = `
+            <div class="error-state-icon">⚠️</div>
+            <h3 class="error-state-title">${title}</h3>
+            <p class="error-state-description">${description}</p>
+            <button class="btn-primary" onclick="${actionCallback}">${actionText}</button>
         `;
 
-        // Body
-        const body = document.createElement('div');
-        body.className = 'modal-body';
-        
-        if (typeof content === 'string') {
-            body.innerHTML = content;
-        } else if (content instanceof HTMLElement) {
-            body.appendChild(content);
-        }
+        return container;
+    }
+}
 
-        // Footer
-        let footerElement = null;
-        if (footer) {
-            footerElement = document.createElement('div');
-            footerElement.className = 'modal-footer';
-            
-            if (typeof footer === 'string') {
-                footerElement.innerHTML = footer;
-            } else if (footer instanceof HTMLElement) {
-                footerElement.appendChild(footer);
-            }
-        }
-
-        modal.appendChild(header);
-        modal.appendChild(body);
-        if (footerElement) modal.appendChild(footerElement);
-
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
-
-        // Event listeners
-        if (closable) {
-            const closeBtn = header.querySelector('.modal-close');
-            closeBtn?.addEventListener('click', () => this.closeModal(overlay.id, onClose));
-
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) {
-                    this.closeModal(overlay.id, onClose);
-                }
-            });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && overlay.classList.contains('active')) {
-                    this.closeModal(overlay.id, onClose);
-                }
-            });
-        }
-
-        // Show modal
-        requestAnimationFrame(() => {
-            overlay.classList.add('active');
-        });
-
-        return overlay.id;
+// Carousel Management
+class CarouselManager {
+    constructor() {
+        this.carousels = new Map();
+        this.touchStartX = 0;
+        this.touchEndX = 0;
+        this.isScrolling = false;
     }
 
-    static closeModal(modalId, onClose = null) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.classList.remove('active');
+    initializeCarousel(carouselId, trackId) {
+        const carousel = document.getElementById(carouselId);
+        const track = document.getElementById(trackId);
+        
+        if (!carousel || !track) return;
+
+        this.carousels.set(carouselId, {
+            carousel,
+            track,
+            currentIndex: 0,
+            itemWidth: 220, // Default item width + gap
+            visibleItems: this.calculateVisibleItems(carousel)
+        });
+
+        // Add touch event listeners
+        track.addEventListener('touchstart', (e) => this.handleTouchStart(e, carouselId));
+        track.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+        track.addEventListener('touchend', (e) => this.handleTouchEnd(e, carouselId));
+
+        // Add resize listener
+        window.addEventListener('resize', () => this.updateVisibleItems(carouselId));
+    }
+
+    calculateVisibleItems(carousel) {
+        const containerWidth = carousel.offsetWidth;
+        return Math.floor(containerWidth / 220); // 200px card + 20px gap
+    }
+
+    updateVisibleItems(carouselId) {
+        const carouselData = this.carousels.get(carouselId);
+        if (carouselData) {
+            carouselData.visibleItems = this.calculateVisibleItems(carouselData.carousel);
+        }
+    }
+
+    scrollCarousel(carouselId, direction) {
+        const carouselData = this.carousels.get(carouselId);
+        if (!carouselData || this.isScrolling) return;
+
+        const { track, currentIndex, itemWidth, visibleItems } = carouselData;
+        const totalItems = track.children.length;
+        const maxIndex = Math.max(0, totalItems - visibleItems);
+
+        let newIndex = currentIndex + (direction * visibleItems);
+        newIndex = Math.max(0, Math.min(newIndex, maxIndex));
+
+        if (newIndex !== currentIndex) {
+            this.isScrolling = true;
+            carouselData.currentIndex = newIndex;
+            
+            const translateX = -newIndex * itemWidth;
+            track.style.transform = `translateX(${translateX}px)`;
+
             setTimeout(() => {
-                modal.remove();
-                if (onClose) onClose();
+                this.isScrolling = false;
             }, 300);
         }
     }
 
-    // Create carousel component
-    static createCarousel(items, renderItem, options = {}) {
-        const {
-            infinite = false,
-            autoPlay = false,
-            autoPlayInterval = 5000,
-            showControls = true,
-            showIndicators = false
-        } = options;
-
-        const carousel = document.createElement('div');
-        carousel.className = 'carousel-component';
-
-        const track = document.createElement('div');
-        track.className = 'carousel-track';
-
-        items.forEach(item => {
-            const slide = document.createElement('div');
-            slide.className = 'carousel-slide';
-            slide.appendChild(renderItem(item));
-            track.appendChild(slide);
-        });
-
-        carousel.appendChild(track);
-
-        if (showControls) {
-            const prevBtn = document.createElement('button');
-            prevBtn.className = 'carousel-control carousel-prev';
-            prevBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M15 18l-6-6 6-6"/></svg>';
-
-            const nextBtn = document.createElement('button');
-            nextBtn.className = 'carousel-control carousel-next';
-            nextBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M9 18l6-6-6-6"/></svg>';
-
-            carousel.appendChild(prevBtn);
-            carousel.appendChild(nextBtn);
-
-            // Add control event listeners
-            this.setupCarouselControls(carousel, track, items.length, infinite);
-        }
-
-        if (showIndicators) {
-            const indicators = document.createElement('div');
-            indicators.className = 'carousel-indicators';
-
-            items.forEach((_, index) => {
-                const indicator = document.createElement('button');
-                indicator.className = `carousel-indicator ${index === 0 ? 'active' : ''}`;
-                indicator.dataset.index = index;
-                indicators.appendChild(indicator);
-            });
-
-            carousel.appendChild(indicators);
-        }
-
-        return carousel;
+    handleTouchStart(e, carouselId) {
+        this.touchStartX = e.touches[0].clientX;
     }
 
-    static setupCarouselControls(carousel, track, itemCount, infinite) {
-        let currentIndex = 0;
-        const prevBtn = carousel.querySelector('.carousel-prev');
-        const nextBtn = carousel.querySelector('.carousel-next');
+    handleTouchMove(e) {
+        e.preventDefault(); // Prevent scrolling
+    }
 
-        const updateCarousel = () => {
-            const slideWidth = track.querySelector('.carousel-slide').offsetWidth;
-            track.style.transform = `translateX(-${currentIndex * slideWidth}px)`;
+    handleTouchEnd(e, carouselId) {
+        this.touchEndX = e.changedTouches[0].clientX;
+        this.handleSwipe(carouselId);
+    }
 
-            // Update indicators
-            const indicators = carousel.querySelectorAll('.carousel-indicator');
-            indicators.forEach((indicator, index) => {
-                indicator.classList.toggle('active', index === currentIndex);
+    handleSwipe(carouselId) {
+        const swipeThreshold = 50;
+        const diff = this.touchStartX - this.touchEndX;
+
+        if (Math.abs(diff) > swipeThreshold) {
+            if (diff > 0) {
+                // Swipe left - next
+                this.scrollCarousel(carouselId, 1);
+            } else {
+                // Swipe right - previous
+                this.scrollCarousel(carouselId, -1);
+            }
+        }
+    }
+
+    populateCarousel(trackId, items, createCardFunction) {
+        const track = document.getElementById(trackId);
+        if (!track) return;
+
+        // Clear existing content
+        track.innerHTML = '';
+
+        if (!items || items.length === 0) {
+            const emptyState = UIComponents.createEmptyState(
+                'No Content Available',
+                'Check back later for new recommendations.'
+            );
+            track.appendChild(emptyState);
+            return;
+        }
+
+        // Add items to carousel
+        items.forEach(item => {
+            const card = createCardFunction(item);
+            track.appendChild(card);
+        });
+
+        // Initialize carousel if not already done
+        const carouselId = trackId.replace('-track', '-carousel');
+        if (!this.carousels.has(carouselId)) {
+            this.initializeCarousel(carouselId, trackId);
+        }
+    }
+}
+
+// Initialize carousel manager
+const carouselManager = new CarouselManager();
+
+// Modal Management
+class ModalManager {
+    static openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            
+            // Focus trap
+            const focusableElements = modal.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            if (focusableElements.length > 0) {
+                focusableElements[0].focus();
+            }
+        }
+    }
+
+    static closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            
+            // Stop any videos
+            const videoContainer = modal.querySelector('#video-container');
+            if (videoContainer) {
+                videoContainer.innerHTML = '';
+            }
+        }
+    }
+
+    static closeAllModals() {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.classList.add('hidden');
+        });
+        document.body.style.overflow = '';
+    }
+}
+
+// Search Management
+class SearchManager {
+    constructor() {
+        this.searchTimeout = null;
+        this.searchResults = [];
+        this.isSearching = false;
+    }
+
+    initializeSearch() {
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', (e) => {
+            this.handleSearchInput(e.target.value);
+        });
+
+        searchInput.addEventListener('focus', () => {
+            if (this.searchResults.length > 0) {
+                searchResults?.classList.remove('hidden');
+            }
+        });
+
+        // Close search results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-container')) {
+                searchResults?.classList.add('hidden');
+            }
+        });
+    }
+
+    handleSearchInput(query) {
+        clearTimeout(this.searchTimeout);
+        
+        if (query.length < 2) {
+            this.hideSearchResults();
+            return;
+        }
+
+        this.searchTimeout = setTimeout(() => {
+            this.performSearch(query);
+        }, 300);
+    }
+
+    async performSearch(query) {
+        if (this.isSearching) return;
+        
+        this.isSearching = true;
+        
+        try {
+            const results = await apiService.searchContent(query);
+            this.searchResults = [
+                ...(results.database_results || []),
+                ...(results.tmdb_results || [])
+            ];
+            
+            this.displaySearchResults();
+        } catch (error) {
+            console.error('Search failed:', error);
+            UIComponents.showToast('Search failed. Please try again.', 'error');
+        } finally {
+            this.isSearching = false;
+        }
+    }
+
+    displaySearchResults() {
+        const searchResults = document.getElementById('search-results');
+        if (!searchResults) return;
+
+        searchResults.innerHTML = '';
+
+                if (this.searchResults.length === 0) {
+            searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
+        } else {
+            this.searchResults.slice(0, 8).forEach(item => {
+                const resultItem = this.createSearchResultItem(item);
+                searchResults.appendChild(resultItem);
             });
+        }
+
+        searchResults.classList.remove('hidden');
+    }
+
+    createSearchResultItem(item) {
+        const resultItem = document.createElement('div');
+        resultItem.className = 'search-result-item';
+        resultItem.onclick = () => {
+            this.hideSearchResults();
+            navigateToMovie(item.id || item.tmdb_id);
         };
 
-        prevBtn?.addEventListener('click', () => {
-            if (currentIndex > 0) {
-                currentIndex--;
-            } else if (infinite) {
-                currentIndex = itemCount - 1;
-            }
-            updateCarousel();
-        });
+        const posterUrl = item.poster_path ? 
+            (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w92${item.poster_path}`) :
+            '/api/placeholder/50/75';
+        
+        const title = item.title || item.name || 'Unknown Title';
+        const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
+        const type = item.content_type || (item.first_air_date ? 'TV Show' : 'Movie');
 
-        nextBtn?.addEventListener('click', () => {
-            if (currentIndex < itemCount - 1) {
-                currentIndex++;
-            } else if (infinite) {
-                currentIndex = 0;
-            }
-            updateCarousel();
-        });
+        resultItem.innerHTML = `
+            <img src="${posterUrl}" alt="${title}" class="search-result-poster" loading="lazy">
+            <div class="search-result-info">
+                <h4>${title} ${year ? `(${year})` : ''}</h4>
+                <p>${type}</p>
+            </div>
+        `;
 
-        // Indicator click handlers
-        const indicators = carousel.querySelectorAll('.carousel-indicator');
-        indicators.forEach((indicator, index) => {
-            indicator.addEventListener('click', () => {
-                currentIndex = index;
-                updateCarousel();
-            });
-        });
+        return resultItem;
     }
 
-    // Create rating component
-    static createRatingComponent(currentRating = 0, onRate = null) {
-        const ratingContainer = document.createElement('div');
-        ratingContainer.className = 'rating-component';
-
-        for (let i = 1; i <= 5; i++) {
-            const star = document.createElement('button');
-            star.className = `rating-star ${i <= currentRating ? 'active' : ''}`;
-            star.dataset.rating = i;
-            star.innerHTML = '★';
-
-            star.addEventListener('click', () => {
-                if (onRate) onRate(i);
-                this.updateRating(ratingContainer, i);
-            });
-
-            star.addEventListener('mouseenter', () => {
-                this.highlightStars(ratingContainer, i);
-            });
-
-            ratingContainer.appendChild(star);
-        }
-
-        ratingContainer.addEventListener('mouseleave', () => {
-            this.updateRating(ratingContainer, currentRating);
-        });
-
-        return ratingContainer;
-    }
-
-    static updateRating(container, rating) {
-        const stars = container.querySelectorAll('.rating-star');
-        stars.forEach((star, index) => {
-            star.classList.toggle('active', index < rating);
-        });
-    }
-
-    static highlightStars(container, rating) {
-        const stars = container.querySelectorAll('.rating-star');
-        stars.forEach((star, index) => {
-            star.classList.toggle('highlighted', index < rating);
-        });
-    }
-
-    // Progress bar component
-    static createProgressBar(progress = 0, options = {}) {
-        const { 
-            animated = false, 
-            showText = true, 
-            size = 'normal',
-            color = 'primary'
-        } = options;
-
-        const progressBar = document.createElement('div');
-        progressBar.className = `progress-bar-component progress-${size} progress-${color}`;
-
-        const track = document.createElement('div');
-        track.className = 'progress-track';
-
-        const fill = document.createElement('div');
-        fill.className = `progress-fill ${animated ? 'animated' : ''}`;
-        fill.style.width = `${progress}%`;
-
-        track.appendChild(fill);
-        progressBar.appendChild(track);
-
-        if (showText) {
-            const text = document.createElement('span');
-            text.className = 'progress-text';
-            text.textContent = `${Math.round(progress)}%`;
-            progressBar.appendChild(text);
-        }
-
-        return progressBar;
-    }
-
-    // Update progress bar
-    static updateProgressBar(progressBar, newProgress) {
-        const fill = progressBar.querySelector('.progress-fill');
-        const text = progressBar.querySelector('.progress-text');
-
-        fill.style.width = `${newProgress}%`;
-        if (text) {
-            text.textContent = `${Math.round(newProgress)}%`;
+    hideSearchResults() {
+        const searchResults = document.getElementById('search-results');
+        if (searchResults) {
+            searchResults.classList.add('hidden');
         }
     }
 }
 
-// Lazy loading implementation
-class LazyLoader {
+// Initialize search manager
+const searchManager = new SearchManager();
+
+// User Management
+class UserManager {
     constructor() {
-        this.imageObserver = null;
-        this.init();
+        this.currentUser = null;
+        this.loadUserFromStorage();
     }
 
-    init() {
-        if ('IntersectionObserver' in window) {
-            this.imageObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        this.loadImage(entry.target);
-                        this.imageObserver.unobserve(entry.target);
-                    }
-                });
-            }, {
-                rootMargin: '50px 0px',
-                threshold: 0.01
-            });
+    loadUserFromStorage() {
+        const token = localStorage.getItem('auth_token');
+        const userData = localStorage.getItem('user_data');
+        
+        if (token && userData) {
+            try {
+                this.currentUser = JSON.parse(userData);
+                apiService.updateToken(token);
+            } catch (error) {
+                console.error('Failed to load user data:', error);
+                this.logout();
+            }
         }
     }
 
-    observe(img) {
-        if (this.imageObserver) {
-            this.imageObserver.observe(img);
-        } else {
-            // Fallback for browsers without IntersectionObserver
-            this.loadImage(img);
-        }
-    }
-
-    loadImage(img) {
-        if (img.dataset.src) {
-            img.src = img.dataset.src;
-            img.classList.add('loaded');
+    async login(credentials) {
+        try {
+            UIComponents.showLoading();
+            const response = await apiService.login(credentials);
             
-            img.onload = () => {
-                img.classList.add('fade-in');
+            this.currentUser = {
+                id: response.user_id,
+                username: response.username
             };
+            
+            localStorage.setItem('user_data', JSON.stringify(this.currentUser));
+            apiService.updateToken(response.token);
+            
+            UIComponents.showToast('Login successful!', 'success');
+            
+            // Redirect to dashboard
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Login failed:', error);
+            UIComponents.showToast('Login failed. Please check your credentials.', 'error');
+        } finally {
+            UIComponents.hideLoading();
         }
     }
 
-    observeAll() {
-        const lazyImages = document.querySelectorAll('img[data-src]');
-        lazyImages.forEach(img => this.observe(img));
+    async register(userData) {
+        try {
+            UIComponents.showLoading();
+            const response = await apiService.register(userData);
+            
+            this.currentUser = {
+                id: response.user_id,
+                username: response.username
+            };
+            
+            localStorage.setItem('user_data', JSON.stringify(this.currentUser));
+            apiService.updateToken(response.token);
+            
+            UIComponents.showToast('Registration successful!', 'success');
+            
+            // Redirect to dashboard
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Registration failed:', error);
+            UIComponents.showToast('Registration failed. Please try again.', 'error');
+        } finally {
+            UIComponents.hideLoading();
+        }
+    }
+
+    logout() {
+        this.currentUser = null;
+        localStorage.removeItem('user_data');
+        apiService.clearToken();
+        
+        UIComponents.showToast('Logged out successfully', 'info');
+        
+        // Redirect to home
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 1000);
+    }
+
+    isLoggedIn() {
+        return this.currentUser !== null;
+    }
+
+    updateUserDisplay() {
+        const usernameDisplay = document.getElementById('username-display');
+        const userInitial = document.getElementById('user-initial');
+        
+        if (this.currentUser) {
+            if (usernameDisplay) {
+                usernameDisplay.textContent = this.currentUser.username;
+            }
+            if (userInitial) {
+                userInitial.textContent = this.currentUser.username.charAt(0).toUpperCase();
+            }
+        }
+    }
+
+    async recordInteraction(contentId, interactionType, rating = null) {
+        if (!this.isLoggedIn()) return;
+
+        try {
+            await apiService.recordInteraction({
+                content_id: contentId,
+                interaction_type: interactionType,
+                rating: rating
+            });
+        } catch (error) {
+            console.error('Failed to record interaction:', error);
+        }
     }
 }
 
-// Initialize lazy loader
-const lazyLoader = new LazyLoader();
+// Initialize user manager
+const userManager = new UserManager();
 
-// Export components
-export { UIComponents, LazyLoader, lazyLoader };
+// Navigation Functions
+function navigateToMovie(movieId) {
+    if (movieId) {
+        window.location.href = `movie-detail.html?id=${movieId}`;
+    }
+}
+
+function scrollToSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function scrollCarousel(carouselId, direction) {
+    carouselManager.scrollCarousel(carouselId, direction);
+}
+
+function performSearch() {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput && searchInput.value.trim()) {
+        searchManager.performSearch(searchInput.value.trim());
+    }
+}
+
+// Modal Functions
+function openModal(modalId) {
+    ModalManager.openModal(modalId);
+}
+
+function closeModal(modalId) {
+    ModalManager.closeModal(modalId);
+}
+
+function openVideoModal(video) {
+    const modal = document.getElementById('video-modal');
+    const title = document.getElementById('video-title');
+    const container = document.getElementById('video-container');
+    
+    if (modal && title && container) {
+        title.textContent = video.title;
+        
+        // Create YouTube embed
+        const videoId = video.video_id || video.url.split('v=')[1]?.split('&')[0];
+        if (videoId) {
+            container.innerHTML = `
+                <iframe 
+                    src="https://www.youtube.com/embed/${videoId}?autoplay=1" 
+                    frameborder="0" 
+                    allowfullscreen
+                    allow="autoplay; encrypted-media">
+                </iframe>
+            `;
+        }
+        
+        ModalManager.openModal('video-modal');
+    }
+}
+
+// Authentication Functions
+function logout() {
+    userManager.logout();
+}
+
+// Mobile Menu Functions
+function initializeMobileMenu() {
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    if (mobileMenuBtn && mobileMenu) {
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenuBtn.classList.toggle('active');
+            mobileMenu.classList.toggle('active');
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.navbar')) {
+                mobileMenuBtn.classList.remove('active');
+                mobileMenu.classList.remove('active');
+            }
+        });
+    }
+}
+
+// User Menu Functions
+function initializeUserMenu() {
+    const userMenuBtn = document.getElementById('user-menu-btn');
+    const userDropdown = document.getElementById('user-dropdown');
+    
+    if (userMenuBtn && userDropdown) {
+        userMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            userDropdown.classList.add('hidden');
+        });
+    }
+}
+
+// Tab Management
+function initializeTabs() {
+    // Content tabs
+    const contentTabs = document.querySelectorAll('.tab-btn');
+    contentTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            contentTabs.forEach(t => t.classList.remove('active'));
+            // Add active class to clicked tab
+            tab.classList.add('active');
+            
+            // Handle tab content switching
+            const tabType = tab.dataset.tab;
+            handleTabSwitch(tabType);
+        });
+    });
+    
+    // Regional tabs
+    const regionalTabs = document.querySelectorAll('.regional-tab');
+    regionalTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            regionalTabs.forEach(t => t.classList.remove('active'));
+            // Add active class to clicked tab
+            tab.classList.add('active');
+            
+            // Handle regional content switching
+            const region = tab.dataset.region;
+            handleRegionalSwitch(region);
+        });
+    });
+}
+
+function handleTabSwitch(tabType) {
+    // This will be implemented in app.js based on current page context
+    console.log('Tab switched to:', tabType);
+}
+
+function handleRegionalSwitch(region) {
+    // This will be implemented in app.js based on current page context
+    console.log('Regional content switched to:', region);
+}
+
+// Utility Functions
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
+
+function formatRuntime(minutes) {
+    if (!minutes) return '';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+}
+
+function getGenreNames(genreIds) {
+    const genreMap = {
+        28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
+        99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
+        27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Science Fiction",
+        10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western"
+    };
+    
+    return genreIds.map(id => genreMap[id] || 'Unknown').filter(Boolean);
+}
+
+// Error Handling
+function handleError(error, context = 'Operation') {
+    console.error(`${context} failed:`, error);
+    
+    let message = 'Something went wrong. Please try again.';
+    
+    if (error.message.includes('401')) {
+        message = 'Please log in to continue.';
+        userManager.logout();
+    } else if (error.message.includes('403')) {
+        message = 'You do not have permission to perform this action.';
+    } else if (error.message.includes('404')) {
+        message = 'The requested content was not found.';
+    } else if (error.message.includes('500')) {
+        message = 'Server error. Please try again later.';
+    }
+    
+    UIComponents.showToast(message, 'error');
+}
+
+// Intersection Observer for Lazy Loading
+function initializeLazyLoading() {
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.classList.remove('lazy');
+                observer.unobserve(img);
+            }
+        });
+    });
+
+    const lazyImages = document.querySelectorAll('img[data-src]');
+    lazyImages.forEach(img => imageObserver.observe(img));
+}
+
+// Performance Monitoring
+function initializePerformanceMonitoring() {
+    // Monitor page load time
+    window.addEventListener('load', () => {
+        const loadTime = performance.now();
+        console.log(`Page loaded in ${loadTime.toFixed(2)}ms`);
+        
+        // Report slow loads
+        if (loadTime > 3000) {
+            console.warn('Slow page load detected');
+        }
+    });
+    
+    // Monitor API response times
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        const start = performance.now();
+        return originalFetch.apply(this, args).then(response => {
+            const duration = performance.now() - start;
+            console.log(`API call to ${args[0]} took ${duration.toFixed(2)}ms`);
+            return response;
+        });
+    };
+}
+
+// Initialize all components when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initializeMobileMenu();
+    initializeUserMenu();
+    initializeTabs();
+    searchManager.initializeSearch();
+    userManager.updateUserDisplay();
+    initializeLazyLoading();
+    initializePerformanceMonitoring();
+    
+    // Close modals on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            ModalManager.closeAllModals();
+        }
+    });
+    
+    // Handle back button for modals
+    window.addEventListener('popstate', () => {
+        ModalManager.closeAllModals();
+    });
+});
+
+// Export for use in other files
+window.UIComponents = UIComponents;
+window.carouselManager = carouselManager;
+window.ModalManager = ModalManager;
+window.searchManager = searchManager;
+window.userManager = userManager;
+window.apiService = apiService;
