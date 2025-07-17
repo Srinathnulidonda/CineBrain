@@ -1,74 +1,32 @@
-const CACHE_NAME = 'movierec-v1';
+const CACHE_NAME = 'movierec-v1.0.0';
 const urlsToCache = [
     '/',
     '/index.html',
     '/login.html',
     '/assets/css/main.css',
-    '/assets/css/components.css',
     '/assets/js/app.js',
     '/assets/js/api.js',
     '/assets/js/auth.js',
-    '/assets/js/components.js',
-    '/assets/js/utils.js',
-    '/assets/images/placeholder.jpg'
+    '/assets/images/placeholder-poster.jpg',
+    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap-grid.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
-// Install service worker
-self.addEventListener('install', event => {
+self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('Opened cache');
-                return cache.addAll(urlsToCache);
-            })
+            .then((cache) => cache.addAll(urlsToCache))
     );
 });
 
-// Fetch event
-self.addEventListener('fetch', event => {
+self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request)
-            .then(response => {
-                // Cache hit - return response
+            .then((response) => {
                 if (response) {
                     return response;
                 }
-                
-                return fetch(event.request).then(
-                    response => {
-                        // Check if valid response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
-                        
-                        // Clone the response
-                        const responseToCache = response.clone();
-                        
-                        caches.open(CACHE_NAME)
-                            .then(cache => {
-                                cache.put(event.request, responseToCache);
-                            });
-                        
-                        return response;
-                    }
-                );
+                return fetch(event.request);
             })
-    );
-});
-
-// Activate event
-self.addEventListener('activate', event => {
-    const cacheWhitelist = [CACHE_NAME];
-    
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheWhitelist.indexOf(cacheName) === -1) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
     );
 });
