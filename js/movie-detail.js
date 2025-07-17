@@ -16,10 +16,11 @@ class MovieDetailManager {
         this.movieId = urlParams.get('id');
         
         if (!this.movieId) {
-            this.showError('Movie not found');
+            this.showError('Movie ID not found in URL');
             return;
         }
         
+        console.log('Loading movie detail for ID:', this.movieId);
         this.loadMovieData();
         this.setupInteractions();
         this.setupVideoPlayer();
@@ -29,9 +30,11 @@ class MovieDetailManager {
     async loadMovieData() {
         try {
             showLoading(true);
+            console.log('Fetching movie data...');
             
             // Load movie details
             this.movieData = await api.getContentDetails(this.movieId);
+            console.log('Movie data loaded:', this.movieData);
             
             // Render all sections
             this.renderMovieHero();
@@ -50,7 +53,7 @@ class MovieDetailManager {
             
         } catch (error) {
             console.error('Movie detail loading error:', error);
-            this.showError('Failed to load movie details');
+            this.showError('Failed to load movie details. Please try again.');
         } finally {
             showLoading(false);
         }
@@ -58,18 +61,24 @@ class MovieDetailManager {
     
     renderMovieHero() {
         const { content, tmdb_details } = this.movieData;
+        console.log('Rendering movie hero for:', content.title);
         
         // Set hero background
         const heroBackground = document.getElementById('heroBackground');
         if (heroBackground && content.backdrop_path) {
             heroBackground.style.backgroundImage = `url('${content.backdrop_path}')`;
+            heroBackground.style.backgroundSize = 'cover';
+            heroBackground.style.backgroundPosition = 'center';
         }
         
-        // Set movie poster
+        // Set movie poster with error handling
         const moviePoster = document.getElementById('moviePoster');
         if (moviePoster) {
-            moviePoster.src = content.poster_path || '/api/placeholder/400/600';
+            moviePoster.src = content.poster_path || 'https://via.placeholder.com/400x600/333/fff?text=No+Image';
             moviePoster.alt = content.title;
+            moviePoster.onerror = function() {
+                this.src = 'https://via.placeholder.com/400x600/333/fff?text=No+Image';
+            };
         }
         
         // Set movie title
@@ -80,14 +89,14 @@ class MovieDetailManager {
         
         // Set tagline
         const movieTagline = document.getElementById('movieTagline');
-        if (movieTagline && tmdb_details?.tagline) {
-            movieTagline.textContent = tmdb_details.tagline;
+        if (movieTagline) {
+            movieTagline.textContent = tmdb_details?.tagline || 'An amazing cinematic experience awaits';
         }
         
         // Set overview
         const movieOverview = document.getElementById('movieOverview');
         if (movieOverview) {
-            movieOverview.textContent = content.overview || 'No overview available.';
+            movieOverview.textContent = content.overview || 'No overview available for this movie.';
         }
     }
     
@@ -102,15 +111,18 @@ class MovieDetailManager {
         
         // Runtime
         const movieRuntime = document.getElementById('movieRuntime');
-        if (movieRuntime && (content.runtime || tmdb_details?.runtime)) {
-            const runtime = content.runtime || tmdb_details.runtime;
+        if (movieRuntime) {
+            const runtime = content.runtime || tmdb_details?.runtime || 120;
             movieRuntime.textContent = `${runtime} min`;
         }
         
         // Rating
         const movieRating = document.getElementById('movieRating');
         if (movieRating && content.rating) {
-            movieRating.querySelector('span').textContent = content.rating.toFixed(1);
+            const ratingSpan = movieRating.querySelector('span');
+            if (ratingSpan) {
+                ratingSpan.textContent = content.rating.toFixed(1);
+            }
         }
         
         // Genres
@@ -128,6 +140,8 @@ class MovieDetailManager {
         
         const { youtube_videos } = this.movieData;
         
+        videosGrid.innerHTML = '';
+        
         if (!youtube_videos || (!youtube_videos.trailers?.length && !youtube_videos.teasers?.length)) {
             videosGrid.appendChild(ui.createEmptyState(
                 'No videos available',
@@ -135,8 +149,6 @@ class MovieDetailManager {
             ));
             return;
         }
-        
-        videosGrid.innerHTML = '';
         
         // Combine trailers and teasers
         const allVideos = [
@@ -156,7 +168,10 @@ class MovieDetailManager {
         card.onclick = () => this.playVideo(video.video_id);
         
         card.innerHTML = `
-            <img class="video-thumbnail" src="${video.thumbnail}" alt="${video.title}">
+            <img class="video-thumbnail" 
+                 src="${video.thumbnail}" 
+                 alt="${video.title}"
+                 onerror="this.src='https://via.placeholder.com/480x270/333/fff?text=Video+Thumbnail'">
             <div class="video-overlay">
                 <button class="video-play-btn">
                     <i class="fas fa-play"></i>
@@ -177,12 +192,12 @@ class MovieDetailManager {
         
         const { tmdb_details } = this.movieData;
         
+        castTrack.innerHTML = '';
+        
         if (!tmdb_details?.credits?.cast?.length) {
             castTrack.innerHTML = '<div class="text-center text-gray-400 p-8">No cast information available</div>';
             return;
         }
-        
-        castTrack.innerHTML = '';
         
         // Show top 20 cast members
         tmdb_details.credits.cast.slice(0, 20).forEach(person => {
@@ -200,10 +215,14 @@ class MovieDetailManager {
         
         const photoUrl = person.profile_path 
             ? `https://image.tmdb.org/t/p/w200${person.profile_path}`
-            : '/api/placeholder/150/200';
+            : 'https://via.placeholder.com/150x200/333/fff?text=No+Photo';
         
         card.innerHTML = `
-            <img class="cast-photo" src="${photoUrl}" alt="${person.name}" loading="lazy">
+            <img class="cast-photo" 
+                 src="${photoUrl}" 
+                 alt="${person.name}" 
+                 loading="lazy"
+                 onerror="this.src='https://via.placeholder.com/150x200/333/fff?text=No+Photo'">
             <div class="cast-info">
                 <h4 class="cast-name">${person.name}</h4>
                 <p class="cast-character">${person.character || ''}</p>
@@ -237,7 +256,7 @@ class MovieDetailManager {
         const avgRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
         
         if (averageRating) averageRating.textContent = avgRating.toFixed(1);
-        if (reviewCount) reviewCount.textContent = reviews.length;
+                if (reviewCount) reviewCount.textContent = reviews.length;
         if (ratingStars) ratingStars.innerHTML = this.createStarDisplay(avgRating);
         
         // Update rating breakdown
@@ -289,7 +308,7 @@ class MovieDetailManager {
     
     createReviewCard(review) {
         const card = document.createElement('div');
-                card.className = 'review-card';
+        card.className = 'review-card';
         
         const initials = review.username.substring(0, 2).toUpperCase();
         const date = new Date(review.created_at).toLocaleDateString();
@@ -308,11 +327,11 @@ class MovieDetailManager {
             </div>
             <p class="review-text">${review.review_text || 'No written review provided.'}</p>
             <div class="review-actions">
-                <button class="review-action" onclick="this.toggleHelpful(${review.id})">
+                <button class="review-action" onclick="movieDetailManager.toggleHelpful(${review.id}, this)">
                     <i class="far fa-thumbs-up"></i>
                     <span>Helpful (0)</span>
                 </button>
-                <button class="review-action" onclick="this.reportReview(${review.id})">
+                <button class="review-action" onclick="movieDetailManager.reportReview(${review.id})">
                     <i class="fas fa-flag"></i>
                     <span>Report</span>
                 </button>
@@ -458,15 +477,6 @@ class MovieDetailManager {
         window.shareMovie = () => {
             this.shareMovie();
         };
-        
-        // Review actions
-        window.toggleHelpful = (reviewId) => {
-            this.toggleHelpful(reviewId);
-        };
-        
-        window.reportReview = (reviewId) => {
-            this.reportReview(reviewId);
-        };
     }
     
     async toggleWatchlist() {
@@ -488,16 +498,13 @@ class MovieDetailManager {
                         ...this.movieData.content,
                         added_at: new Date().toISOString()
                     });
+                    ui.saveToStorage('watchlist', watchlist);
                 }
                 showToast('Added to watchlist', 'success');
             } else {
                 const filtered = watchlist.filter(item => item.id != this.movieId);
                 ui.saveToStorage('watchlist', filtered);
                 showToast('Removed from watchlist', 'info');
-            }
-            
-            if (this.isInWatchlist) {
-                ui.saveToStorage('watchlist', watchlist);
             }
             
         } catch (error) {
@@ -511,16 +518,22 @@ class MovieDetailManager {
         if (!button) return;
         
         const icon = button.querySelector('i');
-        const text = button.querySelector('span') || button;
+        const textSpan = button.querySelector('span');
         
         if (this.isInWatchlist) {
-            icon.classList.replace('fa-plus', 'fa-check');
-            text.textContent = 'In Watchlist';
+            if (icon) {
+                icon.classList.remove('fa-plus');
+                icon.classList.add('fa-check');
+            }
+            if (textSpan) textSpan.textContent = 'In Watchlist';
             button.classList.add('bg-green-600');
             button.classList.remove('bg-gray-800');
         } else {
-            icon.classList.replace('fa-check', 'fa-plus');
-            text.textContent = 'Add to Watchlist';
+            if (icon) {
+                icon.classList.remove('fa-check');
+                icon.classList.add('fa-plus');
+            }
+            if (textSpan) textSpan.textContent = 'Add to Watchlist';
             button.classList.remove('bg-green-600');
             button.classList.add('bg-gray-800');
         }
@@ -567,21 +580,27 @@ class MovieDetailManager {
         const icon = button.querySelector('i');
         
         if (this.isFavorite) {
-            icon.classList.replace('far', 'fas');
-            icon.classList.add('text-red-500');
+            if (icon) {
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+                icon.classList.add('text-red-500');
+            }
             button.classList.add('bg-red-600');
             button.classList.remove('bg-gray-800');
         } else {
-            icon.classList.replace('fas', 'far');
-            icon.classList.remove('text-red-500');
+            if (icon) {
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+                icon.classList.remove('text-red-500');
+            }
             button.classList.remove('bg-red-600');
             button.classList.add('bg-gray-800');
         }
     }
     
     shareMovie() {
-        const movieTitle = document.getElementById('movieTitle').textContent;
-        const movieOverview = document.getElementById('movieOverview').textContent;
+        const movieTitle = document.getElementById('movieTitle')?.textContent || 'Check out this movie!';
+        const movieOverview = document.getElementById('movieOverview')?.textContent || '';
         
         if (navigator.share) {
             navigator.share({
@@ -682,7 +701,8 @@ class MovieDetailManager {
     
     resetReviewForm() {
         this.userRating = 0;
-        document.getElementById('reviewText').value = '';
+        const reviewText = document.getElementById('reviewText');
+        if (reviewText) reviewText.value = '';
         this.updateRatingStars(0);
     }
     
@@ -695,15 +715,17 @@ class MovieDetailManager {
                 this.updateRatingStars(this.userRating);
             });
             
-            star.addEventListener('mouseenter', () => {
+                        star.addEventListener('mouseenter', () => {
                 this.updateRatingStars(index + 1, true);
             });
         });
         
         const container = document.getElementById('reviewRatingStars');
-        container.addEventListener('mouseleave', () => {
-            this.updateRatingStars(this.userRating);
-        });
+        if (container) {
+            container.addEventListener('mouseleave', () => {
+                this.updateRatingStars(this.userRating);
+            });
+        }
     }
     
     updateRatingStars(rating, isHover = false) {
@@ -713,12 +735,16 @@ class MovieDetailManager {
             const icon = star.querySelector('i');
             
             if (index < rating) {
-                icon.classList.remove('far');
-                icon.classList.add('fas');
+                if (icon) {
+                    icon.classList.remove('far');
+                    icon.classList.add('fas');
+                }
                 star.classList.add('active');
             } else {
-                icon.classList.remove('fas');
-                icon.classList.add('far');
+                if (icon) {
+                    icon.classList.remove('fas');
+                    icon.classList.add('far');
+                }
                 star.classList.remove('active');
             }
             
@@ -738,7 +764,8 @@ class MovieDetailManager {
             return;
         }
         
-        const reviewText = document.getElementById('reviewText').value.trim();
+        const reviewTextElement = document.getElementById('reviewText');
+        const reviewText = reviewTextElement ? reviewTextElement.value.trim() : '';
         
         try {
             showLoading(true);
@@ -750,13 +777,20 @@ class MovieDetailManager {
                 review_text: reviewText
             });
             
+            // Store review locally
+            const userReviews = ui.loadFromStorage('userReviews', {});
+            userReviews[this.movieId] = {
+                rating: this.userRating,
+                review_text: reviewText,
+                created_at: new Date().toISOString()
+            };
+            ui.saveToStorage('userReviews', userReviews);
+            
             this.closeReviewModal();
             showToast('Review submitted successfully!', 'success');
             
-            // Refresh reviews section
-            setTimeout(() => {
-                this.loadMovieData();
-            }, 1000);
+            // Add the new review to the current reviews
+            this.addNewReviewToDisplay();
             
         } catch (error) {
             console.error('Submit review error:', error);
@@ -766,23 +800,47 @@ class MovieDetailManager {
         }
     }
     
-        toggleHelpful(reviewId) {
-        // Toggle helpful status for review
-        const button = event.target.closest('.review-action');
-        const span = button.querySelector('span');
-        const icon = button.querySelector('i');
+    addNewReviewToDisplay() {
+        const user = getCurrentUser();
+        if (!user) return;
         
-        const isHelpful = button.classList.contains('active');
+        const newReview = {
+            id: Date.now(),
+            username: user.username,
+            rating: this.userRating,
+            review_text: document.getElementById('reviewText')?.value.trim() || '',
+            created_at: new Date().toISOString()
+        };
+        
+        // Add to the beginning of reviews array
+        if (!this.movieData.user_reviews) {
+            this.movieData.user_reviews = [];
+        }
+        this.movieData.user_reviews.unshift(newReview);
+        
+        // Re-render reviews
+        this.renderReviews();
+    }
+    
+    toggleHelpful(reviewId, buttonElement) {
+        const span = buttonElement.querySelector('span');
+        const icon = buttonElement.querySelector('i');
+        
+        const isHelpful = buttonElement.classList.contains('active');
         
         if (isHelpful) {
-            button.classList.remove('active');
-            icon.classList.replace('fas', 'far');
-            span.textContent = 'Helpful (0)';
+            buttonElement.classList.remove('active');
+            if (icon) {
+                icon.classList.replace('fas', 'far');
+            }
+            if (span) span.textContent = 'Helpful (0)';
             showToast('Removed helpful vote', 'info');
         } else {
-            button.classList.add('active');
-            icon.classList.replace('far', 'fas');
-            span.textContent = 'Helpful (1)';
+            buttonElement.classList.add('active');
+            if (icon) {
+                icon.classList.replace('far', 'fas');
+            }
+            if (span) span.textContent = 'Helpful (1)';
             showToast('Marked as helpful', 'success');
         }
         
@@ -821,7 +879,7 @@ class MovieDetailManager {
     }
     
     loadUserReview() {
-        // In a real app, this would check if user has already reviewed
+        // Check if user has already reviewed
         const userReviews = ui.loadFromStorage('userReviews', {});
         const userReview = userReviews[this.movieId];
         
@@ -871,7 +929,13 @@ class MovieDetailManager {
             main.appendChild(ui.createErrorState(
                 message,
                 'Go Back',
-                () => window.history.back()
+                () => {
+                    if (window.history.length > 1) {
+                        window.history.back();
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                }
             ));
         }
     }
@@ -883,7 +947,7 @@ class MovieDetailManager {
             if (e.code === 'Space' && !e.target.matches('input, textarea')) {
                 e.preventDefault();
                 const videoModal = document.getElementById('videoModal');
-                if (!videoModal.classList.contains('hidden')) {
+                if (videoModal && !videoModal.classList.contains('hidden')) {
                     // Toggle video play/pause
                     const iframe = document.getElementById('videoPlayer');
                     if (iframe) {

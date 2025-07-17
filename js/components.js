@@ -214,51 +214,61 @@ class UIComponents {
     }
     
     // Movie Card Component
-    createMovieCard(movie, options = {}) {
-        const card = document.createElement('div');
-        card.className = 'movie-card';
-        card.onclick = () => this.openMovieDetail(movie.id);
-        
-        const posterUrl = movie.poster_path || '/api/placeholder/300/450';
-        const rating = movie.rating ? movie.rating.toFixed(1) : 'N/A';
-        const year = movie.release_date ? new Date(movie.release_date).getFullYear() : '';
-        
-        card.innerHTML = `
-            <img class="movie-card-image" 
-                 ${options.lazy ? `data-src="${posterUrl}"` : `src="${posterUrl}"`}
-                 alt="${movie.title}"
-                 loading="lazy">
-            <div class="movie-card-content">
-                <h3 class="movie-card-title">${movie.title}</h3>
-                <div class="movie-card-meta">
-                    <span>${year}</span>
-                    <div class="movie-card-rating">
-                        <i class="fas fa-star"></i>
-                        <span>${rating}</span>
-                    </div>
-                </div>
-                <div class="movie-card-actions">
-                    <button class="movie-card-action" onclick="event.stopPropagation(); toggleWatchlist(${movie.id})" title="Add to Watchlist">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                    <button class="movie-card-action" onclick="event.stopPropagation(); toggleFavorite(${movie.id})" title="Add to Favorites">
-                        <i class="far fa-heart"></i>
-                    </button>
-                    <button class="movie-card-action" onclick="event.stopPropagation(); shareMovie(${movie.id})" title="Share">
-                        <i class="fas fa-share"></i>
-                    </button>
+    // Update the createMovieCard function in components.js
+createMovieCard(movie, options = {}) {
+    const card = document.createElement('div');
+    card.className = 'movie-card';
+    card.onclick = () => this.openMovieDetail(movie.id);
+    
+    // Handle poster URL with fallback
+    let posterUrl = movie.poster_path;
+    if (!posterUrl || posterUrl === 'null') {
+        posterUrl = 'https://via.placeholder.com/300x450/333/fff?text=No+Image';
+    } else if (!posterUrl.startsWith('http')) {
+        // If it's a relative path, make it absolute
+        posterUrl = `https://image.tmdb.org/t/p/w500${posterUrl}`;
+    }
+    
+    const rating = movie.rating ? movie.rating.toFixed(1) : 'N/A';
+    const year = movie.release_date ? new Date(movie.release_date).getFullYear() : '';
+    
+    card.innerHTML = `
+        <img class="movie-card-image" 
+             ${options.lazy ? `data-src="${posterUrl}"` : `src="${posterUrl}"`}
+             alt="${movie.title}"
+             loading="lazy"
+             onerror="this.src='https://via.placeholder.com/300x450/333/fff?text=No+Image'">
+        <div class="movie-card-content">
+            <h3 class="movie-card-title">${movie.title}</h3>
+            <div class="movie-card-meta">
+                <span>${year}</span>
+                <div class="movie-card-rating">
+                    <i class="fas fa-star"></i>
+                    <span>${rating}</span>
                 </div>
             </div>
-        `;
-        
-        // Setup lazy loading
-        if (options.lazy) {
-            const img = card.querySelector('img');
-            this.imageObserver.observe(img);
-        }
-        
-        return card;
+            <div class="movie-card-actions">
+                <button class="movie-card-action" onclick="event.stopPropagation(); toggleWatchlist(${movie.id})" title="Add to Watchlist">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="movie-card-action" onclick="event.stopPropagation(); toggleFavorite(${movie.id})" title="Add to Favorites">
+                    <i class="far fa-heart"></i>
+                </button>
+                <button class="movie-card-action" onclick="event.stopPropagation(); shareMovie(${movie.id})" title="Share">
+                    <i class="fas fa-share"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Setup lazy loading
+    if (options.lazy) {
+        const img = card.querySelector('img');
+        this.imageObserver.observe(img);
     }
+    
+    return card;
+}
     
     // Video Card Component
     createVideoCard(video) {
