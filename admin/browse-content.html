@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Browse Content - MovieRec Admin</title>
+    <title>Browse Content - Admin - MovieRec</title>
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Bootstrap Grid Only -->
+    <!-- Bootstrap Grid CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap-grid.min.css" rel="stylesheet">
     
     <!-- Font Awesome -->
@@ -21,33 +18,53 @@
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'netflix-red': '#e50914',
+                        'dark-bg': '#141414',
+                        'dark-secondary': '#1f1f1f',
+                        'dark-tertiary': '#2a2a2a'
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
+<body class="bg-dark-bg text-white">
     <!-- Admin Navigation -->
-    <nav class="admin-navbar">
-        <div class="container-fluid">
-            <div class="row align-items-center w-100">
-                <div class="col-auto">
-                    <a href="/" class="navbar-brand">
-                        <h1 class="text-2xl font-bold text-red-600">MovieRec</h1>
-                        <span class="admin-badge">Admin</span>
+    <nav class="admin-navbar bg-dark-secondary border-b border-gray-800">
+        <div class="container-fluid px-4">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <a class="navbar-brand text-netflix-red font-bold text-xl" href="../index.html">
+                        <i class="fas fa-film me-2"></i>MovieRec Admin
                     </a>
                 </div>
-                <div class="col">
-                    <div class="navbar-nav">
-                        <a href="index.html" class="nav-link">Dashboard</a>
-                        <a href="browse-content.html" class="nav-link active">Browse Content</a>
-                        <a href="create-post.html" class="nav-link">Create Post</a>
-                        <a href="analytics.html" class="nav-link">Analytics</a>
+                <div class="col-md-6">
+                    <div class="admin-breadcrumb">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a href="../index.html" class="text-gray-400">Home</a></li>
+                                <li class="breadcrumb-item"><a href="index.html" class="text-gray-400">Dashboard</a></li>
+                                <li class="breadcrumb-item active text-white">Browse Content</li>
+                            </ol>
+                        </nav>
                     </div>
                 </div>
-                <div class="col-auto">
-                    <div class="navbar-actions">
-                        <a href="/" class="btn btn-outline">
-                            <i class="fas fa-home"></i> Back to Site
-                        </a>
-                        <button class="btn btn-danger" id="logoutBtn">
-                            <i class="fas fa-sign-out-alt"></i> Logout
+                <div class="col-md-3 text-end">
+                    <div class="admin-user-menu">
+                        <button class="btn btn-outline-light me-2" onclick="viewSite()">
+                            <i class="fas fa-external-link-alt me-1"></i>View Site
+                        </button>
+                        <button class="btn btn-netflix-red" onclick="logout()">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout
                         </button>
                     </div>
                 </div>
@@ -55,975 +72,199 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="admin-main">
-        <div class="container-fluid">
-            <!-- Page Header -->
-            <div class="dashboard-header">
-                <h1>Browse Content</h1>
-                <p>Search and manage movies, TV shows, and anime from multiple sources</p>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar bg-dark-secondary">
+            <div class="sidebar-content p-4">
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="index.html">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" href="browse-content.html">
+                            <i class="fas fa-search me-2"></i>Browse Content
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="create-post.html">
+                            <i class="fas fa-plus-circle me-2"></i>Create Post
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="analytics.html">
+                            <i class="fas fa-chart-bar me-2"></i>Analytics
+                        </a>
+                    </li>
+                </ul>
             </div>
+        </aside>
 
-            <!-- Search and Filters -->
-            <div class="admin-card">
-                <div class="card-header">
-                    <h3>Search & Filters</h3>
-                    <button class="btn btn-primary" id="addToSystemBtn" style="display: none;">
-                        <i class="fas fa-plus"></i> Add Selected to System
-                    </button>
-                </div>
-                <div class="card-body">
-                    <form class="admin-form" id="searchForm">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="searchQuery">Search Query</label>
-                                <input type="text" id="searchQuery" class="form-control" placeholder="Enter movie/TV show title...">
-                            </div>
-                            <div class="form-group">
-                                <label for="contentSource">Source</label>
-                                <select id="contentSource" class="form-control">
-                                    <option value="tmdb">TMDB (Movies & TV)</option>
-                                    <option value="regional">Regional Content</option>
-                                    <option value="anime">Anime (Jikan)</option>
-                                </select>
-                            </div>
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="admin-content p-4">
+                <!-- Page Header -->
+                <div class="page-header mb-5">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="page-title text-3xl font-bold mb-2">Browse Content</h1>
+                            <p class="text-gray-400">Search and manage content from multiple sources</p>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="contentType">Content Type</label>
-                                <select id="contentType" class="form-control">
-                                    <option value="movie">Movies</option>
-                                    <option value="tv">TV Shows</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="language">Language</label>
-                                <select id="language" class="form-control">
-                                    <option value="en">English</option>
-                                    <option value="hi">Hindi</option>
-                                    <option value="te">Telugu</option>
-                                    <option value="ta">Tamil</option>
-                                    <option value="kn">Kannada</option>
-                                    <option value="ja">Japanese</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <button type="submit" class="btn btn-primary" style="margin-top: 1.75rem;">
-                                    <i class="fas fa-search"></i> Search
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-netflix-red" onclick="showCreatePostModal()">
+                                <i class="fas fa-plus me-2"></i>Create Post
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search and Filters -->
+                <div class="search-filters bg-dark-secondary rounded-3 p-4 mb-5">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-gray-400">Search Query</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-dark-tertiary border-gray-600 text-white" 
+                                       id="searchQuery" placeholder="Search movies, TV shows, anime...">
+                                <button class="btn btn-netflix-red" onclick="searchContent()">
+                                    <i class="fas fa-search"></i>
                                 </button>
                             </div>
                         </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Results -->
-            <div class="admin-card">
-                <div class="card-header">
-                    <h3>Search Results</h3>
-                    <div class="results-info">
-                        <span id="resultsCount">0 results</span>
-                        <div class="view-toggle">
-                            <button class="view-btn active" data-view="grid" title="Grid View">
-                                <i class="fas fa-th"></i>
-                            </button>
-                            <button class="view-btn" data-view="list" title="List View">
-                                <i class="fas fa-list"></i>
-                            </button>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label text-gray-400">Source</label>
+                            <select class="form-select bg-dark-tertiary border-gray-600 text-white" id="sourceFilter">
+                                <option value="tmdb">TMDB</option>
+                                <option value="regional">Regional</option>
+                                <option value="anime">Anime</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label text-gray-400">Type</label>
+                            <select class="form-select bg-dark-tertiary border-gray-600 text-white" id="typeFilter">
+                                <option value="movie">Movies</option>
+                                <option value="tv">TV Shows</option>
+                                <option value="all">All</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label text-gray-400">Language</label>
+                            <select class="form-select bg-dark-tertiary border-gray-600 text-white" id="languageFilter">
+                                <option value="en">English</option>
+                                <option value="te">Telugu</option>
+                                <option value="hi">Hindi</option>
+                                <option value="ta">Tamil</option>
+                                <option value="kn">Kannada</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label text-gray-400">Page</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control bg-dark-tertiary border-gray-600 text-white" 
+                                       id="pageNumber" value="1" min="1">
+                                <button class="btn btn-outline-light" onclick="goToPage()">Go</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="card-body">
-                    <!-- Loading State -->
-                    <div class="loading-state" id="loadingState" style="display: none;">
-                        <div class="loading-placeholder">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <p>Searching content...</p>
+
+                <!-- Results Section -->
+                <div class="results-section">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="section-title text-xl font-semibold">Search Results</h2>
+                        <div class="results-info">
+                            <span class="text-gray-400" id="resultsCount">0 results found</span>
                         </div>
                     </div>
-
-                    <!-- Empty State -->
-                    <div class="empty-state" id="emptyState">
-                        <i class="fas fa-search"></i>
-                        <h3>Search for Content</h3>
-                        <p>Use the search form above to find movies, TV shows, or anime from various sources.</p>
+                    
+                    <!-- Results Grid -->
+                    <div class="results-grid" id="resultsContainer">
+                        <div class="row g-4" id="resultsGrid">
+                            <!-- Dynamic content cards will be inserted here -->
+                        </div>
                     </div>
-
-                    <!-- Grid View -->
-                    <div class="content-grid" id="gridView" style="display: none;">
-                        <!-- Content cards will be populated here -->
-                    </div>
-
-                    <!-- List View -->
-                    <div class="content-list" id="listView" style="display: none;">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        <input type="checkbox" id="selectAll">
-                                    </th>
-                                    <th>Title</th>
-                                    <th>Type</th>
-                                    <th>Year</th>
-                                    <th>Rating</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="listViewBody">
-                                <!-- Content rows will be populated here -->
-                            </tbody>
-                        </table>
-                    </div>
-
+                    
                     <!-- Pagination -->
-                    <div class="pagination-container" id="paginationContainer" style="display: none;">
-                        <!-- Pagination will be inserted here -->
+                    <div class="pagination-container mt-5" id="paginationContainer">
+                        <nav aria-label="Search results pagination">
+                            <ul class="pagination justify-content-center" id="pagination">
+                                <!-- Dynamic pagination will be inserted here -->
+                            </ul>
+                        </nav>
                     </div>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <!-- Content Detail Modal -->
-    <div class="modal-backdrop" id="contentModal" style="display: none;">
-        <div class="modal large">
-            <div class="modal-header">
-                <h3 class="modal-title" id="modalTitle">Content Details</h3>
-                <button class="modal-close" onclick="closeContentModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Content details will be populated here -->
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeContentModal()">Close</button>
-                <button class="btn btn-primary" id="addToSystemModalBtn">
-                    <i class="fas fa-plus"></i> Add to System
-                </button>
-                <button class="btn btn-success" id="createPostModalBtn">
-                    <i class="fas fa-star"></i> Create Post
-                </button>
+    <div class="modal fade" id="contentDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content bg-dark-secondary border-0">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title text-white">Content Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="contentDetailContainer">
+                        <!-- Dynamic content details -->
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-netflix-red" id="createPostFromContent">
+                        <i class="fas fa-plus me-2"></i>Create Post
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Loading Overlay -->
+    <div class="loading-overlay position-fixed w-100 h-100 top-0 start-0 d-none" id="loadingOverlay">
+        <div class="d-flex justify-content-center align-items-center h-100">
+            <div class="loading-spinner text-center">
+                <div class="spinner-border text-netflix-red mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-white">Searching content...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer">
+        <!-- Dynamic toasts will be added here -->
+    </div>
+
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../assets/js/utils.js"></script>
     <script src="../assets/js/api.js"></script>
     <script src="../assets/js/auth.js"></script>
     <script src="../assets/js/components.js"></script>
     <script src="../assets/js/admin.js"></script>
+    
     <script>
-        class BrowseContentPage {
-            constructor() {
-                this.currentView = 'grid';
-                this.currentPage = 1;
-                this.totalPages = 1;
-                this.searchResults = [];
-                this.selectedItems = new Set();
-                this.currentSource = 'tmdb';
-                this.init();
+        // Initialize browse content page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check admin authentication
+            if (!auth.isAuthenticated()) {
+                window.location.href = '../login.html?redirect=' + encodeURIComponent(window.location.href);
+                return;
             }
-
-            async init() {
-                if (!auth.requireAdmin()) return;
-
-                this.setupEventListeners();
-                this.updateSourceVisibility();
-            }
-
-            setupEventListeners() {
-                // Logout
-                document.getElementById('logoutBtn').addEventListener('click', () => {
-                    auth.logout();
-                });
-
-                // Search form
-                document.getElementById('searchForm').addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.performSearch();
-                });
-
-                // Source change
-                document.getElementById('contentSource').addEventListener('change', (e) => {
-                    this.currentSource = e.target.value;
-                    this.updateSourceVisibility();
-                });
-
-                // View toggle
-                document.querySelectorAll('.view-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        this.switchView(btn.dataset.view);
-                    });
-                });
-
-                // Select all checkbox
-                document.getElementById('selectAll').addEventListener('change', (e) => {
-                    this.toggleSelectAll(e.target.checked);
-                });
-
-                // Add selected button
-                document.getElementById('addToSystemBtn').addEventListener('click', () => {
-                    this.addSelectedToSystem();
-                });
-
-                // Modal buttons
-                document.getElementById('addToSystemModalBtn').addEventListener('click', () => {
-                    this.addCurrentToSystem();
-                });
-
-                document.getElementById('createPostModalBtn').addEventListener('click', () => {
-                    this.createPostFromCurrent();
-                });
-
-                // Real-time search
-                const searchInput = document.getElementById('searchQuery');
-                const debouncedSearch = utils.debounce(() => {
-                    if (searchInput.value.trim().length >= 2) {
-                        this.performSearch();
-                    }
-                }, 500);
-
-                searchInput.addEventListener('input', debouncedSearch);
-            }
-
-            updateSourceVisibility() {
-                const contentTypeSelect = document.getElementById('contentType');
-                const languageSelect = document.getElementById('language');
-
-                if (this.currentSource === 'anime') {
-                    contentTypeSelect.style.display = 'none';
-                    languageSelect.value = 'ja';
-                    languageSelect.disabled = true;
-                } else {
-                    contentTypeSelect.style.display = 'block';
-                    languageSelect.disabled = false;
-                }
-            }
-
-            async performSearch(page = 1) {
-                const query = document.getElementById('searchQuery').value.trim();
-                const source = document.getElementById('contentSource').value;
-                const type = document.getElementById('contentType').value;
-                const language = document.getElementById('language').value;
-
-                if (!query && source === 'tmdb') {
-                    this.showEmptyState();
-                    return;
-                }
-
-                this.showLoading();
-
-                try {
-                    const params = {
-                        source,
-                        q: query,
-                        type,
-                        language,
-                        page
-                    };
-
-                    const response = await api.adminBrowseContent(params);
-                    this.searchResults = response.results || [];
-                    this.currentPage = response.current_page || page;
-                    this.totalPages = response.total_pages || 1;
-
-                    this.renderResults();
-                    this.updatePagination();
-                    this.hideLoading();
-
-                } catch (error) {
-                    console.error('Search failed:', error);
-                    admin.showError('Failed to search content');
-                    this.hideLoading();
-                }
-            }
-
-            renderResults() {
-                if (this.searchResults.length === 0) {
-                    this.showEmptyState('No results found');
-                    return;
-                }
-
-                this.hideEmptyState();
-                this.updateResultsCount();
-
-                if (this.currentView === 'grid') {
-                    this.renderGridView();
-                } else {
-                    this.renderListView();
-                }
-            }
-
-            renderGridView() {
-                const container = document.getElementById('gridView');
-                container.style.display = 'grid';
-                document.getElementById('listView').style.display = 'none';
-
-                container.innerHTML = this.searchResults.map(item => this.createContentCard(item)).join('');
-            }
-
-            renderListView() {
-                const container = document.getElementById('listView');
-                const tbody = document.getElementById('listViewBody');
-                
-                container.style.display = 'block';
-                document.getElementById('gridView').style.display = 'none';
-
-                tbody.innerHTML = this.searchResults.map(item => this.createContentRow(item)).join('');
-            }
-
-            createContentCard(item) {
-                const id = item.id || item.mal_id;
-                const title = item.title || item.name;
-                const year = this.getYear(item);
-                const rating = this.getRating(item);
-                const poster = this.getPosterUrl(item);
-                const isSelected = this.selectedItems.has(id);
-                const inSystem = this.isInSystem(item);
-
-                return `
-                    <div class="browse-content-card ${isSelected ? 'selected' : ''}" data-id="${id}">
-                        <div class="card-selection">
-                            <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="browseContent.toggleSelection('${id}', this.checked)">
-                        </div>
-                        <div class="card-poster" onclick="browseContent.showContentDetails('${id}')">
-                            <img src="${poster}" alt="${title}" onerror="this.src='../assets/images/placeholder.jpg'">
-                            ${inSystem ? '<div class="in-system-badge">In System</div>' : ''}
-                        </div>
-                        <div class="card-content">
-                            <h4 class="card-title" title="${title}">${title}</h4>
-                            <div class="card-meta">
-                                ${year ? `<span>${year}</span>` : ''}
-                                ${rating ? `<span>⭐ ${rating}</span>` : ''}
-                            </div>
-                            <div class="card-actions">
-                                <button class="btn btn-sm btn-outline" onclick="browseContent.showContentDetails('${id}')">
-                                    <i class="fas fa-eye"></i> View
-                                </button>
-                                ${!inSystem ? `
-                                    <button class="btn btn-sm btn-primary" onclick="browseContent.addToSystem('${id}')">
-                                        <i class="fas fa-plus"></i> Add
-                                    </button>
-                                ` : `
-                                    <button class="btn btn-sm btn-success" onclick="browseContent.createPost('${id}')">
-                                        <i class="fas fa-star"></i> Post
-                                    </button>
-                                `}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            createContentRow(item) {
-                const id = item.id || item.mal_id;
-                const title = item.title || item.name;
-                const type = this.getContentType(item);
-                const year = this.getYear(item);
-                const rating = this.getRating(item);
-                const isSelected = this.selectedItems.has(id);
-                const inSystem = this.isInSystem(item);
-
-                return `
-                    <tr class="${isSelected ? 'selected' : ''}" data-id="${id}">
-                        <td>
-                            <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="browseContent.toggleSelection('${id}', this.checked)">
-                        </td>
-                        <td>
-                            <div class="title-cell">
-                                <img src="${this.getPosterUrl(item)}" alt="${title}" class="row-poster" onerror="this.src='../assets/images/placeholder.jpg'">
-                                <span>${title}</span>
-                            </div>
-                        </td>
-                        <td>${type}</td>
-                        <td>${year || 'N/A'}</td>
-                        <td>${rating || 'N/A'}</td>
-                        <td>
-                            <span class="status-badge ${inSystem ? 'success' : 'neutral'}">
-                                ${inSystem ? 'In System' : 'Not Added'}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="row-actions">
-                                <button class="btn btn-sm btn-outline" onclick="browseContent.showContentDetails('${id}')" title="View Details">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                ${!inSystem ? `
-                                    <button class="btn btn-sm btn-primary" onclick="browseContent.addToSystem('${id}')" title="Add to System">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                ` : `
-                                    <button class="btn btn-sm btn-success" onclick="browseContent.createPost('${id}')" title="Create Post">
-                                        <i class="fas fa-star"></i>
-                                    </button>
-                                `}
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }
-
-            // Helper methods
-            getYear(item) {
-                const dateStr = item.release_date || item.first_air_date || item.aired?.from;
-                return dateStr ? new Date(dateStr).getFullYear() : null;
-            }
-
-            getRating(item) {
-                return item.vote_average?.toFixed(1) || item.score?.toFixed(1) || null;
-            }
-
-            getPosterUrl(item) {
-                if (item.poster_path) {
-                    return item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w300${item.poster_path}`;
-                }
-                if (item.images?.jpg?.image_url) {
-                    return item.images.jpg.image_url;
-                }
-                return '../assets/images/placeholder.jpg';
-            }
-
-            getContentType(item) {
-                if (this.currentSource === 'anime') return 'Anime';
-                return item.media_type === 'tv' || item.first_air_date ? 'TV Show' : 'Movie';
-            }
-
-            isInSystem(item) {
-                // This would check against your database
-                // For now, return false
-                return false;
-            }
-
-            // UI State Management
-            switchView(view) {
-                this.currentView = view;
-                
-                document.querySelectorAll('.view-btn').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.view === view);
-                });
-
-                if (this.searchResults.length > 0) {
-                    this.renderResults();
-                }
-            }
-
-            showLoading() {
-                document.getElementById('loadingState').style.display = 'block';
-                document.getElementById('emptyState').style.display = 'none';
-                document.getElementById('gridView').style.display = 'none';
-                document.getElementById('listView').style.display = 'none';
-            }
-
-            hideLoading() {
-                document.getElementById('loadingState').style.display = 'none';
-            }
-
-            showEmptyState(message = 'Search for content using the form above') {
-                const emptyState = document.getElementById('emptyState');
-                emptyState.style.display = 'block';
-                emptyState.querySelector('p').textContent = message;
-                document.getElementById('gridView').style.display = 'none';
-                document.getElementById('listView').style.display = 'none';
-                document.getElementById('paginationContainer').style.display = 'none';
-            }
-
-            hideEmptyState() {
-                document.getElementById('emptyState').style.display = 'none';
-            }
-
-            updateResultsCount() {
-                const count = this.searchResults.length;
-                const total = this.totalPages > 1 ? '(Multiple pages)' : '';
-                document.getElementById('resultsCount').textContent = `${count} results ${total}`;
-            }
-
-            updatePagination() {
-                const container = document.getElementById('paginationContainer');
-                
-                if (this.totalPages <= 1) {
-                    container.style.display = 'none';
-                    return;
-                }
-
-                container.style.display = 'block';
-                container.innerHTML = '';
-                
-                const pagination = admin.createPagination(
-                    this.currentPage,
-                    this.totalPages,
-                    (page) => this.performSearch(page)
-                );
-                
-                container.appendChild(pagination);
-            }
-
-            // Selection Management
-            toggleSelection(id, selected) {
-                if (selected) {
-                    this.selectedItems.add(id);
-                } else {
-                    this.selectedItems.delete(id);
-                }
-
-                this.updateSelectionUI();
-            }
-
-            toggleSelectAll(selectAll) {
-                this.selectedItems.clear();
-                
-                if (selectAll) {
-                    this.searchResults.forEach(item => {
-                        const id = item.id || item.mal_id;
-                        this.selectedItems.add(id);
-                    });
-                }
-
-                // Update checkboxes
-                document.querySelectorAll('input[type="checkbox"][onchange*="toggleSelection"]').forEach(cb => {
-                    cb.checked = selectAll;
-                });
-
-                this.updateSelectionUI();
-            }
-
-            updateSelectionUI() {
-                const hasSelection = this.selectedItems.size > 0;
-                const addBtn = document.getElementById('addToSystemBtn');
-                
-                addBtn.style.display = hasSelection ? 'block' : 'none';
-                
-                // Update cards/rows
-                document.querySelectorAll('[data-id]').forEach(element => {
-                    const id = element.dataset.id;
-                    element.classList.toggle('selected', this.selectedItems.has(id));
-                });
-            }
-
-            // Actions
-            async addToSystem(id) {
-                const item = this.searchResults.find(item => (item.id || item.mal_id) == id);
-                if (!item) return;
-
-                try {
-                    // This would call your API to add content to the system
-                    admin.showLoading('Adding to system...');
-                    
-                    // Simulate API call
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    admin.hideLoading();
-                    admin.showSuccess('Content added to system successfully!');
-                    
-                    // Refresh the current view to show updated status
-                    this.renderResults();
-                    
-                } catch (error) {
-                    admin.hideLoading();
-                    admin.showError('Failed to add content to system');
-                }
-            }
-
-            async addSelectedToSystem() {
-                if (this.selectedItems.size === 0) return;
-
-                const selectedContent = this.searchResults.filter(item => 
-                    this.selectedItems.has(item.id || item.mal_id)
-                );
-
-                admin.showConfirm(
-                    `Add ${selectedContent.length} selected items to the system?`,
-                    async (confirmed) => {
-                        if (!confirmed) return;
-
-                        try {
-                            admin.showLoading('Adding content to system...');
-                            
-                            // Add each item (in real app, you might batch this)
-                            for (const item of selectedContent) {
-                                // Simulate API call
-                                await new Promise(resolve => setTimeout(resolve, 200));
-                            }
-                            
-                            admin.hideLoading();
-                            admin.showSuccess(`${selectedContent.length} items added successfully!`);
-                            
-                            this.selectedItems.clear();
-                            this.renderResults();
-                            
-                        } catch (error) {
-                            admin.hideLoading();
-                            admin.showError('Failed to add some content to system');
-                        }
-                    }
-                );
-            }
-
-            createPost(id) {
-                // Redirect to create post page with the content ID
-                window.location.href = `create-post.html?contentId=${id}&source=${this.currentSource}`;
-            }
-
-            showContentDetails(id) {
-                const item = this.searchResults.find(item => (item.id || item.mal_id) == id);
-                if (!item) return;
-
-                const modal = document.getElementById('contentModal');
-                const title = item.title || item.name;
-                
-                document.getElementById('modalTitle').textContent = title;
-                document.getElementById('modalBody').innerHTML = this.createDetailView(item);
-                
-                // Store current item for modal actions
-                this.currentItem = item;
-                
-                modal.style.display = 'flex';
-            }
-
-            createDetailView(item) {
-                const title = item.title || item.name;
-                const overview = item.overview || item.synopsis || 'No description available.';
-                const year = this.getYear(item);
-                const rating = this.getRating(item);
-                const poster = this.getPosterUrl(item);
-                const backdrop = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : poster;
-
-                return `
-                    <div class="content-detail-view">
-                        <div class="detail-header">
-                            <img src="${backdrop}" alt="${title}" class="detail-backdrop">
-                            <div class="detail-overlay">
-                                <div class="detail-poster">
-                                    <img src="${poster}" alt="${title}">
-                                </div>
-                                <div class="detail-info">
-                                    <h2>${title}</h2>
-                                    ${item.original_title && item.original_title !== title ? `
-                                        <p class="original-title">${item.original_title}</p>
-                                    ` : ''}
-                                    <div class="detail-meta">
-                                        ${year ? `<span>Year: ${year}</span>` : ''}
-                                        ${rating ? `<span>Rating: ⭐ ${rating}</span>` : ''}
-                                        ${item.runtime ? `<span>Runtime: ${item.runtime} min</span>` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="detail-content">
-                            <h3>Overview</h3>
-                            <p>${overview}</p>
-                            
-                            ${item.genres ? `
-                                <h3>Genres</h3>
-                                <div class="genres-list">
-                                    ${item.genres.map(g => `<span class="genre-tag">${g.name || g}</span>`).join('')}
-                                </div>
-                            ` : ''}
-                            
-                            ${item.production_companies ? `
-                                <h3>Production</h3>
-                                <p>${item.production_companies.map(c => c.name).join(', ')}</p>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-
-            addCurrentToSystem() {
-                if (this.currentItem) {
-                    const id = this.currentItem.id || this.currentItem.mal_id;
-                    this.addToSystem(id);
-                    this.closeContentModal();
-                }
-            }
-
-            createPostFromCurrent() {
-                if (this.currentItem) {
-                    const id = this.currentItem.id || this.currentItem.mal_id;
-                    this.createPost(id);
-                }
-            }
-
-            closeContentModal() {
-                document.getElementById('contentModal').style.display = 'none';
-                this.currentItem = null;
-            }
-        }
-
-        // Global functions for inline event handlers
-        let browseContent;
-
-        function closeContentModal() {
-            browseContent.closeContentModal();
-        }
-
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', () => {
-            browseContent = new BrowseContentPage();
+            
+            // Initialize browse content
+            adminBrowseContent.init();
+            
+            // Load initial content
+            searchContent();
         });
     </script>
-
-    <style>
-        .browse-content-card {
-            background: var(--secondary-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .browse-content-card:hover {
-            border-color: var(--accent-primary);
-            transform: translateY(-4px);
-        }
-
-        .browse-content-card.selected {
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
-        }
-
-        .card-selection {
-            position: absolute;
-            top: 0.5rem;
-            left: 0.5rem;
-            z-index: 10;
-        }
-
-        .card-selection input[type="checkbox"] {
-            width: 1.2rem;
-            height: 1.2rem;
-        }
-
-        .card-poster {
-            position: relative;
-            padding-bottom: 150%;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        .card-poster img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .in-system-badge {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            background: var(--success);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .card-content {
-            padding: 1rem;
-        }
-
-        .card-title {
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .card-meta {
-            display: flex;
-            gap: 0.5rem;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            margin-bottom: 1rem;
-        }
-
-        .card-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .card-actions .btn {
-            flex: 1;
-        }
-
-        .content-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .content-list {
-            overflow-x: auto;
-        }
-
-        .admin-table .title-cell {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .row-poster {
-            width: 40px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 4px;
-            flex-shrink: 0;
-        }
-
-        .row-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .results-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .view-toggle {
-            display: flex;
-            gap: 0.25rem;
-        }
-
-        .view-btn {
-            background: var(--tertiary-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 0.5rem 0.75rem;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .view-btn:hover,
-        .view-btn.active {
-            background: var(--accent-primary);
-            border-color: var(--accent-primary);
-            color: white;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--text-secondary);
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            display: block;
-        }
-
-        .content-detail-view {
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-
-        .detail-header {
-            position: relative;
-            height: 300px;
-            overflow: hidden;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-        }
-
-        .detail-backdrop {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .detail-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.3));
-            padding: 1.5rem;
-            display: flex;
-            gap: 1rem;
-        }
-
-        .detail-poster {
-            width: 120px;
-            flex-shrink: 0;
-        }
-
-        .detail-poster img {
-            width: 100%;
-            border-radius: 8px;
-        }
-
-        .detail-info h2 {
-            margin-bottom: 0.5rem;
-        }
-
-        .original-title {
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-        }
-
-        .detail-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            font-size: 0.875rem;
-        }
-
-        .detail-content h3 {
-            margin-bottom: 0.75rem;
-            margin-top: 1.5rem;
-            color: var(--accent-primary);
-        }
-
-        .detail-content h3:first-child {
-            margin-top: 0;
-        }
-
-        .genres-list {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        @media (max-width: 768px) {
-            .content-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            }
-
-            .form-row {
-                flex-direction: column;
-            }
-
-            .results-info {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 0.5rem;
-            }
-
-            .view-toggle {
-                justify-content: center;
-            }
-
-            .detail-overlay {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .detail-poster {
-                width: 100px;
-                align-self: center;
-            }
-        }
-    </style>
 </body>
 </html>

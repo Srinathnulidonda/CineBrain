@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytics - MovieRec Admin</title>
+    <title>Analytics - Admin - MovieRec</title>
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Bootstrap Grid Only -->
+    <!-- Bootstrap Grid CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap-grid.min.css" rel="stylesheet">
     
     <!-- Font Awesome -->
@@ -24,36 +21,53 @@
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'netflix-red': '#e50914',
+                        'dark-bg': '#141414',
+                        'dark-secondary': '#1f1f1f',
+                        'dark-tertiary': '#2a2a2a'
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
+<body class="bg-dark-bg text-white">
     <!-- Admin Navigation -->
-    <nav class="admin-navbar">
-        <div class="container-fluid">
-            <div class="row align-items-center w-100">
-                <div class="col-auto">
-                    <a href="/" class="navbar-brand">
-                        <h1 class="text-2xl font-bold text-red-600">MovieRec</h1>
-                        <span class="admin-badge">Admin</span>
+    <nav class="admin-navbar bg-dark-secondary border-b border-gray-800">
+        <div class="container-fluid px-4">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <a class="navbar-brand text-netflix-red font-bold text-xl" href="../index.html">
+                        <i class="fas fa-film me-2"></i>MovieRec Admin
                     </a>
                 </div>
-                <div class="col">
-                    <div class="navbar-nav">
-                        <a href="index.html" class="nav-link">Dashboard</a>
-                        <a href="browse-content.html" class="nav-link">Browse Content</a>
-                        <a href="create-post.html" class="nav-link">Create Post</a>
-                        <a href="analytics.html" class="nav-link active">Analytics</a>
+                <div class="col-md-6">
+                    <div class="admin-breadcrumb">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a href="../index.html" class="text-gray-400">Home</a></li>
+                                <li class="breadcrumb-item"><a href="index.html" class="text-gray-400">Dashboard</a></li>
+                                <li class="breadcrumb-item active text-white">Analytics</li>
+                            </ol>
+                        </nav>
                     </div>
                 </div>
-                <div class="col-auto">
-                    <div class="navbar-actions">
-                        <button class="btn btn-outline" id="exportDataBtn">
-                            <i class="fas fa-download"></i> Export Data
+                <div class="col-md-3 text-end">
+                    <div class="admin-user-menu">
+                        <button class="btn btn-outline-light me-2" onclick="viewSite()">
+                            <i class="fas fa-external-link-alt me-1"></i>View Site
                         </button>
-                        <a href="/" class="btn btn-outline">
-                            <i class="fas fa-home"></i> Back to Site
-                        </a>
-                        <button class="btn btn-danger" id="logoutBtn">
-                            <i class="fas fa-sign-out-alt"></i> Logout
+                        <button class="btn btn-netflix-red" onclick="logout()">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout
                         </button>
                     </div>
                 </div>
@@ -61,1046 +75,331 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="admin-main">
-        <div class="container-fluid">
-            <!-- Page Header -->
-            <div class="dashboard-header">
-                <h1>Analytics Dashboard</h1>
-                <p>Comprehensive insights into your movie recommendation system</p>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar bg-dark-secondary">
+            <div class="sidebar-content p-4">
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="index.html">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="browse-content.html">
+                            <i class="fas fa-search me-2"></i>Browse Content
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="create-post.html">
+                            <i class="fas fa-plus-circle me-2"></i>Create Post
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" href="analytics.html">
+                            <i class="fas fa-chart-bar me-2"></i>Analytics
+                        </a>
+                    </li>
+                </ul>
             </div>
+        </aside>
 
-            <!-- Time Period Selector -->
-            <div class="analytics-controls">
-                <div class="time-period-selector">
-                    <button class="period-btn active" data-period="7">Last 7 Days</button>
-                    <button class="period-btn" data-period="30">Last 30 Days</button>
-                    <button class="period-btn" data-period="90">Last 90 Days</button>
-                    <button class="period-btn" data-period="365">Last Year</button>
-                </div>
-                <div class="last-updated">
-                    Last updated: <span id="lastUpdated">Loading...</span>
-                </div>
-            </div>
-
-            <!-- Key Metrics -->
-            <div class="metrics-grid">
-                <div class="row">
-                    <div class="col-lg-3 col-md-6">
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="metric-content">
-                                <h3 id="totalUsers">0</h3>
-                                <p>Total Users</p>
-                                <div class="metric-change positive" id="usersChange">+0%</div>
-                            </div>
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="admin-content p-4">
+                <!-- Page Header -->
+                <div class="page-header mb-5">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="page-title text-3xl font-bold mb-2">Analytics Dashboard</h1>
+                            <p class="text-gray-400">Monitor platform performance and user engagement</p>
                         </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6">
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-eye"></i>
-                            </div>
-                            <div class="metric-content">
-                                <h3 id="totalViews">0</h3>
-                                <p>Total Views</p>
-                                <div class="metric-change positive" id="viewsChange">+0%</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6">
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-heart"></i>
-                            </div>
-                            <div class="metric-content">
-                                <h3 id="totalInteractions">0</h3>
-                                <p>User Interactions</p>
-                                <div class="metric-change positive" id="interactionsChange">+0%</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6">
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-percentage"></i>
-                            </div>
-                            <div class="metric-content">
-                                <h3 id="engagementRate">0%</h3>
-                                <p>Engagement Rate</p>
-                                <div class="metric-change positive" id="engagementChange">+0%</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charts Section -->
-            <div class="row">
-                <!-- User Growth Chart -->
-                <div class="col-lg-8">
-                    <div class="admin-card">
-                        <div class="card-header">
-                            <h3>User Growth</h3>
-                            <div class="chart-controls">
-                                <select id="userGrowthMetric" class="form-control">
-                                    <option value="registrations">New Registrations</option>
-                                    <option value="active">Active Users</option>
-                                    <option value="returning">Returning Users</option>
+                        <div class="col-md-4 text-end">
+                            <div class="date-range-selector">
+                                <select class="form-select bg-dark-tertiary border-gray-600 text-white" id="dateRange">
+                                    <option value="7">Last 7 days</option>
+                                    <option value="30" selected>Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                    <option value="365">Last year</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <canvas id="userGrowthChart" height="300"></canvas>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Content Performance -->
-                <div class="col-lg-4">
-                    <div class="admin-card">
-                        <div class="card-header">
-                            <h3>Top Content</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="top-content-list" id="topContentList">
-                                <div class="loading-placeholder">Loading top content...</div>
+                <!-- Key Metrics -->
+                <div class="key-metrics mb-5">
+                    <div class="row g-4">
+                        <div class="col-md-3">
+                            <div class="metric-card bg-dark-secondary p-4 rounded-3">
+                                <div class="metric-header d-flex justify-content-between align-items-center mb-3">
+                                    <div class="metric-icon text-blue-500">
+                                        <i class="fas fa-users fs-2"></i>
+                                    </div>
+                                    <div class="metric-trend text-success">
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span id="usersTrend">+12%</span>
+                                    </div>
+                                </div>
+                                <h3 class="metric-value text-2xl font-bold mb-1" id="totalUsersMetric">1,234</h3>
+                                <p class="metric-label text-gray-400 mb-0">Total Users</p>
+                                <div class="metric-subtitle text-sm text-gray-500 mt-1">
+                                    <span id="activeUsersMetric">456</span> active this month
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <!-- Interaction Types -->
-                <div class="col-lg-6">
-                    <div class="admin-card">
-                        <div class="card-header">
-                            <h3>User Interactions</h3>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="interactionChart" height="300"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Genre Preferences -->
-                <div class="col-lg-6">
-                    <div class="admin-card">
-                        <div class="card-header">
-                            <h3>Popular Genres</h3>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="genreChart" height="300"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Traffic Sources & Device Analytics -->
-            <div class="row">
-                <div class="col-lg-4">
-                    <div class="admin-card">
-                        <div class="card-header">
-                            <h3>Traffic Sources</h3>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="trafficChart" height="250"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4">
-                    <div class="admin-card">
-                        <div class="card-header">
-                            <h3>Device Types</h3>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="deviceChart" height="250"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4">
-                    <div class="admin-card">
-                        <div class="card-header">
-                            <h3>Admin Posts Performance</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="posts-performance" id="postsPerformance">
-                                <div class="performance-metric">
-                                    <span class="metric-label">Total Posts:</span>
-                                    <span class="metric-value" id="totalPosts">0</span>
+                        
+                        <div class="col-md-3">
+                            <div class="metric-card bg-dark-secondary p-4 rounded-3">
+                                <div class="metric-header d-flex justify-content-between align-items-center mb-3">
+                                    <div class="metric-icon text-green-500">
+                                        <i class="fas fa-eye fs-2"></i>
+                                    </div>
+                                    <div class="metric-trend text-success">
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span id="viewsTrend">+8%</span>
+                                    </div>
                                 </div>
-                                <div class="performance-metric">
-                                    <span class="metric-label">Active Posts:</span>
-                                    <span class="metric-value" id="activePosts">0</span>
+                                <h3 class="metric-value text-2xl font-bold mb-1" id="totalViewsMetric">45,678</h3>
+                                <p class="metric-label text-gray-400 mb-0">Content Views</p>
+                                <div class="metric-subtitle text-sm text-gray-500 mt-1">
+                                    <span id="avgViewsMetric">1,523</span> avg per day
                                 </div>
-                                <div class="performance-metric">
-                                    <span class="metric-label">Telegram Posts:</span>
-                                    <span class="metric-value" id="telegramPosts">0</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="metric-card bg-dark-secondary p-4 rounded-3">
+                                <div class="metric-header d-flex justify-content-between align-items-center mb-3">
+                                    <div class="metric-icon text-purple-500">
+                                        <i class="fas fa-heart fs-2"></i>
+                                    </div>
+                                    <div class="metric-trend text-success">
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span id="engagementTrend">+15%</span>
+                                    </div>
                                 </div>
-                                <div class="performance-metric">
-                                    <span class="metric-label">Avg. Engagement:</span>
-                                    <span class="metric-value" id="avgEngagement">0%</span>
+                                <h3 class="metric-value text-2xl font-bold mb-1" id="engagementMetric">78.5%</h3>
+                                <p class="metric-label text-gray-400 mb-0">Engagement Rate</p>
+                                <div class="metric-subtitle text-sm text-gray-500 mt-1">
+                                    <span id="interactionsMetric">12,345</span> interactions
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="metric-card bg-dark-secondary p-4 rounded-3">
+                                <div class="metric-header d-flex justify-content-between align-items-center mb-3">
+                                    <div class="metric-icon text-orange-500">
+                                        <i class="fas fa-star fs-2"></i>
+                                    </div>
+                                    <div class="metric-trend text-warning">
+                                        <i class="fas fa-minus"></i>
+                                        <span id="ratingTrend">-2%</span>
+                                    </div>
+                                </div>
+                                <h3 class="metric-value text-2xl font-bold mb-1" id="avgRatingMetric">4.2</h3>
+                                <p class="metric-label text-gray-400 mb-0">Avg Rating</p>
+                                <div class="metric-subtitle text-sm text-gray-500 mt-1">
+                                    <span id="ratingsCountMetric">2,567</span> ratings given
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Detailed Tables -->
-            <div class="row">
-                <!-- Recent Activity -->
-                <div class="col-lg-6">
-                    <div class="admin-card">
-                        <div class="card-header">
-                            <h3>Recent User Activity</h3>
+                <!-- Charts Section -->
+                <div class="charts-section mb-5">
+                    <div class="row g-4">
+                        <!-- User Growth Chart -->
+                        <div class="col-lg-8">
+                            <div class="chart-card bg-dark-secondary p-4 rounded-3">
+                                <div class="chart-header d-flex justify-content-between align-items-center mb-4">
+                                    <h3 class="chart-title text-lg font-semibold">User Growth</h3>
+                                    <div class="chart-controls">
+                                        <button class="btn btn-sm btn-outline-light me-2" onclick="toggleChartType('userGrowthChart')">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-light" onclick="exportChart('userGrowthChart')">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="userGrowthChart" height="300"></canvas>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="admin-table">
-                                    <thead>
-                                        <tr>
-                                            <th>User</th>
-                                            <th>Action</th>
-                                            <th>Content</th>
-                                            <th>Time</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="recentActivityTable">
-                                        <tr>
-                                            <td colspan="4" class="text-center">Loading activity...</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                        
+                        <!-- Content Distribution -->
+                        <div class="col-lg-4">
+                            <div class="chart-card bg-dark-secondary p-4 rounded-3">
+                                <div class="chart-header mb-4">
+                                    <h3 class="chart-title text-lg font-semibold">Content Distribution</h3>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="contentDistributionChart" height="300"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- System Performance -->
-                <div class="col-lg-6">
-                    <div class="admin-card">
-                        <div class="card-header">
-                            <h3>System Performance</h3>
+                <!-- Engagement Analytics -->
+                <div class="engagement-section mb-5">
+                    <div class="row g-4">
+                        <!-- Interaction Types -->
+                        <div class="col-lg-6">
+                            <div class="chart-card bg-dark-secondary p-4 rounded-3">
+                                <div class="chart-header mb-4">
+                                    <h3 class="chart-title text-lg font-semibold">User Interactions</h3>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="interactionTypesChart" height="250"></canvas>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="performance-metrics">
-                                <div class="performance-item">
-                                    <div class="performance-label">
-                                        <i class="fas fa-database"></i>
-                                        Database Queries/min
-                                    </div>
-                                    <div class="performance-value">
-                                        <span id="dbQueries">0</span>
-                                        <div class="performance-bar">
-                                            <div class="performance-fill" style="width: 65%;"></div>
-                                        </div>
-                                    </div>
+                        
+                        <!-- Popular Genres -->
+                        <div class="col-lg-6">
+                            <div class="chart-card bg-dark-secondary p-4 rounded-3">
+                                <div class="chart-header mb-4">
+                                    <h3 class="chart-title text-lg font-semibold">Popular Genres</h3>
                                 </div>
-                                <div class="performance-item">
-                                    <div class="performance-label">
-                                        <i class="fas fa-server"></i>
-                                        API Response Time
-                                    </div>
-                                    <div class="performance-value">
-                                        <span id="apiResponseTime">0ms</span>
-                                        <div class="performance-bar">
-                                            <div class="performance-fill" style="width: 80%;"></div>
-                                        </div>
-                                    </div>
+                                <div class="chart-container">
+                                    <canvas id="popularGenresChart" height="250"></canvas>
                                 </div>
-                                <div class="performance-item">
-                                    <div class="performance-label">
-                                        <i class="fas fa-memory"></i>
-                                        Memory Usage
-                                    </div>
-                                    <div class="performance-value">
-                                        <span id="memoryUsage">0%</span>
-                                        <div class="performance-bar">
-                                            <div class="performance-fill" style="width: 45%;"></div>
-                                        </div>
-                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Tables -->
+                <div class="data-tables-section">
+                    <div class="row g-4">
+                        <!-- Top Content -->
+                        <div class="col-lg-6">
+                            <div class="table-card bg-dark-secondary p-4 rounded-3">
+                                <div class="table-header d-flex justify-content-between align-items-center mb-4">
+                                    <h3 class="table-title text-lg font-semibold">Top Content</h3>
+                                    <button class="btn btn-sm btn-outline-light" onclick="exportTable('topContent')">
+                                        <i class="fas fa-download me-1"></i>Export
+                                    </button>
                                 </div>
-                                <div class="performance-item">
-                                    <div class="performance-label">
-                                        <i class="fas fa-users"></i>
-                                        Concurrent Users
-                                    </div>
-                                    <div class="performance-value">
-                                        <span id="concurrentUsers">0</span>
-                                        <div class="performance-bar">
-                                            <div class="performance-fill" style="width: 30%;"></div>
-                                        </div>
-                                    </div>
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-hover                                    <table class="table table-dark table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Title</th>
+                                                <th>Views</th>
+                                                <th>Rating</th>
+                                                <th>Interactions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="topContentTable">
+                                            <!-- Dynamic content rows -->
+                                        </tbody>
+                                    </table>
                                 </div>
+                            </div>
+                        </div>
+                        
+                        <!-- User Activity -->
+                        <div class="col-lg-6">
+                            <div class="table-card bg-dark-secondary p-4 rounded-3">
+                                <div class="table-header d-flex justify-content-between align-items-center mb-4">
+                                    <h3 class="table-title text-lg font-semibold">Recent User Activity</h3>
+                                    <button class="btn btn-sm btn-outline-light" onclick="refreshActivity()">
+                                        <i class="fas fa-refresh me-1"></i>Refresh
+                                    </button>
+                                </div>
+                                <div class="activity-feed" id="userActivityFeed">
+                                    <!-- Dynamic activity items -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal fade" id="exportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark-secondary border-0">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title text-white">Export Data</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="export-options">
+                        <h6 class="text-gray-400 mb-3">Select Export Format:</h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <button class="btn btn-outline-light w-100" onclick="exportData('csv')">
+                                    <i class="fas fa-file-csv me-2"></i>CSV
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-light w-100" onclick="exportData('json')">
+                                    <i class="fas fa-file-code me-2"></i>JSON
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-light w-100" onclick="exportData('pdf')">
+                                    <i class="fas fa-file-pdf me-2"></i>PDF
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-light w-100" onclick="exportData('excel')">
+                                    <i class="fas fa-file-excel me-2"></i>Excel
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay position-fixed w-100 h-100 top-0 start-0 d-none" id="loadingOverlay">
+        <div class="d-flex justify-content-center align-items-center h-100">
+            <div class="loading-spinner text-center">
+                <div class="spinner-border text-netflix-red mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-white">Loading analytics data...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer">
+        <!-- Dynamic toasts will be added here -->
+    </div>
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../assets/js/utils.js"></script>
     <script src="../assets/js/api.js"></script>
     <script src="../assets/js/auth.js"></script>
     <script src="../assets/js/components.js"></script>
     <script src="../assets/js/admin.js"></script>
+    
     <script>
-        class AnalyticsPage {
-            constructor() {
-                this.currentPeriod = 7;
-                this.charts = {};
-                this.analyticsData = null;
-                this.init();
-            }
-
-            async init() {
-                if (!auth.requireAdmin()) return;
-
-                this.setupEventListeners();
-                await this.loadAnalyticsData();
-                this.initializeCharts();
-                this.startRealTimeUpdates();
-                this.updateLastUpdatedTime();
-            }
-
-            setupEventListeners() {
-                // Logout
-                document.getElementById('logoutBtn').addEventListener('click', () => {
-                    auth.logout();
-                });
-
-                // Export data
-                document.getElementById('exportDataBtn').addEventListener('click', () => {
-                    this.exportAnalyticsData();
-                });
-
-                // Time period selection
-                document.querySelectorAll('.period-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        this.changePeriod(btn.dataset.period);
-                    });
-                });
-
-                // Chart metric selection
-                document.getElementById('userGrowthMetric').addEventListener('change', () => {
-                    this.updateUserGrowthChart();
-                });
-            }
-
-            changePeriod(days) {
-                this.currentPeriod = parseInt(days);
-                
-                // Update active button
-                document.querySelectorAll('.period-btn').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.period == days);
-                });
-
-                // Reload data and update charts
-                this.loadAnalyticsData();
-            }
-
-            async loadAnalyticsData() {
-                try {
-                    this.analyticsData = await api.adminGetAnalytics();
-                    this.updateMetrics();
-                    this.updateCharts();
-                    this.updateTables();
-                } catch (error) {
-                    console.error('Failed to load analytics data:', error);
-                    admin.showError('Failed to load analytics data');
-                }
-            }
-
-            updateMetrics() {
-                if (!this.analyticsData) return;
-
-                const data = this.analyticsData;
-                
-                // Update main metrics
-                document.getElementById('totalUsers').textContent = data.users.total;
-                document.getElementById('totalViews').textContent = this.formatNumber(data.interactions.total * 1.5); // Simulate views
-                document.getElementById('totalInteractions').textContent = data.interactions.total;
-                document.getElementById('engagementRate').textContent = `${data.users.engagement_rate.toFixed(1)}%`;
-
-                // Update changes (simulated)
-                document.getElementById('usersChange').textContent = '+12%';
-                document.getElementById('viewsChange').textContent = '+8%';
-                document.getElementById('interactionsChange').textContent = '+15%';
-                document.getElementById('engagementChange').textContent = '+3%';
-
-                // Update admin posts metrics
-                document.getElementById('totalPosts').textContent = data.admin_posts.total;
-                document.getElementById('activePosts').textContent = data.admin_posts.active;
-                document.getElementById('telegramPosts').textContent = data.admin_posts.telegram_posts;
-                document.getElementById('avgEngagement').textContent = '76%'; // Simulated
-
-                // Update top content
-                this.updateTopContent();
-            }
-
-            updateTopContent() {
-                const container = document.getElementById('topContentList');
-                const popularContent = this.analyticsData.content.popular;
-
-                if (!popularContent || popularContent.length === 0) {
-                    container.innerHTML = '<p class="text-muted">No data available</p>';
-                    return;
-                }
-
-                container.innerHTML = popularContent.map((item, index) => `
-                    <div class="top-content-item">
-                        <div class="content-rank">${index + 1}</div>
-                        <div class="content-info">
-                            <h5>${item.title}</h5>
-                            <p>${item.interactions} interactions</p>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            initializeCharts() {
-                this.createUserGrowthChart();
-                this.createInteractionChart();
-                this.createGenreChart();
-                this.createTrafficChart();
-                this.createDeviceChart();
-            }
-
-            createUserGrowthChart() {
-                const ctx = document.getElementById('userGrowthChart').getContext('2d');
-                
-                // Generate sample data
-                const labels = this.generateDateLabels();
-                const data = this.generateSampleData(labels.length, 10, 50);
-
-                this.charts.userGrowth = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'New Users',
-                            data: data,
-                            borderColor: '#e50914',
-                            backgroundColor: 'rgba(229, 9, 20, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                labels: {
-                                    color: '#ffffff'
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                ticks: { color: '#cccccc' },
-                                grid: { color: '#333333' }
-                            },
-                            y: {
-                                ticks: { color: '#cccccc' },
-                                grid: { color: '#333333' }
-                            }
-                        }
-                    }
-                });
-            }
-
-            createInteractionChart() {
-                const ctx = document.getElementById('interactionChart').getContext('2d');
-                
-                const interactionData = this.analyticsData?.interactions?.by_type || [];
-                const labels = interactionData.map(item => item.type);
-                const data = interactionData.map(item => item.count);
-
-                this.charts.interaction = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: [
-                                '#e50914',
-                                '#ff6b6b',
-                                '#4ecdc4',
-                                '#45b7d1',
-                                '#96ceb4'
-                            ]
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    color: '#ffffff',
-                                    padding: 20
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            createGenreChart() {
-                const ctx = document.getElementById('genreChart').getContext('2d');
-                
-                const genreData = this.analyticsData?.preferences?.top_genres || {};
-                const labels = Object.keys(genreData).slice(0, 10);
-                const data = Object.values(genreData).slice(0, 10);
-
-                this.charts.genre = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Popularity',
-                            data: data,
-                            backgroundColor: '#e50914',
-                            borderColor: '#e50914',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                labels: {
-                                    color: '#ffffff'
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                ticks: { 
-                                    color: '#cccccc',
-                                    maxRotation: 45
-                                },
-                                grid: { color: '#333333' }
-                            },
-                            y: {
-                                ticks: { color: '#cccccc' },
-                                grid: { color: '#333333' }
-                            }
-                        }
-                    }
-                });
-            }
-
-            createTrafficChart() {
-                const ctx = document.getElementById('trafficChart').getContext('2d');
-                
-                // Sample traffic data
-                const labels = ['Direct', 'Search', 'Social Media', 'Referral', 'Email'];
-                const data = [45, 25, 15, 10, 5];
-
-                this.charts.traffic = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: [
-                                '#e50914',
-                                '#ff6b6b',
-                                '#4ecdc4',
-                                '#45b7d1',
-                                '#96ceb4'
-                            ]
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    color: '#ffffff',
-                                    padding: 15
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            createDeviceChart() {
-                const ctx = document.getElementById('deviceChart').getContext('2d');
-                
-                // Sample device data
-                const labels = ['Desktop', 'Mobile', 'Tablet'];
-                const data = [60, 35, 5];
-
-                this.charts.device = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: [
-                                '#e50914',
-                                '#ff6b6b',
-                                '#4ecdc4'
-                            ]
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    color: '#ffffff',
-                                    padding: 15
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            updateCharts() {
-                if (!this.analyticsData) return;
-
-                // Update charts with new data based on current period
-                this.updateUserGrowthChart();
-                
-                // Update other charts if needed
-                Object.values(this.charts).forEach(chart => {
-                    if (chart) chart.update();
-                });
-            }
-
-            updateUserGrowthChart() {
-                const metric = document.getElementById('userGrowthMetric').value;
-                const chart = this.charts.userGrowth;
-                
-                if (!chart) return;
-
-                // Generate new data based on selected metric
-                const labels = this.generateDateLabels();
-                let data, label, color;
-
-                switch (metric) {
-                    case 'registrations':
-                        data = this.generateSampleData(labels.length, 5, 25);
-                        label = 'New Registrations';
-                        color = '#e50914';
-                        break;
-                    case 'active':
-                        data = this.generateSampleData(labels.length, 50, 200);
-                        label = 'Active Users';
-                        color = '#4ecdc4';
-                        break;
-                    case 'returning':
-                        data = this.generateSampleData(labels.length, 20, 80);
-                        label = 'Returning Users';
-                        color = '#45b7d1';
-                        break;
-                }
-
-                chart.data.labels = labels;
-                chart.data.datasets[0].data = data;
-                chart.data.datasets[0].label = label;
-                chart.data.datasets[0].borderColor = color;
-                chart.data.datasets[0].backgroundColor = color + '20';
-                chart.update();
-            }
-
-            updateTables() {
-                this.updateRecentActivity();
-                this.updateSystemPerformance();
-            }
-
-            updateRecentActivity() {
-                const tbody = document.getElementById('recentActivityTable');
-                
-                // Sample recent activity data
-                const activities = [
-                    { user: 'user123', action: 'Liked', content: 'Inception', time: '2 mins ago' },
-                    { user: 'moviefan', action: 'Added to Wishlist', content: 'The Dark Knight', time: '5 mins ago' },
-                    { user: 'cinephile', action: 'Rated 5 stars', content: 'Interstellar', time: '8 mins ago' },
-                    { user: 'viewer01', action: 'Viewed', content: 'Dune', time: '12 mins ago' },
-                    { user: 'filmcritic', action: 'Favorited', content: 'The Matrix', time: '15 mins ago' }
-                ];
-
-                tbody.innerHTML = activities.map(activity => `
-                    <tr>
-                        <td>${activity.user}</td>
-                        <td>${activity.action}</td>
-                        <td>${activity.content}</td>
-                        <td>${activity.time}</td>
-                    </tr>
-                `).join('');
-            }
-
-            updateSystemPerformance() {
-                // Simulate real-time performance metrics
-                document.getElementById('dbQueries').textContent = Math.floor(Math.random() * 100 + 50);
-                document.getElementById('apiResponseTime').textContent = Math.floor(Math.random() * 100 + 50) + 'ms';
-                document.getElementById('memoryUsage').textContent = Math.floor(Math.random() * 30 + 40) + '%';
-                document.getElementById('concurrentUsers').textContent = Math.floor(Math.random() * 50 + 10);
-            }
-
-            generateDateLabels() {
-                const labels = [];
-                const days = this.currentPeriod;
-                
-                for (let i = days - 1; i >= 0; i--) {
-                    const date = new Date();
-                    date.setDate(date.getDate() - i);
-                    labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                }
-                
-                return labels;
-            }
-
-            generateSampleData(length, min, max) {
-                return Array.from({ length }, () => Math.floor(Math.random() * (max - min + 1)) + min);
-            }
-
-            formatNumber(num) {
-                return num.toLocaleString();
-            }
-
-            exportAnalyticsData() {
-                const data = {
-                    users: this.analyticsData.users,
-                    interactions: this.analyticsData.interactions,
-                    content: this.analyticsData.content,
-                    admin_posts: this.analyticsData.admin_posts,
-                    preferences: this.analyticsData.preferences,
-                    exported_at: new Date().toISOString()
-                };
-
-                const filename = `analytics-${new Date().toISOString().split('T')[0]}.json`;
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = filename;
-                link.click();
-                
-                URL.revokeObjectURL(url);
-                admin.showSuccess('Analytics data exported successfully!');
-            }
-
-            updateLastUpdatedTime() {
-                document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
-            }
-
-            startRealTimeUpdates() {
-                // Update performance metrics every 30 seconds
-                setInterval(() => {
-                    this.updateSystemPerformance();
-                }, 30000);
-
-                // Update last updated time every minute
-                setInterval(() => {
-                    this.updateLastUpdatedTime();
-                }, 60000);
-
-                // Refresh analytics data every 5 minutes
-                setInterval(() => {
-                    this.loadAnalyticsData();
-                }, 300000);
-            }
-        }
-
         // Initialize analytics page
-        document.addEventListener('DOMContentLoaded', () => {
-            new AnalyticsPage();
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check admin authentication
+            if (!auth.isAuthenticated()) {
+                window.location.href = '../login.html?redirect=' + encodeURIComponent(window.location.href);
+                return;
+            }
+            
+            // Initialize analytics
+            adminAnalytics.init();
         });
     </script>
-
-    <style>
-        .analytics-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding: 1rem;
-            background: var(--secondary-bg);
-            border-radius: 8px;
-        }
-
-        .time-period-selector {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .period-btn {
-            background: var(--tertiary-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .period-btn:hover,
-        .period-btn.active {
-            background: var(--accent-primary);
-            border-color: var(--accent-primary);
-            color: white;
-        }
-
-        .last-updated {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .metrics-grid {
-            margin-bottom: 3rem;
-        }
-
-        .metric-card {
-            background: var(--secondary-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .metric-card:hover {
-            border-color: var(--accent-primary);
-            transform: translateY(-2px);
-        }
-
-        .metric-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-primary), #ff6b6b);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: white;
-        }
-
-        .metric-content h3 {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-            color: var(--text-primary);
-        }
-
-        .metric-content p {
-            margin-bottom: 0.5rem;
-            color: var(--text-secondary);
-        }
-
-        .metric-change {
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-
-        .metric-change.positive {
-            color: var(--success);
-        }
-
-        .metric-change.negative {
-            color: var(--error);
-        }
-
-        .chart-controls {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .chart-controls .form-control {
-            width: auto;
-            min-width: 150px;
-        }
-
-        .top-content-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .top-content-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .top-content-item:last-child {
-            border-bottom: none;
-        }
-
-        .content-rank {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: var(--accent-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            color: white;
-            flex-shrink: 0;
-        }
-
-        .content-info h5 {
-            margin-bottom: 0.25rem;
-            font-size: 0.875rem;
-        }
-
-        .content-info p {
-            margin: 0;
-            color: var(--text-secondary);
-            font-size: 0.75rem;
-        }
-
-        .posts-performance {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .performance-metric {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .performance-metric:last-child {
-            border-bottom: none;
-        }
-
-        .metric-label {
-            color: var(--text-secondary);
-        }
-
-        .metric-value {
-            font-weight: 600;
-            color: var(--accent-primary);
-        }
-
-        .performance-metrics {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .performance-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .performance-label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .performance-value {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .performance-value span {
-            font-weight: 600;
-            color: var(--text-primary);
-            min-width: 60px;
-        }
-
-        .performance-bar {
-            flex: 1;
-            height: 8px;
-            background: var(--tertiary-bg);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .performance-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-primary), #ff6b6b);
-            transition: width 0.5s ease;
-        }
-
-        .table-responsive {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .admin-table th {
-            position: sticky;
-            top: 0;
-            background: var(--tertiary-bg);
-            z-index: 10;
-        }
-
-        @media (max-width: 768px) {
-            .analytics-controls {
-                flex-direction: column;
-                gap: 1rem;
-                align-items: stretch;
-            }
-
-            .time-period-selector {
-                flex-wrap: wrap;
-            }
-
-            .period-btn {
-                flex: 1;
-                min-width: 0;
-            }
-
-            .metric-card {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .chart-controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .performance-value {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 0.5rem;
-            }
-
-            .performance-value span {
-                min-width: auto;
-            }
-        }
-    </style>
 </body>
 </html>
