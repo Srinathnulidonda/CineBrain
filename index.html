@@ -3,340 +3,590 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieRec - Discover Your Next Favorite</title>
+    <title>MovieRec - Discover Amazing Movies & TV Shows</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --netflix-red: #e50914;
+            --netflix-dark: #141414;
+            --netflix-gray: #333333;
+            --mobile: 320px;
+            --tablet: 768px;
+            --desktop: 1024px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: linear-gradient(135deg, #141414 0%, #000000 100%);
+            color: white;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .hero-gradient {
+            background: linear-gradient(45deg, rgba(229, 9, 20, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%);
+        }
+
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center;
+        }
+
+        .card-hover:hover {
+            transform: scale(1.05) translateZ(0);
+            box-shadow: 0 25px 50px -12px rgba(229, 9, 20, 0.25);
+        }
+
+        .scroll-container {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+        }
+
+        .scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .loading-shimmer {
+            background: linear-gradient(90deg, #333 25%, #555 50%, #333 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .slide-up {
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--netflix-red) 0%, #c41e3a 100%);
+            transition: all 0.3s ease;
+            min-height: 44px;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #c41e3a 0%, var(--netflix-red) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(229, 9, 20, 0.4);
+        }
+
+        .mobile-nav {
+            backdrop-filter: blur(20px);
+            background: rgba(20, 20, 20, 0.95);
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+                line-height: 1.1;
+            }
+            
+            .card-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .card-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 1rem;
+            }
+        }
+    </style>
 </head>
-<body class="bg-black text-white overflow-x-hidden">
+<body>
     <!-- Navigation -->
-    <nav class="fixed top-0 w-full z-50 bg-black bg-opacity-90 backdrop-blur-md transition-all duration-300" id="navbar">
-        <div class="container mx-auto px-4 py-3">
-            <div class="flex items-center justify-between">
-                <!-- Logo -->
-                <div class="flex items-center space-x-2">
-                    <div class="text-red-600 text-2xl font-bold">
-                        <i class="fas fa-film"></i>
-                    </div>
-                    <h1 class="text-xl font-bold text-white">MovieRec</h1>
+    <nav class="fixed top-0 w-full z-50 mobile-nav">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-red-500">MovieRec</h1>
                 </div>
-
+                
                 <!-- Desktop Navigation -->
-                <div class="hidden md:flex items-center space-x-6">
-                    <a href="#home" class="nav-link active">Home</a>
-                    <a href="#trending" class="nav-link">Trending</a>
-                    <a href="#genres" class="nav-link">Genres</a>
-                    <a href="#regional" class="nav-link">Regional</a>
-                </div>
-
-                <!-- Search Bar -->
-                <div class="hidden md:flex items-center flex-1 max-w-md mx-6">
-                    <div class="relative w-full">
-                        <input type="text" 
-                               id="searchInput" 
-                               placeholder="Search movies, TV shows..." 
-                               class="w-full bg-gray-800 text-white px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-red-600 transition-all">
-                        <button class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
-                            <i class="fas fa-search"></i>
+                <div class="hidden md:block">
+                    <div class="flex items-center space-x-8">
+                        <a href="#home" class="text-white hover:text-red-400 transition-colors">Home</a>
+                        <a href="#trending" class="text-gray-300 hover:text-red-400 transition-colors">Trending</a>
+                        <a href="#genres" class="text-gray-300 hover:text-red-400 transition-colors">Genres</a>
+                        <button onclick="showLogin()" class="btn-primary px-6 py-2 rounded-lg font-medium">
+                            Sign In
                         </button>
                     </div>
                 </div>
 
-                <!-- Auth Buttons -->
-                <div class="flex items-center space-x-4">
-                    <button onclick="openAuthModal('login')" class="hidden md:block px-4 py-2 text-white hover:text-red-400 transition-colors">
-                        Sign In
-                    </button>
-                    <button onclick="openAuthModal('register')" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-full text-white font-medium transition-all">
-                        Get Started
-                    </button>
-                    
-                    <!-- Mobile Menu Button -->
-                    <button class="md:hidden text-white" onclick="toggleMobileMenu()">
-                        <i class="fas fa-bars text-xl"></i>
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-btn" class="text-white p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
                     </button>
                 </div>
             </div>
+        </div>
 
-            <!-- Mobile Navigation -->
-            <div id="mobileMenu" class="md:hidden hidden mt-4 pb-4">
-                <div class="flex flex-col space-y-4">
-                    <div class="relative">
-                        <input type="text" 
-                               placeholder="Search..." 
-                               class="w-full bg-gray-800 text-white px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-red-600">
-                        <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                    <a href="#home" class="nav-link">Home</a>
-                    <a href="#trending" class="nav-link">Trending</a>
-                    <a href="#genres" class="nav-link">Genres</a>
-                    <a href="#regional" class="nav-link">Regional</a>
-                </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 bg-gray-900">
+                <a href="#home" class="block px-3 py-2 text-white">Home</a>
+                <a href="#trending" class="block px-3 py-2 text-gray-300">Trending</a>
+                <a href="#genres" class="block px-3 py-2 text-gray-300">Genres</a>
+                <button onclick="showLogin()" class="w-full text-left btn-primary px-3 py-2 rounded-lg mt-2">
+                    Sign In
+                </button>
             </div>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <section id="hero" class="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <div class="hero-background absolute inset-0 z-0"></div>
-        <div class="hero-overlay absolute inset-0 bg-black bg-opacity-60 z-10"></div>
-        
-        <div class="relative z-20 text-center px-4 max-w-4xl mx-auto">
-            <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 hero-title">
+    <section id="home" class="relative min-h-screen flex items-center justify-center hero-gradient">
+        <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+        <div class="relative z-10 text-center px-4 max-w-4xl mx-auto slide-up">
+            <h1 class="hero-title font-bold text-white mb-6">
                 Discover Your Next
-                <span class="text-red-600">Favorite</span>
+                <span class="text-red-500">Favorite Movie</span>
             </h1>
-            <p class="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-                Personalized movie and TV show recommendations powered by AI. 
-                Find content you'll love across all genres and languages.
+            <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+                Get personalized recommendations powered by AI. Explore trending movies, TV shows, and hidden gems from around the world.
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <button onclick="openAuthModal('register')" class="cta-button bg-red-600 hover:bg-red-700 px-8 py-4 rounded-full text-white font-bold text-lg transition-all transform hover:scale-105">
-                    <i class="fas fa-play mr-2"></i>
-                    Start Discovering
+                <button onclick="showLogin()" class="btn-primary px-8 py-4 rounded-lg text-lg font-semibold">
+                    Get Started Free
                 </button>
-                <button onclick="scrollToSection('trending')" class="cta-button-secondary border-2 border-white text-white hover:bg-white hover:text-black px-8 py-4 rounded-full font-bold text-lg transition-all">
-                    <i class="fas fa-fire mr-2"></i>
-                    Browse Trending
+                <button onclick="scrollToSection('trending')" class="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-black transition-all">
+                    Explore Now
                 </button>
-            </div>
-        </div>
-
-        <!-- Scroll Indicator -->
-        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20">
-            <div class="scroll-indicator animate-bounce">
-                <i class="fas fa-chevron-down text-white text-2xl"></i>
             </div>
         </div>
     </section>
 
-    <!-- Trending Section -->
-    <section id="trending" class="py-16 bg-gray-900">
-        <div class="container mx-auto px-4">
-            <h2 class="text-3xl md:text-4xl font-bold mb-8 text-center">
-                <i class="fas fa-fire text-red-600 mr-3"></i>
-                What's Hot Right Now
-            </h2>
-            
-            <!-- Trending Categories -->
-            <div class="flex flex-wrap justify-center gap-4 mb-8">
-                <button class="category-tab active" data-category="movies">Movies</button>
-                <button class="category-tab" data-category="tv">TV Shows</button>
-                <button class="category-tab" data-category="anime">Anime</button>
-            </div>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden">
+        <div class="text-center">
+            <div class="loading-shimmer w-16 h-16 rounded-full mb-4"></div>
+            <p class="text-white">Loading amazing content...</p>
+        </div>
+    </div>
 
-            <!-- Content Carousel -->
-            <div id="trendingCarousel" class="relative">
-                <div class="carousel-container overflow-hidden">
-                    <div class="carousel-track flex transition-transform duration-500 ease-in-out" id="trendingTrack">
-                        <!-- Content will be loaded dynamically -->
-                    </div>
+    <!-- Main Content -->
+    <main class="pt-16">
+        <!-- What's Hot Section -->
+        <section id="whats-hot" class="py-12 px-4">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-3xl font-bold text-white mb-8">🔥 What's Hot</h2>
+                <div id="whats-hot-container" class="scroll-container flex gap-4 pb-4">
+                    <!-- Content will be loaded here -->
                 </div>
+            </div>
+        </section>
+
+        <!-- Trending Section -->
+        <section id="trending" class="py-12 px-4 bg-gray-900">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-3xl font-bold text-white mb-8">📈 Trending Now</h2>
                 
-                <!-- Carousel Controls -->
-                <button class="carousel-btn carousel-btn-prev" onclick="slideCarousel('trending', -1)">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <button class="carousel-btn carousel-btn-next" onclick="slideCarousel('trending', 1)">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </div>
-    </section>
-
-    <!-- What's Hot Section -->
-    <section id="whats-hot" class="py-16 bg-black">
-        <div class="container mx-auto px-4">
-            <h2 class="text-3xl md:text-4xl font-bold mb-8">
-                <i class="fas fa-star text-yellow-500 mr-3"></i>
-                What's Hot Today
-            </h2>
-            <div id="whatsHotGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <!-- Content will be loaded dynamically -->
-            </div>
-        </div>
-    </section>
-
-    <!-- Critics Choice Section -->
-    <section id="critics-choice" class="py-16 bg-gray-900">
-        <div class="container mx-auto px-4">
-            <h2 class="text-3xl md:text-4xl font-bold mb-8">
-                <i class="fas fa-award text-gold mr-3"></i>
-                Critics' Choice
-            </h2>
-            <div id="criticsChoiceCarousel" class="relative">
-                <div class="carousel-container overflow-hidden">
-                    <div class="carousel-track flex transition-transform duration-500 ease-in-out" id="criticsTrack">
-                        <!-- Content will be loaded dynamically -->
-                    </div>
+                <!-- Tab Navigation -->
+                <div class="flex space-x-4 mb-6">
+                    <button onclick="switchTrendingTab('movies')" id="movies-tab" class="px-6 py-2 bg-red-600 text-white rounded-lg">
+                        Movies
+                    </button>
+                    <button onclick="switchTrendingTab('tv')" id="tv-tab" class="px-6 py-2 bg-gray-700 text-white rounded-lg">
+                        TV Shows
+                    </button>
+                    <button onclick="switchTrendingTab('anime')" id="anime-tab" class="px-6 py-2 bg-gray-700 text-white rounded-lg">
+                        Anime
+                    </button>
                 </div>
+
+                <div id="trending-content" class="card-grid grid">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Regional Content Section -->
+        <section id="regional" class="py-12 px-4">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-3xl font-bold text-white mb-8">🌍 Regional Favorites</h2>
                 
-                <button class="carousel-btn carousel-btn-prev" onclick="slideCarousel('critics', -1)">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <button class="carousel-btn carousel-btn-next" onclick="slideCarousel('critics', 1)">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </div>
-    </section>
-
-    <!-- Regional Content Section -->
-    <section id="regional" class="py-16 bg-black">
-        <div class="container mx-auto px-4">
-            <h2 class="text-3xl md:text-4xl font-bold mb-8">
-                <i class="fas fa-globe text-blue-500 mr-3"></i>
-                Regional Favorites
-            </h2>
-            
-            <!-- Language Tabs -->
-            <div class="flex flex-wrap justify-center gap-4 mb-8">
-                <button class="language-tab active" data-language="Telugu">Telugu</button>
-                <button class="language-tab" data-language="Hindi">Hindi</button>
-                <button class="language-tab" data-language="Tamil">Tamil</button>
-                <button class="language-tab" data-language="Kannada">Kannada</button>
-            </div>
-
-            <div id="regionalContent" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <!-- Content will be loaded dynamically -->
-            </div>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section id="features" class="py-16 bg-gray-900">
-        <div class="container mx-auto px-4">
-            <h2 class="text-3xl md:text-4xl font-bold mb-12 text-center">
-                Why Choose MovieRec?
-            </h2>
-            
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="feature-card text-center p-6 bg-gray-800 rounded-lg hover:bg-gray-700 transition-all">
-                    <div class="text-4xl text-red-600 mb-4">
-                        <i class="fas fa-robot"></i>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="regional-section" data-language="Telugu">
+                        <h3 class="text-xl font-semibold mb-4 text-yellow-400">Telugu Cinema</h3>
+                        <div id="telugu-content" class="space-y-3">
+                            <!-- Content will be loaded here -->
+                        </div>
                     </div>
-                    <h3 class="text-xl font-bold mb-4">AI-Powered Recommendations</h3>
-                    <p class="text-gray-300">Advanced machine learning algorithms analyze your preferences to suggest content you'll love.</p>
-                </div>
-                
-                <div class="feature-card text-center p-6 bg-gray-800 rounded-lg hover:bg-gray-700 transition-all">
-                    <div class="text-4xl text-blue-500 mb-4">
-                        <i class="fas fa-globe"></i>
+                    
+                    <div class="regional-section" data-language="Hindi">
+                        <h3 class="text-xl font-semibold mb-4 text-blue-400">Hindi Cinema</h3>
+                        <div id="hindi-content" class="space-y-3">
+                            <!-- Content will be loaded here -->
+                        </div>
                     </div>
-                    <h3 class="text-xl font-bold mb-4">Global Content</h3>
-                    <p class="text-gray-300">Discover movies and shows from around the world, including regional cinema and international hits.</p>
-                </div>
-                
-                <div class="feature-card text-center p-6 bg-gray-800 rounded-lg hover:bg-gray-700 transition-all">
-                    <div class="text-4xl text-green-500 mb-4">
-                        <i class="fas fa-mobile-alt"></i>
+                    
+                    <div class="regional-section" data-language="Tamil">
+                        <h3 class="text-xl font-semibold mb-4 text-green-400">Tamil Cinema</h3>
+                        <div id="tamil-content" class="space-y-3">
+                            <!-- Content will be loaded here -->
+                        </div>
                     </div>
-                    <h3 class="text-xl font-bold mb-4">Mobile Optimized</h3>
-                    <p class="text-gray-300">Seamless experience across all devices with touch-friendly interface and offline capabilities.</p>
+                    
+                    <div class="regional-section" data-language="Kannada">
+                        <h3 class="text-xl font-semibold mb-4 text-purple-400">Kannada Cinema</h3>
+                        <div id="kannada-content" class="space-y-3">
+                            <!-- Content will be loaded here -->
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+
+        <!-- Critics' Choice Section -->
+        <section id="critics-choice" class="py-12 px-4 bg-gray-900">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-3xl font-bold text-white mb-8">🏆 Critics' Choice</h2>
+                <div id="critics-choice-container" class="scroll-container flex gap-4 pb-4">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- User Favorites Section -->
+        <section id="user-favorites" class="py-12 px-4">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-3xl font-bold text-white mb-8">❤️ Community Favorites</h2>
+                <div id="user-favorites-container" class="card-grid grid">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+    </main>
 
     <!-- Footer -->
-    <footer class="bg-black py-12 border-t border-gray-800">
-        <div class="container mx-auto px-4">
-            <div class="grid md:grid-cols-4 gap-8">
-                <div>
-                    <div class="flex items-center space-x-2 mb-4">
-                        <div class="text-red-600 text-2xl">
-                            <i class="fas fa-film"></i>
-                        </div>
-                        <h3 class="text-xl font-bold">MovieRec</h3>
-                    </div>
-                    <p class="text-gray-400">Your personalized movie and TV show recommendation platform.</p>
-                </div>
-                
-                <div>
-                    <h4 class="font-bold mb-4">Quick Links</h4>
-                    <ul class="space-y-2 text-gray-400">
-                        <li><a href="#home" class="hover:text-white transition-colors">Home</a></li>
-                        <li><a href="#trending" class="hover:text-white transition-colors">Trending</a></li>
-                        <li><a href="#genres" class="hover:text-white transition-colors">Genres</a></li>
-                        <li><a href="#regional" class="hover:text-white transition-colors">Regional</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h4 class="font-bold mb-4">Support</h4>
-                    <ul class="space-y-2 text-gray-400">
-                                                <li><a href="#" class="hover:text-white transition-colors">Help Center</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors">Contact Us</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors">Privacy Policy</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors">Terms of Service</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h4 class="font-bold mb-4">Connect</h4>
-                    <div class="flex space-x-4">
-                        <a href="#" class="text-gray-400 hover:text-white text-xl transition-colors">
-                            <i class="fab fa-twitter"></i>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-white text-xl transition-colors">
-                            <i class="fab fa-facebook"></i>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-white text-xl transition-colors">
-                            <i class="fab fa-instagram"></i>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-white text-xl transition-colors">
-                            <i class="fab fa-youtube"></i>
-                        </a>
-                    </div>
-                </div>
+    <footer class="bg-black py-12 px-4">
+        <div class="max-w-7xl mx-auto text-center">
+            <h2 class="text-2xl font-bold text-red-500 mb-4">MovieRec</h2>
+            <p class="text-gray-400 mb-6">Your personal movie recommendation platform</p>
+            <div class="flex justify-center space-x-6 mb-6">
+                <a href="#" class="text-gray-400 hover:text-red-400">Privacy</a>
+                <a href="#" class="text-gray-400 hover:text-red-400">Terms</a>
+                <a href="#" class="text-gray-400 hover:text-red-400">Contact</a>
             </div>
-            
-            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                <p>&copy; 2025 MovieRec. All rights reserved.</p>
-            </div>
+            <p class="text-gray-500 text-sm">&copy; 2025 MovieRec. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- Auth Modal -->
-    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-gray-900 rounded-lg max-w-md w-full p-6 relative">
-            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
-                <i class="fas fa-times text-xl"></i>
-            </button>
+    <script>
+        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        let currentTrendingType = 'movies';
+        let authToken = null;
+
+        // Utility functions
+        function showLoading() {
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+
+        function showLogin() {
+            window.location.href = 'login.html';
+        }
+
+        function scrollToSection(sectionId) {
+            document.getElementById(sectionId).scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+
+        // API calls
+        async function fetchHomepageData() {
+            try {
+                showLoading();
+                const response = await fetch(`${API_BASE}/homepage`);
+                if (!response.ok) throw new Error('Failed to fetch homepage data');
+                const data = await response.json();
+                
+                renderWhatsHot(data.whats_hot || []);
+                renderTrendingContent(data.trending || {});
+                renderRegionalContent(data.regional || {});
+                renderCriticsChoice(data.critics_choice || []);
+                renderUserFavorites(data.user_favorites || []);
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error fetching homepage data:', error);
+                hideLoading();
+                showError('Failed to load content. Please try again.');
+            }
+        }
+
+        // Render functions
+        function renderWhatsHot(items) {
+            const container = document.getElementById('whats-hot-container');
+            container.innerHTML = items.slice(0, 15).map(item => `
+                <div class="flex-none w-48 sm:w-64 card-hover cursor-pointer" onclick="viewContent(${item.id})">
+                    <div class="relative overflow-hidden rounded-lg">
+                        <img src="${item.poster_path || item.backdrop_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image'}" 
+                             alt="${item.title || item.name}"
+                             class="w-full h-72 object-cover"
+                             loading="lazy">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
+                            <div class="absolute bottom-4 left-4 right-4">
+                                <h3 class="text-white font-semibold text-sm mb-1">${item.title || item.name}</h3>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-yellow-400 text-xs">⭐ ${item.vote_average?.toFixed(1) || 'N/A'}</span>
+                                    <span class="text-gray-300 text-xs">${item.release_date?.split('-')[0] || ''}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTrendingContent(trending) {
+            const container = document.getElementById('trending-content');
+            const currentData = trending[currentTrendingType] || [];
             
-            <div id="authContent">
-                <!-- Auth forms will be loaded here -->
-            </div>
-        </div>
-    </div>
+            container.innerHTML = currentData.slice(0, 12).map(item => `
+                <div class="card-hover cursor-pointer bg-gray-800 rounded-lg overflow-hidden" onclick="viewContent(${item.id})">
+                    <div class="relative">
+                        <img src="${item.poster_path || item.backdrop_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image'}" 
+                             alt="${item.title || item.name}"
+                             class="w-full h-64 sm:h-80 object-cover"
+                             loading="lazy">
+                        <div class="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+                            TRENDING
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-semibold text-sm mb-2 line-clamp-2">${item.title || item.name}</h3>
+                        <div class="flex items-center justify-between">
+                            <span class="text-yellow-400 text-xs">⭐ ${item.vote_average?.toFixed(1) || 'N/A'}</span>
+                            <span class="text-gray-400 text-xs">${item.release_date?.split('-')[0] || ''}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-    <!-- Loading Spinner -->
-    <div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center">
-        <div class="spinner"></div>
-    </div>
+        function renderRegionalContent(regional) {
+            Object.entries(regional).forEach(([language, items]) => {
+                const containerId = `${language.toLowerCase()}-content`;
+                const container = document.getElementById(containerId);
+                
+                if (container && items) {
+                    container.innerHTML = items.slice(0, 5).map(item => `
+                        <div class="flex items-center space-x-3 p-3 bg-gray-800 rounded-lg card-hover cursor-pointer" onclick="viewContent(${item.id})">
+                            <img src="${item.poster_path || 'https://via.placeholder.com/60x90/333/fff?text=No+Image'}" 
+                                 alt="${item.title}"
+                                 class="w-12 h-16 object-cover rounded"
+                                 loading="lazy">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-white text-sm font-medium truncate">${item.title}</h4>
+                                <p class="text-gray-400 text-xs">${item.release_date?.split('-')[0] || ''}</p>
+                                <div class="flex items-center space-x-1">
+                                    <span class="text-yellow-400 text-xs">⭐</span>
+                                    <span class="text-gray-300 text-xs">${item.vote_average?.toFixed(1) || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            });
+        }
 
-    <!-- Toast Notifications -->
-    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2">
-        <!-- Toast notifications will appear here -->
-    </div>
+        function renderCriticsChoice(items) {
+            const container = document.getElementById('critics-choice-container');
+            container.innerHTML = items.slice(0, 10).map(item => `
+                <div class="flex-none w-48 sm:w-64 card-hover cursor-pointer" onclick="viewContent(${item.id})">
+                    <div class="relative overflow-hidden rounded-lg bg-gray-800">
+                        <img src="${item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image'}" 
+                             alt="${item.title}"
+                             class="w-full h-72 object-cover"
+                             loading="lazy">
+                        <div class="absolute top-2 left-2 bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-bold">
+                            CRITIC'S CHOICE
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-white font-semibold text-sm mb-2">${item.title}</h3>
+                            <div class="flex items-center justify-between">
+                                <span class="text-yellow-400 text-xs">⭐ ${item.rating?.toFixed(1) || 'N/A'}</span>
+                                <span class="text-gray-400 text-xs">${item.release_date?.split('-')[0] || ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-    <!-- Scripts -->
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/components.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/debug.js"></script>
-    <script src="js/init.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/components.js"></script>
-    <script src="js/app.js"></script>
+        function renderUserFavorites(items) {
+            const container = document.getElementById('user-favorites-container');
+            container.innerHTML = items.slice(0, 8).map(item => `
+                <div class="card-hover cursor-pointer bg-gray-800 rounded-lg overflow-hidden" onclick="viewContent(${item.id})">
+                    <div class="relative">
+                        <img src="${item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image'}" 
+                             alt="${item.title}"
+                             class="w-full h-64 sm:h-80 object-cover"
+                             loading="lazy">
+                        <div class="absolute top-2 right-2 bg-pink-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+                            ❤️ LOVED
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-semibold text-sm mb-2">${item.title}</h3>
+                        <div class="flex items-center justify-between">
+                            <span class="text-yellow-400 text-xs">⭐ ${item.rating?.toFixed(1) || 'N/A'}</span>
+                            <span class="text-gray-400 text-xs">${item.release_date?.split('-')[0] || ''}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-    <!-- Add to dashboard.html -->
-    <script src="js/dashboard.js"></script>
+        function switchTrendingTab(type) {
+            currentTrendingType = type;
+            
+            // Update tab styles
+            document.querySelectorAll('[id$="-tab"]').forEach(tab => {
+                tab.classList.remove('bg-red-600');
+                tab.classList.add('bg-gray-700');
+            });
+            document.getElementById(`${type}-tab`).classList.remove('bg-gray-700');
+            document.getElementById(`${type}-tab`).classList.add('bg-red-600');
+            
+            // Re-render content
+            fetchHomepageData();
+        }
 
-    <!-- Add to movie-detail.html -->
-    <script src="js/movie-detail.js"></script>
+        function viewContent(contentId) {
+            if (contentId) {
+                window.location.href = `movie-detail.html?id=${contentId}`;
+            }
+        }
+
+        function showError(message) {
+            // Create a simple toast notification
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg z-50';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchHomepageData();
+            
+            // Add intersection observer for animations
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('slide-up');
+                    }
+                });
+            }, observerOptions);
+            
+            document.querySelectorAll('section').forEach(section => {
+                observer.observe(section);
+            });
+        });
+
+        // Touch gesture support for carousels
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        document.querySelectorAll('.scroll-container').forEach(container => {
+            container.addEventListener('mousedown', (e) => {
+                isDown = true;
+                startX = e.pageX - container.offsetLeft;
+                scrollLeft = container.scrollLeft;
+                container.style.cursor = 'grabbing';
+            });
+
+            container.addEventListener('mouseleave', () => {
+                isDown = false;
+                container.style.cursor = 'grab';
+            });
+
+            container.addEventListener('mouseup', () => {
+                isDown = false;
+                container.style.cursor = 'grab';
+            });
+
+            container.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - container.offsetLeft;
+                const walk = (x - startX) * 2;
+                container.scrollLeft = scrollLeft - walk;
+            });
+
+            // Touch events for mobile
+            let touchStartX = 0;
+            container.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+            });
+
+            container.addEventListener('touchmove', (e) => {
+                const touchX = e.touches[0].clientX;
+                const diff = touchStartX - touchX;
+                container.scrollLeft += diff;
+                touchStartX = touchX;
+            });
+        });
+    </script>
 </body>
 </html>

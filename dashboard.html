@@ -5,367 +5,735 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - MovieRec</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --netflix-red: #e50914;
+            --netflix-dark: #141414;
+            --netflix-gray: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: linear-gradient(135deg, #141414 0%, #000000 100%);
+            color: white;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+        }
+
+        .navbar {
+            backdrop-filter: blur(20px);
+            background: rgba(20, 20, 20, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center;
+        }
+
+        .card-hover:hover {
+            transform: scale(1.05) translateZ(0);
+            box-shadow: 0 25px 50px -12px rgba(229, 9, 20, 0.25);
+        }
+
+        .scroll-container {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+        }
+
+        .scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .loading-shimmer {
+            background: linear-gradient(90deg, #333 25%, #555 50%, #333 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .slide-up {
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--netflix-red) 0%, #c41e3a 100%);
+            transition: all 0.3s ease;
+            min-height: 44px;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #c41e3a 0%, var(--netflix-red) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(229, 9, 20, 0.4);
+        }
+
+        .welcome-banner {
+            background: linear-gradient(135deg, rgba(229, 9, 20, 0.2) 0%, rgba(0, 0, 0, 0.8) 100%);
+            border: 1px solid rgba(229, 9, 20, 0.3);
+        }
+
+        .stats-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, var(--netflix-red) 0%, #c41e3a 100%);
+        }
+
+        @media (max-width: 768px) {
+            .grid-cols-adaptive {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 769px) {
+            .grid-cols-adaptive {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+        }
+
+        .interaction-btn {
+            transition: all 0.2s ease;
+            min-height: 36px;
+            min-width: 36px;
+        }
+
+        .interaction-btn:active {
+            transform: scale(0.95);
+        }
+
+        .search-overlay {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+        }
+    </style>
 </head>
-<body class="bg-black text-white">
+<body>
     <!-- Navigation -->
-    <nav class="fixed top-0 w-full z-50 bg-black bg-opacity-90 backdrop-blur-md">
-        <div class="container mx-auto px-4 py-3">
-            <div class="flex items-center justify-between">
-                <!-- Logo -->
-                <div class="flex items-center space-x-2">
-                    <div class="text-red-600 text-2xl">
-                        <i class="fas fa-film"></i>
-                    </div>
-                    <h1 class="text-xl font-bold">MovieRec</h1>
-                </div>
-
-                <!-- Desktop Navigation -->
-                <div class="hidden md:flex items-center space-x-6">
-                    <a href="dashboard.html" class="nav-link active">Dashboard</a>
-                    <a href="#recommendations" class="nav-link">For You</a>
-                    <a href="#watchlist" class="nav-link">Watchlist</a>
-                    <a href="#history" class="nav-link">History</a>
-                </div>
-
-                <!-- Search Bar -->
-                <div class="hidden md:flex items-center flex-1 max-w-md mx-6">
-                    <div class="relative w-full">
-                        <input type="text" 
-                               id="searchInput" 
-                               placeholder="Search your content..." 
-                               class="w-full bg-gray-800 text-white px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-red-600">
-                        <button class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- User Menu -->
-                <div class="flex items-center space-x-4">
-                    <button class="relative text-gray-400 hover:text-white">
-                        <i class="fas fa-bell text-xl"></i>
-                        <span class="absolute -top-1 -right-1 bg-red-600 text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
-                    </button>
+    <nav class="navbar fixed top-0 w-full z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo and Navigation -->
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-2xl font-bold text-red-500">MovieRec</h1>
                     
-                    <div class="relative" id="userMenuContainer">
+                    <!-- Desktop Navigation -->
+                    <div class="hidden md:flex space-x-6">
+                        <a href="#dashboard" class="text-white hover:text-red-400 transition-colors">Dashboard</a>
+                        <a href="#recommendations" class="text-gray-300 hover:text-red-400 transition-colors">For You</a>
+                        <a href="#watchlist" class="text-gray-300 hover:text-red-400 transition-colors">Watchlist</a>
+                    </div>
+                </div>
+
+                <!-- Search and User Menu -->
+                <div class="flex items-center space-x-4">
+                    <!-- Search Button -->
+                    <button onclick="toggleSearch()" class="text-white hover:text-red-400 transition-colors p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+
+                    <!-- User Menu -->
+                    <div class="relative">
                         <button onclick="toggleUserMenu()" class="flex items-center space-x-2 text-white hover:text-red-400 transition-colors">
                             <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
-                                <i class="fas fa-user"></i>
+                                <span id="user-avatar" class="text-sm font-semibold">U</span>
                             </div>
-                            <span id="usernameDisplay" class="hidden md:block"></span>
-                            <i class="fas fa-chevron-down text-sm"></i>
+                            <span id="username-display" class="hidden sm:block">User</span>
                         </button>
                         
-                        <div id="userMenu" class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg hidden">
-                            <a href="profile.html" class="block px-4 py-2 hover:bg-gray-700 transition-colors">
-                                <i class="fas fa-user mr-2"></i>Profile
-                            </a>
-                            <a href="#settings" class="block px-4 py-2 hover:bg-gray-700 transition-colors">
-                                                                <i class="fas fa-cog mr-2"></i>Settings
-                            </a>
-                            <hr class="border-gray-700 my-1">
-                            <button onclick="logout()" class="w-full text-left px-4 py-2 hover:bg-gray-700 transition-colors text-red-400">
-                                <i class="fas fa-sign-out-alt mr-2"></i>Sign Out
-                            </button>
+                        <!-- Dropdown Menu -->
+                        <div id="user-menu" class="absolute right-0 mt-2 w-48 bg-gray-900 rounded-lg shadow-lg border border-gray-700 hidden">
+                            <a href="profile.html" class="block px-4 py-2 hover:bg-gray-800 transition-colors">Profile</a>
+                            <a href="#" onclick="logout()" class="block px-4 py-2 hover:bg-gray-800 transition-colors text-red-400">Logout</a>
                         </div>
                     </div>
-                    
+
                     <!-- Mobile Menu Button -->
-                    <button class="md:hidden text-white" onclick="toggleMobileMenu()">
-                        <i class="fas fa-bars text-xl"></i>
+                    <button onclick="toggleMobileMenu()" class="md:hidden text-white p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
                     </button>
                 </div>
             </div>
+        </div>
 
-            <!-- Mobile Navigation -->
-            <div id="mobileMenu" class="md:hidden hidden mt-4 pb-4">
-                <div class="flex flex-col space-y-4">
-                    <div class="relative">
-                        <input type="text" 
-                               placeholder="Search..." 
-                               class="w-full bg-gray-800 text-white px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-red-600">
-                        <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                    <a href="dashboard.html" class="nav-link">Dashboard</a>
-                    <a href="#recommendations" class="nav-link">For You</a>
-                    <a href="#watchlist" class="nav-link">Watchlist</a>
-                    <a href="#history" class="nav-link">History</a>
-                </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="md:hidden hidden bg-gray-900 border-t border-gray-700">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="#dashboard" class="block px-3 py-2 text-white">Dashboard</a>
+                <a href="#recommendations" class="block px-3 py-2 text-gray-300">For You</a>
+                <a href="#watchlist" class="block px-3 py-2 text-gray-300">Watchlist</a>
             </div>
         </div>
     </nav>
 
+    <!-- Search Overlay -->
+    <div id="search-overlay" class="fixed inset-0 z-50 hidden search-overlay">
+        <div class="flex items-start justify-center pt-20 px-4">
+            <div class="w-full max-w-2xl">
+                <div class="relative">
+                    <input type="text" 
+                           id="search-input" 
+                           placeholder="Search movies, TV shows, actors..."
+                           class="w-full px-6 py-4 bg-gray-900 border border-gray-700 rounded-lg text-white text-lg focus:outline-none focus:border-red-500">
+                    <button onclick="toggleSearch()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Search Results -->
+                <div id="search-results" class="mt-4 space-y-2 max-h-96 overflow-y-auto">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
-    <main class="pt-20 min-h-screen">
+    <main class="pt-16">
         <!-- Welcome Banner -->
-        <section class="bg-gradient-to-r from-red-900 to-gray-900 py-12">
-            <div class="container mx-auto px-4">
-                <div class="flex flex-col md:flex-row items-center justify-between">
-                    <div>
-                        <h1 class="text-3xl md:text-4xl font-bold mb-2">
-                            Welcome back, <span id="welcomeUsername"></span>!
-                        </h1>
-                        <p class="text-gray-300 text-lg">Ready to discover your next favorite?</p>
+        <section class="welcome-banner mx-4 mt-6 p-6 rounded-xl slide-up">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">
+                        Welcome back, <span id="welcome-username">User</span>! 👋
+                    </h2>
+                    <p class="text-gray-300">Ready to discover your next favorite movie?</p>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="flex space-x-4 mt-4 md:mt-0">
+                    <div class="stats-card px-4 py-3 rounded-lg text-center">
+                        <div class="text-lg font-bold text-red-400" id="movies-watched">0</div>
+                        <div class="text-xs text-gray-400">Watched</div>
                     </div>
-                    <div class="mt-4 md:mt-0 flex flex-col md:flex-row gap-4">
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-red-400" id="watchedCount">0</div>
-                            <div class="text-sm text-gray-400">Watched</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-blue-400" id="watchlistCount">0</div>
-                            <div class="text-sm text-gray-400">Watchlist</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-green-400" id="favoritesCount">0</div>
-                            <div class="text-sm text-gray-400">Favorites</div>
-                        </div>
+                    <div class="stats-card px-4 py-3 rounded-lg text-center">
+                        <div class="text-lg font-bold text-yellow-400" id="favorites-count">0</div>
+                        <div class="text-xs text-gray-400">Favorites</div>
+                    </div>
+                    <div class="stats-card px-4 py-3 rounded-lg text-center">
+                        <div class="text-lg font-bold text-green-400" id="watchlist-count">0</div>
+                        <div class="text-xs text-gray-400">Watchlist</div>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Continue Watching -->
-        <section id="continueWatching" class="py-8 bg-gray-900">
-            <div class="container mx-auto px-4">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <i class="fas fa-play-circle text-red-600 mr-3"></i>
-                    Continue Watching
-                </h2>
-                <div id="continueWatchingCarousel" class="relative">
-                    <div class="carousel-container overflow-hidden">
-                        <div class="carousel-track flex transition-transform duration-500 ease-in-out" id="continueWatchingTrack">
-                            <!-- Content will be loaded dynamically -->
-                        </div>
-                    </div>
-                    
-                    <button class="carousel-btn carousel-btn-prev" onclick="slideCarousel('continueWatching', -1)">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <button class="carousel-btn carousel-btn-next" onclick="slideCarousel('continueWatching', 1)">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
+        <section id="continue-watching" class="py-8 px-4">
+            <div class="max-w-7xl mx-auto">
+                <h3 class="text-xl font-bold text-white mb-6">📺 Continue Watching</h3>
+                <div id="continue-watching-container" class="scroll-container flex gap-4 pb-4">
+                    <!-- Content will be loaded here -->
                 </div>
             </div>
         </section>
 
         <!-- Recommended For You -->
-        <section id="recommendations" class="py-8 bg-black">
-            <div class="container mx-auto px-4">
+        <section id="recommendations" class="py-8 px-4 bg-gray-900">
+            <div class="max-w-7xl mx-auto">
+                <h3 class="text-xl font-bold text-white mb-6">🎯 Recommended For You</h3>
+                <div id="recommendations-container" class="grid-cols-adaptive grid gap-4">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Based on Your Recent Activity -->
+        <section id="recent-activity" class="py-8 px-4">
+            <div class="max-w-7xl mx-auto">
+                <h3 class="text-xl font-bold text-white mb-6">📈 Based on Your Recent Activity</h3>
+                <div id="recent-activity-container" class="scroll-container flex gap-4 pb-4">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Genre-based Recommendations -->
+        <section id="genre-recommendations" class="py-8 px-4 bg-gray-900">
+            <div class="max-w-7xl mx-auto">
+                <h3 class="text-xl font-bold text-white mb-6">🎭 Your Favorite Genres</h3>
+                <div id="genre-recommendations-container" class="grid-cols-adaptive grid gap-4">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Similar to What You Liked -->
+        <section id="similar-content" class="py-8 px-4">
+            <div class="max-w-7xl mx-auto">
+                <h3 class="text-xl font-bold text-white mb-6">🔗 Similar to What You Liked</h3>
+                <div id="similar-content-container" class="scroll-container flex gap-4 pb-4">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Watchlist Quick Access -->
+        <section id="watchlist" class="py-8 px-4 bg-gray-900">
+            <div class="max-w-7xl mx-auto">
                 <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold flex items-center">
-                        <i class="fas fa-magic text-purple-600 mr-3"></i>
-                        Recommended For You
-                    </h2>
-                    <button onclick="refreshRecommendations()" class="text-red-400 hover:text-red-300 transition-colors">
-                        <i class="fas fa-sync-alt mr-1"></i>
-                        Refresh
+                    <h3 class="text-xl font-bold text-white">📌 Your Watchlist</h3>
+                    <button onclick="viewFullWatchlist()" class="text-red-400 hover:text-red-300 transition-colors text-sm">
+                        View All →
                     </button>
                 </div>
-                
-                <!-- Recommendation Categories -->
-                <div class="space-y-8">
-                    <!-- Hybrid Recommendations -->
-                    <div>
-                        <h3 class="text-lg font-semibold mb-4 text-gray-300">Perfect Matches</h3>
-                        <div id="hybridRecommendations" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            <!-- Content will be loaded dynamically -->
-                        </div>
-                    </div>
-
-                    <!-- Based on Recent Activity -->
-                    <div>
-                        <h3 class="text-lg font-semibold mb-4 text-gray-300">Based on Your Recent Activity</h3>
-                        <div id="recentActivityRecs" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            <!-- Content will be loaded dynamically -->
-                        </div>
-                    </div>
-
-                    <!-- Genre-based -->
-                    <div>
-                        <h3 class="text-lg font-semibold mb-4 text-gray-300">More Like What You Love</h3>
-                        <div id="genreBasedRecs" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            <!-- Content will be loaded dynamically -->
-                        </div>
-                    </div>
+                <div id="watchlist-container" class="grid-cols-adaptive grid gap-4">
+                    <!-- Content will be loaded here -->
                 </div>
             </div>
         </section>
 
-        <!-- Your Watchlist -->
-        <section id="watchlist" class="py-8 bg-gray-900">
-            <div class="container mx-auto px-4">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold flex items-center">
-                        <i class="fas fa-bookmark text-yellow-600 mr-3"></i>
-                        Your Watchlist
-                    </h2>
-                    <div class="flex items-center space-x-4">
-                        <select id="watchlistSort" class="bg-gray-800 text-white px-3 py-1 rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-red-600">
-                            <option value="added">Recently Added</option>
-                            <option value="title">Title A-Z</option>
-                            <option value="rating">Rating</option>
-                            <option value="release">Release Date</option>
-                        </select>
-                        <button onclick="clearWatchlist()" class="text-red-400 hover:text-red-300 transition-colors text-sm">
-                            <i class="fas fa-trash mr-1"></i>
-                            Clear All
-                        </button>
+        <!-- Recently Added -->
+        <section id="recently-added" class="py-8 px-4">
+            <div class="max-w-7xl mx-auto">
+                <h3 class="text-xl font-bold text-white mb-6">🆕 Recently Added</h3>
+                <div id="recently-added-container" class="scroll-container flex gap-4 pb-4">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Preference Tuning -->
+        <section id="preference-tuning" class="py-8 px-4 bg-gray-900">
+            <div class="max-w-7xl mx-auto">
+                <h3 class="text-xl font-bold text-white mb-6">🎛️ Fine-tune Your Preferences</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <div id="genre-preferences" class="col-span-full">
+                        <!-- Genre preference sliders will be loaded here -->
                     </div>
-                </div>
-                <div id="watchlistGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    <!-- Watchlist content will be loaded dynamically -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Watch History -->
-        <section id="history" class="py-8 bg-black">
-            <div class="container mx-auto px-4">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <i class="fas fa-history text-blue-600 mr-3"></i>
-                    Recently Watched
-                </h2>
-                <div id="historyGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    <!-- History content will be loaded dynamically -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Quick Actions -->
-        <section class="py-8 bg-gray-900">
-            <div class="container mx-auto px-4">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <i class="fas fa-bolt text-yellow-500 mr-3"></i>
-                    Quick Actions
-                </h2>
-                <div class="grid md:grid-cols-3 gap-6">
-                    <button onclick="openPreferenceTuner()" class="quick-action-card bg-gradient-to-r from-purple-600 to-blue-600 p-6 rounded-lg hover:scale-105 transition-transform">
-                        <i class="fas fa-sliders-h text-3xl mb-3"></i>
-                        <h3 class="font-bold mb-2">Tune Preferences</h3>
-                        <p class="text-sm opacity-90">Adjust your recommendation settings</p>
-                    </button>
-                    
-                    <button onclick="exploreGenres()" class="quick-action-card bg-gradient-to-r from-green-600 to-teal-600 p-6 rounded-lg hover:scale-105 transition-transform">
-                        <i class="fas fa-compass text-3xl mb-3"></i>
-                        <h3 class="font-bold mb-2">Explore Genres</h3>
-                        <p class="text-sm opacity-90">Discover new categories</p>
-                    </button>
-                    
-                    <button onclick="viewStats()" class="quick-action-card bg-gradient-to-r from-red-600 to-pink-600 p-6 rounded-lg hover:scale-105 transition-transform">
-                        <i class="fas fa-chart-bar text-3xl mb-3"></i>
-                        <h3 class="font-bold mb-2">Your Stats</h3>
-                        <p class="text-sm opacity-90">View your watching statistics</p>
-                    </button>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Preference Tuner Modal -->
-    <div id="preferenceTunerModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-gray-900 rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-2xl font-bold">Tune Your Preferences</h3>
-                <button onclick="closePreferenceTuner()" class="text-gray-400 hover:text-white">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <!-- Genre Preferences -->
-            <div class="mb-6">
-                <h4 class="text-lg font-semibold mb-4">Favorite Genres</h4>
-                <div id="genrePreferences" class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <!-- Genre checkboxes will be loaded dynamically -->
-                </div>
-            </div>
-            
-            <!-- Content Type Preferences -->
-            <div class="mb-6">
-                <h4 class="text-lg font-semibold mb-4">Content Types</h4>
-                <div class="grid grid-cols-2 gap-3">
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="prefMovies" class="form-checkbox text-red-600">
-                        <span>Movies</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="prefTVShows" class="form-checkbox text-red-600">
-                        <span>TV Shows</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="prefAnime" class="form-checkbox text-red-600">
-                        <span>Anime</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="prefDocumentaries" class="form-checkbox text-red-600">
-                        <span>Documentaries</span>
-                    </label>
-                </div>
-            </div>
-            
-            <!-- Language Preferences -->
-            <div class="mb-6">
-                <h4 class="text-lg font-semibold mb-4">Preferred Languages</h4>
-                <div class="grid grid-cols-2 gap-3">
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="langEnglish" class="form-checkbox text-red-600">
-                        <span>English</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="langHindi" class="form-checkbox text-red-600">
-                        <span>Hindi</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="langTelugu" class="form-checkbox text-red-600">
-                        <span>Telugu</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="langTamil" class="form-checkbox text-red-600">
-                        <span>Tamil</span>
-                    </label>
-                </div>
-            </div>
-            
-            <div class="flex justify-end space-x-4">
-                <button onclick="closePreferenceTuner()" class="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-                    Cancel
-                </button>
-                <button onclick="savePreferences()" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
-                    Save Preferences
-                </button>
-            </div>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 z-40 flex items-center justify-center hidden">
+        <div class="text-center">
+            <div class="loading-shimmer w-16 h-16 rounded-full mb-4"></div>
+            <p class="text-white">Loading your personalized content...</p>
         </div>
     </div>
 
-    <!-- Loading Spinner -->
-    <div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center">
-        <div class="spinner"></div>
-    </div>
+    <script>
+        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        let authToken = window.authToken || null;
+        let currentUser = null;
+        let searchTimeout = null;
 
-    <!-- Toast Notifications -->
-    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2">
-        <!-- Toast notifications will appear here -->
-    </div>
+        // Check authentication
+        function checkAuth() {
+            if (!authToken) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
 
-        <!-- Scripts -->
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/components.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/debug.js"></script>
-    <script src="js/init.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/components.js"></script>
-    <script src="js/app.js"></script>
+        // Utility functions
+        function showLoading() {
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        }
 
-    <!-- Add to dashboard.html -->
-    <script src="js/dashboard.js"></script>
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
 
-    <!-- Add to movie-detail.html -->
-    <script src="js/movie-detail.js"></script>
+        // Navigation functions
+        function toggleUserMenu() {
+            const menu = document.getElementById('user-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function toggleSearch() {
+            const overlay = document.getElementById('search-overlay');
+            const searchInput = document.getElementById('search-input');
+            
+            overlay.classList.toggle('hidden');
+            
+            if (!overlay.classList.contains('hidden')) {
+                searchInput.focus();
+            } else {
+                searchInput.value = '';
+                document.getElementById('search-results').innerHTML = '';
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            window.authToken = null;
+            window.location.href = 'login.html';
+        }
+
+        // API calls with authentication
+        async function makeAuthenticatedRequest(url, options = {}) {
+            if (!authToken) {
+                throw new Error('No authentication token');
+            }
+
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+                ...options.headers
+            };
+
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+
+            if (response.status === 401) {
+                logout();
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return response.json();
+        }
+
+        // Data fetching functions
+        async function fetchPersonalizedRecommendations() {
+            try {
+                const data = await makeAuthenticatedRequest(`${API_BASE}/recommendations/personalized`);
+                
+                renderRecommendations(data.hybrid_recommendations || [], 'recommendations-container');
+                renderScrollableContent(data.watch_history_based || [], 'recent-activity-container');
+                renderRecommendations(data.favorites_based || [], 'genre-recommendations-container');
+                renderScrollableContent(data.collaborative_filtering || [], 'similar-content-container');
+                
+                return data;
+            } catch (error) {
+                console.error('Error fetching personalized recommendations:', error);
+                return {};
+            }
+        }
+
+        async function fetchUserStats() {
+            try {
+                // This would ideally be a separate endpoint, but we'll simulate it
+                const interactions = await makeAuthenticatedRequest(`${API_BASE}/user/interactions`);
+                // For now, we'll use placeholder data
+                updateUserStats({
+                    watched: 45,
+                    favorites: 12,
+                    watchlist: 8
+                });
+            } catch (error) {
+                console.error('Error fetching user stats:', error);
+                updateUserStats({
+                    watched: 0,
+                    favorites: 0,
+                    watchlist: 0
+                });
+            }
+        }
+
+        async function searchContent(query) {
+            if (!query.trim()) {
+                document.getElementById('search-results').innerHTML = '';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                renderSearchResults([
+                    ...(data.database_results || []),
+                    ...(data.tmdb_results || [])
+                ]);
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+
+        // Interaction functions
+        async function interactWithContent(contentId, interactionType, rating = null) {
+            try {
+                await makeAuthenticatedRequest(`${API_BASE}/interact`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        content_id: contentId,
+                        interaction_type: interactionType,
+                        rating: rating
+                    })
+                });
+                
+                // Update UI feedback
+                showInteractionFeedback(interactionType);
+                
+            } catch (error) {
+                console.error('Interaction error:', error);
+            }
+        }
+
+        // Rendering functions
+        function updateUserStats(stats) {
+            document.getElementById('movies-watched').textContent = stats.watched;
+            document.getElementById('favorites-count').textContent = stats.favorites;
+            document.getElementById('watchlist-count').textContent = stats.watchlist;
+        }
+
+        function renderRecommendations(items, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container || !items.length) return;
+
+            container.innerHTML = items.slice(0, 12).map(item => `
+                <div class="card-hover cursor-pointer bg-gray-800 rounded-lg overflow-hidden" onclick="viewContent(${item.id})">
+                    <div class="relative">
+                        <img src="${item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image'}" 
+                             alt="${item.title}"
+                             class="w-full h-64 sm:h-80 object-cover"
+                             loading="lazy">
+                        <div class="absolute top-2 right-2 space-y-1">
+                            <button onclick="event.stopPropagation(); interactWithContent(${item.id}, 'favorite')" 
+                                    class="interaction-btn bg-black bg-opacity-70 text-white p-2 rounded-full hover:bg-red-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="event.stopPropagation(); interactWithContent(${item.id}, 'wishlist')" 
+                                    class="interaction-btn bg-black bg-opacity-70 text-white p-2 rounded-full hover:bg-blue-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-semibold text-sm mb-2 line-clamp-2">${item.title}</h3>
+                        <div class="flex items-center justify-between">
+                            <span class="text-yellow-400 text-xs">⭐ ${item.rating?.toFixed(1) || 'N/A'}</span>
+                            <span class="text-gray-400 text-xs">${item.release_date?.split('-')[0] || ''}</span>
+                        </div>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            ${(item.genre_names || []).slice(0, 2).map(genre => 
+                                `<span class="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">${genre}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderScrollableContent(items, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container || !items.length) return;
+
+            container.innerHTML = items.slice(0, 15).map(item => `
+                <div class="flex-none w-48 sm:w-64 card-hover cursor-pointer" onclick="viewContent(${item.id})">
+                    <div class="relative overflow-hidden rounded-lg bg-gray-800">
+                        <img src="${item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image'}" 
+                             alt="${item.title}"
+                             class="w-full h-72 object-cover"
+                             loading="lazy">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
+                            <div class="absolute bottom-4 left-4 right-4">
+                                <h3 class="text-white font-semibold text-sm mb-1">${item.title}</h3>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-yellow-400 text-xs">⭐ ${item.rating?.toFixed(1) || 'N/A'}</span>
+                                    <span class="text-gray-300 text-xs">${item.release_date?.split('-')[0] || ''}</span>
+                                </div>
+                                <div class="mt-2 flex space-x-2">
+                                    <button onclick="event.stopPropagation(); interactWithContent(${item.id}, 'favorite')" 
+                                            class="interaction-btn bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors">
+                                        ❤️ Like
+                                    </button>
+                                    <button onclick="event.stopPropagation(); interactWithContent(${item.id}, 'wishlist')" 
+                                            class="interaction-btn bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors">
+                                        + Watchlist
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderSearchResults(results) {
+            const container = document.getElementById('search-results');
+            
+            if (!results.length) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-4">No results found</p>';
+                return;
+            }
+
+            container.innerHTML = results.slice(0, 10).map(item => `
+                <div class="flex items-center space-x-4 p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer" onclick="viewContent(${item.id}); toggleSearch();">
+                    <img src="${item.poster_path || 'https://via.placeholder.com/60x90/333/fff?text=No+Image'}" 
+                         alt="${item.title || item.name}"
+                         class="w-12 h-16 object-cover rounded"
+                         loading="lazy">
+                    <div class="flex-1">
+                        <h4 class="text-white font-medium">${item.title || item.name}</h4>
+                        <p class="text-gray-400 text-sm">${item.release_date?.split('-')[0] || ''}</p>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <span class="text-yellow-400 text-xs">⭐ ${item.vote_average?.toFixed(1) || item.rating?.toFixed(1) || 'N/A'}</span>
+                            <span class="text-gray-500 text-xs">${item.content_type || 'movie'}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showInteractionFeedback(type) {
+            const messages = {
+                'favorite': '❤️ Added to favorites!',
+                'wishlist': '📌 Added to watchlist!',
+                'like': '👍 Liked!',
+                'view': '👁️ Marked as watched!'
+            };
+
+            const message = messages[type] || 'Action completed!';
+            
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-20 right-4 bg-green-600 text-white px-6 py-3 rounded-lg z-50 transform translate-x-full';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function viewContent(contentId) {
+            if (contentId) {
+                window.location.href = `movie-detail.html?id=${contentId}`;
+            }
+        }
+
+        function viewFullWatchlist() {
+            // This could navigate to a dedicated watchlist page
+            alert('Full watchlist view - to be implemented');
+        }
+
+        // Event listeners
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchContent(e.target.value);
+            }, 300);
+        });
+
+        // Close menus when clicking outside
+        document.addEventListener('click', function(e) {
+            const userMenu = document.getElementById('user-menu');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (!e.target.closest('#user-menu') && !e.target.closest('button[onclick="toggleUserMenu()"]')) {
+                userMenu.classList.add('hidden');
+            }
+            
+            if (!e.target.closest('#mobile-menu') && !e.target.closest('button[onclick="toggleMobileMenu()"]')) {
+                mobileMenu.classList.add('hidden');
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const searchOverlay = document.getElementById('search-overlay');
+                if (!searchOverlay.classList.contains('hidden')) {
+                    toggleSearch();
+                }
+            }
+            
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                toggleSearch();
+            }
+        });
+
+        // Initialize dashboard
+        async function initializeDashboard() {
+            if (!checkAuth()) return;
+
+            try {
+                showLoading();
+                
+                // Set user info
+                document.getElementById('welcome-username').textContent = 'User';
+                document.getElementById('username-display').textContent = 'User';
+                document.getElementById('user-avatar').textContent = 'U';
+                
+                // Fetch all data
+                await Promise.all([
+                    fetchPersonalizedRecommendations(),
+                    fetchUserStats()
+                ]);
+                
+                hideLoading();
+                
+                // Add scroll animations
+                const observerOptions = {
+                    threshold: 0.1,
+                    rootMargin: '0px 0px -50px 0px'
+                };
+                
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('slide-up');
+                        }
+                    });
+                }, observerOptions);
+                
+                document.querySelectorAll('section').forEach(section => {
+                    observer.observe(section);
+                });
+                
+            } catch (error) {
+                console.error('Error initializing dashboard:', error);
+                hideLoading();
+            }
+        }
+
+        // Load dashboard when DOM is ready
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+    </script>
 </body>
 </html>

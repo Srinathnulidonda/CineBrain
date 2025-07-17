@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieRec - Test Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/main.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-black text-white p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">MovieRec Test Page</h1>
+        
+        <!-- API Test Section -->
+        <div class="bg-gray-900 p-6 rounded-lg mb-8">
+            <h2 class="text-xl font-bold mb-4">API Tests</h2>
+            <div class="space-y-4">
+                <button onclick="testHomepage()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+                    Test Homepage API
+                </button>
+                <button onclick="testLogin()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+                    Test Login
+                </button>
+                <button onclick="testRegister()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded">
+                    Test Register
+                </button>
+                <button onclick="testMovieDetail()" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded">
+                    Test Movie Detail
+                </button>
+            </div>
+            <div id="testResults" class="mt-4 p-4 bg-gray-800 rounded min-h-[200px] overflow-auto">
+                <p class="text-gray-400">Test results will appear here...</p>
+            </div>
+        </div>
+        
+        <!-- Sample Movie Cards -->
+        <div class="bg-gray-900 p-6 rounded-lg mb-8">
+            <h2 class="text-xl font-bold mb-4">Sample Movie Cards</h2>
+            <div id="movieGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Cards will be generated here -->
+            </div>
+        </div>
+        
+        <!-- Auth Test -->
+        <div class="bg-gray-900 p-6 rounded-lg">
+            <h2 class="text-xl font-bold mb-4">Authentication Test</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block mb-2">Username:</label>
+                    <input type="text" id="testUsername" value="testuser" class="bg-gray-800 px-3 py-2 rounded w-full">
+                </div>
+                <div>
+                    <label class="block mb-2">Password:</label>
+                    <input type="password" id="testPassword" value="password123" class="bg-gray-800 px-3 py-2 rounded w-full">
+                </div>
+                <div class="space-x-4">
+                    <button onclick="doTestLogin()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
+                        Login
+                    </button>
+                    <button onclick="doTestLogout()" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">
+                        Logout
+                    </button>
+                </div>
+                <div id="authStatus" class="p-3 bg-gray-800 rounded">
+                    <p>Auth Status: <span id="authStatusText">Not logged in</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/debug.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/components.js"></script>
+
+    <script>
+        // Test functions
+        async function testHomepage() {
+            logTest('Testing Homepage API...');
+            try {
+                const data = await api.getHomepage();
+                logTest('Homepage API Success:', data);
+                
+                // Display some movies
+                displaySampleMovies(data.trending.movies);
+            } catch (error) {
+                logTest('Homepage API Error:', error);
+            }
+        }
+        
+        async function testLogin() {
+            logTest('Testing Login API...');
+            try {
+                const result = await api.login({
+                    username: 'testuser',
+                    password: 'password123'
+                });
+                logTest('Login API Success:', result);
+            } catch (error) {
+                logTest('Login API Error:', error);
+            }
+        }
+        
+        async function testRegister() {
+            logTest('Testing Register API...');
+            try {
+                const result = await api.register({
+                    username: 'newuser' + Date.now(),
+                    email: 'test@example.com',
+                    password: 'password123'
+                });
+                logTest('Register API Success:', result);
+            } catch (error) {
+                logTest('Register API Error:', error);
+            }
+        }
+        
+        async function testMovieDetail() {
+            logTest('Testing Movie Detail API...');
+            try {
+                const result = await api.getContentDetails(1);
+                logTest('Movie Detail API Success:', result);
+            } catch (error) {
+                logTest('Movie Detail API Error:', error);
+            }
+        }
+        
+        async function doTestLogin() {
+            const username = document.getElementById('testUsername').value;
+            const password = document.getElementById('testPassword').value;
+            
+            try {
+                showLoading(true);
+                const result = await login({ username, password });
+                updateAuthStatus();
+                showToast('Login successful!', 'success');
+            } catch (error) {
+                showToast('Login failed: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function doTestLogout() {
+            logout();
+            updateAuthStatus();
+        }
+        
+        function updateAuthStatus() {
+            const statusText = document.getElementById('authStatusText');
+            const user = getCurrentUser();
+            
+            if (user) {
+                statusText.textContent = `Logged in as ${user.username}`;
+                statusText.className = 'text-green-400';
+            } else {
+                statusText.textContent = 'Not logged in';
+                statusText.className = 'text-red-400';
+            }
+        }
+        
+        function logTest(message, data = null) {
+            const results = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            let logEntry = `[${timestamp}] ${message}`;
+            if (data) {
+                logEntry += '\n' + JSON.stringify(data, null, 2);
+            }
+            
+            results.innerHTML += `<div class="mb-2 p-2 bg-gray-700 rounded"><pre class="text-sm">${logEntry}</pre></div>`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function displaySampleMovies(movies) {
+            const grid = document.getElementById('movieGrid');
+            grid.innerHTML = '';
+            
+            movies.slice(0, 8).forEach(movie => {
+                const card = ui.createMovieCard(movie);
+                grid.appendChild(card);
+            });
+        }
+        
+        // Initialize test page
+        document.addEventListener('DOMContentLoaded', () => {
+            updateAuthStatus();
+            testHomepage();
+            
+            // Show debug info
+            console.log('Test page loaded');
+            console.log('Available debug commands:', window.debugCommands ? Object.keys(window.debugCommands) : 'None');
+        });
+    </script>
+</body>
+</html>
