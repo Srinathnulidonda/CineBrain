@@ -3,74 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieRec - Discover Your Next Favorite</title>
-    
-    <!-- Bootstrap Grid CSS -->
+    <title>MovieRec - Personalized Movie Recommendations</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap-grid.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="assets/css/main.css">
-    <link rel="stylesheet" href="assets/css/components.css">
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#141414">
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        'netflix-red': '#e50914',
-                        'dark-bg': '#141414',
-                        'dark-secondary': '#1f1f1f',
-                        'dark-tertiary': '#2a2a2a'
-                    }
-                }
-            }
-        }
-    </script>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root { --primary-bg: #141414; --secondary-bg: #1f1f1f; --tertiary-bg: #2a2a2a; --accent-primary: #e50914; --accent-secondary: #ff6b6b; --text-primary: #ffffff; --text-secondary: #cccccc; --text-muted: #999999; --success: #28a745; --warning: #ffc107; --error: #dc3545; --border-color: #333333; --hover-bg: #333333; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--primary-bg); color: var(--text-primary); line-height: 1.6; overflow-x: hidden; }
+        .navbar { background: rgba(20, 20, 20, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-color); position: fixed; top: 0; width: 100%; z-index: 1000; padding: 1rem 0; transition: all 0.3s ease; }
+        .navbar.scrolled { background: rgba(20, 20, 20, 0.98); }
+        .navbar-brand { font-size: 1.8rem; font-weight: 700; color: var(--accent-primary); text-decoration: none; }
+        .navbar-nav { display: flex; align-items: center; gap: 2rem; }
+        .nav-link { color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: all 0.3s ease; }
+        .nav-link:hover { color: var(--text-primary); background: var(--hover-bg); }
+        .nav-link.active { color: var(--accent-primary); }
+        .hero-section { background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%); padding: 8rem 0 4rem; text-align: center; position: relative; overflow: hidden; }
+        .hero-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="%23e50914" opacity="0.1"/><circle cx="80" cy="40" r="1" fill="%23ff6b6b" opacity="0.1"/><circle cx="40" cy="80" r="1.5" fill="%23e50914" opacity="0.1"/></svg>'); }
+        .hero-content { position: relative; z-index: 2; }
+        .hero-title { font-size: 3.5rem; font-weight: 800; margin-bottom: 1rem; background: linear-gradient(135deg, var(--text-primary), var(--accent-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-subtitle { font-size: 1.25rem; color: var(--text-secondary); margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+        .btn-primary { background: var(--accent-primary); border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; text-decoration: none; color: white; display: inline-block; transition: all 0.3s ease; cursor: pointer; }
+        .btn-primary:hover { background: #f40612; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(229, 9, 20, 0.3); }
+        .btn-secondary { background: transparent; border: 2px solid var(--text-secondary); padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; text-decoration: none; color: var(--text-secondary); display: inline-block; transition: all 0.3s ease; margin-left: 1rem; }
+        .btn-secondary:hover { border-color: var(--text-primary); color: var(--text-primary); }
+        .section { padding: 4rem 0; }
+        .section-title { font-size: 2rem; font-weight: 700; margin-bottom: 2rem; color: var(--text-primary); }
+        .content-row { margin-bottom: 3rem; }
+        .content-carousel { position: relative; overflow: hidden; }
+        .content-track { display: flex; gap: 1rem; overflow-x: auto; scroll-behavior: smooth; padding-bottom: 1rem; scrollbar-width: none; -ms-overflow-style: none; }
+        .content-track::-webkit-scrollbar { display: none; }
+        .movie-card { min-width: 200px; background: var(--tertiary-bg); border-radius: 0.75rem; overflow: hidden; transition: all 0.3s ease; cursor: pointer; position: relative; }
+        .movie-card:hover { transform: scale(1.05); box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3); }
+        .movie-poster { position: relative; width: 100%; height: 300px; overflow: hidden; }
+        .movie-poster img { width: 100%; height: 100%; object-fit: cover; transition: all 0.3s ease; }
+        .movie-card:hover .movie-poster img { transform: scale(1.1); }
+        .movie-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); display: flex; align-items: flex-end; justify-content: center; opacity: 0; transition: all 0.3s ease; }
+        .movie-card:hover .movie-overlay { opacity: 1; }
+        .play-btn { background: var(--accent-primary); border: none; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; margin-bottom: 1rem; transition: all 0.3s ease; }
+        .play-btn:hover { background: #f40612; transform: scale(1.1); }
+        .movie-info { padding: 1rem; }
+        .movie-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .movie-meta { font-size: 0.875rem; color: var(--text-muted); }
+        .movie-rating { display: inline-flex; align-items: center; gap: 0.25rem; color: #ffd700; }
+        .genre-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+        .genre-tag { background: var(--hover-bg); color: var(--text-secondary); padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; }
+        .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0, 0, 0, 0.7); border: none; color: white; width: 50px; height: 50px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; transition: all 0.3s ease; z-index: 10; }
+        .nav-arrow:hover { background: rgba(0, 0, 0, 0.9); transform: translateY(-50%) scale(1.1); }
+        .nav-arrow.prev { left: -25px; }
+        .nav-arrow.next { right: -25px; }
+        .loading-skeleton { background: linear-gradient(90deg, var(--tertiary-bg) 25%, var(--hover-bg) 50%, var(--tertiary-bg) 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton-card { min-width: 200px; height: 380px; border-radius: 0.75rem; }
+        .auth-buttons { display: flex; gap: 1rem; align-items: center; }
+        .user-menu { position: relative; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; cursor: pointer; }
+        .dropdown-menu { position: absolute; top: 100%; right: 0; background: var(--tertiary-bg); border: 1px solid var(--border-color); border-radius: 0.5rem; min-width: 200px; padding: 0.5rem 0; display: none; z-index: 1000; }
+        .dropdown-menu.show { display: block; }
+        .dropdown-item { display: block; padding: 0.5rem 1rem; color: var(--text-secondary); text-decoration: none; transition: all 0.3s ease; }
+        .dropdown-item:hover { background: var(--hover-bg); color: var(--text-primary); }
+        .search-container { position: relative; max-width: 400px; margin: 0 auto; }
+        .search-input { width: 100%; padding: 0.75rem 1rem 0.75rem 3rem; background: var(--tertiary-bg); border: 1px solid var(--border-color); border-radius: 0.5rem; color: var(--text-primary); font-size: 1rem; }
+        .search-input:focus { outline: none; border-color: var(--accent-primary); }
+        .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        .modal-content { background: var(--secondary-bg); border-radius: 1rem; padding: 2rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-title { font-size: 1.5rem; font-weight: 700; }
+        .modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-label { display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 500; }
+        .form-control { width: 100%; padding: 0.75rem; background: var(--tertiary-bg); border: 1px solid var(--border-color); border-radius: 0.5rem; color: var(--text-primary); font-size: 1rem; }
+        .form-control:focus { outline: none; border-color: var(--accent-primary); }
+        .alert { padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+        .alert-success { background: rgba(40, 167, 69, 0.1); border: 1px solid var(--success); color: var(--success); }
+        .alert-error { background: rgba(220, 53, 69, 0.1); border: 1px solid var(--error); color: var(--error); }
+        .footer { background: var(--secondary-bg); padding: 3rem 0; margin-top: 4rem; border-top: 1px solid var(--border-color); }
+        .footer-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; }
+        .footer-section h3 { color: var(--text-primary); margin-bottom: 1rem; }
+        .footer-section a { color: var(--text-secondary); text-decoration: none; display: block; margin-bottom: 0.5rem; transition: color 0.3s ease; }
+        .footer-section a:hover { color: var(--text-primary); }
+        @media (max-width: 768px) { .hero-title { font-size: 2.5rem; } .navbar-nav { gap: 1rem; } .movie-card { min-width: 150px; } .nav-arrow { display: none; } .auth-buttons { flex-direction: column; gap: 0.5rem; } }
+    </style>
 </head>
-<body class="bg-dark-bg text-white">
+<body>
     <!-- Navigation -->
-    <nav class="navbar fixed-top bg-dark-bg bg-opacity-95 backdrop-blur-sm border-b border-gray-800">
-        <div class="container-fluid px-4">
+    <nav class="navbar">
+        <div class="container">
             <div class="row w-100 align-items-center">
                 <div class="col-md-3">
-                    <a class="navbar-brand text-netflix-red font-bold text-2xl" href="index.html">
-                        <i class="fas fa-film me-2"></i>MovieRec
-                    </a>
+                    <a href="/" class="navbar-brand">MovieRec</a>
                 </div>
                 <div class="col-md-6">
-                    <div class="search-container position-relative">
-                        <input type="text" id="globalSearch" class="form-control bg-dark-secondary border-gray-600 text-white rounded-pill ps-4 pe-12" 
-                               placeholder="Search movies, TV shows, anime...">
-                        <button class="btn position-absolute end-0 top-50 translate-middle-y me-2 text-gray-400">
-                            <i class="fas fa-search"></i>
-                        </button>
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" placeholder="Search movies, TV shows, anime..." id="searchInput">
                     </div>
                 </div>
-                <div class="col-md-3 text-end">
-                    <div class="user-menu d-none" id="userMenu">
-                        <button class="btn btn-outline-light me-2" onclick="showProfile()">
-                            <i class="fas fa-user me-1"></i>Profile
-                        </button>
-                        <button class="btn btn-netflix-red" onclick="logout()">
-                            <i class="fas fa-sign-out-alt me-1"></i>Logout
-                        </button>
-                    </div>
-                    <div class="auth-buttons" id="authButtons">
-                        <a href="login.html" class="btn btn-outline-light me-2">Login</a>
-                        <a href="login.html?mode=register" class="btn btn-netflix-red">Sign Up</a>
+                <div class="col-md-3">
+                    <div class="navbar-nav justify-content-end">
+                        <div id="authButtons" class="auth-buttons">
+                            <a href="#" class="btn-secondary" onclick="showModal('loginModal')">Login</a>
+                            <a href="#" class="btn-primary" onclick="showModal('registerModal')">Sign Up</a>
+                        </div>
+                        <div id="userMenu" class="user-menu" style="display: none;">
+                            <div class="user-avatar" onclick="toggleDropdown()">
+                                <span id="userInitial">U</span>
+                            </div>
+                            <div class="dropdown-menu" id="dropdownMenu">
+                                <a href="profile.html" class="dropdown-item">
+                                    <i class="fas fa-user"></i> Profile
+                                </a>
+                                <a href="#" class="dropdown-item">
+                                    <i class="fas fa-heart"></i> Favorites
+                                </a>
+                                <a href="#" class="dropdown-item">
+                                    <i class="fas fa-bookmark"></i> Watchlist
+                                </a>
+                                <a href="#" class="dropdown-item" onclick="logout()">
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -78,248 +134,220 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero-section position-relative overflow-hidden" id="heroSection">
-        <div class="hero-background position-absolute w-100 h-100">
-            <div class="hero-overlay position-absolute w-100 h-100 bg-gradient-to-r from-black via-transparent to-black"></div>
-        </div>
-        <div class="container position-relative z-10 py-5">
-            <div class="row align-items-center min-vh-100">
-                <div class="col-lg-6">
-                    <div class="hero-content">
-                        <h1 class="display-3 font-bold mb-4 text-white">
-                            Discover Your Next <span class="text-netflix-red">Favorite</span>
-                        </h1>
-                        <p class="lead mb-4 text-gray-300">
-                            Personalized movie and TV show recommendations powered by AI. 
-                            Find hidden gems across all genres and languages.
-                        </p>
-                        <div class="hero-actions">
-                            <button class="btn btn-netflix-red btn-lg me-3 px-4 py-3" onclick="exploreContent()">
-                                <i class="fas fa-play me-2"></i>Start Exploring
-                            </button>
-                            <button class="btn btn-outline-light btn-lg px-4 py-3" onclick="learnMore()">
-                                <i class="fas fa-info-circle me-2"></i>Learn More
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="hero-video-container position-relative">
-                        <div class="featured-content-preview bg-dark-secondary rounded-3 p-4 shadow-lg">
-                            <div id="featuredContentCarousel" class="carousel slide" data-bs-ride="carousel">
-                                <div class="carousel-inner" id="featuredCarouselInner">
-                                    <!-- Dynamic content will be loaded here -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Discover Your Next Favorite</h1>
+            <p class="hero-subtitle">Get personalized movie and TV show recommendations powered by AI and machine learning</p>
+            <a href="#" class="btn-primary" onclick="scrollToRecommendations()">Explore Now</a>
+            <a href="#" class="btn-secondary" onclick="showModal('registerModal')">Join Free</a>
         </div>
     </section>
 
     <!-- Main Content -->
-    <main class="main-content py-5">
-        <div class="container-fluid px-4">
-            
-            <!-- What's Hot Section -->
-            <section class="content-section mb-5" id="whatsHotSection">
-                <div class="section-header d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="section-title text-2xl font-semibold">🔥 What's Hot</h2>
-                    <button class="btn btn-outline-light btn-sm" onclick="viewAllWhatsHot()">
-                        View All <i class="fas fa-arrow-right ms-1"></i>
+    <main class="container">
+        <!-- Trending Section -->
+        <section class="section" id="trending">
+            <h2 class="section-title">🔥 What's Hot</h2>
+            <div class="content-row">
+                <div class="content-carousel">
+                    <button class="nav-arrow prev" onclick="scrollCarousel('trending-track', -1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="content-track" id="trending-track">
+                        <!-- Loading skeletons -->
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                    </div>
+                    <button class="nav-arrow next" onclick="scrollCarousel('trending-track', 1)">
+                        <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
-                <div class="content-carousel" id="whatsHotCarousel">
-                    <div class="carousel-container position-relative">
-                        <button class="carousel-nav prev position-absolute start-0 top-50 translate-middle-y z-10">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <div class="carousel-track d-flex gap-3 overflow-hidden" id="whatsHotTrack">
-                            <!-- Dynamic content cards -->
-                        </div>
-                        <button class="carousel-nav next position-absolute end-0 top-50 translate-middle-y z-10">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Trending Section -->
-            <section class="content-section mb-5" id="trendingSection">
-                <div class="section-header mb-4">
-                    <h2 class="section-title text-2xl font-semibold mb-3">📈 Trending Now</h2>
-                    <div class="trending-tabs">
-                        <button class="tab-btn active" data-type="movies">Movies</button>
-                        <button class="tab-btn" data-type="tv">TV Shows</button>
-                        <button class="tab-btn" data-type="anime">Anime</button>
+        <!-- Personalized Recommendations -->
+        <section class="section" id="recommendations">
+            <h2 class="section-title">🎯 Recommended for You</h2>
+            <div class="content-row">
+                <div class="content-carousel">
+                    <button class="nav-arrow prev" onclick="scrollCarousel('recommendations-track', -1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="content-track" id="recommendations-track">
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
                     </div>
-                </div>
-                <div class="trending-content">
-                    <div class="tab-content active" id="trendingMovies">
-                        <div class="content-grid row g-3" id="trendingMoviesGrid">
-                            <!-- Dynamic movie cards -->
-                        </div>
-                    </div>
-                    <div class="tab-content" id="trendingTV">
-                        <div class="content-grid row g-3" id="trendingTVGrid">
-                            <!-- Dynamic TV show cards -->
-                        </div>
-                    </div>
-                    <div class="tab-content" id="trendingAnime">
-                        <div class="content-grid row g-3" id="trendingAnimeGrid">
-                            <!-- Dynamic anime cards -->
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Personalized Recommendations (Logged in users only) -->
-            <section class="content-section mb-5 d-none" id="personalizedSection">
-                <div class="section-header mb-4">
-                    <h2 class="section-title text-2xl font-semibold">🎯 Just For You</h2>
-                    <p class="text-gray-400">Based on your viewing history and preferences</p>
-                </div>
-                <div class="personalized-content">
-                    <div class="recommendation-categories">
-                        <div class="category-section mb-4">
-                            <h3 class="category-title text-lg font-medium mb-3">Because you liked...</h3>
-                            <div class="content-carousel" id="favoritesBasedCarousel">
-                                <!-- Dynamic recommendations -->
-                            </div>
-                        </div>
-                        <div class="category-section mb-4">
-                            <h3 class="category-title text-lg font-medium mb-3">Continue Watching</h3>
-                            <div class="content-carousel" id="continueWatchingCarousel">
-                                <!-- Dynamic continue watching -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Regional Content -->
-            <section class="content-section mb-5" id="regionalSection">
-                <div class="section-header mb-4">
-                    <h2 class="section-title text-2xl font-semibold">🌍 Regional Favorites</h2>
-                    <div class="language-selector">
-                        <button class="lang-btn active" data-lang="Telugu">Telugu</button>
-                        <button class="lang-btn" data-lang="Hindi">Hindi</button>
-                        <button class="lang-btn" data-lang="Tamil">Tamil</button>
-                        <button class="lang-btn" data-lang="Kannada">Kannada</button>
-                    </div>
-                </div>
-                <div class="regional-content">
-                    <div class="content-carousel" id="regionalCarousel">
-                        <!-- Dynamic regional content -->
-                    </div>
-                </div>
-            </section>
-
-            <!-- Critics' Choice -->
-            <section class="content-section mb-5" id="criticsChoiceSection">
-                <div class="section-header mb-4">
-                    <h2 class="section-title text-2xl font-semibold">🏆 Critics' Choice</h2>
-                    <p class="text-gray-400">Highly rated and critically acclaimed</p>
-                </div>
-                <div class="content-carousel" id="criticsChoiceCarousel">
-                    <!-- Dynamic critics choice content -->
-                </div>
-            </section>
-
-            <!-- Admin Curated Content -->
-            <section class="content-section mb-5" id="adminCuratedSection">
-                <div class="section-header mb-4">
-                    <h2 class="section-title text-2xl font-semibold">⭐ Staff Picks</h2>
-                    <p class="text-gray-400">Handpicked by our content experts</p>
-                </div>
-                <div class="curated-content">
-                    <div class="row g-4" id="adminCuratedGrid">
-                        <!-- Dynamic admin curated content -->
-                    </div>
-                </div>
-            </section>
-
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer bg-dark-secondary py-5 mt-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <h5 class="text-netflix-red mb-3">MovieRec</h5>
-                    <p class="text-gray-400">Your personalized entertainment discovery platform.</p>
-                </div>
-                <div class="col-md-2">
-                    <h6 class="mb-3">Features</h6>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-gray-400 text-decoration-none">Recommendations</a></li>
-                        <li><a href="#" class="text-gray-400 text-decoration-none">Watchlist</a></li>
-                        <li><a href="#" class="text-gray-400 text-decoration-none">Reviews</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-2">
-                    <h6 class="mb-3">Content</h6>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-gray-400 text-decoration-none">Movies</a></li>
-                        <li><a href="#" class="text-gray-400 text-decoration-none">TV Shows</a></li>
-                        <li><a href="#" class="text-gray-400 text-decoration-none">Anime</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-2">
-                    <h6 class="mb-3">Support</h6>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-gray-400 text-decoration-none">Help Center</a></li>
-                        <li><a href="#" class="text-gray-400 text-decoration-none">Contact</a></li>
-                        <li><a href="#" class="text-gray-400 text-decoration-none">Privacy</a></li>
-                    </ul>
-                </div> 
-                                <div class="col-md-2">
-                    <h6 class="mb-3">Connect</h6>
-                    <div class="social-links">
-                        <a href="#" class="text-gray-400 me-3"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="text-gray-400 me-3"><i class="fab fa-facebook"></i></a>
-                        <a href="#" class="text-gray-400 me-3"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="text-gray-400"><i class="fab fa-youtube"></i></a>
-                    </div>
+                    <button class="nav-arrow next" onclick="scrollCarousel('recommendations-track', 1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
             </div>
-            <hr class="my-4 border-gray-700">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <p class="text-gray-500 mb-0">&copy; 2025 MovieRec. All rights reserved.</p>
+        </section>
+
+        <!-- Regional Content -->
+        <section class="section" id="regional">
+            <h2 class="section-title">🌏 Regional Favorites</h2>
+            <div class="content-row">
+                <div class="content-carousel">
+                    <button class="nav-arrow prev" onclick="scrollCarousel('regional-track', -1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="content-track" id="regional-track">
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                    </div>
+                    <button class="nav-arrow next" onclick="scrollCarousel('regional-track', 1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
-                <div class="col-md-6 text-end">
-                    <p class="text-gray-500 mb-0">Made with ❤️ for movie lovers</p>
+            </div>
+        </section>
+
+        <!-- Anime Section -->
+        <section class="section" id="anime">
+            <h2 class="section-title">🎌 Trending Anime</h2>
+            <div class="content-row">
+                <div class="content-carousel">
+                    <button class="nav-arrow prev" onclick="scrollCarousel('anime-track', -1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="content-track" id="anime-track">
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                    </div>
+                    <button class="nav-arrow next" onclick="scrollCarousel('anime-track', 1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Critics Choice -->
+        <section class="section" id="critics">
+            <h2 class="section-title">🏆 Critics' Choice</h2>
+            <div class="content-row">
+                <div class="content-carousel">
+                    <button class="nav-arrow prev" onclick="scrollCarousel('critics-track', -1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="content-track" id="critics-track">
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                        <div class="skeleton-card loading-skeleton"></div>
+                    </div>
+                    <button class="nav-arrow next" onclick="scrollCarousel('critics-track', 1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal-backdrop" style="display: none;" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Welcome Back</h3>
+                <button class="modal-close" onclick="hideModal('loginModal')">&times;</button>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label">Username or Email</label>
+                    <input type="text" class="form-control" id="loginUsername" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" id="loginPassword" required>
+                </div>
+                <div id="loginAlert"></div>
+                <button type="submit" class="btn-primary w-100">Sign In</button>
+                <p style="text-align: center; margin-top: 1rem; color: var(--text-secondary);">
+                    Don't have an account? 
+                    <a href="#" onclick="hideModal('loginModal'); showModal('registerModal')" style="color: var(--accent-primary);">Sign up</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal-backdrop" style="display: none;" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Join MovieRec</h3>
+                <button class="modal-close" onclick="hideModal('registerModal')">&times;</button>
+            </div>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" id="registerUsername" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="registerEmail" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" id="registerPassword" required>
+                </div>
+                <div id="registerAlert"></div>
+                <button type="submit" class="btn-primary w-100">Create Account</button>
+                <p style="text-align: center; margin-top: 1rem; color: var(--text-secondary);">
+                    Already have an account? 
+                    <a href="#" onclick="hideModal('registerModal'); showModal('loginModal')" style="color: var(--accent-primary);">Sign in</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>MovieRec</h3>
+                    <p style="color: var(--text-secondary);">Your personalized movie and TV show recommendation platform.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Features</h3>
+                    <a href="#">Personalized Recommendations</a>
+                    <a href="#">Regional Content</a>
+                    <a href="#">Anime Collection</a>
+                    <a href="#">Watchlist</a>
+                </div>
+                <div class="footer-section">
+                    <h3>Support</h3>
+                    <a href="#">Help Center</a>
+                    <a href="#">Contact Us</a>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                </div>
+                <div class="footer-section">
+                    <h3>Connect</h3>
+                    <a href="#"><i class="fab fa-twitter"></i> Twitter</a>
+                    <a href="#"><i class="fab fa-facebook"></i> Facebook</a>
+                    <a href="#"><i class="fab fa-instagram"></i> Instagram</a>
                 </div>
             </div>
         </div>
     </footer>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay position-fixed w-100 h-100 top-0 start-0 d-none" id="loadingOverlay">
-        <div class="d-flex justify-content-center align-items-center h-100">
-            <div class="loading-spinner">
-                <div class="spinner-border text-netflix-red" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-3 text-white">Loading amazing content...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Container -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer">
-        <!-- Dynamic toasts will be added here -->
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/app.js"></script>
     <script src="assets/js/api.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/components.js"></script>
-    <script src="assets/js/app.js"></script>
 </body>
 </html>
