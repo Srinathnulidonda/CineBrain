@@ -3,66 +3,263 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Recommendations</title>
+    <title>MovieRec - Your Personal Movie Companion</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#e50914">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-dark text-white">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-black fixed-top">
-        <div class="container-fluid">
-            <a class="navbar-brand text-danger fw-bold" href="#">MOVIEAPP</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="#" onclick="app.showHome()">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#" onclick="app.showSearch()">Search</a></li>
-                    <li class="nav-item d-none" id="profileNav"><a class="nav-link" href="#" onclick="app.showProfile()">Profile</a></li>
-                    <li class="nav-item d-none" id="adminNav"><a class="nav-link" href="#" onclick="app.showAdmin()">Admin</a></li>
-                    <li class="nav-item" id="loginNav"><a class="nav-link" href="#" onclick="auth.showLogin()">Login</a></li>
-                    <li class="nav-item d-none" id="logoutNav"><a class="nav-link" href="#" onclick="auth.logout()">Logout</a></li>
-                </ul>
+<body class="bg-primary text-white">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-sm border-b border-border-color">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold text-accent-red">MovieRec</h1>
+                    <div class="hidden md:flex space-x-6">
+                        <a href="#trending" class="nav-link">Trending</a>
+                        <a href="#whats-hot" class="nav-link">What's Hot</a>
+                        <a href="#regional" class="nav-link">Regional</a>
+                        <a href="#critics" class="nav-link">Critics' Choice</a>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="search-container hidden md:block">
+                        <input type="text" id="searchInput" placeholder="Search movies, TV shows..." 
+                               class="search-input">
+                        <div id="searchResults" class="search-results hidden"></div>
+                    </div>
+                    
+                    <button id="mobileSearchBtn" class="md:hidden p-2 hover:bg-secondary-bg rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+                    
+                    <div class="auth-buttons">
+                        <button id="loginBtn" class="btn-secondary mr-2">Login</button>
+                        <button id="signupBtn" class="btn-primary">Sign Up</button>
+                    </div>
+                    
+                    <div id="userMenu" class="user-menu hidden">
+                        <button id="userMenuToggle" class="flex items-center space-x-2 p-2 hover:bg-secondary-bg rounded-lg">
+                            <div class="user-avatar"></div>
+                            <span id="userName"></span>
+                        </button>
+                        <div id="userDropdown" class="user-dropdown hidden">
+                            <a href="dashboard.html" class="dropdown-item">Dashboard</a>
+                            <a href="profile.html" class="dropdown-item">Profile</a>
+                            <div id="adminMenuItems" class="hidden">
+                                <div class="border-t border-border-color my-2"></div>
+                                <a href="admin/dashboard.html" class="dropdown-item">Admin Panel</a>
+                            </div>
+                            <div class="border-t border-border-color my-2"></div>
+                            <button id="logoutBtn" class="dropdown-item w-full text-left">Logout</button>
+                        </div>
+                    </div>
+                    
+                    <button id="mobileMenuBtn" class="md:hidden p-2 hover:bg-secondary-bg rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="mobile-menu hidden">
+            <div class="px-4 py-2 space-y-2">
+                <a href="#trending" class="mobile-nav-link">Trending</a>
+                <a href="#whats-hot" class="mobile-nav-link">What's Hot</a>
+                <a href="#regional" class="mobile-nav-link">Regional</a>
+                <a href="#critics" class="mobile-nav-link">Critics' Choice</a>
+            </div>
+        </div>
+        
+        <!-- Mobile Search -->
+        <div id="mobileSearch" class="mobile-search hidden">
+            <div class="px-4 py-3">
+                <input type="text" id="mobileSearchInput" placeholder="Search movies, TV shows..." 
+                       class="w-full p-3 bg-secondary-bg rounded-lg border border-border-color">
+                <div id="mobileSearchResults" class="mt-2"></div>
             </div>
         </div>
     </nav>
 
-    <main id="mainContent" class="pt-5 mt-3"></main>
-
-    <div class="modal fade" id="videoModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content bg-dark">
-                <div class="modal-header border-0">
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-0">
-                    <div id="videoContainer"></div>
+    <!-- Main Content -->
+    <main class="pt-20">
+        <!-- Hero Section -->
+        <section id="heroSection" class="hero-section">
+            <div class="hero-content">
+                <div class="hero-overlay"></div>
+                <div class="container mx-auto px-4 relative z-10">
+                    <div class="hero-text">
+                        <h1 class="text-4xl md:text-6xl font-bold mb-4">
+                            Discover Your Next<br>
+                            <span class="text-accent-red">Favorite Movie</span>
+                        </h1>
+                        <p class="text-lg md:text-xl mb-8 max-w-2xl">
+                            Get personalized recommendations powered by AI. Explore trending content, 
+                            regional favorites, and hidden gems curated just for you.
+                        </p>
+                        <div class="space-x-4">
+                            <button id="exploreBtn" class="btn-primary text-lg px-8 py-3">
+                                Start Exploring
+                            </button>
+                            <button id="learnMoreBtn" class="btn-secondary text-lg px-8 py-3">
+                                Learn More
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <div class="modal fade" id="authModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content bg-dark">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title text-white" id="authModalTitle">Login</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <!-- Content Sections -->
+        <div class="container mx-auto px-4 py-8 space-y-12">
+            <!-- Loading State -->
+            <div id="loadingSpinner" class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Loading amazing content...</p>
+            </div>
+
+            <!-- What's Hot -->
+            <section id="whats-hot" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">🔥 What's Hot</h2>
+                    <button class="view-all-btn">View All</button>
                 </div>
-                <div class="modal-body" id="authModalBody"></div>
+                <div class="content-carousel" id="whatsHotCarousel">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Trending Movies -->
+            <section id="trending" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">📈 Trending Movies</h2>
+                    <button class="view-all-btn">View All</button>
+                </div>
+                <div class="content-carousel" id="trendingMoviesCarousel">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Trending TV Shows -->
+            <section class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">📺 Trending TV Shows</h2>
+                    <button class="view-all-btn">View All</button>
+                </div>
+                <div class="content-carousel" id="trendingTVCarousel">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Critics' Choice -->
+            <section id="critics" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">⭐ Critics' Choice</h2>
+                    <button class="view-all-btn">View All</button>
+                </div>
+                <div class="content-carousel" id="criticsChoiceCarousel">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Regional Content -->
+            <section id="regional" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">🌍 Regional Favorites</h2>
+                    <div class="region-tabs">
+                        <button class="region-tab active" data-region="Telugu">Telugu</button>
+                        <button class="region-tab" data-region="Hindi">Hindi</button>
+                        <button class="region-tab" data-region="Tamil">Tamil</button>
+                        <button class="region-tab" data-region="Kannada">Kannada</button>
+                    </div>
+                </div>
+                <div class="content-carousel" id="regionalCarousel">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </section>
+
+            <!-- User Favorites -->
+            <section class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">💝 Community Favorites</h2>
+                    <button class="view-all-btn">View All</button>
+                </div>
+                <div class="content-carousel" id="userFavoritesCarousel">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Admin Curated -->
+            <section class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">🎯 Staff Picks</h2>
+                    <button class="view-all-btn">View All</button>
+                </div>
+                <div class="content-carousel" id="adminCuratedCarousel">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-secondary-bg py-12 mt-16">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold text-accent-red mb-4">MovieRec</h3>
+                    <p class="text-text-secondary">
+                        Your personal movie companion powered by AI recommendations.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Explore</h4>
+                    <div class="space-y-2">
+                        <a href="#trending" class="footer-link">Trending</a>
+                        <a href="#regional" class="footer-link">Regional</a>
+                        <a href="#critics" class="footer-link">Critics' Choice</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Account</h4>
+                    <div class="space-y-2">
+                        <a href="login.html" class="footer-link">Login</a>
+                        <a href="dashboard.html" class="footer-link">Dashboard</a>
+                        <a href="profile.html" class="footer-link">Profile</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Connect</h4>
+                    <div class="space-y-2">
+                        <a href="#" class="footer-link">Support</a>
+                        <a href="#" class="footer-link">Feedback</a>
+                        <a href="#" class="footer-link">API</a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-border-color mt-8 pt-8 text-center text-text-secondary">
+                <p>&copy; 2025 MovieRec. All rights reserved.</p>
             </div>
         </div>
-    </div>
+    </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="api.js"></script>
-    <script src="auth.js"></script>
-    <script src="components.js"></script>
-    <script src="app.js"></script>
-    <script src="admin.js"></script>
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>

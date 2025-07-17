@@ -1,118 +1,175 @@
+// API service for backend communication
 const API_BASE = 'https://backend-app-970m.onrender.com/api';
 
 class APIService {
     constructor() {
         this.token = localStorage.getItem('auth_token');
-        this.updateAuthHeaders();
+        this.baseURL = API_BASE;
     }
 
-    updateAuthHeaders() {
-        this.baseHeaders = {
+    getHeaders() {
+        const headers = {
             'Content-Type': 'application/json',
-            'Authorization': this.token ? `Bearer ${this.token}` : ''
         };
+        
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+        
+        return headers;
     }
 
-    async makeRequest(endpoint, options = {}) {
-        const url = `${API_BASE}${endpoint}`;
+    setToken(token) {
+        this.token = token;
+        if (token) {
+            localStorage.setItem('auth_token', token);
+        } else {
+            localStorage.removeItem('auth_token');
+        }
+    }
+
+    async request(endpoint, options = {}) {
+        const url = `${this.baseURL}${endpoint}`;
         const config = {
-            headers: this.baseHeaders,
-            ...options
+            headers: this.getHeaders(),
+            ...options,
         };
 
         try {
             const response = await fetch(url, config);
-            const data = await response.json();
             
             if (!response.ok) {
-                throw new Error(data.error || 'Request failed');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
             }
             
-            return data;
+            return await response.json();
         } catch (error) {
-            console.error('API Error:', error);
+            console.error('API request failed:', error);
             throw error;
         }
     }
 
+    // Authentication endpoints
     async login(credentials) {
-        const data = await this.makeRequest('/login', {
+        const response = await this.request('/login', {
             method: 'POST',
-            body: JSON.stringify(credentials)
+            body: JSON.stringify(credentials),
         });
         
-        if (data.token) {
-            this.token = data.token;
-            localStorage.setItem('auth_token', this.token);
-            this.updateAuthHeaders();
+        if (response.token) {
+            this.setToken(response.token);
         }
         
-        return data;
+        return response;
     }
 
     async register(userData) {
-        return await this.makeRequest('/register', {
+        const response = await this.request('/register', {
             method: 'POST',
-            body: JSON.stringify(userData)
+            body: JSON.stringify(userData),
         });
+        
+        if (response.token) {
+            this.setToken(response.token);
+        }
+        
+        return response;
     }
 
+    async logout() {
+        this.setToken(null);
+        return { success: true };
+    }
+
+    // Content endpoints
     async getHomepage() {
-        return await this.makeRequest('/homepage');
-    }
-
-    async getPersonalizedRecommendations() {
-        return await this.makeRequest('/recommendations/personalized');
+        return await this.request('/homepage');
     }
 
     async getRecommendations() {
-        return await this.makeRequest('/recommendations');
+        return await this.request('/recommendations');
+    }
+
+    async getPersonalizedRecommendations() {
+        return await this.request('/recommendations/personalized');
     }
 
     async getContentDetails(contentId) {
-        return await this.makeRequest(`/content/${contentId}/details`);
+        return await this.request(`/content/${contentId}/details`);
     }
 
     async searchContent(query, type = 'movie') {
-        return await this.makeRequest(`/search?q=${encodeURIComponent(query)}&type=${type}`);
+        const params = new URLSearchParams({ q: query, type });
+        return await this.request(`/search?${params}`);
     }
 
+    // User interactions
     async recordInteraction(data) {
-        return await this.makeRequest('/interact', {
+        return await this.request('/interact', {
             method: 'POST',
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
         });
     }
 
+    // Admin endpoints
     async adminBrowseContent(params = {}) {
-        const queryString = new URLSearchParams(params).toString();
-        return await this.makeRequest(`/admin/enhanced-browse?${queryString}`);
+        const queryParams = new URLSearchParams(params);
+        return await this.request(`/admin/enhanced-browse?${queryParams}`);
     }
 
-    async adminCreatePost(data) {
-        return await this.makeRequest('/admin/create-post', {
+    async adminCreatePost(postData) {
+        return await this.request('/admin/create-post', {
             method: 'POST',
-            body: JSON.stringify(data)
+            body: JSON.stringify(postData),
         });
     }
 
     async adminGetPosts() {
-        return await this.makeRequest('/admin/posts');
+        return await this.request('/admin/posts');
+    }
+
+    async adminUpdatePost(postId, data) {
+        return await this.request(`/admin/posts/${postId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async adminDeletePost(postId) {
+        return await this.request(`/admin/posts/${postId}`, {
+            method: 'DELETE',
+        });
     }
 
     async adminGetAnalytics() {
-        return await this.makeRequest('/admin/analytics');
+        return await this.request('/admin/analytics');
     }
 
     async adminGetSystemStatus() {
-        return await this.makeRequest('/admin/system-status');
+        return await this.request('/admin/system-status');
     }
 
-    async enhancedSync() {
-        return await this.makeRequest('/enhanced-sync', {
-            method: 'POST'
+    async adminSyncContent() {
+        return await this.request('/enhanced-sync', {
+            method: 'POST',
         });
+    }
+
+    // Utility methods
+    isAuthenticated() {
+        return !!this.token;
+    }
+
+    async checkConnection() {
+        try {
+            const response = await fetch(`${this.baseURL}/../health`);
+            return response.ok;
+        } catch {
+            return false;
+        }
     }
 }
 
-const api = new APIService();
+// Create global API instance
+window.apiService = new APIService();

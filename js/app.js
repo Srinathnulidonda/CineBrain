@@ -1,486 +1,400 @@
+// Main application logic
 class MovieApp {
     constructor() {
-        this.currentPage = 'home';
+        this.homepageData = null;
+        this.currentRegion = 'Telugu';
         this.searchTimeout = null;
         this.init();
     }
 
-    init() {
-        this.showHome();
-        this.setupSearch();
-        this.setupServiceWorker();
+    async init() {
+        this.initEventListeners();
+        await this.loadHomepageData();
+        this.initSearch();
+        this.initNavigation();
     }
 
-    setupServiceWorker() {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(registration => console.log('SW registered'))
-                .catch(error => console.log('SW registration failed'));
+    initEventListeners() {
+        // Auth buttons
+        const loginBtn = document.getElementById('loginBtn');
+        const signupBtn = document.getElementById('signupBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        if (loginBtn) {
+            loginBtn.addEventListener('click', () => {
+                window.location.href = 'login.html';
+            });
         }
+
+        if (signupBtn) {
+            signupBtn.addEventListener('click', () => {
+                window.location.href = 'login.html';
+            });
+        }
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                authManager.logout();
+            });
+        }
+
+        // User menu toggle
+        const userMenuToggle = document.getElementById('userMenuToggle');
+        const userDropdown = document.getElementById('userDropdown');
+
+        if (userMenuToggle && userDropdown) {
+            userMenuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('hidden');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {
+                userDropdown.classList.add('hidden');
+            });
+        }
+
+        // Mobile menu
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
+
+        // Mobile search
+        const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+        const mobileSearch = document.getElementById('mobileSearch');
+
+        if (mobileSearchBtn && mobileSearch) {
+            mobileSearchBtn.addEventListener('click', () => {
+                mobileSearch.classList.toggle('hidden');
+                if (!mobileSearch.classList.contains('hidden')) {
+                    const searchInput = mobileSearch.querySelector('input');
+                    if (searchInput) searchInput.focus();
+                }
+            });
+        }
+
+        // Region tabs
+        const regionTabs = document.querySelectorAll('.region-tab');
+        regionTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                this.switchRegion(tab.getAttribute('data-region'));
+            });
+        });
+
+        // Hero buttons
+        const exploreBtn = document.getElementById('exploreBtn');
+        if (exploreBtn) {
+            exploreBtn.addEventListener('click', () => {
+                document.getElementById('trending')?.scrollIntoView({ behavior: 'smooth' });
+            });
+        }
+
+        // View All buttons
+        const viewAllBtns = document.querySelectorAll('.view-all-btn');
+        viewAllBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const section = e.target.closest('.content-section');
+                if (section) {
+                    const carousel = section.querySelector('.content-carousel');
+                    if (carousel) {
+                        carousel.scrollTo({ left: carousel.scrollWidth, behavior: 'smooth' });
+                    }
+                }
+            });
+        });
     }
 
-    setupSearch() {
-        const searchInput = document.createElement('input');
-        searchInput.type = 'text';
-        searchInput.className = 'form-control me-2';
-        searchInput.placeholder = 'Search movies, shows...';
-        searchInput.id = 'globalSearch';
-        
-        const searchContainer = document.createElement('div');
-        searchContainer.className = 'position-relative';
-        searchContainer.appendChild(searchInput);
-        
-        const suggestionsDiv = document.createElement('div');
-        suggestionsDiv.id = 'searchSuggestions';
-        suggestionsDiv.className = 'search-suggestions d-none';
-        searchContainer.appendChild(suggestionsDiv);
-        
-        document.querySelector('.navbar-nav').parentNode.insertBefore(searchContainer, document.querySelector('.navbar-nav'));
-        
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(this.searchTimeout);
-            const query = e.target.value.trim();
-            
-            if (query.length > 2) {
-                this.searchTimeout = setTimeout(() => this.handleSearch(query), 300);
-            } else {
-                this.hideSuggestions();
-            }
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (!searchContainer.contains(e.target)) {
-                this.hideSuggestions();
-            }
-        });
-    }
-
-    async handleSearch(query) {
+    async loadHomepageData() {
         try {
-            const results = await api.searchContent(query);
-            this.showSuggestions(results.database_results.concat(results.tmdb_results).slice(0, 5));
-        } catch (error) {
-            console.error('Search error:', error);
-        }
-    }
-
-    showSuggestions(results) {
-        const suggestionsDiv = document.getElementById('searchSuggestions');
-        
-        if (results.length === 0) {
-            suggestionsDiv.classList.add('d-none');
-            return;
-        }
-        
-        suggestionsDiv.innerHTML = results.map(item => `
-            <div class="suggestion-item" onclick="app.showContentDetails(${item.id})">
-                <img src="${item.poster_path || 'https://via.placeholder.com/50x75'}" alt="${item.title}">
-                <div>
-                    <div class="text-white fw-medium">${item.title}</div>
-                    <small class="text-light">${item.release_date ? new Date(item.release_date).getFullYear() : ''} • ${item.content_type}</small>
-                </div>
-            </div>
-        `).join('');
-        
-        suggestionsDiv.classList.remove('d-none');
-    }
-
-    hideSuggestions() {
-        document.getElementById('searchSuggestions').classList.add('d-none');
-    }
-
-    async showHome() {
-        this.currentPage = 'home';
-        const mainContent = document.getElementById('mainContent');
-        
-        if (auth.isLoggedIn()) {
-            mainContent.innerHTML = `
-                <div class="container-fluid">
-                    ${ComponentBuilder.createLoadingSkeleton(15)}
-                </div>
-            `;
+            UIComponents.showLoading('loadingSpinner', 'Loading amazing content...');
             
-            try {
-                const [homepage, personalizedRecs] = await Promise.all([
-                    api.getHomepage(),
-                    api.getPersonalizedRecommendations()
-                ]);
-                
-                mainContent.innerHTML = `
-                    <div class="container-fluid fade-in">
-                        ${ComponentBuilder.createHeroCarousel(homepage.trending.movies)}
-                        ${ComponentBuilder.createContentSection('Recommended for You', personalizedRecs.hybrid_recommendations)}
-                        ${ComponentBuilder.createContentSection('Because You Liked', personalizedRecs.favorites_based)}
-                        ${ComponentBuilder.createContentSection('Continue Watching', personalizedRecs.watch_history_based)}
-                        ${ComponentBuilder.createContentSection('Trending Now', homepage.trending.movies)}
-                        ${ComponentBuilder.createContentSection('What\'s Hot', homepage.whats_hot)}
-                        ${ComponentBuilder.createContentSection('Critics\' Choice', homepage.critics_choice)}
-                        ${Object.entries(homepage.regional).map(([lang, content]) => 
-                            ComponentBuilder.createContentSection(`${lang} Movies`, content)
-                        ).join('')}
+            const data = await apiService.getHomepage();
+            this.homepageData = data;
+            
+            this.renderHomepageContent();
+            
+            // Hide loading spinner
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            if (loadingSpinner) {
+                loadingSpinner.classList.add('hidden');
+            }
+            
+        } catch (error) {
+            console.error('Failed to load homepage data:', error);
+            UIComponents.showToast('Failed to load content. Please refresh the page.', 'error');
+            
+            // Hide loading spinner and show error
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            if (loadingSpinner) {
+                loadingSpinner.innerHTML = `
+                    <div class="text-center py-12">
+                        <svg class="w-16 h-16 text-text-secondary mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <h3 class="text-lg font-medium text-white mb-2">Unable to load content</h3>
+                        <p class="text-text-secondary mb-4">Please check your connection and try again.</p>
+                        <button onclick="window.location.reload()" class="btn-primary">Retry</button>
                     </div>
                 `;
+            }
+        }
+    }
+
+    renderHomepageContent() {
+        if (!this.homepageData) return;
+
+        const { trending, whats_hot, critics_choice, regional, user_favorites, admin_curated } = this.homepageData;
+
+        // What's Hot
+        if (whats_hot && whats_hot.length > 0) {
+            UIComponents.createCarousel('whatsHotCarousel', whats_hot);
+        }
+
+        // Trending Movies
+        if (trending?.movies && trending.movies.length > 0) {
+            UIComponents.createCarousel('trendingMoviesCarousel', trending.movies);
+        }
+
+        // Trending TV Shows
+        if (trending?.tv && trending.tv.length > 0) {
+            UIComponents.createCarousel('trendingTVCarousel', trending.tv);
+        }
+
+        // Critics' Choice
+        if (critics_choice && critics_choice.length > 0) {
+            UIComponents.createCarousel('criticsChoiceCarousel', critics_choice);
+        }
+
+        // Regional Content
+        if (regional && regional[this.currentRegion]) {
+            UIComponents.createCarousel('regionalCarousel', regional[this.currentRegion]);
+        }
+
+        // User Favorites
+        if (user_favorites && user_favorites.length > 0) {
+            UIComponents.createCarousel('userFavoritesCarousel', user_favorites);
+        }
+
+        // Admin Curated
+        if (admin_curated && admin_curated.length > 0) {
+            UIComponents.createCarousel('adminCuratedCarousel', admin_curated, { 
+                cardType: 'featured',
+                showGenres: false 
+            });
+        }
+
+        // Update hero section with featured content
+        this.updateHeroSection();
+    }
+
+    updateHeroSection() {
+        const heroSection = document.getElementById('heroSection');
+        if (!heroSection || !this.homepageData?.whats_hot?.[0]) return;
+
+        const featuredContent = this.homepageData.whats_hot[0];
+        const backdropUrl = featuredContent.backdrop_path;
+
+        if (backdropUrl) {
+            heroSection.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url(${backdropUrl})`;
+            heroSection.style.backgroundSize = 'cover';
+            heroSection.style.backgroundPosition = 'center';
+        }
+    }
+
+    switchRegion(region) {
+        this.currentRegion = region;
+        
+        // Update tab states
+        document.querySelectorAll('.region-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector(`[data-region="${region}"]`)?.classList.add('active');
+        
+        // Update carousel content
+        if (this.homepageData?.regional?.[region]) {
+            UIComponents.createCarousel('regionalCarousel', this.homepageData.regional[region]);
+        }
+    }
+
+    initSearch() {
+        const searchInput = document.getElementById('searchInput');
+        const mobileSearchInput = document.getElementById('mobileSearchInput');
+        const searchResults = document.getElementById('searchResults');
+        const mobileSearchResults = document.getElementById('mobileSearchResults');
+
+        // Desktop search
+        if (searchInput && searchResults) {
+            searchInput.addEventListener('input', (e) => {
+                this.handleSearch(e.target.value, searchResults);
+            });
+
+            searchInput.addEventListener('focus', () => {
+                if (searchInput.value.trim()) {
+                    searchResults.classList.remove('hidden');
+                }
+            });
+
+            // Hide results when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-container')) {
+                    searchResults.classList.add('hidden');
+                }
+            });
+        }
+
+        // Mobile search
+        if (mobileSearchInput && mobileSearchResults) {
+            mobileSearchInput.addEventListener('input', (e) => {
+                this.handleSearch(e.target.value, mobileSearchResults);
+            });
+        }
+    }
+
+    async handleSearch(query, resultsContainer) {
+        // Clear previous timeout
+        if (this.searchTimeout) {
+            clearTimeout(this.searchTimeout);
+        }
+
+        if (!query.trim()) {
+            resultsContainer.classList.add('hidden');
+            return;
+        }
+
+        // Debounce search
+        this.searchTimeout = setTimeout(async () => {
+            try {
+                resultsContainer.innerHTML = '<div class="p-4 text-center"><div class="spinner mx-auto"></div></div>';
+                resultsContainer.classList.remove('hidden');
+
+                const results = await apiService.searchContent(query);
+                
+                // Combine database and TMDB results
+                const allResults = [
+                    ...(results.database_results || []),
+                    ...(results.tmdb_results || [])
+                ];
+
+                UIComponents.createSearchResults(allResults.slice(0, 10), resultsContainer);
+                
             } catch (error) {
-                this.showError('Failed to load personalized content');
+                console.error('Search error:', error);
+                resultsContainer.innerHTML = '<div class="p-4 text-center text-red-400">Search failed. Please try again.</div>';
             }
+        }, 300);
+    }
+
+    initNavigation() {
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Update navigation on scroll
+        window.addEventListener('scroll', () => {
+            this.updateNavigationOnScroll();
+        });
+    }
+
+    updateNavigationOnScroll() {
+        const nav = document.querySelector('nav');
+        if (!nav) return;
+
+        if (window.scrollY > 100) {
+            nav.classList.add('bg-primary');
+            nav.classList.remove('bg-primary/95');
         } else {
-            this.showAnonymousHome();
+            nav.classList.remove('bg-primary');
+            nav.classList.add('bg-primary/95');
         }
     }
 
-    async showAnonymousHome() {
-        const mainContent = document.getElementById('mainContent');
-        
-        mainContent.innerHTML = `
-            <div class="container-fluid">
-                ${ComponentBuilder.createLoadingSkeleton(15)}
-            </div>
-        `;
-        
+    // Utility methods
+    async refreshHomepage() {
+        await this.loadHomepageData();
+        UIComponents.showToast('Content refreshed!', 'success');
+    }
+
+    goToContentDetail(contentId) {
+        window.location.href = `movie-detail.html?id=${contentId}`;
+    }
+
+    async loadPersonalizedContent() {
+        if (!authManager.isLoggedIn) {
+            window.location.href = 'login.html';
+            return;
+        }
+
         try {
-            const homepage = await api.getHomepage();
+            showLoader(true, 'Loading your personalized recommendations...');
             
-            mainContent.innerHTML = `
-                <div class="container-fluid fade-in">
-                    ${ComponentBuilder.createHeroCarousel(homepage.trending.movies)}
-                    ${ComponentBuilder.createContentSection('Trending Movies', homepage.trending.movies)}
-                    ${ComponentBuilder.createContentSection('Trending TV Shows', homepage.trending.tv)}
-                    ${ComponentBuilder.createContentSection('What\'s Hot', homepage.whats_hot)}
-                    ${ComponentBuilder.createContentSection('Critics\' Choice', homepage.critics_choice)}
-                    ${Object.entries(homepage.regional).map(([lang, content]) => 
-                        ComponentBuilder.createContentSection(`${lang} Favorites`, content)
-                    ).join('')}
-                    ${ComponentBuilder.createContentSection('User Favorites', homepage.user_favorites)}
-                    ${homepage.admin_curated.length > 0 ? ComponentBuilder.createContentSection('Staff Picks', homepage.admin_curated) : ''}
-                </div>
-            `;
-        } catch (error) {
-            this.showError('Failed to load homepage content');
-        }
-    }
-
-    async showContentDetails(contentId) {
-        const mainContent = document.getElementById('mainContent');
-        
-        mainContent.innerHTML = `
-            <div class="container mt-4">
-                <div class="row">
-                    <div class="col-12">
-                        <div class="loading-skeleton" style="height: 400px; border-radius: 8px;"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        try {
-            const details = await api.getContentDetails(contentId);
-            const content = details.content;
+            const recommendations = await apiService.getPersonalizedRecommendations();
             
-            mainContent.innerHTML = `
-                <div class="container-fluid fade-in">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="hero-section" style="background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${content.backdrop_path}') center/cover;">
-                                <div class="container">
-                                    <div class="row align-items-center">
-                                        <div class="col-md-3">
-                                            <img src="${content.poster_path}" alt="${content.title}" class="img-fluid rounded">
-                                        </div>
-                                        <div class="col-md-9">
-                                            <h1 class="display-4 text-white fw-bold">${content.title}</h1>
-                                            ${content.release_date ? `<p class="text-light fs-5">${new Date(content.release_date).getFullYear()}</p>` : ''}
-                                            <p class="lead text-light">${content.overview || 'No overview available.'}</p>
-                                            
-                                            ${content.genre_names ? `
-                                                <div class="mb-3">
-                                                    ${content.genre_names.map(genre => `<span class="genre-tag me-2">${genre}</span>`).join('')}
-                                                </div>
-                                            ` : ''}
-                                            
-                                            ${content.rating ? `
-                                                <div class="mb-3">
-                                                    <span class="rating-stars fs-4">${'★'.repeat(Math.floor(content.rating / 2))}</span>
-                                                    <span class="text-white fs-5 ms-2">${content.rating}/10</span>
-                                                </div>
-                                            ` : ''}
-                                            
-                                            <div class="d-flex gap-3 flex-wrap">
-                                                ${details.youtube_videos && details.youtube_videos.trailers.length > 0 ? `
-                                                    <button class="btn btn-netflix" onclick="app.playVideo('${details.youtube_videos.trailers[0].video_id}')">
-                                                        <i class="fas fa-play me-2"></i>Play Trailer
-                                                    </button>
-                                                ` : ''}
-                                                
-                                                ${auth.isLoggedIn() ? `
-                                                    <button class="btn btn-outline-light" onclick="app.addToWishlist(${content.id})">
-                                                        <i class="fas fa-plus me-2"></i>Wishlist
-                                                    </button>
-                                                    <button class="btn btn-outline-light" onclick="app.addToFavorites(${content.id})">
-                                                        <i class="fas fa-heart me-2"></i>Favorite
-                                                    </button>
-                                                ` : ''}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    ${details.similar_content && details.similar_content.length > 0 ? `
-                        <div class="container mt-5">
-                            <h3 class="text-white mb-4">More Like This</h3>
-                            <div class="row">
-                                ${details.similar_content.map(item => ComponentBuilder.createContentCard(item)).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    ${details.user_reviews && details.user_reviews.length > 0 ? `
-                        <div class="container mt-5">
-                            <h3 class="text-white mb-4">User Reviews</h3>
-                            <div class="row">
-                                ${details.user_reviews.map(review => `
-                                    <div class="col-md-6 mb-3">
-                                        <div class="content-card p-3">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <strong class="text-white">${review.username}</strong>
-                                                <span class="rating-stars">${'★'.repeat(review.rating)}</span>
-                                            </div>
-                                            <small class="text-light">${new Date(review.created_at).toLocaleDateString()}</small>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
+            // Add personalized sections to homepage
+            this.renderPersonalizedSections(recommendations);
+            
+            showLoader(false);
+            UIComponents.showToast('Personalized content loaded!', 'success');
+            
         } catch (error) {
-            this.showError('Failed to load content details');
+            showLoader(false);
+            console.error('Failed to load personalized content:', error);
+            UIComponents.showToast('Failed to load personalized content', 'error');
         }
     }
 
-    playVideo(videoId) {
-        const videoContainer = document.getElementById('videoContainer');
-        videoContainer.innerHTML = `
-            <iframe width="100%" height="500" 
-                    src="https://www.youtube.com/embed/${videoId}?autoplay=1" 
-                    frameborder="0" allowfullscreen>
-            </iframe>
-        `;
-        
-        const modal = new bootstrap.Modal(document.getElementById('videoModal'));
-        modal.show();
-        
-        modal._element.addEventListener('hidden.bs.modal', () => {
-            videoContainer.innerHTML = '';
-        });
-    }
-
-    async addToWishlist(contentId) {
-        if (!auth.isLoggedIn()) {
-            auth.showLogin();
-            return;
-        }
-        
-        try {
-            await api.recordInteraction({
-                content_id: contentId,
-                interaction_type: 'wishlist'
-            });
-            this.showToast('Added to wishlist!', 'success');
-        } catch (error) {
-            this.showToast('Failed to add to wishlist', 'error');
-        }
-    }
-
-    async addToFavorites(contentId) {
-        if (!auth.isLoggedIn()) {
-            auth.showLogin();
-            return;
-        }
-        
-        try {
-            await api.recordInteraction({
-                content_id: contentId,
-                interaction_type: 'favorite'
-            });
-            this.showToast('Added to favorites!', 'success');
-        } catch (error) {
-            this.showToast('Failed to add to favorites', 'error');
-        }
-    }
-
-    showSearch() {
-        const mainContent = document.getElementById('mainContent');
-        mainContent.innerHTML = `
-            <div class="container mt-4">
-                <div class="row">
-                    <div class="col-md-8 mx-auto">
-                        <div class="content-card p-4">
-                            <h2 class="text-white mb-4 text-center">Search Movies & TV Shows</h2>
-                            <div class="input-group mb-4">
-                                <input type="text" class="form-control form-control-lg" id="mainSearchInput" 
-                                       placeholder="Search for movies, TV shows, anime...">
-                                <button class="btn btn-netflix" type="button" onclick="app.performSearch()">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                            
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label text-white">Content Type</label>
-                                    <select class="form-select" id="searchType">
-                                        <option value="movie">Movies</option>
-                                        <option value="tv">TV Shows</option>
-                                        <option value="anime">Anime</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-white">Genre</label>
-                                    <select class="form-select" id="searchGenre">
-                                        <option value="">All Genres</option>
-                                        <option value="action">Action</option>
-                                        <option value="comedy">Comedy</option>
-                                        <option value="drama">Drama</option>
-                                        <option value="horror">Horror</option>
-                                        <option value="romance">Romance</option>
-                                        <option value="thriller">Thriller</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div id="searchResults"></div>
-            </div>
-        `;
-        
-        document.getElementById('mainSearchInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.performSearch();
-            }
-        });
-    }
-
-    async performSearch() {
-        const query = document.getElementById('mainSearchInput').value.trim();
-        const type = document.getElementById('searchType').value;
-        
-        if (!query) {
-            this.showToast('Please enter a search term', 'warning');
-            return;
-        }
-        
-        const resultsDiv = document.getElementById('searchResults');
-        resultsDiv.innerHTML = `
-            <div class="container">
-                <div class="row">
-                    ${ComponentBuilder.createLoadingSkeleton(8)}
-                </div>
-            </div>
-        `;
-        
-        try {
-            const results = await api.searchContent(query, type);
-            resultsDiv.innerHTML = ComponentBuilder.createSearchResults(results);
-        } catch (error) {
-            resultsDiv.innerHTML = '<div class="text-center text-light p-5"><h4>Search failed. Please try again.</h4></div>';
-        }
-    }
-
-    showProfile() {
-        if (!auth.isLoggedIn()) {
-            auth.showLogin();
-            return;
-        }
-        
-        const mainContent = document.getElementById('mainContent');
-        mainContent.innerHTML = ComponentBuilder.createUserProfile(auth.currentUser);
-    }
-
-    showAdmin() {
-        if (!auth.isLoggedIn() || auth.currentUser?.preferences?.role !== 'admin') {
-            this.showToast('Admin access required', 'error');
-            return;
-        }
-        
-        adminPanel.show();
-    }
-
-    showToast(message, type = 'info') {
-        const toastContainer = document.querySelector('.toast-container') || this.createToastContainer();
-        
-        const toastId = 'toast_' + Date.now();
-        const toastHtml = `
-            <div class="toast" id="${toastId}" role="alert">
-                <div class="toast-header bg-dark text-white border-0">
-                    <i class="fas fa-${this.getToastIcon(type)} text-${this.getToastColor(type)} me-2"></i>
-                    <strong class="me-auto">Notification</strong>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
-                </div>
-                <div class="toast-body">${message}</div>
-            </div>
-        `;
-        
-        toastContainer.insertAdjacentHTML('afterbegin', toastHtml);
-        
-        const toast = new bootstrap.Toast(document.getElementById(toastId));
-        toast.show();
-        
-        setTimeout(() => {
-            const element = document.getElementById(toastId);
-            if (element) element.remove();
-        }, 5000);
-    }
-
-    createToastContainer() {
-        const container = document.createElement('div');
-        container.className = 'toast-container';
-        document.body.appendChild(container);
-        return container;
-    }
-
-    getToastIcon(type) {
-        const icons = {
-            success: 'check-circle',
-            error: 'exclamation-circle',
-            warning: 'exclamation-triangle',
-            info: 'info-circle'
-        };
-        return icons[type] || 'info-circle';
-    }
-
-    getToastColor(type) {
-        const colors = {
-            success: 'success',
-            error: 'danger',
-            warning: 'warning',
-            info: 'info'
-        };
-        return colors[type] || 'info';
-    }
-
-    showError(message) {
-        const mainContent = document.getElementById('mainContent');
-        mainContent.innerHTML = `
-            <div class="container mt-5">
-                <div class="row">
-                    <div class="col-md-6 mx-auto text-center">
-                        <div class="content-card p-5">
-                            <i class="fas fa-exclamation-triangle text-netflix fa-3x mb-3"></i>
-                            <h3 class="text-white mb-3">Oops! Something went wrong</h3>
-                            <p class="text-light mb-4">${message}</p>
-                            <button class="btn btn-netflix" onclick="app.showHome()">
-                                <i class="fas fa-home me-2"></i>Back to Home
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+    renderPersonalizedSections(recommendations) {
+        // This would add personalized sections to the homepage
+        // Implementation depends on specific UI requirements
+        console.log('Personalized recommendations:', recommendations);
     }
 }
 
-const app = new MovieApp();
+// Initialize app when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.movieApp = new MovieApp();
+    
+    // Initialize auth UI
+    if (window.authManager) {
+        authManager.updateUI();
+    }
+
+    // Check if we need to redirect authenticated users
+    const isAuthPage = window.location.pathname.includes('login.html');
+    if (isAuthPage && authManager.isLoggedIn) {
+        window.location.href = 'dashboard.html';
+    }
+});
+
+// Global functions for template usage
+window.openContentModal = openContentModal;
+window.handleInteraction = handleInteraction;
+
+// Error handling
+window.addEventListener('error', (e) => {
+    console.error('Global error:', e.error);
+    UIComponents.showToast('An unexpected error occurred', 'error');
+});
+
+// Online/Offline handling
+window.addEventListener('online', () => {
+    UIComponents.showToast('Connection restored', 'success');
+});
+
+window.addEventListener('offline', () => {
+    UIComponents.showToast('You are offline. Some features may not work.', 'warning');
+});
