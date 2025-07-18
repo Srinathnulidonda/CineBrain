@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - MovieRec</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Netflix Sans', 'Helvetica Neue', Arial, sans-serif;
+            background: #141414;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .register-bg {
+            min-height: 100vh;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.8) 100%),
+                        linear-gradient(45deg, #141414 25%, #1a1a1a 25%, #1a1a1a 50%, #141414 50%, #141414 75%, #1a1a1a 75%, #1a1a1a);
+            background-size: cover, 20px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 20px 50px;
+            background: rgba(20, 20, 20, 0.95);
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #E50914;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .register-container {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 60px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            margin-top: 80px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 20px;
+            background: #333;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            background: #454545;
+            box-shadow: 0 0 0 2px #E50914;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: #E50914;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn:hover {
+            background: #f40612;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(229, 9, 20, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .error-message, .success-message {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .error-message {
+            background: #831212;
+            border: 1px solid #a41515;
+        }
+
+        .success-message {
+            background: #125f12;
+            border: 1px solid #18a418;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loader {
+            display: none;
+            border: 3px solid #333;
+            border-radius: 50%;
+            border-top: 3px solid #E50914;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .password-strength {
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin-top: -12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            width: 0;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .strength-weak { background: #f44336; width: 33%; }
+        .strength-medium { background: #ff9800; width: 66%; }
+        .strength-strong { background: #4caf50; width: 100%; }
+
+        @media (max-width: 768px) {
+            .register-container {
+                padding: 40px 30px;
+            }
+            
+            .navbar {
+                padding: 15px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="flex justify-between items-center">
+            <a href="index.html" class="logo">MovieRec</a>
+            <div>
+                <a href="index.html" class="text-white hover:text-gray-300 transition">Sign In</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="register-bg">
+        <div class="register-container">
+            <h1 class="text-3xl font-bold mb-2">Join MovieRec</h1>
+            <p class="text-gray-400 mb-8">Create your account and start discovering amazing content</p>
+            
+            <div class="error-message" id="error-message"></div>
+            <div class="success-message" id="success-message"></div>
+            
+            <form id="register-form">
+                <input type="text" class="form-input" placeholder="Username" id="username" required minlength="3">
+                <input type="email" class="form-input" placeholder="Email Address" id="email" required>
+                <input type="password" class="form-input" placeholder="Password (min 8 characters)" id="password" required minlength="8">
+                
+                <div class="password-strength">
+                    <div class="password-strength-bar" id="password-strength-bar"></div>
+                </div>
+                
+                <input type="password" class="form-input" placeholder="Confirm Password" id="confirm-password" required>
+                
+                <button type="submit" class="submit-btn">Create Account</button>
+            </form>
+            
+            <div class="loader" id="loader"></div>
+            
+            <div class="mt-6 text-gray-400 text-center">
+                <p>Already have an account? <a href="index.html" class="text-white hover:underline">Sign in</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        
+        // Password strength checker
+        document.getElementById('password').addEventListener('input', (e) => {
+            const password = e.target.value;
+            const strengthBar = document.getElementById('password-strength-bar');
+            
+            if (password.length < 8) {
+                strengthBar.className = 'password-strength-bar strength-weak';
+            } else if (password.match(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/)) {
+                strengthBar.className = 'password-strength-bar strength-strong';
+            } else {
+                strengthBar.className = 'password-strength-bar strength-medium';
+            }
+        });
+        
+        // Registration form handler
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loader = document.getElementById('loader');
+            const errorMsg = document.getElementById('error-message');
+            const successMsg = document.getElementById('success-message');
+            const submitBtn = e.target.querySelector('.submit-btn');
+            
+            // Reset messages
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+            
+            // Validate passwords match
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (password !== confirmPassword) {
+                errorMsg.textContent = 'Passwords do not match';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            // Show loader
+            loader.style.display = 'block';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+            
+            const formData = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: password
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    successMsg.textContent = 'Account created successfully! Redirecting...';
+                    successMsg.style.display = 'block';
+                    
+                    // Auto-login and redirect
+                    setTimeout(() => {
+                        window.location.hash = btoa(JSON.stringify({
+                            token: data.token,
+                            user: data.user
+                        }));
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
+                } else {
+                    errorMsg.textContent = data.message || 'Registration failed';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (error) {
+                errorMsg.textContent = 'Network error. Please try again.';
+                errorMsg.style.display = 'block';
+            } finally {
+                loader.style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,470 +1,180 @@
-// Authentication Management
-class AuthManager {
-    constructor() {
-        this.currentUser = null;
-        this.token = null;
-        this.refreshTimer = null;
-        
-        // Initialize from storage
-        this.initializeFromStorage();
-        
-        // Setup auto-refresh
-        this.setupTokenRefresh();
-    }
+// Authentication Logic
+let authMode = 'login';
+
+// Show login modal
+function showLoginModal() {
+    authMode = 'login';
+    updateAuthModal();
+    document.getElementById('authModal').classList.add('show');
+    document.body.classList.add('no-scroll');
+}
+
+// Show signup modal
+function showSignupModal() {
+    authMode = 'signup';
+    updateAuthModal();
+    document.getElementById('authModal').classList.add('show');
+    document.body.classList.add('no-scroll');
+}
+
+// Close auth modal
+function closeAuthModal() {
+    document.getElementById('authModal').classList.remove('show');
+    document.body.classList.remove('no-scroll');
+}
+
+// Toggle between login and signup
+function toggleAuthMode() {
+    authMode = authMode === 'login' ? 'signup' : 'login';
+    updateAuthModal();
+}
+
+// Update auth modal UI
+function updateAuthModal() {
+    const title = document.getElementById('authTitle');
+    const emailGroup = document.getElementById('emailGroup');
+    const submitBtn = document.getElementById('authSubmitBtn');
+    const switchText = document.getElementById('authSwitchText');
+    const switchLink = document.getElementById('authSwitchLink');
     
-    initializeFromStorage() {
-        const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
-        
-        if (token && user) {
-            try {
-                this.token = token;
-                this.currentUser = JSON.parse(user);
-                api.setToken(token);
-                console.log('Auth initialized from storage:', this.currentUser);
-            } catch (error) {
-                console.error('Failed to parse stored user data:', error);
-                this.clearStoredAuth();
-            }
-        }
+    if (authMode === 'login') {
+        title.textContent = 'Sign In';
+        emailGroup.style.display = 'none';
+        submitBtn.textContent = 'Sign In';
+        switchText.textContent = "Don't have an account?";
+        switchLink.textContent = 'Sign Up';
+    } else {
+        title.textContent = 'Create Account';
+        emailGroup.style.display = 'block';
+        submitBtn.textContent = 'Sign Up';
+        switchText.textContent = 'Already have an account?';
+        switchLink.textContent = 'Sign In';
     }
+}
+
+// Handle authentication form submission
+async function handleAuth(event) {
+    event.preventDefault();
     
-    clearStoredAuth() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        this.token = null;
-        this.currentUser = null;
-        api.clearToken();
-    }
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const email = document.getElementById('email').value;
     
-    setupTokenRefresh() {
-        // Refresh token 5 minutes before expiry
-        const refreshInterval = 25 * 60 * 1000; // 25 minutes
+    try {
+        let response;
         
-        this.refreshTimer = setInterval(() => {
-            if (this.isAuthenticated()) {
-                this.refreshToken();
-            }
-        }, refreshInterval);
-    }
-    
-    async login(credentials) {
-        try {
-            showLoading(true);
-            console.log('Attempting login...');
-            
-            const response = await api.login(credentials);
-            console.log('Login response:', response);
-            
-            if (response.token) {
-                this.setAuthData(response);
-                showToast('Welcome back!', 'success');
-                
-                // Redirect based on user role
-                this.redirectAfterLogin();
-                
-                return { success: true, user: response };
-            } else {
-                throw new Error('Invalid response from server');
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            
-            // Handle specific error cases
-            let errorMessage = 'Login failed. Please try again.';
-            if (error.message.includes('401')) {
-                errorMessage = 'Invalid username or password.';
-            } else if (error.message.includes('Network')) {
-                errorMessage = 'Network error. Please check your connection.';
-            } else if (error.message.includes('500')) {
-                errorMessage = 'Server error. Please try again later.';
-            }
-            
-            showToast(errorMessage, 'error');
-            return { success: false, error: error.message };
-        } finally {
-            showLoading(false);
-        }
-    }
-    
-    async register(userData) {
-        try {
-            showLoading(true);
-            console.log('Attempting registration...');
-            
-            // Validate data
-            const validation = this.validateRegistrationData(userData);
-            if (!validation.valid) {
-                throw new Error(validation.message);
-            }
-            
-            const response = await api.register(userData);
-            console.log('Registration response:', response);
-            
-            if (response.token) {
-                this.setAuthData(response);
-                showToast('Account created successfully! Welcome to MovieRec!', 'success');
-                
-                // Redirect to dashboard
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1500);
-                
-                return { success: true, user: response };
-            } else {
-                throw new Error('Invalid response from server');
-            }
-        } catch (error) {
-            console.error('Registration error:', error);
-            
-            // Handle specific error cases
-            let errorMessage = 'Registration failed. Please try again.';
-            if (error.message.includes('already exists')) {
-                errorMessage = 'Username or email already exists.';
-            } else if (error.message.includes('400')) {
-                errorMessage = 'Invalid registration data. Please check your inputs.';
-            } else if (error.message.includes('Network')) {
-                errorMessage = 'Network error. Please check your connection.';
-            }
-            
-            showToast(errorMessage, 'error');
-            return { success: false, error: error.message };
-        } finally {
-            showLoading(false);
-        }
-    }
-    
-    validateRegistrationData(data) {
-        if (!data.username || data.username.length < 3) {
-            return { valid: false, message: 'Username must be at least 3 characters long' };
-        }
-        
-        if (!data.email || !this.isValidEmail(data.email)) {
-            return { valid: false, message: 'Please enter a valid email address' };
-        }
-        
-        if (!data.password || data.password.length < 6) {
-            return { valid: false, message: 'Password must be at least 6 characters long' };
-        }
-        
-        return { valid: true };
-    }
-    
-    isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-    
-    setAuthData(response) {
-        this.token = response.token;
-        this.currentUser = {
-            id: response.user_id,
-            username: response.username,
-            email: response.email || ''
-        };
-        
-        console.log('Setting auth data:', this.currentUser);
-        
-        // Store in localStorage
-        localStorage.setItem('token', this.token);
-        localStorage.setItem('user', JSON.stringify(this.currentUser));
-        
-        // Set API token
-        api.setToken(this.token);
-    }
-    
-    logout() {
-        console.log('Logging out user');
-        
-        // Clear data
-        this.token = null;
-        this.currentUser = null;
-        
-        // Clear storage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        
-        // Clear API token
-        api.clearToken();
-        
-        // Clear refresh timer
-        if (this.refreshTimer) {
-            clearInterval(this.refreshTimer);
-        }
-        
-        // Clear cache
-        api.clearCache();
-        
-        showToast('You have been logged out', 'info');
-        
-        // Redirect to home
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1000);
-    }
-    
-    isAuthenticated() {
-        const authenticated = !!(this.token && this.currentUser);
-        console.log('Is authenticated:', authenticated);
-        return authenticated;
-    }
-    
-    getCurrentUser() {
-        return this.currentUser;
-    }
-    
-    getToken() {
-        return this.token;
-    }
-    
-    redirectAfterLogin() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirect = urlParams.get('redirect');
-        
-        if (redirect) {
-            window.location.href = decodeURIComponent(redirect);
-        } else if (this.currentUser?.role === 'admin') {
-            window.location.href = 'admin/dashboard.html';
+        if (authMode === 'login') {
+            response = await api.login(username, password);
         } else {
-            window.location.href = 'dashboard.html';
+            response = await api.register(username, email, password);
         }
-    }
-    
-    requireAuth() {
-        if (!this.isAuthenticated()) {
-            const currentPath = encodeURIComponent(window.location.pathname + window.location.search);
-            showToast('Please log in to access this page', 'info');
-            setTimeout(() => {
-                window.location.href = `login.html?redirect=${currentPath}`;
-            }, 1500);
-            return false;
-        }
-        return true;
-    }
-    
-    requireAdmin() {
-        if (!this.requireAuth()) return false;
         
-        if (this.currentUser?.role !== 'admin') {
-            showToast('Admin access required', 'error');
-            window.location.href = 'dashboard.html';
-            return false;
-        }
-        return true;
-    }
-    
-    async refreshToken() {
-                try {
-            // This would be implemented if the backend supports token refresh
-            // For now, we'll just validate the current token
-            console.log('Refreshing token...');
-            // const response = await api.request('/auth/validate');
-            // if (!response.valid) {
-            //     this.logout();
-            // }
-        } catch (error) {
-            console.error('Token refresh failed:', error);
-            // Don't logout on network errors
-            if (error.message.includes('401')) {
-                this.logout();
-            }
-        }
-    }
-    
-    // Social login methods (for future implementation)
-    async loginWithGoogle() {
-        // Implementation for Google OAuth
-        showToast('Google login coming soon!', 'info');
-    }
-    
-    async loginWithFacebook() {
-        // Implementation for Facebook OAuth
-        showToast('Facebook login coming soon!', 'info');
-    }
-    
-    // Password reset (for future implementation)
-    async requestPasswordReset(email) {
-        try {
-            showLoading(true);
-            // await api.request('/auth/password-reset', {
-            //     method: 'POST',
-            //     body: JSON.stringify({ email })
-            // });
-            showToast('Password reset link sent to your email', 'success');
-        } catch (error) {
-            showToast('Failed to send reset link', 'error');
-        } finally {
-            showLoading(false);
-        }
-    }
-    
-    // Update profile
-    async updateProfile(profileData) {
-        try {
-            showLoading(true);
+        if (response.user) {
+            // Set current user
+            window.app.setCurrentUser(response.user);
             
-            // const response = await api.request('/auth/profile', {
-            //     method: 'PUT',
-            //     body: JSON.stringify(profileData)
-            // });
+            // Update UI
+            updateAuthUI(true);
+            closeAuthModal();
             
-            // Update current user data
-            this.currentUser = { ...this.currentUser, ...profileData };
-            localStorage.setItem('user', JSON.stringify(this.currentUser));
+            // Show success message
+            window.app.showToast(`Welcome ${response.user.username}!`, 'success');
             
-            showToast('Profile updated successfully', 'success');
-            return { success: true };
-        } catch (error) {
-            showToast('Failed to update profile', 'error');
-            return { success: false, error: error.message };
-        } finally {
-            showLoading(false);
+            // Reload content for personalized experience
+            window.app.loadInitialContent();
         }
+    } catch (error) {
+        console.error('Authentication error:', error);
+        window.app.showToast(
+            authMode === 'login' ? 'Invalid credentials' : 'Registration failed',
+            'error'
+        );
     }
+}
+
+// Update authentication UI
+function updateAuthUI(isLoggedIn) {
+    const authButtons = document.getElementById('authButtons');
     
-    // Change password
-    async changePassword(currentPassword, newPassword) {
-        try {
-            showLoading(true);
-            
-            // await api.request('/auth/change-password', {
-            //     method: 'POST',
-            //     body: JSON.stringify({
-            //         current_password: currentPassword,
-            //         new_password: newPassword
-            //     })
-            // });
-            
-            showToast('Password changed successfully', 'success');
-            return { success: true };
-        } catch (error) {
-            showToast('Failed to change password', 'error');
-            return { success: false, error: error.message };
-        } finally {
-            showLoading(false);
+    if (isLoggedIn) {
+        authButtons.innerHTML = `
+            <div class="dropdown">
+                <button class="icon-btn" onclick="toggleUserMenu()">
+                    <i class="fas fa-user-circle text-2xl"></i>
+                </button>
+                <div id="userMenu" class="dropdown-menu hidden">
+                    <a href="/profile.html" class="dropdown-item">
+                        <i class="fas fa-user mr-2"></i> Profile
+                    </a>
+                    <a href="/watchlist.html" class="dropdown-item">
+                        <i class="fas fa-list mr-2"></i> Watchlist
+                    </a>
+                    <a href="/favorites.html" class="dropdown-item">
+                        <i class="fas fa-heart mr-2"></i> Favorites
+                    </a>
+                    <hr class="dropdown-divider">
+                    <a href="#" onclick="logout()" class="dropdown-item">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                    </a>
+                </div>
+            </div>
+        `;
+    } else {
+        authButtons.innerHTML = `
+            <button class="btn-secondary btn-sm" onclick="showLoginModal()">
+                Sign In
+            </button>
+            <button class="btn-primary btn-sm" onclick="showSignupModal()">
+                Sign Up
+            </button>
+        `;
+    }
+}
+
+// Toggle user menu
+function toggleUserMenu() {
+    const menu = document.getElementById('userMenu');
+    menu.classList.toggle('hidden');
+    
+    // Close menu when clicking outside
+    if (!menu.classList.contains('hidden')) {
+        setTimeout(() => {
+            document.addEventListener('click', closeUserMenu);
+        }, 100);
+    }
+}
+
+// Close user menu
+function closeUserMenu(event) {
+    const menu = document.getElementById('userMenu');
+    if (!event.target.closest('.dropdown')) {
+        menu.classList.add('hidden');
+        document.removeEventListener('click', closeUserMenu);
+    }
+}
+
+// Logout
+async function logout() {
+    api.logout();
+    window.app.setCurrentUser(null);
+    updateAuthUI(false);
+    window.app.showToast('Logged out successfully', 'success');
+    window.app.loadInitialContent();
+}
+
+// Validate token on page load
+async function validateToken() {
+    try {
+        // Try to get user profile with current token
+        const response = await api.getPersonalizedRecommendations();
+        if (response) {
+            updateAuthUI(true);
+        } else {
+            throw new Error('Invalid token');
         }
+    } catch (error) {
+        // Token is invalid, clear it
+        api.logout();
+        updateAuthUI(false);
     }
-}
-
-// Create global auth manager instance
-const auth = new AuthManager();
-
-// Global auth functions for easy access
-function login(credentials) {
-    return auth.login(credentials);
-}
-
-function register(userData) {
-    return auth.register(userData);
-}
-
-function logout() {
-    auth.logout();
-}
-
-function isAuthenticated() {
-    return auth.isAuthenticated();
-}
-
-function getCurrentUser() {
-    return auth.getCurrentUser();
-}
-
-function requireAuth() {
-    return auth.requireAuth();
-}
-
-function requireAdmin() {
-    return auth.requireAdmin();
-}
-
-// Form handlers with better error handling
-async function handleLogin(event) {
-    event.preventDefault();
-    
-    const form = event.target;
-    const formData = new FormData(form);
-    
-    // Get values from form inputs
-    const usernameInput = document.getElementById('loginUsername') || form.querySelector('input[name="username"]');
-    const passwordInput = document.getElementById('loginPassword') || form.querySelector('input[name="password"]');
-    
-    if (!usernameInput || !passwordInput) {
-        showToast('Form inputs not found', 'error');
-        return;
-    }
-    
-    const credentials = {
-        username: usernameInput.value.trim(),
-        password: passwordInput.value
-    };
-    
-    // Validate inputs
-    if (!credentials.username) {
-        showToast('Please enter your username or email', 'error');
-        usernameInput.focus();
-        return;
-    }
-    
-    if (!credentials.password) {
-        showToast('Please enter your password', 'error');
-        passwordInput.focus();
-        return;
-    }
-    
-    console.log('Submitting login form with:', { username: credentials.username });
-    await login(credentials);
-}
-
-async function handleRegister(event) {
-    event.preventDefault();
-    
-    const form = event.target;
-    const formData = new FormData(form);
-    
-    // Get values from form inputs
-    const usernameInput = document.getElementById('registerUsername') || form.querySelector('input[name="username"]');
-    const emailInput = document.getElementById('registerEmail') || form.querySelector('input[name="email"]');
-    const passwordInput = document.getElementById('registerPassword') || form.querySelector('input[name="password"]');
-    
-    if (!usernameInput || !emailInput || !passwordInput) {
-        showToast('Form inputs not found', 'error');
-        return;
-    }
-    
-    const userData = {
-        username: usernameInput.value.trim(),
-        email: emailInput.value.trim(),
-        password: passwordInput.value
-    };
-    
-    // Validate inputs
-    if (!userData.username) {
-        showToast('Please enter a username', 'error');
-        usernameInput.focus();
-        return;
-    }
-    
-    if (!userData.email) {
-        showToast('Please enter your email', 'error');
-        emailInput.focus();
-        return;
-    }
-    
-    if (!userData.password) {
-        showToast('Please enter a password', 'error');
-        passwordInput.focus();
-        return;
-    }
-    
-    console.log('Submitting registration form with:', { 
-        username: userData.username, 
-        email: userData.email 
-    });
-    await register(userData);
-}
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { auth, login, register, logout, isAuthenticated, getCurrentUser, requireAuth, requireAdmin };
 }
