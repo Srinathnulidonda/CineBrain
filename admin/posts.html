@@ -756,107 +756,124 @@
     <!-- Toast Notification -->
     <div class="toast" id="toast"></div>
 
-    <script>
-        // API Configuration
-        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+<script>
+    // API Configuration
+    const API_BASE = 'https://backend-app-970m.onrender.com/api';
+    
+    // Global State
+    const state = {
+        authToken: null,
+        userData: null,
+        selectedContent: null,
+        tags: [],
+        posts: []
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!initializeAuth()) return;
         
-        // Global State
-        const state = {
-            authToken: null,
-            userData: null,
-            selectedContent: null,
-            tags: [],
-            posts: []
-        };
+        initializeAdmin();
+        updateNavigation();
+        loadPosts();
+        setupEventListeners();
+    });
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!initializeAuth()) return;
-            
-            initializeAdmin();
-            loadPosts();
-            setupEventListeners();
-        });
-
-        // Initialize Authentication
-        function initializeAuth() {
-            try {
-                // First check for hash (for initial login)
-                const hash = window.location.hash.substring(1);
-                if (hash) {
-                    const authData = JSON.parse(atob(hash));
-                    state.authToken = authData.token;
-                    state.userData = authData.user;
-                    
-                    // Store in localStorage for persistence
-                    localStorage.setItem('movierecAuthToken', authData.token);
-                    localStorage.setItem('movierecUserData', JSON.stringify(authData.user));
-                    
-                    // Clear hash for security
-                    window.location.hash = '';
-                } else {
-                    // Check localStorage for existing auth
-                    const storedToken = localStorage.getItem('movierecAuthToken');
-                    const storedUserData = localStorage.getItem('movierecUserData');
-                    
-                    if (!storedToken || !storedUserData) {
-                        clearAuthData();
-                        window.location.href = '../login.html';
-                        return false;
-                    }
-                    
-                    try {
-                        state.authToken = storedToken;
-                        state.userData = JSON.parse(storedUserData);
-                    } catch (parseError) {
-                        console.error('Failed to parse stored user data:', parseError);
-                        clearAuthData();
-                        window.location.href = '../login.html';
-                        return false;
-                    }
-                }
+    // Initialize Authentication (UPDATED TO MATCH DASHBOARD)
+    function initializeAuth() {
+        try {
+            // First check if we have auth data in sessionStorage
+            const storedAuth = sessionStorage.getItem('adminAuth');
+            if (storedAuth) {
+                const authData = JSON.parse(storedAuth);
+                state.authToken = authData.token;
+                state.userData = authData.user;
                 
                 // Verify admin access
-                if (!state.userData || !state.userData.is_admin) {
-                    clearAuthData();
+                if (!state.userData.is_admin) {
+                    sessionStorage.removeItem('adminAuth');
                     window.location.href = '../dashboard.html';
                     return false;
                 }
-                
                 return true;
-            } catch (e) {
-                console.error('Auth initialization failed:', e);
-                clearAuthData();
+            }
+            
+            // If no stored auth, check URL hash
+            const hash = window.location.hash.substring(1);
+            if (!hash) {
                 window.location.href = '../login.html';
                 return false;
             }
-        }
 
-        // Clear authentication data
-        function clearAuthData() {
-            localStorage.removeItem('movierecAuthToken');
-            localStorage.removeItem('movierecUserData');
-            state.authToken = null;
-            state.userData = null;
-        }
-
-        // Check if user is authenticated
-        function isAuthenticated() {
-            return state.authToken && state.userData;
-        }
-
-        // Initialize Admin
-        function initializeAdmin() {
-            if (!isAuthenticated()) return;
+            const authData = JSON.parse(atob(hash));
+            state.authToken = authData.token;
+            state.userData = authData.user;
             
-            document.getElementById('adminName').textContent = state.userData.username;
-            document.getElementById('adminAvatar').textContent = state.userData.username[0].toUpperCase();
+            // Verify admin access
+            if (!state.userData.is_admin) {
+                window.location.href = '../dashboard.html';
+                return false;
+            }
+            
+            // Store auth data in sessionStorage for other admin pages
+            sessionStorage.setItem('adminAuth', JSON.stringify(authData));
+            
+            // Clear hash after storing
+            window.location.hash = '';
+            return true;
+        } catch (e) {
+            console.error('Auth initialization failed:', e);
+            sessionStorage.removeItem('adminAuth');
+            window.location.href = '../login.html';
+            return false;
         }
+    }
 
-        // Setup Event Listeners
-        function setupEventListeners() {
-            // Tag input
-            const tagInput = document.getElementById('tagInput');
+    // Clear authentication data
+    function clearAuthData() {
+        sessionStorage.removeItem('adminAuth');
+        state.authToken = null;
+        state.userData = null;
+    }
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+        return state.authToken && state.userData;
+    }
+
+    // Initialize Admin (UPDATED)
+    function initializeAdmin() {
+        if (!isAuthenticated()) return;
+        
+        const adminName = document.getElementById('adminName');
+        const adminAvatar = document.getElementById('adminAvatar');
+        
+        if (adminName && adminAvatar) {
+            adminName.textContent = state.userData.username;
+            adminAvatar.textContent = state.userData.username[0].toUpperCase();
+        }
+    }
+
+    // Update navigation active state (NEW)
+    function updateNavigation() {
+        const currentPage = window.location.pathname.split('/').pop();
+        const navItems = document.querySelectorAll('.nav-item');
+        
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            const href = item.getAttribute('href');
+            
+            if (href === currentPage || (currentPage === 'posts.html' && href === 'posts.html')) {
+                item.classList.add('active');
+            }
+        });
+    }
+
+    // Setup Event Listeners
+    function setupEventListeners() {
+        // Tag input
+        const tagInput = document.getElementById('tagInput');
+        if (tagInput) {
             tagInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -864,307 +881,406 @@
                     tagInput.value = '';
                 }
             });
-            
-            // Form submission
-            document.getElementById('createPostForm').addEventListener('submit', createPost);
+        }
+        
+        // Form submission
+        const createPostForm = document.getElementById('createPostForm');
+        if (createPostForm) {
+            createPostForm.addEventListener('submit', createPost);
+        }
+    }
+
+    // API Request Helper (UPDATED)
+    async function apiRequest(endpoint, options = {}) {
+        if (!isAuthenticated()) {
+            window.location.href = '../login.html';
+            return null;
         }
 
-        // API Request Helper
-        async function apiRequest(endpoint, options = {}) {
-            if (!isAuthenticated()) {
+        try {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                ...options,
+                headers: {
+                    'Authorization': `Bearer ${state.authToken}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
+
+            if (response.status === 401) {
+                clearAuthData();
                 window.location.href = '../login.html';
                 return null;
             }
 
-            try {
-                const response = await fetch(`${API_BASE}${endpoint}`, {
-                    ...options,
-                    headers: {
-                        'Authorization': `Bearer ${state.authToken}`,
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    }
-                });
-
-                if (response.status === 401) {
-                    clearAuthData();
-                    window.location.href = '../login.html';
-                    return null;
-                }
-
-                return response;
-            } catch (error) {
-                console.error('API request failed:', error);
-                showToast('Network error. Please try again.', 'error');
-                return null;
-            }
+            return response;
+        } catch (error) {
+            console.error('API request failed:', error);
+            showToast('Network error. Please try again.', 'error');
+            return null;
         }
+    }
 
-        // Load Posts
-        async function loadPosts() {
-            const response = await apiRequest('/admin/recommendations');
-            
-            if (response && response.ok) {
-                const data = await response.json();
-                state.posts = data.recommendations || [];
-                displayPosts();
-            } else {
-                document.getElementById('postsList').innerHTML = '<div class="loading">Failed to load posts</div>';
-            }
-        }
-
-        // Display Posts
-        function displayPosts() {
+    // Load Posts
+    async function loadPosts() {
+        const response = await apiRequest('/admin/recommendations');
+        
+        if (response && response.ok) {
+            const data = await response.json();
+            state.posts = data.recommendations || [];
+            displayPosts();
+        } else {
             const postsList = document.getElementById('postsList');
-            
-            if (state.posts.length === 0) {
-                postsList.innerHTML = '<div class="loading">No active posts</div>';
-                return;
+            if (postsList) {
+                postsList.innerHTML = '<div class="loading">Failed to load posts</div>';
             }
+        }
+    }
+
+    // Display Posts
+    function displayPosts() {
+        const postsList = document.getElementById('postsList');
+        if (!postsList) return;
+        
+        if (state.posts.length === 0) {
+            postsList.innerHTML = '<div class="loading">No active posts</div>';
+            return;
+        }
+        
+        postsList.innerHTML = state.posts.map(post => {
+            const priorityClass = post.priority >= 8 ? 'priority-high' : 
+                                post.priority >= 4 ? 'priority-medium' : 'priority-low';
+            const priorityText = post.priority >= 8 ? 'High' : 
+                               post.priority >= 4 ? 'Medium' : 'Low';
             
-            postsList.innerHTML = state.posts.map(post => {
-                const priorityClass = post.priority >= 8 ? 'priority-high' : 
-                                    post.priority >= 4 ? 'priority-medium' : 'priority-low';
-                const priorityText = post.priority >= 8 ? 'High' : 
-                                   post.priority >= 4 ? 'Medium' : 'Low';
-                
-                return `
-                    <div class="post-item">
-                        <div class="post-header">
-                            <div>
-                                <div class="post-title">${post.title}</div>
-                                <div class="post-meta">
-                                    Created ${new Date(post.created_at).toLocaleDateString()}
-                                    ${post.expires_at ? `• Expires ${new Date(post.expires_at).toLocaleDateString()}` : ''}
-                                </div>
+            return `
+                <div class="post-item">
+                    <div class="post-header">
+                        <div>
+                            <div class="post-title">${post.title}</div>
+                            <div class="post-meta">
+                                Created ${new Date(post.created_at).toLocaleDateString()}
+                                ${post.expires_at ? `• Expires ${new Date(post.expires_at).toLocaleDateString()}` : ''}
                             </div>
-                            <span class="priority-badge ${priorityClass}">${priorityText} Priority</span>
                         </div>
-                        
-                        <div class="post-content">
-                            <p>${post.description}</p>
-                        </div>
-                        
-                        ${post.tags && post.tags.length > 0 ? `
-                            <div class="post-tags">
-                                ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                        
-                        <div class="post-actions">
-                            <button class="btn btn-secondary" onclick="editPost(${post.id})">Edit</button>
-                            <button class="btn btn-danger" onclick="deletePost(${post.id})">Delete</button>
-                        </div>
+                        <span class="priority-badge ${priorityClass}">${priorityText} Priority</span>
                     </div>
-                `;
-            }).join('');
-        }
-
-        // Create Post
-        async function createPost(e) {
-            e.preventDefault();
-            
-            if (!state.selectedContent) {
-                showToast('Please select content for the recommendation', 'error');
-                return;
-            }
-            
-            const formData = {
-                content_id: state.selectedContent.id,
-                title: document.getElementById('postTitle').value.trim(),
-                description: document.getElementById('postDescription').value.trim(),
-                priority: parseInt(document.getElementById('postPriority').value),
-                tags: state.tags,
-                expires_at: document.getElementById('postExpires').value || null
-            };
-            
-            if (!formData.title || !formData.description) {
-                showToast('Please fill in all required fields', 'error');
-                return;
-            }
-            
-            const response = await apiRequest('/admin/recommendations', {
-                method: 'POST',
-                body: JSON.stringify(formData)
-            });
-            
-            if (response && response.ok) {
-                showToast('Recommendation post created successfully!', 'success');
-                resetForm();
-                loadPosts();
-            } else {
-                const errorData = response ? await response.json().catch(() => ({})) : {};
-                showToast(errorData.message || 'Failed to create post', 'error');
-            }
-        }
-
-        // Search Content for Post
-        async function searchContentForPost() {
-            const query = document.getElementById('contentSearch').value.trim();
-            
-            if (!query) {
-                showToast('Please enter a search query', 'error');
-                return;
-            }
-            
-            const response = await apiRequest(`/content/search?q=${encodeURIComponent(query)}`);
-            
-            if (response && response.ok) {
-                const data = await response.json();
-                displaySearchResults(data.results || []);
-                document.getElementById('contentSearchModal').classList.add('show');
-            } else {
-                showToast('Failed to search content', 'error');
-            }
-        }
-
-        // Display Search Results
-        function displaySearchResults(results) {
-            const resultsContainer = document.getElementById('modalSearchResults');
-            
-            if (results.length === 0) {
-                resultsContainer.innerHTML = '<p class="text-center text-gray-400">No results found</p>';
-                return;
-            }
-            
-            resultsContainer.innerHTML = results.slice(0, 10).map(item => `
-                <div class="search-result-item" onclick='selectContent(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
-                    <img class="search-result-poster" src="${item.poster_url || getPlaceholderImage()}" alt="${item.title}">
-                    <div>
-                        <div style="font-weight: 600;">${item.title}</div>
-                        <div style="font-size: 0.875rem; color: #999;">${item.content_type} • ${item.language || 'Unknown'}</div>
+                    
+                    <div class="post-content">
+                        <p>${post.description}</p>
+                    </div>
+                    
+                    ${post.tags && post.tags.length > 0 ? `
+                        <div class="post-tags">
+                            ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="post-actions">
+                        <button class="btn btn-secondary" onclick="editPost(${post.id})">Edit</button>
+                        <button class="btn btn-danger" onclick="deletePost(${post.id})">Delete</button>
                     </div>
                 </div>
-            `).join('');
-        }
+            `;
+        }).join('');
+    }
 
-        // Select Content
-        function selectContent(content) {
-            state.selectedContent = content;
+    // Create Post
+    async function createPost(e) {
+        e.preventDefault();
+        
+        if (!state.selectedContent) {
+            showToast('Please select content for the recommendation', 'error');
+            return;
+        }
+        
+        const postTitle = document.getElementById('postTitle');
+        const postDescription = document.getElementById('postDescription');
+        const postPriority = document.getElementById('postPriority');
+        const postExpires = document.getElementById('postExpires');
+        
+        if (!postTitle || !postDescription || !postPriority) {
+            showToast('Form elements not found', 'error');
+            return;
+        }
+        
+        const formData = {
+            content_id: state.selectedContent.id,
+            title: postTitle.value.trim(),
+            description: postDescription.value.trim(),
+            priority: parseInt(postPriority.value),
+            tags: state.tags,
+            expires_at: postExpires ? postExpires.value || null : null
+        };
+        
+        if (!formData.title || !formData.description) {
+            showToast('Please fill in all required fields', 'error');
+            return;
+        }
+        
+        const response = await apiRequest('/admin/recommendations', {
+            method: 'POST',
+            body: JSON.stringify(formData)
+        });
+        
+        if (response && response.ok) {
+            showToast('Recommendation post created successfully!', 'success');
+            resetForm();
+            loadPosts();
+        } else {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
+            showToast(errorData.message || 'Failed to create post', 'error');
+        }
+    }
+
+    // Search Content for Post
+    async function searchContentForPost() {
+        const contentSearch = document.getElementById('contentSearch');
+        if (!contentSearch) {
+            showToast('Search field not found', 'error');
+            return;
+        }
+        
+        const query = contentSearch.value.trim();
+        
+        if (!query) {
+            showToast('Please enter a search query', 'error');
+            return;
+        }
+        
+        const response = await apiRequest(`/content/search?q=${encodeURIComponent(query)}`);
+        
+        if (response && response.ok) {
+            const data = await response.json();
+            displaySearchResults(data.results || []);
+            const modal = document.getElementById('contentSearchModal');
+            if (modal) {
+                modal.classList.add('show');
+            }
+        } else {
+            showToast('Failed to search content', 'error');
+        }
+    }
+
+    // Display Search Results
+    function displaySearchResults(results) {
+        const resultsContainer = document.getElementById('modalSearchResults');
+        if (!resultsContainer) return;
+        
+        if (results.length === 0) {
+            resultsContainer.innerHTML = '<p class="text-center text-gray-400">No results found</p>';
+            return;
+        }
+        
+        resultsContainer.innerHTML = results.slice(0, 10).map(item => `
+            <div class="search-result-item" onclick='selectContent(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
+                <img class="search-result-poster" src="${item.poster_url || getPlaceholderImage()}" alt="${item.title}">
+                <div>
+                    <div style="font-weight: 600;">${item.title}</div>
+                    <div style="font-size: 0.875rem; color: #999;">${item.content_type} • ${item.language || 'Unknown'}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Select Content
+    function selectContent(content) {
+        state.selectedContent = content;
+        
+        const selectedContent = document.getElementById('selectedContent');
+        const selectedPoster = document.getElementById('selectedPoster');
+        const selectedTitle = document.getElementById('selectedTitle');
+        const selectedType = document.getElementById('selectedType');
+        
+        if (selectedContent) selectedContent.style.display = 'block';
+        if (selectedPoster) selectedPoster.src = content.poster_url || getPlaceholderImage();
+        if (selectedTitle) selectedTitle.textContent = content.title;
+        if (selectedType) selectedType.textContent = `${content.content_type} • ${content.language || 'Unknown'}`;
+        
+        closeModal();
+    }
+
+    // Remove Selected Content
+    function removeSelectedContent() {
+        state.selectedContent = null;
+        const selectedContent = document.getElementById('selectedContent');
+        if (selectedContent) {
+            selectedContent.style.display = 'none';
+        }
+    }
+
+    // Add Tag
+    function addTag(tag) {
+        tag = tag.trim();
+        if (!tag || state.tags.includes(tag)) return;
+        
+        state.tags.push(tag);
+        updateTagsDisplay();
+    }
+
+    // Remove Tag
+    function removeTag(tag) {
+        state.tags = state.tags.filter(t => t !== tag);
+        updateTagsDisplay();
+    }
+
+    // Update Tags Display
+    function updateTagsDisplay() {
+        const container = document.getElementById('tagsContainer');
+        if (!container) return;
+        
+        container.innerHTML = state.tags.map(tag => `
+            <span class="tag">
+                ${tag}
+                <span class="tag-remove" onclick="removeTag('${tag}')">×</span>
+            </span>
+        `).join('');
+    }
+
+    // Edit Post
+    function editPost(postId) {
+        showToast('Edit functionality not implemented in demo', 'error');
+    }
+
+    // Delete Post
+    async function deletePost(postId) {
+        if (!confirm('Are you sure you want to delete this post?')) return;
+        
+        const response = await apiRequest(`/admin/recommendations/${postId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response && response.ok) {
+            showToast('Post deleted successfully', 'success');
+            loadPosts();
+        } else {
+            showToast('Failed to delete post', 'error');
+        }
+    }
+
+    // Reset Form
+    function resetForm() {
+        const createPostForm = document.getElementById('createPostForm');
+        if (createPostForm) {
+            createPostForm.reset();
+        }
+        
+        state.selectedContent = null;
+        state.tags = [];
+        
+        const selectedContent = document.getElementById('selectedContent');
+        if (selectedContent) {
+            selectedContent.style.display = 'none';
+        }
+        
+        updateTagsDisplay();
+    }
+
+    // Refresh Posts
+    function refreshPosts() {
+        showToast('Refreshing posts...', 'success');
+        loadPosts();
+    }
+
+    // Close Modal
+    function closeModal() {
+        const modal = document.getElementById('contentSearchModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+
+    // Toggle Sidebar (UPDATED)
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (sidebar && overlay) {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+    }
+
+    // Get Placeholder Image
+    function getPlaceholderImage() {
+        return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><rect fill="%23333" width="200" height="300"/><text x="50%" y="50%" fill="%23666" text-anchor="middle" dy=".3em">No Image</text></svg>';
+    }
+
+    // Show Toast
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        if (!toast) {
+            console.log(`Toast: ${message} (${type})`);
+            return;
+        }
+        
+        toast.textContent = message;
+        toast.className = `toast ${type}`;
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    // Logout (UPDATED)
+    function logout() {
+        clearAuthData();
+        window.location.href = '../login.html';
+    }
+
+    // Handle navigation clicks (NEW)
+    document.addEventListener('click', (e) => {
+        const navItem = e.target.closest('.nav-item');
+        if (navItem && !navItem.getAttribute('onclick')) {
+            const href = navItem.getAttribute('href');
             
-            document.getElementById('selectedContent').style.display = 'block';
-            document.getElementById('selectedPoster').src = content.poster_url || getPlaceholderImage();
-            document.getElementById('selectedTitle').textContent = content.title;
-            document.getElementById('selectedType').textContent = `${content.content_type} • ${content.language || 'Unknown'}`;
+            if (href === '#') {
+                e.preventDefault();
+                return;
+            }
             
-            closeModal();
-        }
-
-        // Remove Selected Content
-        function removeSelectedContent() {
-            state.selectedContent = null;
-            document.getElementById('selectedContent').style.display = 'none';
-        }
-
-        // Add Tag
-        function addTag(tag) {
-            tag = tag.trim();
-            if (!tag || state.tags.includes(tag)) return;
-            
-            state.tags.push(tag);
-            updateTagsDisplay();
-        }
-
-        // Remove Tag
-        function removeTag(tag) {
-            state.tags = state.tags.filter(t => t !== tag);
-            updateTagsDisplay();
-        }
-
-        // Update Tags Display
-        function updateTagsDisplay() {
-            const container = document.getElementById('tagsContainer');
-            container.innerHTML = state.tags.map(tag => `
-                <span class="tag">
-                    ${tag}
-                    <span class="tag-remove" onclick="removeTag('${tag}')">×</span>
-                </span>
-            `).join('');
-        }
-
-        // Edit Post
-        function editPost(postId) {
-            showToast('Edit functionality not implemented in demo', 'error');
-        }
-
-        // Delete Post
-        async function deletePost(postId) {
-            if (!confirm('Are you sure you want to delete this post?')) return;
-            
-            const response = await apiRequest(`/admin/recommendations/${postId}`, {
-                method: 'DELETE'
-            });
-            
-            if (response && response.ok) {
-                showToast('Post deleted successfully', 'success');
-                loadPosts();
-            } else {
-                showToast('Failed to delete post', 'error');
+            if (href === '../dashboard.html') {
+                e.preventDefault();
+                const authData = {
+                    token: state.authToken,
+                    user: state.userData
+                };
+                window.location.href = `../dashboard.html#${btoa(JSON.stringify(authData))}`;
+                return;
             }
         }
+    });
 
-        // Reset Form
-        function resetForm() {
-            document.getElementById('createPostForm').reset();
-            state.selectedContent = null;
-            state.tags = [];
-            document.getElementById('selectedContent').style.display = 'none';
-            updateTagsDisplay();
-        }
-
-        // Refresh Posts
-        function refreshPosts() {
-            showToast('Refreshing posts...', 'success');
-            loadPosts();
-        }
-
-        // Close Modal
-        function closeModal() {
-            document.getElementById('contentSearchModal').classList.remove('show');
-        }
-
-        // Toggle Sidebar
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('active');
-            document.getElementById('sidebarOverlay').classList.toggle('active');
-        }
-
-        // Get Placeholder Image
-        function getPlaceholderImage() {
-            return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><rect fill="%23333" width="200" height="300"/><text x="50%" y="50%" fill="%23666" text-anchor="middle" dy=".3em">No Image</text></svg>';
-        }
-
-        // Show Toast
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${type}`;
-            toast.classList.add('show');
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-
-        // Logout
-        function logout() {
-            clearAuthData();
-            window.location.href = '../login.html';
-        }
-
-        // Handle escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && document.getElementById('contentSearchModal').classList.contains('show')) {
+    // Handle escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('contentSearchModal');
+            if (modal && modal.classList.contains('show')) {
                 closeModal();
             }
-        });
+        }
+    });
 
-        // Handle page visibility change to check auth status
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && !isAuthenticated()) {
-                window.location.href = '../login.html';
+    // Handle page visibility change to check auth status (UPDATED)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !isAuthenticated()) {
+            window.location.href = '../login.html';
+        }
+    });
+
+    // Handle window resize for responsive sidebar (NEW)
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            if (sidebar && overlay) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
             }
-        });
-    </script>
+        }
+    });
+</script>
 </body>
 </html>
