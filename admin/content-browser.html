@@ -3,644 +3,600 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Browser - MovieFlix Admin</title>
+    <title>Content Browser - CineScope Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary: #e50914;
-            --secondary: #141414;
-            --sidebar: #1a1a1a;
-            --text-primary: #ffffff;
-            --text-secondary: #b3b3b3;
-            --success: #46d369;
-            --warning: #f59e0b;
-            --error: #ef4444;
+            --secondary: #221f1f;
+            --dark: #141414;
+            --light: #f5f5f1;
         }
 
         body {
-            background-color: var(--secondary);
-            color: var(--text-primary);
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: var(--dark);
+            color: var(--light);
+            font-family: 'Arial', sans-serif;
         }
 
-        /* Layout */
-        .admin-layout {
-            display: grid;
-            grid-template-columns: 250px 1fr;
-            min-height: 100vh;
+        .admin-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
         }
 
-        /* Sidebar */
         .sidebar {
-            background: var(--sidebar);
-            padding: 20px;
-            border-right: 1px solid #333;
-        }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 40px;
-            display: block;
+            background: linear-gradient(180deg, var(--secondary) 0%, var(--dark) 100%);
         }
 
         .nav-item {
             display: flex;
             align-items: center;
-            gap: 15px;
             padding: 12px 16px;
-            margin: 5px 0;
-            border-radius: 8px;
-            color: var(--text-secondary);
+            color: #cbd5e1;
             text-decoration: none;
-            transition: all 0.2s;
+            border-radius: 8px;
+            margin: 4px 0;
+            transition: all 0.3s ease;
         }
 
         .nav-item:hover {
-            background: rgba(255,255,255,0.1);
-            color: var(--text-primary);
-        }
-
-        .nav-item.active {
             background: var(--primary);
             color: white;
-        }
-
-        /* Main Content */
-        .main-content {
-            padding: 30px;
-        }
-
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        /* Search Section */
-        .search-section {
-            background: var(--sidebar);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-        }
-
-        .search-controls {
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            gap: 15px;
-            align-items: end;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .form-label {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .form-control {
-            padding: 10px 15px;
-            background: #333;
-            border: 1px solid #444;
-            border-radius: 6px;
-            color: white;
-            font-size: 1rem;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.875rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #f40612;
-        }
-
-        .btn-secondary {
-            background: #333;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #444;
-        }
-
-        /* Results Grid */
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
         }
 
         .content-card {
-            background: var(--sidebar);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             overflow: hidden;
-            transition: transform 0.3s;
-            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
         .content-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
         }
 
-        .content-poster {
-            width: 100%;
-            height: 300px;
-            object-fit: cover;
+        .source-tab {
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
         }
 
-        .content-info {
-            padding: 15px;
+        .source-tab.active {
+            background: var(--primary);
+            color: white;
         }
 
-        .content-title {
-            font-weight: 600;
-            margin-bottom: 5px;
-            line-height: 1.4;
+        .source-tab:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
         }
 
-        .content-meta {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .source-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            background: #333;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .modal.active {
-            display: block;
-        }
-
-        .modal-content {
-            background: var(--sidebar);
-            margin: 50px auto;
-            padding: 30px;
-            border-radius: 12px;
-            max-width: 800px;
-            width: 90%;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .detail-grid {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 30px;
-        }
-
-        .detail-poster {
-            width: 100%;
+        .search-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px 16px;
             border-radius: 8px;
+            transition: all 0.3s ease;
         }
 
-        .detail-info h2 {
-            font-size: 1.8rem;
-            margin-bottom: 15px;
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.3);
         }
 
-        .detail-row {
-            margin-bottom: 15px;
-        }
-
-        .detail-label {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            margin-bottom: 5px;
-        }
-
-        /* Loading State */
         .loading {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-secondary);
-        }
-
-        .spinner {
-            border: 3px solid #333;
-            border-top: 3px solid var(--primary);
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .admin-layout {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar {
-                display: none;
-            }
-
-            .search-controls {
-                grid-template-columns: 1fr;
-            }
-
-            .detail-grid {
-                grid-template-columns: 1fr;
-            }
+        .recommendation-modal {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
         }
     </style>
 </head>
 <body>
-    <div class="admin-layout">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo">MovieFlix Admin</div>
-            <nav>
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-90 backdrop-blur-sm">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold text-red-600">CineScope Admin</h1>
+                    <span class="text-gray-400">Content Browser</span>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-300">Welcome, <span id="adminName">Admin</span></span>
+                    <button onclick="logout()" class="text-white hover:text-red-500 transition">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="fixed left-0 top-16 bottom-0 w-64 sidebar z-40 overflow-y-auto">
+        <div class="p-4">
+            <nav class="space-y-2">
                 <a href="dashboard.html" class="nav-item">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Dashboard</span>
+                    📊 Dashboard
                 </a>
-                <a href="content-browser.html" class="nav-item active">
-                    <i class="fas fa-film"></i>
-                    <span>Content Manager</span>
+                <a href="#" class="nav-item" style="background: var(--primary); color: white;">
+                    🔍 Browse Content
                 </a>
                 <a href="posts.html" class="nav-item">
-                    <i class="fas fa-bullhorn"></i>
-                    <span>Recommendations</span>
+                    📝 Manage Posts
                 </a>
                 <a href="analytics.html" class="nav-item">
-                    <i class="fas fa-analytics"></i>
-                    <span>Analytics</span>
+                    📈 Analytics
                 </a>
                 <a href="../dashboard.html" class="nav-item">
-                    <i class="fas fa-eye"></i>
-                    <span>View as User</span>
-                </a>
-                <a href="#" onclick="logout()" class="nav-item">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
+                    👤 User View
                 </a>
             </nav>
-        </aside>
+        </div>
+    </div>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="content-header">
-                <h1 class="text-2xl font-semibold">Content Manager</h1>
-                <div class="flex gap-3">
-                    <button class="btn btn-secondary" onclick="refreshContent()">
-                        <i class="fas fa-sync"></i>
-                        Refresh
-                    </button>
-                    <button class="btn btn-primary" onclick="showAddContentModal()">
-                        <i class="fas fa-plus"></i>
-                        Add Content
-                    </button>
-                </div>
+    <!-- Main Content -->
+    <div class="ml-64 pt-16 min-h-screen">
+        <div class="p-6">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold mb-2">Content Browser</h1>
+                <p class="text-gray-400">Search and curate content from multiple sources</p>
             </div>
 
             <!-- Search Section -->
-            <div class="search-section">
-                <h2 class="text-lg font-semibold mb-4">Search External Sources</h2>
-                <div class="search-controls">
-                    <div class="form-group">
-                        <label class="form-label">Search Query</label>
-                        <input type="text" id="searchQuery" class="form-control" 
-                               placeholder="Search movies, TV shows, anime...">
+            <div class="admin-card p-6 mb-8">
+                <div class="flex flex-col lg:flex-row gap-4 mb-6">
+                    <!-- Search Input -->
+                    <div class="flex-1">
+                        <input 
+                            type="text" 
+                            id="searchInput"
+                            class="search-input w-full"
+                            placeholder="Search for movies, TV shows, or anime..."
+                        >
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Source</label>
-                        <select id="searchSource" class="form-control">
-                            <option value="all">All Sources</option>
-                            <option value="tmdb">TMDB</option>
-                            <option value="anime">Anime (Jikan)</option>
-                        </select>
-                    </div>
-                    <button onclick="searchContent()" class="btn btn-primary">
-                        <i class="fas fa-search"></i>
-                        Search
+                    
+                    <!-- Search Button -->
+                    <button 
+                        id="searchBtn"
+                        class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition whitespace-nowrap"
+                    >
+                        🔍 Search
                     </button>
                 </div>
+
+                <!-- Source Tabs -->
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <div class="source-tab active" data-source="tmdb">
+                        🎬 TMDB (Movies & TV)
+                    </div>
+                    <div class="source-tab" data-source="anime">
+                        🎌 Anime (Jikan)
+                    </div>
+                    <div class="source-tab" data-source="omdb">
+                        🎭 OMDb
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <select id="contentTypeFilter" class="search-input">
+                        <option value="">All Types</option>
+                        <option value="movie">Movies</option>
+                        <option value="tv">TV Shows</option>
+                        <option value="anime">Anime</option>
+                    </select>
+                    
+                    <select id="languageFilter" class="search-input">
+                        <option value="">All Languages</option>
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="te">Telugu</option>
+                        <option value="ta">Tamil</option>
+                        <option value="kn">Kannada</option>
+                        <option value="ja">Japanese</option>
+                    </select>
+                    
+                    <select id="yearFilter" class="search-input">
+                        <option value="">All Years</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                        <option value="2022">2022</option>
+                        <option value="2021">2021</option>
+                        <option value="2020">2020</option>
+                    </select>
+                </div>
             </div>
 
-            <!-- Results Section -->
-            <div id="resultsSection">
-                <h2 class="text-xl font-semibold mb-4">Search Results</h2>
-                <div id="resultsGrid" class="results-grid">
-                    <div class="loading">
-                        <p class="text-gray-400">Use the search above to find content from external sources</p>
+            <!-- Search Results -->
+            <div class="admin-card p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold">Search Results</h2>
+                    <div id="resultsCount" class="text-gray-400"></div>
+                </div>
+                
+                <div id="searchResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div class="text-center text-gray-400 py-12 col-span-full">
+                        Use the search above to find content from multiple sources
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="flex justify-center mt-8 space-x-2 hidden">
+                    <!-- Pagination buttons will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendation Modal -->
+    <div id="recommendationModal" class="hidden fixed inset-0 recommendation-modal z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div class="flex items-start space-x-6 mb-6">
+                <img id="modalPoster" src="" alt="" class="w-32 h-48 object-cover rounded-lg">
+                <div class="flex-1">
+                    <h3 id="modalTitle" class="text-2xl font-bold mb-2"></h3>
+                    <p id="modalOverview" class="text-gray-300 mb-4"></p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span id="modalRating" class="bg-yellow-600 px-2 py-1 rounded text-sm"></span>
+                        <span id="modalYear" class="bg-blue-600 px-2 py-1 rounded text-sm"></span>
+                        <span id="modalType" class="bg-green-600 px-2 py-1 rounded text-sm"></span>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
 
-    <!-- Content Detail Modal -->
-    <div id="contentModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="text-xl font-semibold">Content Details</h2>
-                <button onclick="closeContentModal()" class="text-2xl">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div id="modalBody">
-                <!-- Dynamic content -->
-            </div>
+            <form id="recommendationForm">
+                <div class="mb-4">
+                    <label class="block text-gray-300 font-medium mb-2">Recommendation Type</label>
+                    <select id="recommendationType" class="search-input w-full">
+                        <option value="admin_choice">Admin's Choice</option>
+                        <option value="trending">Trending</option>
+                        <option value="popular">Popular</option>
+                        <option value="critics_choice">Critics' Choice</option>
+                    </select>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-300 font-medium mb-2">Your Recommendation</label>
+                    <textarea 
+                        id="recommendationDescription" 
+                        class="search-input w-full h-24 resize-none"
+                        placeholder="Why do you recommend this content? What makes it special?"
+                        required
+                    ></textarea>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button 
+                        type="submit" 
+                        class="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-700 transition font-medium"
+                    >
+                        📝 Create Recommendation
+                    </button>
+                    <button 
+                        type="button" 
+                        onclick="closeRecommendationModal()"
+                        class="flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition font-medium"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
     <script>
         const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        let currentResults = [];
+        
+        // Global variables
+        let currentUser = null;
+        let authToken = null;
+        let currentSource = 'tmdb';
+        let currentPage = 1;
+        let totalPages = 1;
+        let selectedContent = null;
 
-        // Check admin authentication
-        if (!token || !user.is_admin) {
-            window.location.href = '../login.html';
-        }
-
-        // Search content
-        async function searchContent() {
-            const query = document.getElementById('searchQuery').value.trim();
-            const source = document.getElementById('searchSource').value;
+        // Authentication check
+        function checkAuth() {
+            authToken = sessionStorage.getItem('authToken');
+            const userStr = sessionStorage.getItem('currentUser');
             
-            if (!query) {
-                alert('Please enter a search query');
-                return;
+            if (!authToken || !userStr) {
+                window.location.href = '../login.html';
+                return false;
             }
-
-            const resultsGrid = document.getElementById('resultsGrid');
-            resultsGrid.innerHTML = `
-                <div class="loading col-span-full">
-                    <div class="spinner"></div>
-                    <p>Searching...</p>
-                </div>
-            `;
-
-            try {
-                const response = await fetch(
-                    `${API_BASE}/admin/search-content?q=${encodeURIComponent(query)}&source=${source}`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    }
-                );
-
-                if (response.ok) {
-                    const data = await response.json();
-                    currentResults = data.results;
-                    displayResults(data.results);
-                } else {
-                    resultsGrid.innerHTML = '<div class="col-span-full text-center text-red-500">Search failed</div>';
-                }
-            } catch (error) {
-                console.error('Search error:', error);
-                resultsGrid.innerHTML = '<div class="col-span-full text-center text-red-500">An error occurred</div>';
-            }
-        }
-
-        function displayResults(results) {
-            const resultsGrid = document.getElementById('resultsGrid');
             
-            if (results.length === 0) {
-                resultsGrid.innerHTML = '<div class="col-span-full text-center text-gray-400">No results found</div>';
-                return;
-            }
-
-            resultsGrid.innerHTML = results.map((result, index) => `
-                <div class="content-card" onclick="showContentDetails(${index})">
-                    <img src="${result.data.poster_url || '/placeholder.jpg'}" 
-                         alt="${result.data.title}"
-                         class="content-poster"
-                         onerror="this.src='/placeholder.jpg'">
-                    <div class="content-info">
-                        <h3 class="content-title">${result.data.title}</h3>
-                        <div class="content-meta">
-                            <span class="source-badge">${result.source}</span>
-                            <span>${result.data.content_type || 'Unknown'}</span>
-                            ${result.data.release_date ? 
-                                `<span>${new Date(result.data.release_date).getFullYear()}</span>` : ''}
-                        </div>
-                        <div class="action-buttons">
-                            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addToDatabase(${index})">
-                                <i class="fas fa-plus"></i> Add
-                            </button>
-                            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); showContentDetails(${index})">
-                                <i class="fas fa-info"></i> Details
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function showContentDetails(index) {
-            const content = currentResults[index];
-            const modal = document.getElementById('contentModal');
-            const modalBody = document.getElementById('modalBody');
+            currentUser = JSON.parse(userStr);
             
-            modalBody.innerHTML = `
-                <div class="detail-grid">
-                    <div>
-                        <img src="${content.data.poster_url || '/placeholder.jpg'}" 
-                             alt="${content.data.title}"
-                             class="detail-poster"
-                             onerror="this.src='/placeholder.jpg'">
-                    </div>
-                    <div class="detail-info">
-                        <h2>${content.data.title}</h2>
-                        ${content.data.original_title && content.data.original_title !== content.data.title ? 
-                            `<p class="text-gray-400 mb-4">${content.data.original_title}</p>` : ''}
-                        
-                        <div class="detail-row">
-                            <div class="detail-label">Type</div>
-                            <div>${content.data.content_type || 'Unknown'}</div>
-                        </div>
-                        
-                        <div class="detail-row">
-                            <div class="detail-label">Source</div>
-                            <div>${content.source.toUpperCase()}</div>
-                        </div>
-                        
-                        ${content.data.release_date ? `
-                            <div class="detail-row">
-                                <div class="detail-label">Release Date</div>
-                                <div>${new Date(content.data.release_date).toLocaleDateString()}</div>
-                            </div>
-                        ` : ''}
-                        
-                        ${content.data.genres && content.data.genres.length > 0 ? `
-                            <div class="detail-row">
-                                <div class="detail-label">Genres</div>
-                                <div>${content.data.genres.join(', ')}</div>
-                            </div>
-                        ` : ''}
-                        
-                        ${content.data.synopsis ? `
-                            <div class="detail-row">
-                                <div class="detail-label">Synopsis</div>
-                                <div>${content.data.synopsis}</div>
-                            </div>
-                        ` : ''}
-                        
-                        ${content.data.popularity_score ? `
-                            <div class="detail-row">
-                                <div class="detail-label">Popularity Score</div>
-                                <div>${content.data.popularity_score.toFixed(2)}</div>
-                            </div>
-                        ` : ''}
-                        
-                        <div class="mt-6">
-                            <button class="btn btn-primary" onclick="addToDatabase(${index})">
-                                <i class="fas fa-plus"></i> Add to Database
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
+            if (!currentUser.is_admin) {
+                window.location.href = '../dashboard.html';
+                return false;
+            }
             
-            modal.classList.add('active');
+            document.getElementById('adminName').textContent = currentUser.username;
+            return true;
         }
 
-        function closeContentModal() {
-            document.getElementById('contentModal').classList.remove('active');
-        }
-
-        async function addToDatabase(index) {
-            const content = currentResults[index];
-            
-            if (!confirm(`Add "${content.data.title}" to the database?`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/admin/add-content`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        content_data: content.data
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    alert(`Content added successfully! ID: ${data.content_id}`);
-                    
-                    // Update UI to show it's been added
-                    const card = document.querySelectorAll('.content-card')[index];
-                    const addBtn = card.querySelector('.btn-primary');
-                    addBtn.innerHTML = '<i class="fas fa-check"></i> Added';
-                    addBtn.disabled = true;
-                    addBtn.classList.add('opacity-50');
-                } else {
-                    alert(data.message || 'Failed to add content');
-                }
-            } catch (error) {
-                console.error('Error adding content:', error);
-                alert('An error occurred while adding content');
-            }
-        }
-
-        function showAddContentModal() {
-            alert('Manual content addition form would go here');
-            // In a real implementation, this would show a form to manually add content
-        }
-
-        function refreshContent() {
-            const query = document.getElementById('searchQuery').value;
-            if (query) {
-                searchContent();
-            }
+        function getAuthHeaders() {
+            return {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            };
         }
 
         function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            sessionStorage.clear();
             window.location.href = '../login.html';
         }
 
-        // Close modal when clicking outside
-        document.getElementById('contentModal').addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                closeContentModal();
+        // Search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const searchBtn = document.getElementById('searchBtn');
+            
+            searchBtn.addEventListener('click', performSearch);
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+
+            // Source tabs
+            document.querySelectorAll('.source-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentSource = tab.dataset.source;
+                });
+            });
+
+            // Filters
+            document.getElementById('contentTypeFilter').addEventListener('change', performSearch);
+            document.getElementById('languageFilter').addEventListener('change', performSearch);
+            document.getElementById('yearFilter').addEventListener('change', performSearch);
+        }
+
+        async function performSearch(page = 1) {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+
+            currentPage = page;
+            showLoading();
+
+            try {
+                const params = new URLSearchParams({
+                    query: query,
+                    source: currentSource,
+                    page: page.toString()
+                });
+
+                // Add filters
+                const contentType = document.getElementById('contentTypeFilter').value;
+                const language = document.getElementById('languageFilter').value;
+                const year = document.getElementById('yearFilter').value;
+
+                if (contentType) params.append('type', contentType);
+                if (language) params.append('language', language);
+                if (year) params.append('year', year);
+
+                const response = await fetch(`${API_BASE}/admin/search?${params}`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displaySearchResults(data.results || []);
+                    updatePagination(data.total_pages || 1, data.total_results || 0);
+                } else {
+                    showError('Failed to search content');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showError('Search failed. Please try again.');
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('searchResults').innerHTML = `
+                <div class="col-span-full flex justify-center py-12">
+                    <div class="loading"></div>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            document.getElementById('searchResults').innerHTML = `
+                <div class="col-span-full text-center text-red-500 py-12">
+                    ${message}
+                </div>
+            `;
+        }
+
+        function displaySearchResults(results) {
+            const container = document.getElementById('searchResults');
+            
+            if (!results || results.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center text-gray-400 py-12">
+                        No results found. Try different search terms or sources.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = results.map(item => {
+                const posterUrl = item.poster_path || '/api/placeholder/200/300';
+                const rating = item.rating ? `⭐ ${item.rating.toFixed(1)}` : 'No rating';
+                const year = item.release_date ? new Date(item.release_date).getFullYear() : 'Unknown';
+                
+                return `
+                    <div class="content-card">
+                        <img src="${posterUrl}" alt="${item.title}" class="w-full h-64 object-cover">
+                        <div class="p-4">
+                            <h3 class="font-bold text-white mb-2 line-clamp-2">${item.title}</h3>
+                            <p class="text-gray-400 text-sm mb-2">${year} • ${(item.content_type || 'movie').toUpperCase()}</p>
+                            <p class="text-gray-300 text-sm mb-3 line-clamp-3">${item.overview || 'No description available'}</p>
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-yellow-400 text-sm">${rating}</span>
+                                <span class="text-blue-400 text-sm">${item.source?.toUpperCase() || currentSource.toUpperCase()}</span>
+                            </div>
+                            <button 
+                                onclick="openRecommendationModal(${JSON.stringify(item).replace(/"/g, '&quot;')})"
+                                class="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition text-sm font-medium"
+                            >
+                                📝 Create Recommendation
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updatePagination(totalPagesCount, totalResults) {
+            totalPages = totalPagesCount;
+            document.getElementById('resultsCount').textContent = `${totalResults} results found`;
+            
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.classList.add('hidden');
+                return;
+            }
+
+            pagination.classList.remove('hidden');
+            
+            let paginationHTML = '';
+            
+            // Previous button
+            if (currentPage > 1) {
+                paginationHTML += `
+                    <button onclick="performSearch(${currentPage - 1})" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">
+                        Previous
+                    </button>
+                `;
+            }
+
+            // Page numbers
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+
+            for (let i = startPage; i <= endPage; i++) {
+                const isActive = i === currentPage;
+                paginationHTML += `
+                    <button 
+                        onclick="performSearch(${i})" 
+                        class="px-3 py-2 rounded transition ${isActive ? 'bg-red-600 text-white' : 'bg-gray-700 text-white hover:bg-gray-600'}"
+                    >
+                        ${i}
+                    </button>
+                `;
+            }
+
+            // Next button
+            if (currentPage < totalPages) {
+                paginationHTML += `
+                    <button onclick="performSearch(${currentPage + 1})" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">
+                        Next
+                    </button>
+                `;
+            }
+
+            pagination.innerHTML = paginationHTML;
+        }
+
+        // Recommendation modal
+        function openRecommendationModal(content) {
+            selectedContent = content;
+            
+            document.getElementById('modalTitle').textContent = content.title;
+            document.getElementById('modalOverview').textContent = content.overview || 'No description available';
+            document.getElementById('modalPoster').src = content.poster_path || '/api/placeholder/200/300';
+            document.getElementById('modalRating').textContent = content.rating ? `⭐ ${content.rating.toFixed(1)}` : 'No rating';
+            document.getElementById('modalYear').textContent = content.release_date ? new Date(content.release_date).getFullYear() : 'Unknown';
+            document.getElementById('modalType').textContent = (content.content_type || 'movie').toUpperCase();
+            
+            document.getElementById('recommendationModal').classList.remove('hidden');
+        }
+
+        function closeRecommendationModal() {
+            document.getElementById('recommendationModal').classList.add('hidden');
+            document.getElementById('recommendationForm').reset();
+            selectedContent = null;
+        }
+
+        // Submit recommendation
+        document.getElementById('recommendationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!selectedContent) {
+                alert('No content selected');
+                return;
+            }
+
+            const recommendationType = document.getElementById('recommendationType').value;
+            const description = document.getElementById('recommendationDescription').value;
+
+            try {
+                // Create the recommendation
+                const response = await fetch(`${API_BASE}/admin/recommendations`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        content_id: selectedContent.id,
+                        recommendation_type: recommendationType,
+                        description: description
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Recommendation created successfully and posted to Telegram!');
+                    closeRecommendationModal();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Failed to create recommendation: ${errorData.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Create recommendation error:', error);
+                alert('Failed to create recommendation. Please try again.');
             }
         });
 
-        // Search on Enter key
-        document.getElementById('searchQuery').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                searchContent();
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeRecommendationModal();
             }
         });
+
+        // Initialize page
+        function initializePage() {
+            if (!checkAuth()) return;
+            setupSearch();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializePage);
     </script>
 </body>
 </html>
