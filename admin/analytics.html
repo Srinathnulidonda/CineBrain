@@ -787,132 +787,407 @@
         </main>
     </div>
 
-    <script>
-        // API Configuration
-        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+<script>
+    // API Configuration
+    const API_BASE = 'https://backend-app-970m.onrender.com/api';
+    
+    // Global State
+    const state = {
+        authToken: null,
+        userData: null,
+        currentDateRange: 'today'
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!initializeAuth()) return;
         
-        // Global State
-        const state = {
-            authToken: null,
-            userData: null,
-            currentDateRange: 'today'
-        };
+        initializeAdmin();
+        updateNavigation();
+        loadAnalytics();
+        setupEventListeners();
+    });
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!initializeAuth()) return;
-            
-            initializeAdmin();
-            loadAnalytics();
-        });
-
-        // Initialize Authentication
-        function initializeAuth() {
-            try {
-                const hash = window.location.hash.substring(1);
-                if (!hash) {
-                    window.location.href = '../login.html';
-                    return false;
-                }
-
-                const authData = JSON.parse(atob(hash));
+    // Initialize Authentication (UPDATED TO MATCH DASHBOARD)
+    function initializeAuth() {
+        try {
+            // First check if we have auth data in sessionStorage
+            const storedAuth = sessionStorage.getItem('adminAuth');
+            if (storedAuth) {
+                const authData = JSON.parse(storedAuth);
                 state.authToken = authData.token;
                 state.userData = authData.user;
                 
                 // Verify admin access
                 if (!state.userData.is_admin) {
+                    sessionStorage.removeItem('adminAuth');
                     window.location.href = '../dashboard.html';
                     return false;
                 }
-                
-                window.location.hash = '';
                 return true;
-            } catch (e) {
-                console.error('Auth initialization failed:', e);
+            }
+            
+            // If no stored auth, check URL hash
+            const hash = window.location.hash.substring(1);
+            if (!hash) {
                 window.location.href = '../login.html';
                 return false;
             }
-        }
 
-        // Initialize Admin
-        function initializeAdmin() {
-            document.getElementById('adminName').textContent = state.userData.username;
-            document.getElementById('adminAvatar').textContent = state.userData.username[0].toUpperCase();
-        }
-
-        // Load Analytics Data
-        function loadAnalytics() {
-            // In a real application, this would fetch data from API endpoints
-            // For demo purposes, we're using the static data already in the HTML
-            console.log('Loading analytics for date range:', state.currentDateRange);
-        }
-
-        // Set Date Range
-        function setDateRange(range) {
-            state.currentDateRange = range;
+            const authData = JSON.parse(atob(hash));
+            state.authToken = authData.token;
+            state.userData = authData.user;
             
-            // Update button states
-            document.querySelectorAll('.range-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
+            // Verify admin access
+            if (!state.userData.is_admin) {
+                window.location.href = '../dashboard.html';
+                return false;
+            }
             
-            // Reload analytics with new date range
-            loadAnalytics();
-        }
-
-        // Export Data
-        function exportData() {
-            // In a real application, this would generate and download a report
-            alert('Export functionality would generate a CSV/PDF report with current analytics data');
-        }
-
-        // Toggle Sidebar
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('active');
-            document.getElementById('sidebarOverlay').classList.toggle('active');
-        }
-
-        // Logout
-        function logout() {
-            state.authToken = null;
-            state.userData = null;
+            // Store auth data in sessionStorage for other admin pages
+            sessionStorage.setItem('adminAuth', JSON.stringify(authData));
+            
+            // Clear hash after storing
+            window.location.hash = '';
+            return true;
+        } catch (e) {
+            console.error('Auth initialization failed:', e);
+            sessionStorage.removeItem('adminAuth');
             window.location.href = '../login.html';
+            return false;
+        }
+    }
+
+    // Clear authentication data
+    function clearAuthData() {
+        sessionStorage.removeItem('adminAuth');
+        state.authToken = null;
+        state.userData = null;
+    }
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+        return state.authToken && state.userData;
+    }
+
+    // Initialize Admin (UPDATED)
+    function initializeAdmin() {
+        if (!isAuthenticated()) return;
+        
+        const adminName = document.getElementById('adminName');
+        const adminAvatar = document.getElementById('adminAvatar');
+        
+        if (adminName && adminAvatar) {
+            adminName.textContent = state.userData.username;
+            adminAvatar.textContent = state.userData.username[0].toUpperCase();
+        }
+    }
+
+    // Update navigation active state (NEW)
+    function updateNavigation() {
+        const currentPage = window.location.pathname.split('/').pop();
+        const navItems = document.querySelectorAll('.nav-item');
+        
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            const href = item.getAttribute('href');
+            
+            if (href === currentPage || (currentPage === 'analytics.html' && href === 'analytics.html')) {
+                item.classList.add('active');
+            }
+        });
+    }
+
+    // Setup Event Listeners (NEW)
+    function setupEventListeners() {
+        // Date range buttons
+        document.querySelectorAll('.range-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                setDateRange(e.target.dataset.range || e.target.textContent.toLowerCase());
+            });
+        });
+    }
+
+    // API Request Helper (NEW)
+    async function apiRequest(endpoint, options = {}) {
+        if (!isAuthenticated()) {
+            window.location.href = '../login.html';
+            return null;
         }
 
-        // Animate Numbers on Load
-        window.addEventListener('load', () => {
-            animateValue('8942', 0, 8942, 2000);
-            animateValue('45.2K', 0, 45.2, 2000, 'K');
-            animateValue('78.5%', 0, 78.5, 2000, '%');
-        });
-
-        function animateValue(id, start, end, duration, suffix = '') {
-            const elements = document.querySelectorAll('.stat-value');
-            elements.forEach(element => {
-                if (element.textContent === id) {
-                    const range = end - start;
-                    const increment = range / (duration / 16);
-                    let current = start;
-                    
-                    const timer = setInterval(() => {
-                        current += increment;
-                        if (current >= end) {
-                            current = end;
-                            clearInterval(timer);
-                        }
-                        
-                        if (suffix === 'K') {
-                            element.textContent = current.toFixed(1) + suffix;
-                        } else if (suffix === '%') {
-                            element.textContent = current.toFixed(1) + suffix;
-                        } else {
-                            element.textContent = Math.floor(current).toLocaleString();
-                        }
-                    }, 16);
+        try {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                ...options,
+                headers: {
+                    'Authorization': `Bearer ${state.authToken}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers
                 }
             });
+
+            if (response.status === 401) {
+                clearAuthData();
+                window.location.href = '../login.html';
+                return null;
+            }
+
+            return response;
+        } catch (error) {
+            console.error('API request failed:', error);
+            showToast('Network error. Please try again.', 'error');
+            return null;
         }
-    </script>
+    }
+
+    // Load Analytics Data (ENHANCED)
+    async function loadAnalytics() {
+        try {
+            // Load real analytics data from API
+            const response = await apiRequest(`/admin/analytics?range=${state.currentDateRange}`);
+            
+            if (response && response.ok) {
+                const data = await response.json();
+                updateAnalyticsDisplay(data);
+            } else {
+                // Fallback to simulated data
+                loadSimulatedAnalytics();
+            }
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+            loadSimulatedAnalytics();
+        }
+    }
+
+    // Update Analytics Display (NEW)
+    function updateAnalyticsDisplay(data) {
+        // Update metrics
+        if (data.metrics) {
+            animateValue('totalUsers', 0, data.metrics.total_users || 8942, 2000);
+            animateValue('totalViews', 0, data.metrics.total_views || 45200, 2000, 'K');
+            animateValue('engagementRate', 0, data.metrics.engagement_rate || 78.5, 2000, '%');
+            animateValue('activeUsers', 0, data.metrics.active_users || 1234, 2000);
+        }
+
+        // Update charts data here if you have chart libraries
+        console.log('Analytics data updated for range:', state.currentDateRange);
+    }
+
+    // Load Simulated Analytics (FALLBACK)
+    function loadSimulatedAnalytics() {
+        // Simulate different data based on date range
+        const ranges = {
+            today: { users: 8942, views: 45.2, engagement: 78.5, active: 1234 },
+            week: { users: 12500, views: 89.3, engagement: 82.1, active: 2156 },
+            month: { users: 45600, views: 234.7, engagement: 85.3, active: 5678 },
+            year: { users: 156789, views: 892.4, engagement: 88.9, active: 12345 }
+        };
+
+        const data = ranges[state.currentDateRange] || ranges.today;
+        
+        animateValue('totalUsers', 0, data.users, 2000);
+        animateValue('totalViews', 0, data.views, 2000, 'K');
+        animateValue('engagementRate', 0, data.engagement, 2000, '%');
+        animateValue('activeUsers', 0, data.active, 2000);
+        
+        console.log('Loading simulated analytics for date range:', state.currentDateRange);
+    }
+
+    // Set Date Range (ENHANCED)
+    function setDateRange(range) {
+        state.currentDateRange = range;
+        
+        // Update button states
+        document.querySelectorAll('.range-btn').forEach(btn => {
+            btn.classList.remove('active');
+            
+            // Check if button matches the range
+            const btnRange = btn.dataset.range || btn.textContent.toLowerCase();
+            if (btnRange === range) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Show loading state
+        showToast(`Loading ${range} analytics...`, 'info');
+        
+        // Reload analytics with new date range
+        setTimeout(() => {
+            loadAnalytics();
+        }, 500);
+    }
+
+    // Export Data (ENHANCED)
+    async function exportData() {
+        try {
+            showToast('Preparing export...', 'info');
+            
+            const response = await apiRequest(`/admin/analytics/export?range=${state.currentDateRange}`, {
+                method: 'POST'
+            });
+            
+            if (response && response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `analytics-${state.currentDateRange}-${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showToast('Analytics exported successfully!', 'success');
+            } else {
+                throw new Error('Export failed');
+            }
+        } catch (error) {
+            console.error('Export error:', error);
+            // Fallback to simulated export
+            showToast('Demo mode: Export functionality would generate a CSV/PDF report with current analytics data', 'info');
+        }
+    }
+
+    // Refresh Analytics (NEW)
+    function refreshAnalytics() {
+        showToast('Refreshing analytics...', 'success');
+        loadAnalytics();
+    }
+
+    // Toggle Sidebar (UPDATED)
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (sidebar && overlay) {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+    }
+
+    // Show Toast (NEW)
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        if (!toast) {
+            console.log(`Toast: ${message} (${type})`);
+            return;
+        }
+        
+        toast.textContent = message;
+        toast.className = `toast ${type}`;
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    // Logout (UPDATED)
+    function logout() {
+        clearAuthData();
+        window.location.href = '../login.html';
+    }
+
+    // Animate Numbers (ENHANCED)
+    function animateValue(elementId, start, end, duration, suffix = '') {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            // Fallback: look for elements by class and content
+            const elements = document.querySelectorAll('.stat-value');
+            elements.forEach(el => {
+                if (el.dataset.metric === elementId) {
+                    animateElement(el, start, end, duration, suffix);
+                }
+            });
+            return;
+        }
+        
+        animateElement(element, start, end, duration, suffix);
+    }
+
+    // Animate Element Helper (NEW)
+    function animateElement(element, start, end, duration, suffix = '') {
+        const range = end - start;
+        const increment = range / (duration / 16);
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= end) {
+                current = end;
+                clearInterval(timer);
+            }
+            
+            if (suffix === 'K') {
+                element.textContent = (current / 1000).toFixed(1) + suffix;
+            } else if (suffix === '%') {
+                element.textContent = current.toFixed(1) + suffix;
+            } else {
+                element.textContent = Math.floor(current).toLocaleString();
+            }
+        }, 16);
+    }
+
+    // Handle navigation clicks (NEW)
+    document.addEventListener('click', (e) => {
+        const navItem = e.target.closest('.nav-item');
+        if (navItem && !navItem.getAttribute('onclick')) {
+            const href = navItem.getAttribute('href');
+            
+            if (href === '#') {
+                e.preventDefault();
+                return;
+            }
+            
+            if (href === '../dashboard.html') {
+                e.preventDefault();
+                const authData = {
+                    token: state.authToken,
+                    user: state.userData
+                };
+                window.location.href = `../dashboard.html#${btoa(JSON.stringify(authData))}`;
+                return;
+            }
+        }
+    });
+
+    // Handle page visibility change to check auth status (NEW)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !isAuthenticated()) {
+            window.location.href = '../login.html';
+        } else if (document.visibilityState === 'visible') {
+            // Refresh analytics when tab becomes active
+            loadAnalytics();
+        }
+    });
+
+    // Handle window resize for responsive sidebar (NEW)
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            if (sidebar && overlay) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+        }
+    });
+
+    // Auto-refresh analytics every 5 minutes (NEW)
+    setInterval(() => {
+        if (document.visibilityState === 'visible' && isAuthenticated()) {
+            loadAnalytics();
+        }
+    }, 5 * 60 * 1000);
+
+    // Initialize animations when page loads (UPDATED)
+    window.addEventListener('load', () => {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+            loadSimulatedAnalytics();
+        }, 100);
+    });
+</script>
 </body>
 </html>

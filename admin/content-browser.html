@@ -766,69 +766,130 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // API Configuration
-        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+    // API Configuration
+    const API_BASE = 'https://backend-app-970m.onrender.com/api';
+    
+    // Global State
+    const state = {
+        authToken: null,
+        userData: null,
+        selectedContent: null,
+        tags: []
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!initializeAuth()) return;
         
-        // Global State
-        const state = {
-            authToken: null,
-            userData: null,
-            selectedContent: null,
-            tags: []
-        };
+        initializeAdmin();
+        updateNavigation();
+        loadRecentContent();
+        setupEventListeners();
+    });
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!initializeAuth()) return;
-            
-            initializeAdmin();
-            loadRecentContent();
-            setupEventListeners();
-        });
-
-        // Initialize Authentication
-        function initializeAuth() {
-            try {
-                const hash = window.location.hash.substring(1);
-                if (!hash) {
-                    window.location.href = '../login.html';
-                    return false;
-                }
-
-                const authData = JSON.parse(atob(hash));
+    // Initialize Authentication (UPDATED TO MATCH DASHBOARD)
+    function initializeAuth() {
+        try {
+            // First check if we have auth data in sessionStorage
+            const storedAuth = sessionStorage.getItem('adminAuth');
+            if (storedAuth) {
+                const authData = JSON.parse(storedAuth);
                 state.authToken = authData.token;
                 state.userData = authData.user;
                 
                 // Verify admin access
                 if (!state.userData.is_admin) {
+                    sessionStorage.removeItem('adminAuth');
                     window.location.href = '../dashboard.html';
                     return false;
                 }
-                
-                window.location.hash = '';
                 return true;
-            } catch (e) {
-                console.error('Auth initialization failed:', e);
+            }
+            
+            // If no stored auth, check URL hash
+            const hash = window.location.hash.substring(1);
+            if (!hash) {
                 window.location.href = '../login.html';
                 return false;
             }
-        }
 
-        // Initialize Admin
-        function initializeAdmin() {
-            document.getElementById('adminName').textContent = state.userData.username;
-            document.getElementById('adminAvatar').textContent = state.userData.username[0].toUpperCase();
+            const authData = JSON.parse(atob(hash));
+            state.authToken = authData.token;
+            state.userData = authData.user;
+            
+            // Verify admin access
+            if (!state.userData.is_admin) {
+                window.location.href = '../dashboard.html';
+                return false;
+            }
+            
+            // Store auth data in sessionStorage for other admin pages
+            sessionStorage.setItem('adminAuth', JSON.stringify(authData));
+            
+            // Clear hash after storing
+            window.location.hash = '';
+            return true;
+        } catch (e) {
+            console.error('Auth initialization failed:', e);
+            sessionStorage.removeItem('adminAuth');
+            window.location.href = '../login.html';
+            return false;
         }
+    }
 
-        // Setup Event Listeners
-        function setupEventListeners() {
-            // Enter key for search
-            document.getElementById('searchQuery').addEventListener('keypress', (e) => {
+    // Clear authentication data
+    function clearAuthData() {
+        sessionStorage.removeItem('adminAuth');
+        state.authToken = null;
+        state.userData = null;
+    }
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+        return state.authToken && state.userData;
+    }
+
+    // Initialize Admin (UPDATED)
+    function initializeAdmin() {
+        if (!isAuthenticated()) return;
+        
+        const adminName = document.getElementById('adminName');
+        const adminAvatar = document.getElementById('adminAvatar');
+        
+        if (adminName && adminAvatar) {
+            adminName.textContent = state.userData.username;
+            adminAvatar.textContent = state.userData.username[0].toUpperCase();
+        }
+    }
+
+    // Update navigation active state (NEW)
+    function updateNavigation() {
+        const currentPage = window.location.pathname.split('/').pop();
+        const navItems = document.querySelectorAll('.nav-item');
+        
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            const href = item.getAttribute('href');
+            
+            if (href === currentPage || (currentPage === 'content-browser.html' && href === 'content-browser.html')) {
+                item.classList.add('active');
+            }
+        });
+    }
+
+    // Setup Event Listeners (UPDATED)
+    function setupEventListeners() {
+        // Enter key for search
+        const searchQuery = document.getElementById('searchQuery');
+        if (searchQuery) {
+            searchQuery.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchContent();
             });
-            
-            // Tag input
-            const tagInput = document.getElementById('tagInput');
+        }
+        
+        // Tag input
+        const tagInput = document.getElementById('tagInput');
+        if (tagInput) {
             tagInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -837,126 +898,170 @@
                 }
             });
         }
+    }
 
-        // API Request Helper
-        async function apiRequest(endpoint, options = {}) {
-            try {
-                const response = await fetch(`${API_BASE}${endpoint}`, {
-                    ...options,
-                    headers: {
-                        'Authorization': `Bearer ${state.authToken}`,
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    }
-                });
+    // API Request Helper (UPDATED)
+    async function apiRequest(endpoint, options = {}) {
+        if (!isAuthenticated()) {
+            window.location.href = '../login.html';
+            return null;
+        }
 
-                if (response.status === 401) {
-                    window.location.href = '../login.html';
-                    return null;
+        try {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                ...options,
+                headers: {
+                    'Authorization': `Bearer ${state.authToken}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers
                 }
+            });
 
-                return response;
-            } catch (error) {
-                console.error('API request failed:', error);
-                showToast('Network error. Please try again.', 'error');
+            if (response.status === 401) {
+                clearAuthData();
+                window.location.href = '../login.html';
                 return null;
             }
-        }
 
-        // Search Content
-        async function searchContent() {
-            const query = document.getElementById('searchQuery').value.trim();
-            const source = document.getElementById('searchSource').value;
-            
-            if (!query) {
-                showToast('Please enter a search query', 'error');
-                return;
-            }
-            
-            // Show loading
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('searchResults').style.display = 'none';
-            
-            const response = await apiRequest(`/admin/search-content?q=${encodeURIComponent(query)}&source=${source}`);
-            
-            if (response && response.ok) {
-                const data = await response.json();
-                displaySearchResults(data.results || []);
-            } else {
-                showToast('Search failed. Please try again.', 'error');
-            }
-            
-            document.getElementById('loading').style.display = 'none';
+            return response;
+        } catch (error) {
+            console.error('API request failed:', error);
+            showToast('Network error. Please try again.', 'error');
+            return null;
         }
+    }
 
-        // Display Search Results
-        function displaySearchResults(results) {
-            const resultsGrid = document.getElementById('resultsGrid');
-            const resultsCount = document.getElementById('resultsCount');
-            
-            resultsCount.textContent = `${results.length} results found`;
-            
-            if (results.length === 0) {
-                resultsGrid.innerHTML = '<p class="col-span-full text-center text-gray-400">No results found</p>';
-            } else {
-                resultsGrid.innerHTML = results.map(item => createResultCard(item)).join('');
-            }
-            
-            document.getElementById('searchResults').style.display = 'block';
+    // Search Content
+    async function searchContent() {
+        const searchQuery = document.getElementById('searchQuery');
+        const searchSource = document.getElementById('searchSource');
+        
+        if (!searchQuery || !searchSource) {
+            showToast('Search form elements not found', 'error');
+            return;
         }
+        
+        const query = searchQuery.value.trim();
+        const source = searchSource.value;
+        
+        if (!query) {
+            showToast('Please enter a search query', 'error');
+            return;
+        }
+        
+        // Show loading
+        const loading = document.getElementById('loading');
+        const searchResults = document.getElementById('searchResults');
+        
+        if (loading) loading.style.display = 'block';
+        if (searchResults) searchResults.style.display = 'none';
+        
+        const response = await apiRequest(`/admin/search-content?q=${encodeURIComponent(query)}&source=${source}`);
+        
+        if (response && response.ok) {
+            const data = await response.json();
+            displaySearchResults(data.results || []);
+        } else {
+            showToast('Search failed. Please try again.', 'error');
+        }
+        
+        if (loading) loading.style.display = 'none';
+    }
 
-        // Create Result Card
-        function createResultCard(item) {
-            const data = item.data;
-            const posterUrl = data.poster_url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><rect fill="%23333" width="200" height="300"/><text x="50%" y="50%" fill="%23666" text-anchor="middle" dy=".3em">No Image</text></svg>';
-            
-            return `
-                <div class="content-item">
-                    <img class="content-poster" src="${posterUrl}" alt="${data.title}">
-                    <div class="content-info">
-                        <div class="content-title">${data.title}</div>
-                        <div class="content-meta">
-                            ${data.content_type} • ${item.source.toUpperCase()}<br>
-                            ${data.genres?.join(', ') || 'Unknown'}
-                        </div>
-                        <div class="content-actions">
-                            <button class="btn btn-primary" onclick='showAddModal(${JSON.stringify(data).replace(/'/g, "&apos;")})'>
-                                Add
-                            </button>
-                            <button class="btn btn-secondary" onclick='viewDetails(${JSON.stringify(data).replace(/'/g, "&apos;")})'>
-                                View
-                            </button>
-                        </div>
+    // Display Search Results
+    function displaySearchResults(results) {
+        const resultsGrid = document.getElementById('resultsGrid');
+        const resultsCount = document.getElementById('resultsCount');
+        const searchResults = document.getElementById('searchResults');
+        
+        if (!resultsGrid || !resultsCount || !searchResults) {
+            console.error('Search results elements not found');
+            return;
+        }
+        
+        resultsCount.textContent = `${results.length} results found`;
+        
+        if (results.length === 0) {
+            resultsGrid.innerHTML = '<p class="col-span-full text-center text-gray-400">No results found</p>';
+        } else {
+            resultsGrid.innerHTML = results.map(item => createResultCard(item)).join('');
+        }
+        
+        searchResults.style.display = 'block';
+    }
+
+    // Create Result Card
+    function createResultCard(item) {
+        const data = item.data;
+        const posterUrl = data.poster_url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><rect fill="%23333" width="200" height="300"/><text x="50%" y="50%" fill="%23666" text-anchor="middle" dy=".3em">No Image</text></svg>';
+        
+        return `
+            <div class="content-item">
+                <img class="content-poster" src="${posterUrl}" alt="${data.title}" onerror="this.src='data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 200 300&quot;><rect fill=&quot;%23333&quot; width=&quot;200&quot; height=&quot;300&quot;/><text x=&quot;50%&quot; y=&quot;50%&quot; fill=&quot;%23666&quot; text-anchor=&quot;middle&quot; dy=&quot;.3em&quot;>No Image</text></svg>'">
+                <div class="content-info">
+                    <div class="content-title">${data.title}</div>
+                    <div class="content-meta">
+                        ${data.content_type} • ${item.source.toUpperCase()}<br>
+                        ${data.genres?.join(', ') || 'Unknown'}
+                    </div>
+                    <div class="content-actions">
+                        <button class="btn btn-primary" onclick='showAddModal(${JSON.stringify(data).replace(/'/g, "&apos;")})'>
+                            Add
+                        </button>
+                        <button class="btn btn-secondary" onclick='viewDetails(${JSON.stringify(data).replace(/'/g, "&apos;")})'>
+                            View
+                        </button>
                     </div>
                 </div>
-            `;
-        }
+            </div>
+        `;
+    }
 
-        // Show Add Modal
-        function showAddModal(contentData) {
-            state.selectedContent = contentData;
-            state.tags = [];
-            
-            // Populate modal
-            document.getElementById('contentTitle').value = contentData.title;
-            document.getElementById('contentType').value = contentData.content_type;
-            document.getElementById('contentSynopsis').value = contentData.synopsis || '';
-            document.getElementById('recommendationTitle').value = `Must Watch: ${contentData.title}`;
-            document.getElementById('recommendationDescription').value = '';
-            document.getElementById('priority').value = '5';
-            
-            // Clear tags
-            const tagsInput = document.getElementById('tagsInput');
+    // Show Add Modal
+    function showAddModal(contentData) {
+        state.selectedContent = contentData;
+        state.tags = [];
+        
+        // Check if modal elements exist
+        const modal = document.getElementById('addContentModal');
+        if (!modal) {
+            showToast('Modal not found', 'error');
+            return;
+        }
+        
+        // Populate modal
+        const contentTitle = document.getElementById('contentTitle');
+        const contentType = document.getElementById('contentType');
+        const contentSynopsis = document.getElementById('contentSynopsis');
+        const recommendationTitle = document.getElementById('recommendationTitle');
+        const recommendationDescription = document.getElementById('recommendationDescription');
+        const priority = document.getElementById('priority');
+        
+        if (contentTitle) contentTitle.value = contentData.title;
+        if (contentType) contentType.value = contentData.content_type;
+        if (contentSynopsis) contentSynopsis.value = contentData.synopsis || '';
+        if (recommendationTitle) recommendationTitle.value = `Must Watch: ${contentData.title}`;
+        if (recommendationDescription) recommendationDescription.value = '';
+        if (priority) priority.value = '5';
+        
+        // Clear tags
+        const tagsInput = document.getElementById('tagsInput');
+        if (tagsInput) {
             tagsInput.innerHTML = '<input type="text" class="form-input" style="border: none; background: none; flex: 1; min-width: 100px;" id="tagInput" placeholder="Add tags...">';
             setupEventListeners(); // Re-setup tag input listener
-            
-            document.getElementById('addContentModal').classList.add('show');
         }
+        
+        modal.classList.add('show');
+    }
 
-        // Add Content
-        async function addContent() {
-            if (!state.selectedContent) return;
-            
+    // Add Content
+    async function addContent() {
+        if (!state.selectedContent) {
+            showToast('No content selected', 'error');
+            return;
+        }
+        
+        try {
             // First, add content to database
             const contentResponse = await apiRequest('/admin/add-content', {
                 method: 'POST',
@@ -966,24 +1071,29 @@
             });
             
             if (!contentResponse || !contentResponse.ok) {
-                showToast('Failed to add content', 'error');
+                const errorData = contentResponse ? await contentResponse.json().catch(() => ({})) : {};
+                showToast(errorData.message || 'Failed to add content', 'error');
                 return;
             }
             
             const contentData = await contentResponse.json();
             
             // Create recommendation if specified
-            const recTitle = document.getElementById('recommendationTitle').value.trim();
-            const recDesc = document.getElementById('recommendationDescription').value.trim();
+            const recTitle = document.getElementById('recommendationTitle');
+            const recDesc = document.getElementById('recommendationDescription');
+            const priority = document.getElementById('priority');
             
-            if (recTitle || recDesc) {
+            const titleValue = recTitle ? recTitle.value.trim() : '';
+            const descValue = recDesc ? recDesc.value.trim() : '';
+            
+            if (titleValue || descValue) {
                 const recResponse = await apiRequest('/admin/recommendations', {
                     method: 'POST',
                     body: JSON.stringify({
                         content_id: contentData.content_id,
-                        title: recTitle || `Check out ${state.selectedContent.title}`,
-                        description: recDesc || state.selectedContent.synopsis,
-                        priority: parseInt(document.getElementById('priority').value),
+                        title: titleValue || `Check out ${state.selectedContent.title}`,
+                        description: descValue || state.selectedContent.synopsis || '',
+                        priority: priority ? parseInt(priority.value) : 5,
                         tags: state.tags
                     })
                 });
@@ -991,7 +1101,7 @@
                 if (recResponse && recResponse.ok) {
                     showToast('Content added and recommendation created!', 'success');
                 } else {
-                    showToast('Content added but recommendation failed', 'error');
+                    showToast('Content added but recommendation failed', 'warning');
                 }
             } else {
                 showToast('Content added successfully!', 'success');
@@ -999,78 +1109,172 @@
             
             closeModal();
             loadRecentContent();
+        } catch (error) {
+            console.error('Error adding content:', error);
+            showToast('An error occurred while adding content', 'error');
         }
+    }
 
-        // View Details
-        function viewDetails(contentData) {
-            // In a real app, this would open a details view
-            console.log('View details:', contentData);
-            showToast('Details view not implemented in demo', 'error');
-        }
+    // View Details
+    function viewDetails(contentData) {
+        // In a real app, this would open a details view
+        console.log('View details:', contentData);
+        showToast('Details view not implemented in demo', 'info');
+    }
 
-        // Load Recent Content
-        async function loadRecentContent() {
-            // This would normally fetch from an endpoint
-            const tableBody = document.getElementById('contentTableBody');
+    // Load Recent Content
+    async function loadRecentContent() {
+        const tableBody = document.getElementById('contentTableBody');
+        if (!tableBody) return;
+        
+        try {
+            const response = await apiRequest('/admin/recent-content');
             
-            // Simulated data
-            tableBody.innerHTML = `
-                <tr>
-                    <td>
-                        <img class="content-thumb" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 75'><rect fill='%23333' width='50' height='75'/></svg>" alt="Poster">
-                    </td>
-                    <td>Inception</td>
-                    <td>Movie</td>
-                    <td>en</td>
-                    <td>2 hours ago</td>
-                    <td>
-                        <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Remove</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <img class="content-thumb" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 75'><rect fill='%23333' width='50' height='75'/></svg>" alt="Poster">
-                    </td>
-                    <td>Attack on Titan</td>
-                    <td>Anime</td>
-                    <td>ja</td>
-                    <td>5 hours ago</td>
-                    <td>
-                        <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Remove</button>
-                    </td>
-                </tr>
-            `;
+            if (response && response.ok) {
+                const data = await response.json();
+                displayRecentContent(data.content || []);
+            } else {
+                // Fallback to simulated data
+                displaySimulatedRecentContent();
+            }
+        } catch (error) {
+            console.error('Error loading recent content:', error);
+            displaySimulatedRecentContent();
         }
+    }
 
-        // Refresh Content
-        function refreshContent() {
-            showToast('Refreshing content...', 'success');
+    // Display Recent Content
+    function displayRecentContent(content) {
+        const tableBody = document.getElementById('contentTableBody');
+        if (!tableBody) return;
+        
+        if (content.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400">No recent content</td></tr>';
+            return;
+        }
+        
+        tableBody.innerHTML = content.map(item => `
+            <tr>
+                <td>
+                    <img class="content-thumb" src="${item.poster_url || getPlaceholderImage()}" alt="Poster" onerror="this.src='${getPlaceholderImage()}'">
+                </td>
+                <td>${item.title}</td>
+                <td>${item.content_type}</td>
+                <td>${item.language || 'Unknown'}</td>
+                <td>${formatTimeAgo(item.created_at)}</td>
+                <td>
+                    <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;" onclick="removeContent(${item.id})">Remove</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Display Simulated Recent Content (fallback)
+    function displaySimulatedRecentContent() {
+        const tableBody = document.getElementById('contentTableBody');
+        if (!tableBody) return;
+        
+        tableBody.innerHTML = `
+            <tr>
+                <td>
+                    <img class="content-thumb" src="${getPlaceholderImage()}" alt="Poster">
+                </td>
+                <td>Inception</td>
+                <td>Movie</td>
+                <td>en</td>
+                <td>2 hours ago</td>
+                <td>
+                    <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;" onclick="showToast('Demo mode - remove not available', 'info')">Remove</button>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img class="content-thumb" src="${getPlaceholderImage()}" alt="Poster">
+                </td>
+                <td>Attack on Titan</td>
+                <td>Anime</td>
+                <td>ja</td>
+                <td>5 hours ago</td>
+                <td>
+                    <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;" onclick="showToast('Demo mode - remove not available', 'info')">Remove</button>
+                </td>
+            </tr>
+        `;
+    }
+
+    // Remove Content
+    async function removeContent(contentId) {
+        if (!confirm('Are you sure you want to remove this content?')) return;
+        
+        const response = await apiRequest(`/admin/content/${contentId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response && response.ok) {
+            showToast('Content removed successfully', 'success');
             loadRecentContent();
+        } else {
+            showToast('Failed to remove content', 'error');
         }
+    }
 
-        // Add Tag
-        function addTag(tag) {
-            tag = tag.trim();
-            if (!tag || state.tags.includes(tag)) return;
-            
-            state.tags.push(tag);
-            
-            const tagElement = document.createElement('span');
-            tagElement.className = 'tag';
-            tagElement.innerHTML = `
-                ${tag}
-                <span class="tag-remove" onclick="removeTag('${tag}')">×</span>
-            `;
-            
-            const tagsInput = document.getElementById('tagsInput');
-            const input = tagsInput.querySelector('input');
+    // Format time ago
+    function formatTimeAgo(timestamp) {
+        if (!timestamp) return 'Unknown';
+        
+        const now = new Date();
+        const past = new Date(timestamp);
+        const diffInMinutes = Math.floor((now - past) / 60000);
+        
+        if (diffInMinutes < 1) return 'Just now';
+        if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+        
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `${diffInHours} hours ago`;
+        
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays} days ago`;
+    }
+
+    // Get Placeholder Image
+    function getPlaceholderImage() {
+        return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 75"><rect fill="%23333" width="50" height="75"/><text x="50%" y="50%" fill="%23666" text-anchor="middle" dy=".3em">No Image</text></svg>';
+    }
+
+    // Refresh Content
+    function refreshContent() {
+        showToast('Refreshing content...', 'success');
+        loadRecentContent();
+    }
+
+    // Add Tag
+    function addTag(tag) {
+        tag = tag.trim();
+        if (!tag || state.tags.includes(tag)) return;
+        
+        state.tags.push(tag);
+        
+        const tagElement = document.createElement('span');
+        tagElement.className = 'tag';
+        tagElement.innerHTML = `
+            ${tag}
+            <span class="tag-remove" onclick="removeTag('${tag}')">×</span>
+        `;
+        
+        const tagsInput = document.getElementById('tagsInput');
+        const input = tagsInput ? tagsInput.querySelector('input') : null;
+        
+        if (tagsInput && input) {
             tagsInput.insertBefore(tagElement, input);
         }
+    }
 
-        // Remove Tag
-        function removeTag(tag) {
-            state.tags = state.tags.filter(t => t !== tag);
-            const tagsInput = document.getElementById('tagsInput');
+    // Remove Tag
+    function removeTag(tag) {
+        state.tags = state.tags.filter(t => t !== tag);
+        const tagsInput = document.getElementById('tagsInput');
+        
+        if (tagsInput) {
             const tags = tagsInput.querySelectorAll('.tag');
             tags.forEach(t => {
                 if (t.textContent.includes(tag)) {
@@ -1078,45 +1282,104 @@
                 }
             });
         }
+    }
 
-        // Close Modal
-        function closeModal() {
-            document.getElementById('addContentModal').classList.remove('show');
-            state.selectedContent = null;
-            state.tags = [];
+    // Close Modal
+    function closeModal() {
+        const modal = document.getElementById('addContentModal');
+        if (modal) {
+            modal.classList.remove('show');
         }
+        state.selectedContent = null;
+        state.tags = [];
+    }
 
-        // Toggle Sidebar
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('active');
-            document.getElementById('sidebarOverlay').classList.toggle('active');
+    // Toggle Sidebar (UPDATED)
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (sidebar && overlay) {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
         }
+    }
 
-        // Show Toast
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${type}`;
-            toast.classList.add('show');
+    // Show Toast (UPDATED)
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        if (!toast) {
+            console.log(`Toast: ${message} (${type})`);
+            return;
+        }
+        
+        toast.textContent = message;
+        toast.className = `toast ${type}`;
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    // Logout (UPDATED)
+    function logout() {
+        clearAuthData();
+        window.location.href = '../login.html';
+    }
+
+    // Handle navigation clicks (NEW)
+    document.addEventListener('click', (e) => {
+        const navItem = e.target.closest('.nav-item');
+        if (navItem && !navItem.getAttribute('onclick')) {
+            const href = navItem.getAttribute('href');
             
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+            if (href === '#') {
+                e.preventDefault();
+                return;
+            }
+            
+            if (href === '../dashboard.html') {
+                e.preventDefault();
+                const authData = {
+                    token: state.authToken,
+                    user: state.userData
+                };
+                window.location.href = `../dashboard.html#${btoa(JSON.stringify(authData))}`;
+                return;
+            }
         }
+    });
 
-        // Logout
-        function logout() {
-            state.authToken = null;
-            state.userData = null;
-            window.location.href = '../login.html';
-        }
-
-        // Handle escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && document.getElementById('addContentModal').classList.contains('show')) {
+    // Handle escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('addContentModal');
+            if (modal && modal.classList.contains('show')) {
                 closeModal();
             }
-        });
-    </script>
+        }
+    });
+
+    // Handle page visibility change to check auth status (NEW)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !isAuthenticated()) {
+            window.location.href = '../login.html';
+        }
+    });
+
+    // Handle window resize for responsive sidebar (NEW)
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            if (sidebar && overlay) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+        }
+    });
+</script>
 </body>
 </html>
