@@ -3,590 +3,869 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieRec - Discover Amazing Movies & TV Shows</title>
+    <title>CineStream - Discover Amazing Movies & Shows</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
             --netflix-red: #e50914;
-            --netflix-dark: #141414;
+            --netflix-black: #141414;
+            --netflix-dark-gray: #222222;
             --netflix-gray: #333333;
-            --mobile: 320px;
-            --tablet: 768px;
-            --desktop: 1024px;
+            --netflix-light-gray: #555555;
         }
 
         * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background: linear-gradient(135deg, #141414 0%, #000000 100%);
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--netflix-black);
             color: white;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            margin: 0;
             overflow-x: hidden;
         }
 
-        .hero-gradient {
-            background: linear-gradient(45deg, rgba(229, 9, 20, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%);
+        .hero-section {
+            background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), 
+                        url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+            background-size: cover;
+            background-position: center;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
         }
 
-        .card-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-origin: center;
-        }
-
-        .card-hover:hover {
-            transform: scale(1.05) translateZ(0);
-            box-shadow: 0 25px 50px -12px rgba(229, 9, 20, 0.25);
-        }
-
-        .scroll-container {
-            scrollbar-width: none;
-            -ms-overflow-style: none;
+        .content-carousel {
+            display: flex;
+            gap: 12px;
             overflow-x: auto;
             scroll-behavior: smooth;
+            padding: 20px 0;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
 
-        .scroll-container::-webkit-scrollbar {
+        .content-carousel::-webkit-scrollbar {
             display: none;
         }
 
-        .loading-shimmer {
-            background: linear-gradient(90deg, #333 25%, #555 50%, #333 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
+        .movie-card {
+            min-width: 200px;
+            height: 300px;
+            background: var(--netflix-gray);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
         }
 
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
+        .movie-card:hover {
+            transform: scale(1.05);
+            z-index: 10;
         }
 
-        .slide-up {
-            transform: translateY(20px);
-            opacity: 0;
-            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        .movie-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
-        @keyframes slideUp {
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+        .movie-card-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 20px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .movie-card:hover .movie-card-overlay {
+            transform: translateY(0);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: white;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--netflix-red) 0%, #c41e3a 100%);
-            transition: all 0.3s ease;
+            background-color: var(--netflix-red);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
             min-height: 44px;
         }
 
         .btn-primary:hover {
-            background: linear-gradient(135deg, #c41e3a 0%, var(--netflix-red) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(229, 9, 20, 0.4);
+            background-color: #f40612;
         }
 
-        .mobile-nav {
-            backdrop-filter: blur(20px);
-            background: rgba(20, 20, 20, 0.95);
+        .btn-secondary {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 24px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 44px;
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255,255,255,0.3);
+            border-color: white;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(rgba(0,0,0,0.7), transparent);
+            padding: 20px;
+            z-index: 1000;
+            transition: background-color 0.3s ease;
+        }
+
+        .navbar.scrolled {
+            background-color: var(--netflix-black);
+        }
+
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 80%;
+            height: 100vh;
+            background-color: var(--netflix-dark-gray);
+            z-index: 2000;
+            transition: left 0.3s ease;
+            padding: 20px;
+        }
+
+        .mobile-menu.active {
+            left: 0;
+        }
+
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1500;
+        }
+
+        .mobile-overlay.active {
+            display: block;
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background-color: white;
+            margin: 3px 0;
+            transition: 0.3s;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .genre-tag {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin: 2px;
+            display: inline-block;
+        }
+
+        .rating-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: var(--netflix-red);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
         }
 
         @media (max-width: 768px) {
-            .hero-title {
-                font-size: 2.5rem;
-                line-height: 1.1;
+            .hamburger {
+                display: flex;
             }
-            
-            .card-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 0.75rem;
+
+            .desktop-nav {
+                display: none;
+            }
+
+            .movie-card {
+                min-width: 150px;
+                height: 225px;
+            }
+
+            .hero-section {
+                min-height: 70vh;
+                text-align: center;
+            }
+
+            .section-title {
+                font-size: 1.25rem;
             }
         }
 
-        @media (min-width: 769px) {
-            .card-grid {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 1rem;
+        @media (max-width: 480px) {
+            .movie-card {
+                min-width: 120px;
+                height: 180px;
             }
+
+            .content-carousel {
+                gap: 8px;
+            }
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
     </style>
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="fixed top-0 w-full z-50 mobile-nav">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-red-500">MovieRec</h1>
-                </div>
-                
-                <!-- Desktop Navigation -->
-                <div class="hidden md:block">
-                    <div class="flex items-center space-x-8">
-                        <a href="#home" class="text-white hover:text-red-400 transition-colors">Home</a>
-                        <a href="#trending" class="text-gray-300 hover:text-red-400 transition-colors">Trending</a>
-                        <a href="#genres" class="text-gray-300 hover:text-red-400 transition-colors">Genres</a>
-                        <button onclick="showLogin()" class="btn-primary px-6 py-2 rounded-lg font-medium">
-                            Sign In
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Mobile Menu Button -->
-                <div class="md:hidden">
-                    <button id="mobile-menu-btn" class="text-white p-2">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
+    <nav class="navbar" id="navbar">
+        <div class="flex justify-between items-center max-w-7xl mx-auto">
+            <div class="flex items-center space-x-8">
+                <h1 class="text-2xl font-bold text-red-600">CineStream</h1>
+                <div class="desktop-nav hidden md:flex space-x-6">
+                    <a href="#" class="hover:text-gray-300 transition-colors">Home</a>
+                    <a href="#" class="hover:text-gray-300 transition-colors">Movies</a>
+                    <a href="#" class="hover:text-gray-300 transition-colors">TV Shows</a>
+                    <a href="#" class="hover:text-gray-300 transition-colors">Anime</a>
                 </div>
             </div>
-        </div>
-
-        <!-- Mobile Menu -->
-        <div id="mobile-menu" class="md:hidden hidden">
-            <div class="px-2 pt-2 pb-3 space-y-1 bg-gray-900">
-                <a href="#home" class="block px-3 py-2 text-white">Home</a>
-                <a href="#trending" class="block px-3 py-2 text-gray-300">Trending</a>
-                <a href="#genres" class="block px-3 py-2 text-gray-300">Genres</a>
-                <button onclick="showLogin()" class="w-full text-left btn-primary px-3 py-2 rounded-lg mt-2">
+            <div class="flex items-center space-x-4">
+                <button class="btn-primary" onclick="window.location.href='login.html'">
                     Sign In
                 </button>
+                <div class="hamburger md:hidden" onclick="toggleMobileMenu()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
             </div>
         </div>
     </nav>
 
+    <!-- Mobile Menu -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-xl font-bold">Menu</h2>
+            <button onclick="toggleMobileMenu()" class="text-2xl">&times;</button>
+        </div>
+        <div class="space-y-4">
+            <a href="#" class="block py-3 text-lg hover:text-red-500 transition-colors">Home</a>
+            <a href="#" class="block py-3 text-lg hover:text-red-500 transition-colors">Movies</a>
+            <a href="#" class="block py-3 text-lg hover:text-red-500 transition-colors">TV Shows</a>
+            <a href="#" class="block py-3 text-lg hover:text-red-500 transition-colors">Anime</a>
+            <hr class="border-gray-600 my-4">
+            <button class="btn-primary w-full" onclick="window.location.href='login.html'">
+                Sign In
+            </button>
+        </div>
+    </div>
+
     <!-- Hero Section -->
-    <section id="home" class="relative min-h-screen flex items-center justify-center hero-gradient">
-        <div class="absolute inset-0 bg-black bg-opacity-50"></div>
-        <div class="relative z-10 text-center px-4 max-w-4xl mx-auto slide-up">
-            <h1 class="hero-title font-bold text-white mb-6">
-                Discover Your Next
-                <span class="text-red-500">Favorite Movie</span>
-            </h1>
-            <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-                Get personalized recommendations powered by AI. Explore trending movies, TV shows, and hidden gems from around the world.
-            </p>
-            <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <button onclick="showLogin()" class="btn-primary px-8 py-4 rounded-lg text-lg font-semibold">
-                    Get Started Free
-                </button>
-                <button onclick="scrollToSection('trending')" class="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-black transition-all">
-                    Explore Now
-                </button>
+    <section class="hero-section">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-2xl">
+                <h1 class="text-4xl md:text-6xl font-bold mb-6 fade-in">
+                    Unlimited movies, TV shows, and more.
+                </h1>
+                <p class="text-lg md:text-xl mb-8 fade-in" style="animation-delay: 0.2s">
+                    Watch anywhere. Cancel anytime. Discover your next favorite with AI-powered recommendations.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 fade-in" style="animation-delay: 0.4s">
+                    <button class="btn-primary text-lg px-8 py-4" onclick="window.location.href='login.html'">
+                        Get Started
+                    </button>
+                    <button class="btn-secondary text-lg px-8 py-4" onclick="scrollToContent()">
+                        Learn More
+                    </button>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden">
-        <div class="text-center">
-            <div class="loading-shimmer w-16 h-16 rounded-full mb-4"></div>
-            <p class="text-white">Loading amazing content...</p>
+    <!-- Content Sections -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" id="content">
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-20">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-gray-400">Loading amazing content...</p>
         </div>
-    </div>
 
-    <!-- Main Content -->
-    <main class="pt-16">
-        <!-- What's Hot Section -->
-        <section id="whats-hot" class="py-12 px-4">
-            <div class="max-w-7xl mx-auto">
-                <h2 class="text-3xl font-bold text-white mb-8">🔥 What's Hot</h2>
-                <div id="whats-hot-container" class="scroll-container flex gap-4 pb-4">
-                    <!-- Content will be loaded here -->
+        <!-- Content Container -->
+        <div id="contentContainer" style="display: none;">
+            <!-- Trending Movies -->
+            <section class="mb-12 fade-in">
+                <h2 class="section-title">🔥 Trending Movies</h2>
+                <div class="content-carousel" id="trendingMovies">
+                    <!-- Dynamic content -->
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Trending Section -->
-        <section id="trending" class="py-12 px-4 bg-gray-900">
-            <div class="max-w-7xl mx-auto">
-                <h2 class="text-3xl font-bold text-white mb-8">📈 Trending Now</h2>
-                
-                <!-- Tab Navigation -->
-                <div class="flex space-x-4 mb-6">
-                    <button onclick="switchTrendingTab('movies')" id="movies-tab" class="px-6 py-2 bg-red-600 text-white rounded-lg">
-                        Movies
-                    </button>
-                    <button onclick="switchTrendingTab('tv')" id="tv-tab" class="px-6 py-2 bg-gray-700 text-white rounded-lg">
-                        TV Shows
-                    </button>
-                    <button onclick="switchTrendingTab('anime')" id="anime-tab" class="px-6 py-2 bg-gray-700 text-white rounded-lg">
-                        Anime
-                    </button>
+            <!-- Trending TV Shows -->
+            <section class="mb-12 fade-in">
+                <h2 class="section-title">📺 Trending TV Shows</h2>
+                <div class="content-carousel" id="trendingTV">
+                    <!-- Dynamic content -->
                 </div>
+            </section>
 
-                <div id="trending-content" class="card-grid grid">
-                    <!-- Content will be loaded here -->
+            <!-- What's Hot -->
+            <section class="mb-12 fade-in">
+                <h2 class="section-title">🌟 What's Hot</h2>
+                <div class="content-carousel" id="whatsHot">
+                    <!-- Dynamic content -->
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Regional Content Section -->
-        <section id="regional" class="py-12 px-4">
-            <div class="max-w-7xl mx-auto">
-                <h2 class="text-3xl font-bold text-white mb-8">🌍 Regional Favorites</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="regional-section" data-language="Telugu">
-                        <h3 class="text-xl font-semibold mb-4 text-yellow-400">Telugu Cinema</h3>
-                        <div id="telugu-content" class="space-y-3">
-                            <!-- Content will be loaded here -->
+            <!-- Critics' Choice -->
+            <section class="mb-12 fade-in">
+                <h2 class="section-title">🏆 Critics' Choice</h2>
+                <div class="content-carousel" id="criticsChoice">
+                    <!-- Dynamic content -->
+                </div>
+            </section>
+
+            <!-- Regional Content -->
+            <section class="mb-12 fade-in">
+                <h2 class="section-title">🌍 Regional Favorites</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 text-yellow-400">Telugu Cinema</h3>
+                        <div class="content-carousel" id="teluguContent">
+                            <!-- Dynamic content -->
                         </div>
                     </div>
-                    
-                    <div class="regional-section" data-language="Hindi">
-                        <h3 class="text-xl font-semibold mb-4 text-blue-400">Hindi Cinema</h3>
-                        <div id="hindi-content" class="space-y-3">
-                            <!-- Content will be loaded here -->
-                        </div>
-                    </div>
-                    
-                    <div class="regional-section" data-language="Tamil">
-                        <h3 class="text-xl font-semibold mb-4 text-green-400">Tamil Cinema</h3>
-                        <div id="tamil-content" class="space-y-3">
-                            <!-- Content will be loaded here -->
-                        </div>
-                    </div>
-                    
-                    <div class="regional-section" data-language="Kannada">
-                        <h3 class="text-xl font-semibold mb-4 text-purple-400">Kannada Cinema</h3>
-                        <div id="kannada-content" class="space-y-3">
-                            <!-- Content will be loaded here -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 text-yellow-400">Hindi Cinema</h3>
+                        <div class="content-carousel" id="hindiContent">
+                            <!-- Dynamic content -->
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Critics' Choice Section -->
-        <section id="critics-choice" class="py-12 px-4 bg-gray-900">
-            <div class="max-w-7xl mx-auto">
-                <h2 class="text-3xl font-bold text-white mb-8">🏆 Critics' Choice</h2>
-                <div id="critics-choice-container" class="scroll-container flex gap-4 pb-4">
-                    <!-- Content will be loaded here -->
+            <!-- Admin Curated -->
+            <section class="mb-12 fade-in">
+                <h2 class="section-title">✨ Staff Picks</h2>
+                <div class="content-carousel" id="adminCurated">
+                    <!-- Dynamic content -->
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- User Favorites Section -->
-        <section id="user-favorites" class="py-12 px-4">
-            <div class="max-w-7xl mx-auto">
-                <h2 class="text-3xl font-bold text-white mb-8">❤️ Community Favorites</h2>
-                <div id="user-favorites-container" class="card-grid grid">
-                    <!-- Content will be loaded here -->
+            <!-- User Favorites -->
+            <section class="mb-12 fade-in">
+                <h2 class="section-title">❤️ Community Favorites</h2>
+                <div class="content-carousel" id="userFavorites">
+                    <!-- Dynamic content -->
                 </div>
-            </div>
-        </section>
+            </section>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" style="display: none;" class="text-center py-20">
+            <div class="text-6xl mb-4">😞</div>
+            <h3 class="text-xl font-semibold mb-2">Oops! Something went wrong</h3>
+            <p class="text-gray-400 mb-6">We're having trouble loading content. Please try again.</p>
+            <button class="btn-primary" onclick="loadHomepageContent()">
+                Try Again
+            </button>
+        </div>
     </main>
 
     <!-- Footer -->
-    <footer class="bg-black py-12 px-4">
-        <div class="max-w-7xl mx-auto text-center">
-            <h2 class="text-2xl font-bold text-red-500 mb-4">MovieRec</h2>
-            <p class="text-gray-400 mb-6">Your personal movie recommendation platform</p>
-            <div class="flex justify-center space-x-6 mb-6">
-                <a href="#" class="text-gray-400 hover:text-red-400">Privacy</a>
-                <a href="#" class="text-gray-400 hover:text-red-400">Terms</a>
-                <a href="#" class="text-gray-400 hover:text-red-400">Contact</a>
+    <footer class="bg-gray-900 py-12 mt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold text-red-600 mb-4">CineStream</h3>
+                    <p class="text-gray-400">Your ultimate destination for movies, TV shows, and anime with AI-powered recommendations.</p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Browse</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">Movies</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">TV Shows</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Anime</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Regional</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Features</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">AI Recommendations</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Watchlist</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Reviews</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Trailers</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Connect</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">About Us</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Contact</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Privacy</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Terms</a></li>
+                    </ul>
+                </div>
             </div>
-            <p class="text-gray-500 text-sm">&copy; 2025 MovieRec. All rights reserved.</p>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2025 CineStream. All rights reserved.</p>
+            </div>
         </div>
     </footer>
 
     <script>
         const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        let currentTrendingType = 'movies';
-        let authToken = null;
+        
+        // Global variables
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let isLoading = false;
 
-        // Utility functions
-        function showLoading() {
-            document.getElementById('loading-overlay').classList.remove('hidden');
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar();
+            loadHomepageContent();
+            initializeTouchGestures();
+            initializeIntersectionObserver();
+        });
+
+        // Navbar scroll effect
+        function initializeNavbar() {
+            const navbar = document.getElementById('navbar');
+            
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 100) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+            });
         }
 
-        function hideLoading() {
-            document.getElementById('loading-overlay').classList.add('hidden');
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobileMenu');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            
+            mobileMenu.classList.toggle('active');
+            mobileOverlay.classList.toggle('active');
+            
+            // Prevent body scroll when menu is open
+            document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
         }
 
-        function showLogin() {
-            window.location.href = 'login.html';
-        }
-
-        function scrollToSection(sectionId) {
-            document.getElementById(sectionId).scrollIntoView({
+        // Smooth scroll to content
+        function scrollToContent() {
+            document.getElementById('content').scrollIntoView({
                 behavior: 'smooth'
             });
         }
 
-        // API calls
-        async function fetchHomepageData() {
-            try {
-                showLoading();
-                const response = await fetch(`${API_BASE}/homepage`);
-                if (!response.ok) throw new Error('Failed to fetch homepage data');
-                const data = await response.json();
-                
-                renderWhatsHot(data.whats_hot || []);
-                renderTrendingContent(data.trending || {});
-                renderRegionalContent(data.regional || {});
-                renderCriticsChoice(data.critics_choice || []);
-                renderUserFavorites(data.user_favorites || []);
-                
-                hideLoading();
-            } catch (error) {
-                console.error('Error fetching homepage data:', error);
-                hideLoading();
-                showError('Failed to load content. Please try again.');
-            }
-        }
-
-        // Render functions
-        function renderWhatsHot(items) {
-            const container = document.getElementById('whats-hot-container');
-            container.innerHTML = items.slice(0, 15).map(item => `
-                <div class="flex-none w-48 sm:w-64 card-hover cursor-pointer" onclick="viewContent(${item.id})">
-                    <div class="relative overflow-hidden rounded-lg">
-                        <img src="${item.poster_path || item.backdrop_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image'}" 
-                             alt="${item.title || item.name}"
-                             class="w-full h-72 object-cover"
-                             loading="lazy">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
-                            <div class="absolute bottom-4 left-4 right-4">
-                                <h3 class="text-white font-semibold text-sm mb-1">${item.title || item.name}</h3>
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-yellow-400 text-xs">⭐ ${item.vote_average?.toFixed(1) || 'N/A'}</span>
-                                    <span class="text-gray-300 text-xs">${item.release_date?.split('-')[0] || ''}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderTrendingContent(trending) {
-            const container = document.getElementById('trending-content');
-            const currentData = trending[currentTrendingType] || [];
+        // Touch gestures for carousels
+        function initializeTouchGestures() {
+            const carousels = document.querySelectorAll('.content-carousel');
             
-            container.innerHTML = currentData.slice(0, 12).map(item => `
-                <div class="card-hover cursor-pointer bg-gray-800 rounded-lg overflow-hidden" onclick="viewContent(${item.id})">
-                    <div class="relative">
-                        <img src="${item.poster_path || item.backdrop_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image'}" 
-                             alt="${item.title || item.name}"
-                             class="w-full h-64 sm:h-80 object-cover"
-                             loading="lazy">
-                        <div class="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-bold">
-                            TRENDING
-                        </div>
-                    </div>
-                    <div class="p-4">
-                        <h3 class="text-white font-semibold text-sm mb-2 line-clamp-2">${item.title || item.name}</h3>
-                        <div class="flex items-center justify-between">
-                            <span class="text-yellow-400 text-xs">⭐ ${item.vote_average?.toFixed(1) || 'N/A'}</span>
-                            <span class="text-gray-400 text-xs">${item.release_date?.split('-')[0] || ''}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
+            carousels.forEach(carousel => {
+                let isDown = false;
+                let startX;
+                let scrollLeft;
 
-        function renderRegionalContent(regional) {
-            Object.entries(regional).forEach(([language, items]) => {
-                const containerId = `${language.toLowerCase()}-content`;
-                const container = document.getElementById(containerId);
-                
-                if (container && items) {
-                    container.innerHTML = items.slice(0, 5).map(item => `
-                        <div class="flex items-center space-x-3 p-3 bg-gray-800 rounded-lg card-hover cursor-pointer" onclick="viewContent(${item.id})">
-                            <img src="${item.poster_path || 'https://via.placeholder.com/60x90/333/fff?text=No+Image'}" 
-                                 alt="${item.title}"
-                                 class="w-12 h-16 object-cover rounded"
-                                 loading="lazy">
-                            <div class="flex-1 min-w-0">
-                                <h4 class="text-white text-sm font-medium truncate">${item.title}</h4>
-                                <p class="text-gray-400 text-xs">${item.release_date?.split('-')[0] || ''}</p>
-                                <div class="flex items-center space-x-1">
-                                    <span class="text-yellow-400 text-xs">⭐</span>
-                                    <span class="text-gray-300 text-xs">${item.vote_average?.toFixed(1) || 'N/A'}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                }
+                // Mouse events
+                carousel.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    carousel.style.cursor = 'grabbing';
+                    startX = e.pageX - carousel.offsetLeft;
+                    scrollLeft = carousel.scrollLeft;
+                });
+
+                carousel.addEventListener('mouseleave', () => {
+                    isDown = false;
+                    carousel.style.cursor = 'grab';
+                });
+
+                carousel.addEventListener('mouseup', () => {
+                    isDown = false;
+                    carousel.style.cursor = 'grab';
+                });
+
+                carousel.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - carousel.offsetLeft;
+                    const walk = (x - startX) * 2;
+                    carousel.scrollLeft = scrollLeft - walk;
+                });
+
+                // Touch events
+                carousel.addEventListener('touchstart', (e) => {
+                    touchStartX = e.touches[0].clientX;
+                    startX = touchStartX - carousel.offsetLeft;
+                    scrollLeft = carousel.scrollLeft;
+                });
+
+                carousel.addEventListener('touchmove', (e) => {
+                    if (!touchStartX) return;
+                    const x = e.touches[0].clientX - carousel.offsetLeft;
+                    const walk = (x - startX) * 1.5;
+                    carousel.scrollLeft = scrollLeft - walk;
+                });
+
+                carousel.addEventListener('touchend', (e) => {
+                    touchEndX = e.changedTouches[0].clientX;
+                    touchStartX = 0;
+                });
             });
         }
 
-        function renderCriticsChoice(items) {
-            const container = document.getElementById('critics-choice-container');
-            container.innerHTML = items.slice(0, 10).map(item => `
-                <div class="flex-none w-48 sm:w-64 card-hover cursor-pointer" onclick="viewContent(${item.id})">
-                    <div class="relative overflow-hidden rounded-lg bg-gray-800">
-                        <img src="${item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image'}" 
-                             alt="${item.title}"
-                             class="w-full h-72 object-cover"
-                             loading="lazy">
-                        <div class="absolute top-2 left-2 bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-bold">
-                            CRITIC'S CHOICE
-                        </div>
-                        <div class="p-4">
-                            <h3 class="text-white font-semibold text-sm mb-2">${item.title}</h3>
-                            <div class="flex items-center justify-between">
-                                <span class="text-yellow-400 text-xs">⭐ ${item.rating?.toFixed(1) || 'N/A'}</span>
-                                <span class="text-gray-400 text-xs">${item.release_date?.split('-')[0] || ''}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderUserFavorites(items) {
-            const container = document.getElementById('user-favorites-container');
-            container.innerHTML = items.slice(0, 8).map(item => `
-                <div class="card-hover cursor-pointer bg-gray-800 rounded-lg overflow-hidden" onclick="viewContent(${item.id})">
-                    <div class="relative">
-                        <img src="${item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image'}" 
-                             alt="${item.title}"
-                             class="w-full h-64 sm:h-80 object-cover"
-                             loading="lazy">
-                        <div class="absolute top-2 right-2 bg-pink-600 text-white px-2 py-1 rounded-full text-xs font-bold">
-                            ❤️ LOVED
-                        </div>
-                    </div>
-                    <div class="p-4">
-                        <h3 class="text-white font-semibold text-sm mb-2">${item.title}</h3>
-                        <div class="flex items-center justify-between">
-                            <span class="text-yellow-400 text-xs">⭐ ${item.rating?.toFixed(1) || 'N/A'}</span>
-                            <span class="text-gray-400 text-xs">${item.release_date?.split('-')[0] || ''}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function switchTrendingTab(type) {
-            currentTrendingType = type;
-            
-            // Update tab styles
-            document.querySelectorAll('[id$="-tab"]').forEach(tab => {
-                tab.classList.remove('bg-red-600');
-                tab.classList.add('bg-gray-700');
-            });
-            document.getElementById(`${type}-tab`).classList.remove('bg-gray-700');
-            document.getElementById(`${type}-tab`).classList.add('bg-red-600');
-            
-            // Re-render content
-            fetchHomepageData();
-        }
-
-        function viewContent(contentId) {
-            if (contentId) {
-                window.location.href = `movie-detail.html?id=${contentId}`;
-            }
-        }
-
-        function showError(message) {
-            // Create a simple toast notification
-            const toast = document.createElement('div');
-            toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg z-50';
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
-        }
-
-        // Mobile menu toggle
-        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
-            const mobileMenu = document.getElementById('mobile-menu');
-            mobileMenu.classList.toggle('hidden');
-        });
-
-        // Smooth scrolling for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            fetchHomepageData();
-            
-            // Add intersection observer for animations
+        // Intersection Observer for animations
+        function initializeIntersectionObserver() {
             const observerOptions = {
                 threshold: 0.1,
                 rootMargin: '0px 0px -50px 0px'
             };
-            
+
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
-                        entry.target.classList.add('slide-up');
+                        entry.target.style.animationDelay = '0s';
+                        entry.target.classList.add('fade-in');
                     }
                 });
             }, observerOptions);
-            
+
+            // Observe all sections
             document.querySelectorAll('section').forEach(section => {
                 observer.observe(section);
             });
+        }
+
+        // Load homepage content
+        async function loadHomepageContent() {
+            if (isLoading) return;
+            isLoading = true;
+
+            const loadingState = document.getElementById('loadingState');
+            const contentContainer = document.getElementById('contentContainer');
+            const errorState = document.getElementById('errorState');
+
+            // Show loading state
+            loadingState.style.display = 'block';
+            contentContainer.style.display = 'none';
+            errorState.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE}/homepage`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Populate content sections
+                populateCarousel('trendingMovies', data.trending?.movies || []);
+                populateCarousel('trendingTV', data.trending?.tv || []);
+                populateCarousel('whatsHot', data.whats_hot || []);
+                populateCarousel('criticsChoice', data.critics_choice || []);
+                populateCarousel('teluguContent', data.regional?.Telugu || []);
+                populateCarousel('hindiContent', data.regional?.Hindi || []);
+                populateCarousel('adminCurated', data.admin_curated || []);
+                populateCarousel('userFavorites', data.user_favorites || []);
+
+                // Show content
+                loadingState.style.display = 'none';
+                contentContainer.style.display = 'block';
+
+                // Reinitialize touch gestures for new content
+                setTimeout(() => {
+                    initializeTouchGestures();
+                }, 100);
+
+            } catch (error) {
+                console.error('Error loading homepage content:', error);
+                
+                // Show error state
+                loadingState.style.display = 'none';
+                errorState.style.display = 'block';
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        // Populate carousel with content
+        function populateCarousel(carouselId, items) {
+            const carousel = document.getElementById(carouselId);
+            if (!carousel || !items.length) return;
+
+            carousel.innerHTML = items.map(item => createMovieCard(item)).join('');
+        }
+
+        // Create movie card HTML
+        function createMovieCard(item) {
+            const title = item.title || item.name || item.admin_title || 'Unknown Title';
+            const posterPath = item.poster_path || item.poster_url;
+            const rating = item.rating || item.vote_average;
+            const releaseDate = item.release_date || item.first_air_date;
+            const overview = item.overview || item.admin_description || '';
+            const genres = item.genre_names || item.genres || [];
+
+            // Handle different poster URL formats
+            let posterUrl = '/api/placeholder/200/300';
+            if (posterPath) {
+                if (posterPath.startsWith('http')) {
+                    posterUrl = posterPath;
+                } else if (posterPath.startsWith('/')) {
+                    posterUrl = `https://image.tmdb.org/t/p/w500${posterPath}`;
+                }
+            }
+
+            return `
+                <div class="movie-card" onclick="viewContent(${item.id || item.tmdb_id}, '${item.content_type || 'movie'}')">
+                    <img src="${posterUrl}" 
+                         alt="${title}" 
+                         loading="lazy"
+                         onerror="this.src='/api/placeholder/200/300'">
+                    
+                    ${rating ? `<div class="rating-badge">${rating.toFixed(1)}</div>` : ''}
+                    
+                    <div class="movie-card-overlay">
+                        <h3 class="font-bold text-sm mb-2 line-clamp-2">${title}</h3>
+                        
+                        ${releaseDate ? `<p class="text-xs text-gray-300 mb-2">${new Date(releaseDate).getFullYear()}</p>` : ''}
+                        
+                        ${genres.length > 0 ? `
+                            <div class="mb-2">
+                                ${genres.slice(0, 2).map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${overview ? `<p class="text-xs text-gray-300 line-clamp-3">${overview}</p>` : ''}
+                        
+                        <div class="flex justify-between items-center mt-3">
+                            <button class="bg-white text-black px-3 py-1 rounded text-xs font-bold hover:bg-gray-200 transition-colors"
+                                    onclick="event.stopPropagation(); viewContent(${item.id || item.tmdb_id}, '${item.content_type || 'movie'}')">
+                                ▶ Play
+                            </button>
+                            <button class="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-500 transition-colors"
+                                    onclick="event.stopPropagation(); addToWishlist(${item.id || item.tmdb_id})">
+                                + List
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // View content details
+        function viewContent(contentId, contentType = 'movie') {
+            // Store content info for details page
+            sessionStorage.setItem('selectedContent', JSON.stringify({
+                id: contentId,
+                type: contentType
+            }));
+            
+            // Redirect to details page
+            window.location.href = 'movie-detail.html';
+        }
+
+        // Add to wishlist (requires login)
+        function addToWishlist(contentId) {
+            // Check if user is logged in
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                // Show login prompt
+                if (confirm('Please sign in to add items to your wishlist. Would you like to sign in now?')) {
+                    window.location.href = 'login.html';
+                }
+                return;
+            }
+
+            // Add to wishlist logic would go here
+            showToast('Please sign in to add to wishlist');
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white z-50 transform translate-y-full transition-transform duration-300`;
+            
+            switch (type) {
+                case 'success':
+                    toast.classList.add('bg-green-600');
+                    break;
+                case 'error':
+                    toast.classList.add('bg-red-600');
+                    break;
+                default:
+                    toast.classList.add('bg-blue-600');
+            }
+            
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.style.transform = 'translateY(full)';
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const mobileMenu = document.getElementById('mobileMenu');
+                if (mobileMenu.classList.contains('active')) {
+                    toggleMobileMenu();
+                }
+            }
         });
 
-        // Touch gesture support for carousels
-        let isDown = false;
-        let startX;
-        let scrollLeft;
-
-        document.querySelectorAll('.scroll-container').forEach(container => {
-            container.addEventListener('mousedown', (e) => {
-                isDown = true;
-                startX = e.pageX - container.offsetLeft;
-                scrollLeft = container.scrollLeft;
-                container.style.cursor = 'grabbing';
-            });
-
-            container.addEventListener('mouseleave', () => {
-                isDown = false;
-                container.style.cursor = 'grab';
-            });
-
-            container.addEventListener('mouseup', () => {
-                isDown = false;
-                container.style.cursor = 'grab';
-            });
-
-            container.addEventListener('mousemove', (e) => {
-                if (!isDown) return;
-                e.preventDefault();
-                const x = e.pageX - container.offsetLeft;
-                const walk = (x - startX) * 2;
-                container.scrollLeft = scrollLeft - walk;
-            });
-
-            // Touch events for mobile
-            let touchStartX = 0;
-            container.addEventListener('touchstart', (e) => {
-                touchStartX = e.touches[0].clientX;
-            });
-
-            container.addEventListener('touchmove', (e) => {
-                const touchX = e.touches[0].clientX;
-                const diff = touchStartX - touchX;
-                container.scrollLeft += diff;
-                touchStartX = touchX;
-            });
+        // Handle online/offline status
+        window.addEventListener('online', function() {
+            showToast('Connection restored', 'success');
+            if (document.getElementById('errorState').style.display === 'block') {
+                loadHomepageContent();
+            }
         });
+
+        window.addEventListener('offline', function() {
+            showToast('Connection lost. Some features may not work.', 'error');
+        });
+
+        // Performance optimization: Lazy load images
+        if ('IntersectionObserver' in window) {
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src || img.src;
+                        img.classList.remove('lazy');
+                        observer.unobserve(img);
+                    }
+                });
+            });
+
+            // Observe images when they're added to DOM
+            const observeImages = () => {
+                document.querySelectorAll('img[loading="lazy"]').forEach(img => {
+                    imageObserver.observe(img);
+                });
+            };
+
+            // Initial observation
+            setTimeout(observeImages, 1000);
+        }
+
+        // Add CSS utility classes
+        const style = document.createElement('style');
+        style.textContent = `
+                        .line-clamp-2 {
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            
+            .line-clamp-3 {
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            
+            .content-carousel {
+                cursor: grab;
+            }
+            
+            .content-carousel:active {
+                cursor: grabbing;
+            }
+            
+            .movie-card {
+                user-select: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
