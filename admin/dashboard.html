@@ -536,121 +536,350 @@
         </main>
     </div>
 
-    <script>
-        // API Configuration
-        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+<script>
+    // API Configuration
+    const API_BASE = 'https://backend-app-970m.onrender.com/api';
+    
+    // Global State
+    const state = {
+        authToken: null,
+        userData: null
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!initializeAuth()) return;
         
-        // Global State
-        const state = {
-            authToken: null,
-            userData: null
-        };
+        initializeAdmin();
+        loadDashboardData();
+        updateNavigation();
+    });
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!initializeAuth()) return;
-            
-            initializeAdmin();
-            loadDashboardData();
-        });
-
-        // Initialize Authentication
-        function initializeAuth() {
-            try {
-                const hash = window.location.hash.substring(1);
-                if (!hash) {
-                    window.location.href = '../login.html';
-                    return false;
-                }
-
-                const authData = JSON.parse(atob(hash));
+    // Initialize Authentication
+    function initializeAuth() {
+        try {
+            // First check if we have auth data in sessionStorage
+            const storedAuth = sessionStorage.getItem('adminAuth');
+            if (storedAuth) {
+                const authData = JSON.parse(storedAuth);
                 state.authToken = authData.token;
                 state.userData = authData.user;
                 
                 // Verify admin access
                 if (!state.userData.is_admin) {
+                    sessionStorage.removeItem('adminAuth');
                     window.location.href = '../dashboard.html';
                     return false;
                 }
-                
-                window.location.hash = '';
                 return true;
-            } catch (e) {
-                console.error('Auth initialization failed:', e);
+            }
+            
+            // If no stored auth, check URL hash
+            const hash = window.location.hash.substring(1);
+            if (!hash) {
                 window.location.href = '../login.html';
                 return false;
             }
-        }
 
-        // Initialize Admin
-        function initializeAdmin() {
-            const adminName = document.getElementById('adminName');
-            const adminAvatar = document.getElementById('adminAvatar');
+            const authData = JSON.parse(atob(hash));
+            state.authToken = authData.token;
+            state.userData = authData.user;
             
+            // Verify admin access
+            if (!state.userData.is_admin) {
+                window.location.href = '../dashboard.html';
+                return false;
+            }
+            
+            // Store auth data in sessionStorage for other admin pages
+            sessionStorage.setItem('adminAuth', JSON.stringify(authData));
+            
+            // Clear hash after storing
+            window.location.hash = '';
+            return true;
+        } catch (e) {
+            console.error('Auth initialization failed:', e);
+            sessionStorage.removeItem('adminAuth');
+            window.location.href = '../login.html';
+            return false;
+        }
+    }
+
+    // Initialize Admin
+    function initializeAdmin() {
+        const adminName = document.getElementById('adminName');
+        const adminAvatar = document.getElementById('adminAvatar');
+        
+        if (state.userData) {
             adminName.textContent = state.userData.username;
             adminAvatar.textContent = state.userData.username[0].toUpperCase();
         }
+    }
 
-        // Load Dashboard Data
-        async function loadDashboardData() {
-            // Simulated data - would normally come from API
-            animateCounter('totalUsers', 1234);
-            animateCounter('totalContent', 5678);
-            animateCounter('totalRatings', 12345);
-            animateCounter('activeUsers', 342);
+    // Load Dashboard Data
+    async function loadDashboardData() {
+        try {
+            // Load real data from API
+            await loadStatistics();
+            await loadRecentActivity();
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+            // Fallback to simulated data
+            loadSimulatedData();
         }
+    }
 
-        // Animate Counter
-        function animateCounter(elementId, targetValue) {
-            const element = document.getElementById(elementId);
-            const duration = 1000;
-            const start = 0;
-            const increment = targetValue / (duration / 16);
-            let current = start;
-            
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= targetValue) {
-                    current = targetValue;
-                    clearInterval(timer);
+    // Load Statistics from API
+    async function loadStatistics() {
+        try {
+            const response = await fetch(`${API_BASE}/admin/statistics`, {
+                headers: {
+                    'Authorization': `Bearer ${state.authToken}`,
+                    'Content-Type': 'application/json'
                 }
-                element.textContent = Math.floor(current).toLocaleString();
-            }, 16);
-        }
+            });
 
-        // Toggle Sidebar
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            
+            if (response.ok) {
+                const stats = await response.json();
+                animateCounter('totalUsers', stats.total_users || 0);
+                animateCounter('totalContent', stats.total_content || 0);
+                animateCounter('totalRatings', stats.total_ratings || 0);
+                animateCounter('activeUsers', stats.active_users || 0);
+            } else {
+                throw new Error('Failed to load statistics');
+            }
+        } catch (error) {
+            console.error('Error loading statistics:', error);
+            // Fallback to simulated data
+            loadSimulatedData();
+        }
+    }
+
+    // Load Recent Activity from API
+    async function loadRecentActivity() {
+        try {
+            const response = await fetch(`${API_BASE}/admin/recent-activity`, {
+                headers: {
+                    'Authorization': `Bearer ${state.authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const activities = await response.json();
+                updateActivityTable(activities);
+            } else {
+                throw new Error('Failed to load recent activity');
+            }
+        } catch (error) {
+            console.error('Error loading recent activity:', error);
+            // Keep default activity data
+        }
+    }
+
+    // Update Activity Table
+    function updateActivityTable(activities) {
+        const tbody = document.getElementById('activityTableBody');
+        if (!activities || activities.length === 0) return;
+
+        tbody.innerHTML = activities.map(activity => `
+            <tr>
+                <td>${activity.username || 'Unknown'}</td>
+                <td>${activity.action || 'Unknown'}</td>
+                <td>${activity.content || '-'}</td>
+                <td>${formatTimeAgo(activity.timestamp) || 'Unknown'}</td>
+            </tr>
+        `).join('');
+    }
+
+    // Format time ago
+    function formatTimeAgo(timestamp) {
+        if (!timestamp) return 'Unknown';
+        
+        const now = new Date();
+        const past = new Date(timestamp);
+        const diffInMinutes = Math.floor((now - past) / 60000);
+        
+        if (diffInMinutes < 1) return 'Just now';
+        if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+        
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `${diffInHours} hours ago`;
+        
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays} days ago`;
+    }
+
+    // Load Simulated Data (fallback)
+    function loadSimulatedData() {
+        animateCounter('totalUsers', 1234);
+        animateCounter('totalContent', 5678);
+        animateCounter('totalRatings', 12345);
+        animateCounter('activeUsers', 342);
+    }
+
+    // Animate Counter
+    function animateCounter(elementId, targetValue) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        const duration = 1000;
+        const start = 0;
+        const increment = targetValue / (duration / 16);
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= targetValue) {
+                current = targetValue;
+                clearInterval(timer);
+            }
+            element.textContent = Math.floor(current).toLocaleString();
+        }, 16);
+    }
+
+    // Toggle Sidebar
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (sidebar && overlay) {
             sidebar.classList.toggle('active');
             overlay.classList.toggle('active');
         }
+    }
 
-        // Export Data
-        function exportData() {
-            alert('Export functionality would be implemented here');
-        }
-
-        // Logout
-        function logout() {
-            state.authToken = null;
-            state.userData = null;
-            window.location.href = '../login.html';
-        }
-
-        // Update navigation active state
-        function updateNavigation() {
-            const currentPage = window.location.pathname.split('/').pop();
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.getAttribute('href') === currentPage) {
-                    item.classList.add('active');
+    // Export Data
+    async function exportData() {
+        try {
+            const response = await fetch(`${API_BASE}/admin/export`, {
+                headers: {
+                    'Authorization': `Bearer ${state.authToken}`,
+                    'Content-Type': 'application/json'
                 }
             });
-        }
 
-        updateNavigation();
-    </script>
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `movierec-data-${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } else {
+                throw new Error('Export failed');
+            }
+        } catch (error) {
+            console.error('Export error:', error);
+            alert('Export functionality is currently unavailable. Please try again later.');
+        }
+    }
+
+    // Logout
+    function logout() {
+        // Clear auth state
+        state.authToken = null;
+        state.userData = null;
+        
+        // Clear stored auth data
+        sessionStorage.removeItem('adminAuth');
+        
+        // Redirect to login
+        window.location.href = '../login.html';
+    }
+
+    // Update navigation active state
+    function updateNavigation() {
+        const currentPage = window.location.pathname.split('/').pop();
+        const navItems = document.querySelectorAll('.nav-item');
+        
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            const href = item.getAttribute('href');
+            
+            // Check if current page matches the nav item
+            if (href === currentPage || 
+                (currentPage === 'dashboard.html' && href === 'dashboard.html') ||
+                (currentPage === '' && href === 'dashboard.html')) {
+                item.classList.add('active');
+            }
+        });
+    }
+
+    // Chart button handlers
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('chart-btn')) {
+            // Remove active class from all chart buttons
+            document.querySelectorAll('.chart-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            e.target.classList.add('active');
+            
+            // Here you would typically update the chart data
+            console.log('Chart period changed to:', e.target.textContent);
+        }
+    });
+
+    // Handle navigation clicks
+    document.addEventListener('click', (e) => {
+        const navItem = e.target.closest('.nav-item');
+        if (navItem && !navItem.getAttribute('onclick')) {
+            const href = navItem.getAttribute('href');
+            
+            // Handle special cases
+            if (href === '#') {
+                e.preventDefault();
+                return;
+            }
+            
+            if (href === '../dashboard.html') {
+                // Redirect to user dashboard with auth
+                e.preventDefault();
+                const authData = {
+                    token: state.authToken,
+                    user: state.userData
+                };
+                window.location.href = `../dashboard.html#${btoa(JSON.stringify(authData))}`;
+                return;
+            }
+            
+            // For admin pages, the sessionStorage will handle auth
+        }
+    });
+
+    // Handle window resize for responsive sidebar
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            if (sidebar && overlay) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+        }
+    });
+
+    // Periodic data refresh (every 5 minutes)
+    setInterval(() => {
+        if (state.authToken) {
+            loadStatistics();
+            loadRecentActivity();
+        }
+    }, 5 * 60 * 1000);
+
+    // Handle page visibility change to refresh data when tab becomes active
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && state.authToken) {
+            loadDashboardData();
+        }
+    });
+</script>
 </body>
 </html>

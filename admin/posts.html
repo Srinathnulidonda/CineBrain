@@ -146,6 +146,23 @@
             }
         }
 
+        .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .admin-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--netflix-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
         /* Posts Content */
         .posts-content {
             padding: 2rem;
@@ -764,33 +781,74 @@
         // Initialize Authentication
         function initializeAuth() {
             try {
+                // First check for hash (for initial login)
                 const hash = window.location.hash.substring(1);
-                if (!hash) {
-                    window.location.href = '../login.html';
-                    return false;
+                if (hash) {
+                    const authData = JSON.parse(atob(hash));
+                    state.authToken = authData.token;
+                    state.userData = authData.user;
+                    
+                    // Store in localStorage for persistence
+                    localStorage.setItem('movierecAuthToken', authData.token);
+                    localStorage.setItem('movierecUserData', JSON.stringify(authData.user));
+                    
+                    // Clear hash for security
+                    window.location.hash = '';
+                } else {
+                    // Check localStorage for existing auth
+                    const storedToken = localStorage.getItem('movierecAuthToken');
+                    const storedUserData = localStorage.getItem('movierecUserData');
+                    
+                    if (!storedToken || !storedUserData) {
+                        clearAuthData();
+                        window.location.href = '../login.html';
+                        return false;
+                    }
+                    
+                    try {
+                        state.authToken = storedToken;
+                        state.userData = JSON.parse(storedUserData);
+                    } catch (parseError) {
+                        console.error('Failed to parse stored user data:', parseError);
+                        clearAuthData();
+                        window.location.href = '../login.html';
+                        return false;
+                    }
                 }
-
-                const authData = JSON.parse(atob(hash));
-                state.authToken = authData.token;
-                state.userData = authData.user;
                 
                 // Verify admin access
-                if (!state.userData.is_admin) {
+                if (!state.userData || !state.userData.is_admin) {
+                    clearAuthData();
                     window.location.href = '../dashboard.html';
                     return false;
                 }
                 
-                window.location.hash = '';
                 return true;
             } catch (e) {
                 console.error('Auth initialization failed:', e);
+                clearAuthData();
                 window.location.href = '../login.html';
                 return false;
             }
         }
 
+        // Clear authentication data
+        function clearAuthData() {
+            localStorage.removeItem('movierecAuthToken');
+            localStorage.removeItem('movierecUserData');
+            state.authToken = null;
+            state.userData = null;
+        }
+
+        // Check if user is authenticated
+        function isAuthenticated() {
+            return state.authToken && state.userData;
+        }
+
         // Initialize Admin
         function initializeAdmin() {
+            if (!isAuthenticated()) return;
+            
             document.getElementById('adminName').textContent = state.userData.username;
             document.getElementById('adminAvatar').textContent = state.userData.username[0].toUpperCase();
         }
@@ -813,6 +871,11 @@
 
         // API Request Helper
         async function apiRequest(endpoint, options = {}) {
+            if (!isAuthenticated()) {
+                window.location.href = '../login.html';
+                return null;
+            }
+
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, {
                     ...options,
@@ -824,6 +887,7 @@
                 });
 
                 if (response.status === 401) {
+                    clearAuthData();
                     window.location.href = '../login.html';
                     return null;
                 }
@@ -844,6 +908,8 @@
                 const data = await response.json();
                 state.posts = data.recommendations || [];
                 displayPosts();
+            } else {
+                document.getElementById('postsList').innerHTML = '<div class="loading">Failed to load posts</div>';
             }
         }
 
@@ -879,7 +945,7 @@
                             <p>${post.description}</p>
                         </div>
                         
-                        ${post.tags.length > 0 ? `
+                        ${post.tags && post.tags.length > 0 ? `
                             <div class="post-tags">
                                 ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
                             </div>
@@ -927,7 +993,8 @@
                 resetForm();
                 loadPosts();
             } else {
-                showToast('Failed to create post', 'error');
+                const errorData = response ? await response.json().catch(() => ({})) : {};
+                showToast(errorData.message || 'Failed to create post', 'error');
             }
         }
 
@@ -946,6 +1013,8 @@
                 const data = await response.json();
                 displaySearchResults(data.results || []);
                 document.getElementById('contentSearchModal').classList.add('show');
+            } else {
+                showToast('Failed to search content', 'error');
             }
         }
 
@@ -1022,8 +1091,16 @@
         async function deletePost(postId) {
             if (!confirm('Are you sure you want to delete this post?')) return;
             
-            // This would normally call a delete endpoint
-            showToast('Delete functionality not implemented in demo', 'error');
+            const response = await apiRequest(`/admin/recommendations/${postId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response && response.ok) {
+                showToast('Post deleted successfully', 'success');
+                loadPosts();
+            } else {
+                showToast('Failed to delete post', 'error');
+            }
         }
 
         // Reset Form
@@ -1071,8 +1148,7 @@
 
         // Logout
         function logout() {
-            state.authToken = null;
-            state.userData = null;
+            clearAuthData();
             window.location.href = '../login.html';
         }
 
@@ -1080,6 +1156,13 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && document.getElementById('contentSearchModal').classList.contains('show')) {
                 closeModal();
+            }
+        });
+
+        // Handle page visibility change to check auth status
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && !isAuthenticated()) {
+                window.location.href = '../login.html';
             }
         });
     </script>
