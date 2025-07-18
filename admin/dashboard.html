@@ -2,168 +2,655 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#141414">
     <title>Admin Dashboard - MovieRec</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="../css/main.css">
-    <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/responsive.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --netflix-red: #E50914;
+            --netflix-black: #141414;
+            --netflix-gray: #333333;
+            --admin-sidebar: #1a1a1a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--netflix-black);
+            color: #fff;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: var(--admin-sidebar);
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--netflix-red);
+            text-transform: uppercase;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 1rem 1.5rem;
+            color: #999;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item.active {
+            color: #fff;
+            background: rgba(229, 9, 20, 0.2);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--netflix-red);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            min-height: 100vh;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+
+        /* Header */
+        .admin-header {
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            width: 44px;
+            height: 44px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .admin-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--netflix-red);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* Dashboard Content */
+        .dashboard-content {
+            padding: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-content {
+                padding: 1rem;
+            }
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #999;
+            font-size: 0.875rem;
+        }
+
+        .stat-change {
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .stat-change.positive {
+            color: #4ade80;
+        }
+
+        .stat-change.negative {
+            color: #f87171;
+        }
+
+        /* Charts */
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .chart-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chart-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 4px;
+            color: #999;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chart-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+
+        .chart-btn.active {
+            background: var(--netflix-red);
+            color: #fff;
+        }
+
+        /* Activity Table */
+        .activity-table {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 1rem;
+            font-weight: 600;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            font-weight: 600;
+            color: #999;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .action-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: #fff;
+        }
+
+        .action-card:hover {
+            background: rgba(229, 9, 20, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .action-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        /* Overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-overlay.active {
+                display: block;
+            }
+        }
+
+        /* Charts placeholder */
+        .chart-placeholder {
+            height: 300px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+    </style>
 </head>
-<body class="bg-primary text-white">
-    <!-- Navigation -->
-    <nav class="navbar fixed top-0 w-full z-50 bg-primary bg-opacity-95 backdrop-blur-sm">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <div class="logo text-2xl font-bold text-accent-red">MovieRec Admin</div>
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">MovieRec</div>
+                <div style="color: #999; font-size: 0.875rem; margin-top: 0.5rem;">Admin Panel</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <span>📊 Dashboard</span>
+                </a>
+                <a href="content-browser.html" class="nav-item">
+                    <span>🎬 Content Browser</span>
+                </a>
+                <a href="posts.html" class="nav-item">
+                    <span>📝 Admin Posts</span>
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <span>📈 Analytics</span>
+                </a>
+                <a href="../dashboard.html" class="nav-item">
+                    <span>👤 User View</span>
+                </a>
+                <a href="#" class="nav-item" onclick="logout()">
+                    <span>🚪 Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="admin-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+                    <h1 class="header-title">Dashboard</h1>
                 </div>
                 
-                <div class="flex items-center space-x-4">
-                    <a href="../dashboard.html" class="nav-link">User Dashboard</a>
-                    <div class="user-menu relative">
-                        <button id="user-menu-btn" class="user-avatar">
-                            <span id="user-initial">A</span>
-                        </button>
-                        <div id="user-dropdown" class="user-dropdown hidden">
-                            <a href="../profile.html" class="dropdown-item">Profile</a>
-                            <button onclick="logout()" class="dropdown-item">Sign Out</button>
+                <div class="admin-info">
+                    <span id="adminName">Admin</span>
+                    <div class="admin-avatar" id="adminAvatar">A</div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-icon">👥</span>
+                        <div class="stat-value" id="totalUsers">0</div>
+                        <div class="stat-label">Total Users</div>
+                        <div class="stat-change positive">↑ 12% from last month</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <span class="stat-icon">🎬</span>
+                        <div class="stat-value" id="totalContent">0</div>
+                        <div class="stat-label">Total Content</div>
+                        <div class="stat-change positive">↑ 8% from last month</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <span class="stat-icon">⭐</span>
+                        <div class="stat-value" id="totalRatings">0</div>
+                        <div class="stat-label">Total Ratings</div>
+                        <div class="stat-change positive">↑ 25% from last month</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <span class="stat-icon">📺</span>
+                        <div class="stat-value" id="activeUsers">0</div>
+                        <div class="stat-label">Active Users Today</div>
+                        <div class="stat-change negative">↓ 3% from yesterday</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
+                <div class="quick-actions">
+                    <a href="content-browser.html" class="action-card">
+                        <span class="action-icon">➕</span>
+                        <div>Add New Content</div>
+                    </a>
+                    <a href="posts.html" class="action-card">
+                        <span class="action-icon">📣</span>
+                        <div>Create Announcement</div>
+                    </a>
+                    <a href="analytics.html" class="action-card">
+                        <span class="action-icon">📊</span>
+                        <div>View Analytics</div>
+                    </a>
+                    <a href="#" class="action-card" onclick="exportData()">
+                        <span class="action-icon">💾</span>
+                        <div>Export Data</div>
+                    </a>
+                </div>
+
+                <!-- Charts -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">User Activity</h3>
+                        <div class="chart-actions">
+                            <button class="chart-btn active">Day</button>
+                            <button class="chart-btn">Week</button>
+                            <button class="chart-btn">Month</button>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Admin Header -->
-    <section class="admin-header">
-        <div class="container mx-auto px-4">
-            <h1 class="admin-title">Admin Dashboard</h1>
-            <p class="admin-subtitle">Manage content, users, and platform analytics</p>
-        </div>
-    </section>
-
-    <!-- Admin Navigation -->
-    <nav class="admin-nav">
-        <div class="container mx-auto px-4">
-            <ul class="admin-nav-list">
-                <li><a href="dashboard.html" class="admin-nav-link active">Dashboard</a></li>
-                <li><a href="content-browser.html" class="admin-nav-link">Content Browser</a></li>
-                <li><a href="posts.html" class="admin-nav-link">Posts</a></li>
-                <li><a href="analytics.html" class="admin-nav-link">Analytics</a></li>
-            </ul>
-        </div>
-    </nav>
-
-    <!-- Dashboard Content -->
-    <main class="container mx-auto px-4 py-8">
-        <!-- Quick Stats -->
-        <div class="admin-stats-grid">
-            <div class="admin-stat-card">
-                <div class="admin-stat-number" id="total-users">0</div>
-                <div class="admin-stat-label">Total Users</div>
-            </div>
-            <div class="admin-stat-card">
-                <div class="admin-stat-number" id="total-content">0</div>
-                <div class="admin-stat-label">Content Items</div>
-            </div>
-            <div class="admin-stat-card">
-                <div class="admin-stat-number" id="active-posts">0</div>
-                <div class="admin-stat-label">Active Posts</div>
-            </div>
-            <div class="admin-stat-card">
-                <div class="admin-stat-number" id="total-interactions">0</div>
-                <div class="admin-stat-label">User Interactions</div>
-            </div>
-        </div>
-
-        <!-- System Status -->
-        <div class="admin-card">
-            <h2 class="admin-card-title">System Status</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="status-item">
-                    <h3 class="status-title">Database</h3>
-                    <div class="status-indicator" id="db-status">
-                        <span class="status-dot"></span>
-                        <span class="status-text">Checking...</span>
+                    <div class="chart-placeholder">
+                        User Activity Chart
                     </div>
                 </div>
-                <div class="status-item">
-                    <h3 class="status-title">External APIs</h3>
-                    <div class="status-indicator" id="api-status">
-                        <span class="status-dot"></span>
-                        <span class="status-text">Checking...</span>
+
+                <!-- Recent Activity -->
+                <div class="activity-table">
+                    <div class="table-header">
+                        <h3 class="text-lg font-semibold">Recent Activity</h3>
                     </div>
-                </div>
-                <div class="status-item">
-                    <h3 class="status-title">Telegram Bot</h3>
-                    <div class="status-indicator" id="telegram-status">
-                        <span class="status-dot"></span>
-                        <span class="status-text">Checking...</span>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Content</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activityTableBody">
+                                <tr>
+                                    <td>john_doe</td>
+                                    <td>Rated</td>
+                                    <td>Inception</td>
+                                    <td>2 minutes ago</td>
+                                </tr>
+                                <tr>
+                                    <td>jane_smith</td>
+                                    <td>Added to watchlist</td>
+                                    <td>The Dark Knight</td>
+                                    <td>5 minutes ago</td>
+                                </tr>
+                                <tr>
+                                    <td>mike_wilson</td>
+                                    <td>Registered</td>
+                                    <td>-</td>
+                                    <td>10 minutes ago</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="admin-card">
-            <h2 class="admin-card-title">Recent Activity</h2>
-            <div class="activity-list" id="recent-activity">
-                <!-- Activity items will be populated here -->
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="admin-card">
-            <h2 class="admin-card-title">Quick Actions</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <button class="quick-action-btn" onclick="syncContent()">
-                    <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                    Sync Content
-                </button>
-                <button class="quick-action-btn" onclick="window.location.href='content-browser.html'">
-                    <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    Browse Content
-                </button>
-                <button class="quick-action-btn" onclick="window.location.href='posts.html'">
-                    <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Create Post
-                </button>
-                <button class="quick-action-btn" onclick="window.location.href='analytics.html'">
-                    <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
-                    View Analytics
-                </button>
-            </div>
-        </div>
-
-        <!-- Popular Content -->
-        <div class="admin-card">
-            <h2 class="admin-card-title">Most Popular Content</h2>
-            <div class="popular-content-list" id="popular-content">
-                <!-- Popular content will be populated here -->
-            </div>
-        </div>
-    </main>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay hidden">
-        <div class="loading-spinner"></div>
+        </main>
     </div>
 
-    <script src="../js/components.js"></script>
-    <script src="../js/app.js"></script>
-    <script src="../js/admin.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeAdminDashboard();
+        // API Configuration
+        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        
+        // Global State
+        const state = {
+            authToken: null,
+            userData: null
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!initializeAuth()) return;
+            
+            initializeAdmin();
+            loadDashboardData();
         });
+
+        // Initialize Authentication
+        function initializeAuth() {
+            try {
+                const hash = window.location.hash.substring(1);
+                if (!hash) {
+                    window.location.href = '../login.html';
+                    return false;
+                }
+
+                const authData = JSON.parse(atob(hash));
+                state.authToken = authData.token;
+                state.userData = authData.user;
+                
+                // Verify admin access
+                if (!state.userData.is_admin) {
+                    window.location.href = '../dashboard.html';
+                    return false;
+                }
+                
+                window.location.hash = '';
+                return true;
+            } catch (e) {
+                console.error('Auth initialization failed:', e);
+                window.location.href = '../login.html';
+                return false;
+            }
+        }
+
+        // Initialize Admin
+        function initializeAdmin() {
+            const adminName = document.getElementById('adminName');
+            const adminAvatar = document.getElementById('adminAvatar');
+            
+            adminName.textContent = state.userData.username;
+            adminAvatar.textContent = state.userData.username[0].toUpperCase();
+        }
+
+        // Load Dashboard Data
+        async function loadDashboardData() {
+            // Simulated data - would normally come from API
+            animateCounter('totalUsers', 1234);
+            animateCounter('totalContent', 5678);
+            animateCounter('totalRatings', 12345);
+            animateCounter('activeUsers', 342);
+        }
+
+        // Animate Counter
+        function animateCounter(elementId, targetValue) {
+            const element = document.getElementById(elementId);
+            const duration = 1000;
+            const start = 0;
+            const increment = targetValue / (duration / 16);
+            let current = start;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= targetValue) {
+                    current = targetValue;
+                    clearInterval(timer);
+                }
+                element.textContent = Math.floor(current).toLocaleString();
+            }, 16);
+        }
+
+        // Toggle Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        // Export Data
+        function exportData() {
+            alert('Export functionality would be implemented here');
+        }
+
+        // Logout
+        function logout() {
+            state.authToken = null;
+            state.userData = null;
+            window.location.href = '../login.html';
+        }
+
+        // Update navigation active state
+        function updateNavigation() {
+            const currentPage = window.location.pathname.split('/').pop();
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === currentPage) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        updateNavigation();
     </script>
 </body>
 </html>

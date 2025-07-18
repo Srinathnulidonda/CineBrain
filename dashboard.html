@@ -2,191 +2,129 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#141414">
     <title>Dashboard - MovieRec</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        :root {
+            --netflix-red: #E50914;
+            --netflix-black: #141414;
+            --netflix-gray: #333333;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            font-family: 'Netflix Sans', 'Helvetica Neue', Arial, sans-serif;
-            background: #141414;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--netflix-black);
             color: #fff;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            touch-action: pan-y;
         }
 
-        .navbar {
+        /* Mobile Navigation */
+        .mobile-nav {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 80%;
+            max-width: 320px;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            transition: left 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .mobile-nav.active {
+            left: 0;
+        }
+
+        .nav-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1999;
+            display: none;
+        }
+
+        .nav-overlay.active {
+            display: block;
+        }
+
+        /* Header */
+        .header {
             position: fixed;
             top: 0;
             width: 100%;
-            padding: 20px 50px;
             background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(10px);
             z-index: 1000;
             transition: all 0.3s ease;
         }
 
-        .navbar.transparent {
-            background: transparent;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 10%, transparent);
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .header-content {
+                padding: 1.5rem 3rem;
+            }
         }
 
         .logo {
-            font-size: 2rem;
+            font-size: 1.5rem;
             font-weight: bold;
-            color: #E50914;
+            color: var(--netflix-red);
             text-transform: uppercase;
             letter-spacing: 2px;
         }
 
-        .hero-section {
-            height: 80vh;
-            position: relative;
-            background: linear-gradient(to bottom, transparent 70%, #141414 100%);
-            margin-bottom: -100px;
+        @media (min-width: 768px) {
+            .logo {
+                font-size: 2rem;
+            }
         }
 
-        .hero-content {
-            position: absolute;
-            bottom: 150px;
-            left: 50px;
-            max-width: 600px;
-        }
-
-        .content-row {
-            margin-bottom: 40px;
-            padding: 0 50px;
-        }
-
-        .content-row h2 {
-            font-size: 1.8rem;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-
-        .content-slider {
+        /* User Menu */
+        .user-menu {
             display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            scroll-behavior: smooth;
-            padding: 10px 0;
-            -webkit-overflow-scrolling: touch;
+            align-items: center;
+            gap: 1rem;
         }
 
-        .content-slider::-webkit-scrollbar {
-            height: 0;
-        }
-
-        .content-card {
-            flex: 0 0 200px;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-            position: relative;
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--netflix-red);
             border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .content-card:hover {
-            transform: scale(1.05);
-            z-index: 10;
-        }
-
-        .content-card img {
-            width: 100%;
-            height: 300px;
-            object-fit: cover;
-            border-radius: 4px;
-        }
-
-        .content-card.placeholder {
-            background: #333;
-            height: 300px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #666;
-        }
-
-        .content-title {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 10px;
-            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .search-container {
-            position: relative;
-            margin-top: 100px;
-            padding: 0 50px;
-            margin-bottom: 40px;
-        }
-
-        .search-input {
-            width: 100%;
-            max-width: 600px;
-            padding: 15px 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            color: #fff;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .search-input:focus {
-            outline: none;
-            background: rgba(255, 255, 255, 0.2);
-            border-color: #E50914;
-        }
-
-        .search-results {
-            position: absolute;
-            top: 100%;
-            left: 50px;
-            right: 50px;
-            max-width: 600px;
-            background: #1a1a1a;
-            border-radius: 4px;
-            margin-top: 5px;
-            max-height: 400px;
-            overflow-y: auto;
-            display: none;
-            z-index: 100;
-        }
-
-        .search-result-item {
-            padding: 15px;
-            border-bottom: 1px solid #333;
+            font-weight: bold;
             cursor: pointer;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            transition: background 0.2s ease;
+            transition: transform 0.2s ease;
         }
 
-        .search-result-item:hover {
-            background: #333;
+        .user-avatar:hover {
+            transform: scale(1.05);
         }
 
-        .search-result-item img {
-            width: 60px;
-            height: 90px;
-            object-fit: cover;
-            border-radius: 4px;
-        }
-
-        .profile-menu {
-            position: relative;
-        }
-
-        .profile-dropdown {
+        .user-dropdown {
             position: absolute;
             top: 100%;
             right: 0;
@@ -195,326 +133,1127 @@
             border-radius: 4px;
             min-width: 200px;
             display: none;
-            margin-top: 10px;
+            margin-top: 0.5rem;
         }
 
-        .profile-dropdown.show {
+        .user-dropdown.show {
             display: block;
         }
 
-        .profile-dropdown a {
+        .user-dropdown a {
             display: block;
-            padding: 12px 20px;
+            padding: 1rem;
             color: #fff;
             text-decoration: none;
             transition: background 0.2s ease;
         }
 
-        .profile-dropdown a:hover {
-            background: #333;
+        .user-dropdown a:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        .loader {
+        /* Welcome Banner */
+        .welcome-banner {
+            margin-top: 80px;
+            padding: 2rem 1rem;
+            background: linear-gradient(135deg, rgba(229, 9, 20, 0.8) 0%, rgba(0, 0, 0, 0.8) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (min-width: 768px) {
+            .welcome-banner {
+                padding: 3rem;
+            }
+        }
+
+        .welcome-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .welcome-title {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .welcome-title {
+                font-size: 2rem;
+            }
+        }
+
+        .user-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--netflix-red);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #999;
+            margin-top: 0.25rem;
+        }
+
+        /* Content Sections */
+        .content-section {
+            padding: 1.5rem 1rem;
+            position: relative;
+        }
+
+        @media (min-width: 768px) {
+            .content-section {
+                padding: 2rem 3rem;
+            }
+        }
+
+        .section-header {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            height: 300px;
+            margin-bottom: 1rem;
         }
 
-        .spinner {
-            border: 3px solid #333;
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        @media (min-width: 768px) {
+            .section-title {
+                font-size: 1.5rem;
+            }
+        }
+
+        .section-action {
+            color: var(--netflix-red);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: opacity 0.2s ease;
+        }
+
+        .section-action:hover {
+            opacity: 0.8;
+        }
+
+        /* Content Carousel */
+        .content-carousel {
+            position: relative;
+            margin: 0 -1rem;
+            padding: 0 1rem;
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 1rem;
+        }
+
+        .carousel-track::-webkit-scrollbar {
+            display: none;
+        }
+
+        .content-card {
+            flex: 0 0 150px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            position: relative;
+            border-radius: 4px;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        @media (min-width: 768px) {
+            .content-card {
+                flex: 0 0 200px;
+            }
+        }
+
+        .content-card:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .content-card:active {
+            transform: scale(0.98);
+        }
+
+        .content-card img {
+            width: 100%;
+            height: 225px;
+            object-fit: cover;
+            background: var(--netflix-gray);
+        }
+
+        @media (min-width: 768px) {
+            .content-card img {
+                height: 300px;
+            }
+        }
+
+        .content-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .content-card:hover .content-info {
+            transform: translateY(0);
+        }
+
+        .content-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .content-meta {
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .quick-action {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
             border-radius: 50%;
-            border-top: 3px solid #E50914;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .play-btn {
-            padding: 10px 24px;
-            background: #fff;
-            color: #000;
-            border: none;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .play-btn:hover {
-            background: rgba(255, 255, 255, 0.75);
-        }
-
-        .info-btn {
-            padding: 10px 24px;
-            background: rgba(109, 109, 110, 0.7);
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .info-btn:hover {
-            background: rgba(109, 109, 110, 0.4);
-        }
-
-        .genre-filter {
             display: flex;
-            gap: 15px;
-            padding: 0 50px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        .genre-btn {
-            padding: 8px 16px;
+        .quick-action:hover {
+            background: var(--netflix-red);
+            transform: scale(1.1);
+        }
+
+        /* Continue Watching */
+        .continue-watching-card {
+            position: relative;
+            flex: 0 0 250px;
+        }
+
+        @media (min-width: 768px) {
+            .continue-watching-card {
+                flex: 0 0 350px;
+            }
+        }
+
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--netflix-red);
+            transition: width 0.3s ease;
+        }
+
+        /* Preference Tuning */
+        .preference-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .preference-section {
+                margin: 2rem 3rem;
+            }
+        }
+
+        .genre-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .genre-chip {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+        }
+
+        .genre-chip.active {
+            background: var(--netflix-red);
+            border-color: var(--netflix-red);
+        }
+
+        .genre-chip:hover {
+            border-color: var(--netflix-red);
+        }
+
+        /* Loading States */
+        .skeleton {
+            background: linear-gradient(90deg, var(--netflix-gray) 25%, #444 50%, var(--netflix-gray) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Empty States */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #666;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Mobile Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            padding: 0.5rem 0;
+            z-index: 1000;
+        }
+
+        @media (min-width: 768px) {
+            .bottom-nav {
+                display: none;
+            }
+        }
+
+        .bottom-nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            color: #999;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .bottom-nav-item.active {
+            color: #fff;
+        }
+
+        .bottom-nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .bottom-nav-label {
+            font-size: 0.75rem;
+        }
+
+        /* Search Bar */
+        .search-container {
+            padding: 0 1rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .search-container {
+                padding: 0 3rem;
+            }
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem;
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
+            border-radius: 4px;
             color: #fff;
-            cursor: pointer;
+            font-size: 1rem;
             transition: all 0.3s ease;
-            font-size: 14px;
         }
 
-        .genre-btn:hover, .genre-btn.active {
-            background: #E50914;
-            border-color: #E50914;
+        .search-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--netflix-red);
         }
 
-        @media (max-width: 768px) {
-            .navbar {
-                padding: 15px 20px;
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--netflix-black);
+            border: 1px solid #333;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            z-index: 100;
+        }
+
+        .search-results.show {
+            display: block;
+        }
+
+        .search-result-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .search-result-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .search-result-poster {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .search-result-info {
+            flex: 1;
+        }
+
+        .search-result-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .search-result-meta {
+            font-size: 0.875rem;
+            color: #999;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 1rem 2rem;
+            border-radius: 4px;
+            display: none;
+            z-index: 3000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 100%);
+                opacity: 0;
             }
-            
-            .content-row {
-                padding: 0 20px;
-            }
-            
-            .hero-content {
-                left: 20px;
-                bottom: 100px;
-            }
-            
-            .content-card {
-                flex: 0 0 150px;
-            }
-            
-            .content-card img {
-                height: 225px;
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
             }
         }
 
-        /* Lazy loading animation */
-        .lazy-img {
+        /* Hamburger Menu */
+        .hamburger {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 2001;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background: #fff;
+            margin: 3px 0;
+            transition: 0.3s;
+        }
+
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(-45deg) translate(-5px, 6px);
+        }
+
+        .hamburger.active span:nth-child(2) {
             opacity: 0;
-            transition: opacity 0.3s ease;
         }
 
-        .lazy-img.loaded {
-            opacity: 1;
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(45deg) translate(-5px, -6px);
+        }
+
+        @media (min-width: 768px) {
+            .hamburger {
+                display: none;
+            }
+        }
+
+        /* Desktop Navigation */
+        .desktop-nav {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .desktop-nav {
+                display: flex;
+                gap: 2rem;
+                align-items: center;
+            }
+        }
+
+        .nav-link {
+            color: #fff;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Adjust for bottom nav on mobile */
+        @media (max-width: 767px) {
+            body {
+                padding-bottom: 60px;
+            }
         }
     </style>
 </head>
 <body>
-    <nav class="navbar transparent" id="navbar">
-        <div class="flex justify-between items-center">
-            <div class="flex items-center gap-8">
-                <div class="logo">MovieRec</div>
-                <div class="hidden md:flex gap-6">
-                    <a href="#" class="hover:text-gray-300 transition">Home</a>
-                    <a href="#movies" class="hover:text-gray-300 transition">Movies</a>
-                    <a href="#tvshows" class="hover:text-gray-300 transition">TV Shows</a>
-                    <a href="#anime" class="hover:text-gray-300 transition">Anime</a>
-                    <a href="#mylist" class="hover:text-gray-300 transition">My List</a>
-                </div>
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+        <div class="p-6">
+            <h2 class="text-2xl font-bold mb-6 text-red-600">MovieRec</h2>
+            <div class="space-y-4">
+                <a href="#home" class="block py-3 text-lg">Home</a>
+                <a href="#watchlist" class="block py-3 text-lg">My List</a>
+                <a href="#favorites" class="block py-3 text-lg">Favorites</a>
+                <a href="profile.html" class="block py-3 text-lg">Profile</a>
+                <a href="#" class="block py-3 text-lg" onclick="logout()">Sign Out</a>
             </div>
-            <div class="flex items-center gap-6">
-                <button class="text-xl hover:text-gray-300 transition">🔍</button>
-                <div class="profile-menu">
-                    <button id="profile-btn" class="flex items-center gap-2 hover:text-gray-300 transition">
-                        <div class="w-8 h-8 bg-red-600 rounded flex items-center justify-center">
-                            <span id="user-initial">U</span>
-                        </div>
-                        <span>▼</span>
-                    </button>
-                    <div class="profile-dropdown" id="profile-dropdown">
-                        <a href="#profile">Profile</a>
-                        <a href="#watchlist">Watchlist</a>
-                        <a href="#favorites">Favorites</a>
-                        <hr class="border-gray-700 my-2">
-                        <a href="#" id="logout-btn">Sign Out</a>
+        </div>
+    </nav>
+    <div class="nav-overlay" id="navOverlay"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="flex items-center gap-4">
+                <div class="hamburger" id="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <div class="logo">MovieRec</div>
+                <nav class="desktop-nav">
+                    <a href="#home" class="nav-link">Home</a>
+                    <a href="#watchlist" class="nav-link">My List</a>
+                    <a href="#favorites" class="nav-link">Favorites</a>
+                </nav>
+            </div>
+            <div class="user-menu">
+                <div class="relative">
+                    <div class="user-avatar" id="userAvatar">
+                        <span id="userInitial">U</span>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <a href="profile.html">Profile</a>
+                        <a href="#settings">Settings</a>
+                        <a href="#" onclick="logout()">Sign Out</a>
                     </div>
                 </div>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <div class="hero-section" id="hero">
-        <div class="hero-content">
-            <h1 class="text-5xl font-bold mb-4" id="hero-title">Loading...</h1>
-            <p class="text-xl mb-6" id="hero-description">Please wait while we load your content...</p>
-            <div class="flex gap-4">
-                <button class="play-btn" id="hero-play">▶ Play</button>
-                <button class="info-btn" id="hero-info">ℹ More Info</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="search-container">
-        <input type="text" class="search-input" placeholder="Search for movies, TV shows, anime..." id="search-input">
-        <div class="search-results" id="search-results"></div>
-    </div>
-
-    <div class="genre-filter">
-        <button class="genre-btn active" data-genre="all">All</button>
-        <button class="genre-btn" data-genre="Action">Action</button>
-        <button class="genre-btn" data-genre="Comedy">Comedy</button>
-        <button class="genre-btn" data-genre="Drama">Drama</button>
-        <button class="genre-btn" data-genre="Horror">Horror</button>
-        <button class="genre-btn" data-genre="Romance">Romance</button>
-        <button class="genre-btn" data-genre="Sci-Fi">Sci-Fi</button>
-        <button class="genre-btn" data-genre="Anime">Anime</button>
-    </div>
-
-    <div class="content-sections">
-        <div class="content-row">
-            <h2>For You</h2>
-            <div class="content-slider" id="for-you">
-                <div class="loader"><div class="spinner"></div></div>
-            </div>
-        </div>
-
-        <div class="content-row">
-            <h2>Trending Now</h2>
-            <div class="content-slider" id="trending">
-                <div class="loader"><div class="spinner"></div></div>
-            </div>
-        </div>
-
-        <div class="content-row">
-            <h2>Popular Movies</h2>
-            <div class="content-slider" id="popular-movies">
-                <div class="loader"><div class="spinner"></div></div>
-            </div>
-        </div>
-
-        <div class="content-row">
-            <h2>Top Rated Anime</h2>
-            <div class="content-slider" id="anime">
-                <div class="loader"><div class="spinner"></div></div>
-            </div>
-        </div>
-
-        <div class="content-row">
-            <h2>Regional Content</h2>
-            <div class="content-slider" id="regional">
-                <div class="loader"><div class="spinner"></div></div>
-            </div>
-        </div>
-
-        <div class="content-row">
-            <h2>Recently Added</h2>
-            <div class="content-slider" id="recently-added">
-                <div class="loader"><div class="spinner"></div></div>
-            </div>
-        </div>
-
-        <div class="content-row">
-            <h2>My Watchlist</h2>
-            <div class="content-slider" id="watchlist">
-                <div class="content-card placeholder">
-                    <span>Your watchlist is empty</span>
+    <!-- Welcome Banner -->
+    <section class="welcome-banner">
+        <div class="welcome-content">
+            <h1 class="welcome-title">Welcome back, <span id="userName">User</span>!</h1>
+            <p class="text-gray-300">Here's what we've picked for you today</p>
+            <div class="user-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="watchlistCount">0</div>
+                    <div class="stat-label">In Watchlist</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="favoritesCount">0</div>
+                    <div class="stat-label">Favorites</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="ratingsCount">0</div>
+                    <div class="stat-label">Rated</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="watchedCount">0</div>
+                    <div class="stat-label">Watched</div>
                 </div>
             </div>
         </div>
+    </section>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+        <div class="relative">
+            <input type="text" class="search-input" placeholder="Search movies, TV shows, anime..." id="searchInput">
+            <div class="search-results" id="searchResults"></div>
+        </div>
     </div>
 
+    <!-- Continue Watching -->
+    <section class="content-section" id="continueWatching" style="display: none;">
+        <div class="section-header">
+            <h2 class="section-title">Continue Watching</h2>
+            <a href="#" class="section-action">View All</a>
+        </div>
+        <div class="content-carousel">
+            <div class="carousel-track" id="continueWatchingCarousel">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Recommended For You -->
+    <section class="content-section">
+        <div class="section-header">
+            <h2 class="section-title">Recommended For You</h2>
+            <a href="#" class="section-action">View All</a>
+        </div>
+        <div class="content-carousel">
+            <div class="carousel-track" id="recommendedCarousel">
+                <!-- Loading skeletons -->
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Based on Recent Activity -->
+    <section class="content-section">
+        <div class="section-header">
+            <h2 class="section-title">Based on Your Recent Activity</h2>
+            <a href="#" class="section-action">View All</a>
+        </div>
+        <div class="content-carousel">
+            <div class="carousel-track" id="recentActivityCarousel">
+                <!-- Loading skeletons -->
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Genre Recommendations -->
+    <section class="content-section" id="genreRecommendations">
+        <!-- Dynamic genre sections -->
+    </section>
+
+    <!-- Watchlist Quick Access -->
+    <section class="content-section" id="watchlistSection">
+        <div class="section-header">
+            <h2 class="section-title">My List</h2>
+            <a href="#" class="section-action">Manage</a>
+        </div>
+        <div class="content-carousel">
+            <div class="carousel-track" id="watchlistCarousel">
+                <div class="empty-state">
+                    <div class="empty-icon">📺</div>
+                    <p>Your watchlist is empty</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recently Added -->
+    <section class="content-section">
+        <div class="section-header">
+            <h2 class="section-title">Recently Added</h2>
+            <a href="#" class="section-action">View All</a>
+        </div>
+        <div class="content-carousel">
+            <div class="carousel-track" id="recentlyAddedCarousel">
+                <!-- Loading skeletons -->
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Preference Tuning -->
+    <section class="preference-section">
+        <h2 class="section-title mb-2">Tune Your Preferences</h2>
+        <p class="text-gray-400 mb-4">Select genres you enjoy for better recommendations</p>
+        <div class="genre-chips" id="genreChips">
+            <button class="genre-chip" data-genre="Action">Action</button>
+            <button class="genre-chip" data-genre="Comedy">Comedy</button>
+            <button class="genre-chip" data-genre="Drama">Drama</button>
+            <button class="genre-chip" data-genre="Horror">Horror</button>
+            <button class="genre-chip" data-genre="Romance">Romance</button>
+            <button class="genre-chip" data-genre="Sci-Fi">Sci-Fi</button>
+            <button class="genre-chip" data-genre="Thriller">Thriller</button>
+            <button class="genre-chip" data-genre="Animation">Animation</button>
+            <button class="genre-chip" data-genre="Documentary">Documentary</button>
+            <button class="genre-chip" data-genre="Fantasy">Fantasy</button>
+        </div>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="#home" class="bottom-nav-item active">
+            <span class="bottom-nav-icon">🏠</span>
+            <span class="bottom-nav-label">Home</span>
+        </a>
+        <a href="#search" class="bottom-nav-item">
+            <span class="bottom-nav-icon">🔍</span>
+            <span class="bottom-nav-label">Search</span>
+        </a>
+        <a href="#watchlist" class="bottom-nav-item">
+            <span class="bottom-nav-icon">📺</span>
+            <span class="bottom-nav-label">My List</span>
+        </a>
+        <a href="profile.html" class="bottom-nav-item">
+            <span class="bottom-nav-icon">👤</span>
+            <span class="bottom-nav-label">Profile</span>
+        </a>
+    </nav>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
     <script>
-        // Global state
+        // API Configuration
+        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        
+        // Global State
         const state = {
             authToken: null,
             userData: null,
             sessionId: null,
-            currentContent: {},
-            searchTimeout: null
+            watchlist: [],
+            favorites: [],
+            searchTimeout: null,
+            preferredGenres: []
         };
 
-       const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!initializeAuth()) return;
+            
+            initializeUI();
+            loadDashboardData();
+            initializeEventListeners();
+        });
 
-        // Initialize state from hash
-        function initializeState() {
+        // Initialize Authentication
+        function initializeAuth() {
             try {
                 const hash = window.location.hash.substring(1);
-                if (hash) {
-                    const data = JSON.parse(atob(hash));
-                    state.authToken = data.token;
-                    state.userData = data.user;
-                    window.location.hash = '';
+                if (!hash) {
+                    window.location.href = 'login.html';
+                    return false;
                 }
-            } catch (e) {
-                console.error('Failed to parse auth data');
-            }
 
-            if (!state.authToken) {
-                window.location.href = 'index.html';
+                const authData = JSON.parse(atob(hash));
+                state.authToken = authData.token;
+                state.userData = authData.user;
+                state.sessionId = Math.random().toString(36).substring(7);
+                
+                window.location.hash = '';
+                return true;
+            } catch (e) {
+                console.error('Auth initialization failed:', e);
+                window.location.href = 'login.html';
                 return false;
             }
-
-            // Update UI with user data
-            if (state.userData) {
-                document.getElementById('user-initial').textContent = state.userData.username[0].toUpperCase();
-            }
-
-            // Generate session ID
-            state.sessionId = Math.random().toString(36).substring(7);
-            
-            return true;
         }
 
-        // API request helper
-        async function apiRequest(endpoint, options = {}) {
-            const headers = {
-                'Content-Type': 'application/json',
-                'Session-ID': state.sessionId,
-                ...options.headers
-            };
-
-            if (state.authToken) {
-                headers['Authorization'] = `Bearer ${state.authToken}`;
+        // Initialize UI
+        function initializeUI() {
+            // Update user info
+            document.getElementById('userName').textContent = state.userData.username;
+            document.getElementById('userInitial').textContent = state.userData.username[0].toUpperCase();
+            
+            // Load preferred genres
+            if (state.userData.preferred_genres) {
+                try {
+                    state.preferredGenres = JSON.parse(state.userData.preferred_genres);
+                    updateGenreChips();
+                } catch (e) {
+                    state.preferredGenres = [];
+                }
             }
+        }
 
-            const response = await fetch(`${API_BASE}${endpoint}`, {
-                ...options,
-                headers
+        // Initialize Event Listeners
+        function initializeEventListeners() {
+            // Navigation
+            const hamburger = document.getElementById('hamburger');
+            const mobileNav = document.getElementById('mobileNav');
+            const navOverlay = document.getElementById('navOverlay');
+            
+            hamburger.addEventListener('click', () => {
+                hamburger.classList.toggle('active');
+                mobileNav.classList.toggle('active');
+                navOverlay.classList.toggle('active');
+                document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
             });
+            
+            navOverlay.addEventListener('click', () => {
+                hamburger.classList.remove('active');
+                mobileNav.classList.remove('active');
+                navOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+            
+            // User dropdown
+            const userAvatar = document.getElementById('userAvatar');
+            const userDropdown = document.getElementById('userDropdown');
+            
+            userAvatar.addEventListener('click', () => {
+                userDropdown.classList.toggle('show');
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (!userAvatar.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+            
+            // Search
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', handleSearch);
+            
+            // Genre chips
+            document.querySelectorAll('.genre-chip').forEach(chip => {
+                chip.addEventListener('click', handleGenreToggle);
+            });
+            
+            // Bottom navigation
+            document.querySelectorAll('.bottom-nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                });
+            });
+        }
 
-            if (response.status === 401) {
-                window.location.href = 'index.html';
+        // API Request Helper
+        async function apiRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    ...options,
+                    headers: {
+                        'Authorization': `Bearer ${state.authToken}`,
+                        'Content-Type': 'application/json',
+                        'Session-ID': state.sessionId,
+                        ...options.headers
+                    }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return null;
+                }
+
+                return response;
+            } catch (error) {
+                console.error('API request failed:', error);
+                showToast('Network error. Please try again.');
                 return null;
             }
-
-            return response;
         }
 
-        // Lazy loading for images
-        function lazyLoadImage(img) {
-            const observer = new IntersectionObserver((entries) => {
+        // Load Dashboard Data
+        async function loadDashboardData() {
+            // Load user stats
+            loadUserStats();
+            
+            // Load recommendations
+            loadPersonalizedRecommendations();
+            
+            // Load watchlist
+            loadWatchlist();
+            
+            // Load homepage recommendations for fallback
+            loadHomepageRecommendations();
+        }
+
+        // Load User Stats
+        async function loadUserStats() {
+            // These would normally come from API endpoints
+            // For now, using placeholder data
+            document.getElementById('watchlistCount').textContent = state.watchlist.length;
+            document.getElementById('favoritesCount').textContent = state.favorites.length;
+            document.getElementById('ratingsCount').textContent = '0';
+            document.getElementById('watchedCount').textContent = '0';
+        }
+
+        // Load Personalized Recommendations
+        async function loadPersonalizedRecommendations() {
+            const response = await apiRequest('/recommendations/personalized');
+            if (!response || !response.ok) return;
+            
+            const data = await response.json();
+            
+            // Recommended For You
+            if (data.for_you && data.for_you.length > 0) {
+                populateCarousel('recommendedCarousel', data.for_you);
+            }
+            
+            // Based on Favorites
+            if (data.based_on_favorites && data.based_on_favorites.length > 0) {
+                populateCarousel('recentActivityCarousel', data.based_on_favorites);
+            }
+            
+            // Genre Deep Dive
+            if (data.genre_deep_dive) {
+                displayGenreRecommendations(data.genre_deep_dive);
+            }
+        }
+
+        // Load Homepage Recommendations
+        async function loadHomepageRecommendations() {
+            const response = await apiRequest('/recommendations/homepage');
+            if (!response || !response.ok) return;
+            
+            const data = await response.json();
+            
+            // Recently Added
+            if (data.recently_added && data.recently_added.length > 0) {
+                populateCarousel('recentlyAddedCarousel', data.recently_added);
+            }
+        }
+
+        // Load Watchlist
+        async function loadWatchlist() {
+            const response = await apiRequest('/user/watchlist');
+            if (!response || !response.ok) return;
+            
+            const data = await response.json();
+            state.watchlist = data.watchlist || [];
+            
+            if (state.watchlist.length > 0) {
+                populateCarousel('watchlistCarousel', state.watchlist);
+            }
+            
+            // Update stats
+            document.getElementById('watchlistCount').textContent = state.watchlist.length;
+        }
+
+        // Search Handler
+        async function handleSearch(e) {
+            const query = e.target.value.trim();
+            const resultsContainer = document.getElementById('searchResults');
+            
+            if (query.length < 2) {
+                resultsContainer.classList.remove('show');
+                return;
+            }
+            
+            // Debounce search
+            clearTimeout(state.searchTimeout);
+            state.searchTimeout = setTimeout(async () => {
+                const response = await apiRequest(`/content/search?q=${encodeURIComponent(query)}`);
+                if (!response || !response.ok) return;
+                
+                const data = await response.json();
+                displaySearchResults(data.results || []);
+            }, 300);
+        }
+
+        // Display Search Results
+        function displaySearchResults(results) {
+            const resultsContainer = document.getElementById('searchResults');
+            
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<div class="search-result-item">No results found</div>';
+            } else {
+                resultsContainer.innerHTML = results.slice(0, 10).map(item => `
+                    <div class="search-result-item" onclick="viewContent(${item.id})">
+                        <img class="search-result-poster" src="${item.poster_url || getPlaceholderImage()}" alt="${item.title}">
+                        <div class="search-result-info">
+                            <div class="search-result-title">${item.title}</div>
+                            <div class="search-result-meta">${item.content_type} • ${item.language || 'Unknown'}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            resultsContainer.classList.add('show');
+        }
+
+        // Genre Toggle Handler
+        function handleGenreToggle(e) {
+            const chip = e.target;
+            const genre = chip.dataset.genre;
+            
+            chip.classList.toggle('active');
+            
+            if (chip.classList.contains('active')) {
+                if (!state.preferredGenres.includes(genre)) {
+                    state.preferredGenres.push(genre);
+                }
+            } else {
+                state.preferredGenres = state.preferredGenres.filter(g => g !== genre);
+            }
+            
+            // Update preferences (would normally save to backend)
+            updateRecommendations();
+        }
+
+        // Update Genre Chips
+        function updateGenreChips() {
+            document.querySelectorAll('.genre-chip').forEach(chip => {
+                const genre = chip.dataset.genre;
+                chip.classList.toggle('active', state.preferredGenres.includes(genre));
+            });
+        }
+
+        // Update Recommendations
+        function updateRecommendations() {
+            showToast('Updating recommendations...');
+            // Reload personalized recommendations
+            loadPersonalizedRecommendations();
+        }
+
+        // Populate Carousel
+        function populateCarousel(carouselId, items) {
+            const carousel = document.getElementById(carouselId);
+            
+            if (!items || items.length === 0) {
+                carousel.innerHTML = '<div class="empty-state"><div class="empty-icon">🎬</div><p>No content available</p></div>';
+                return;
+            }
+            
+            carousel.innerHTML = items.map(item => createContentCard(item)).join('');
+            
+            // Lazy load images
+            carousel.querySelectorAll('.lazy-img').forEach(img => {
+                observeLazyImage(img);
+            });
+        }
+
+        // Create Content Card
+        function createContentCard(content) {
+            const isInWatchlist = state.watchlist.some(w => w.id === content.id);
+            const isFavorite = state.favorites.some(f => f.id === content.id);
+            
+            return `
+                <div class="content-card" onclick="viewContent(${content.id})">
+                    <img 
+                        class="lazy-img" 
+                        data-src="${content.poster_url || getPlaceholderImage()}" 
+                        src="${getPlaceholderImage()}"
+                        alt="${content.title}"
+                    >
+                    <div class="content-info">
+                        <div class="content-title">${content.title}</div>
+                        <div class="content-meta">${content.content_type || 'Movie'} • ${content.rating || 'NR'}</div>
+                        <div class="quick-actions" onclick="event.stopPropagation()">
+                            <button class="quick-action" onclick="toggleWatchlist(${content.id})" title="Add to watchlist">
+                                ${isInWatchlist ? '✓' : '+'}
+                            </button>
+                            <button class="quick-action" onclick="toggleFavorite(${content.id})" title="Add to favorites">
+                                ${isFavorite ? '♥' : '♡'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Display Genre Recommendations
+        function displayGenreRecommendations(genreData) {
+            const container = document.getElementById('genreRecommendations');
+            container.innerHTML = '';
+            
+            Object.entries(genreData).forEach(([genre, items]) => {
+                if (items.length > 0) {
+                    const section = document.createElement('section');
+                    section.className = 'content-section';
+                    section.innerHTML = `
+                        <div class="section-header">
+                            <h2 class="section-title">Because You Like ${genre}</h2>
+                            <a href="#" class="section-action">View All</a>
+                        </div>
+                        <div class="content-carousel">
+                            <div class="carousel-track" id="genre-${genre}">
+                                ${items.map(item => createContentCard(item)).join('')}
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(section);
+                }
+            });
+        }
+
+        // Lazy Image Loading
+        function observeLazyImage(img) {
+            const imageObserver = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const image = entry.target;
@@ -524,216 +1263,101 @@
                     }
                 });
             });
-            observer.observe(img);
-        }
-
-        // Create content card
-        function createContentCard(content) {
-            const card = document.createElement('div');
-            card.className = 'content-card';
-            card.onclick = () => showContentDetails(content.id);
-
-            const img = document.createElement('img');
-            img.className = 'lazy-img';
-            img.dataset.src = content.poster_url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><rect fill="%23333" width="200" height="300"/><text x="50%" y="50%" fill="%23666" text-anchor="middle" dy=".3em">No Image</text></svg>';
-            img.alt = content.title;
             
-            const title = document.createElement('div');
-            title.className = 'content-title';
-            title.textContent = content.title;
-
-            card.appendChild(img);
-            card.appendChild(title);
-
-            lazyLoadImage(img);
-            
-            return card;
+            imageObserver.observe(img);
         }
 
-        // Load homepage recommendations
-        async function loadHomepageRecommendations() {
-            const response = await apiRequest('/recommendations/homepage');
-            if (!response || !response.ok) return;
-
-            const data = await response.json();
-
-            // Update hero section with random trending item
-            if (data.trending && data.trending.length > 0) {
-                const hero = data.trending[Math.floor(Math.random() * Math.min(5, data.trending.length))];
-                document.getElementById('hero').style.background = `linear-gradient(to bottom, transparent 70%, #141414 100%), url('${hero.poster_url}') center/cover`;
-                document.getElementById('hero-title').textContent = hero.title;
-                document.getElementById('hero-description').textContent = hero.synopsis || 'Watch now on MovieRec';
-                document.getElementById('hero-play').onclick = () => showContentDetails(hero.id);
-                document.getElementById('hero-info').onclick = () => showContentDetails(hero.id);
-            }
-
-            // Load content sections
-            const sections = {
-                'trending': data.trending || [],
-                'popular-movies': data.popular || [],
-                'anime': data.anime || [],
-                'regional': data.regional || [],
-                'recently-added': data.recently_added || []
-            };
-
-            for (const [sectionId, items] of Object.entries(sections)) {
-                const container = document.getElementById(sectionId);
-                if (container && items.length > 0) {
-                    container.innerHTML = '';
-                    items.forEach(item => {
-                        container.appendChild(createContentCard(item));
-                    });
-                }
-            }
-
-            // Load personalized recommendations if logged in
-            if (state.authToken) {
-                loadPersonalizedRecommendations();
-            }
-        }
-
-        // Load personalized recommendations
-        async function loadPersonalizedRecommendations() {
-            const response = await apiRequest('/recommendations/personalized');
-            if (!response || !response.ok) return;
-
-            const data = await response.json();
-
-            // Update "For You" section
-            if (data.for_you && data.for_you.length > 0) {
-                const container = document.getElementById('for-you');
-                container.innerHTML = '';
-                data.for_you.forEach(item => {
-                    container.appendChild(createContentCard(item));
-                });
-            }
-
-            // Load user's watchlist
-            loadWatchlist();
-        }
-
-        // Load user's watchlist
-        async function loadWatchlist() {
-            const response = await apiRequest('/user/watchlist');
-            if (!response || !response.ok) return;
-
-            const data = await response.json();
-            const container = document.getElementById('watchlist');
-
-            if (data.watchlist && data.watchlist.length > 0) {
-                container.innerHTML = '';
-                data.watchlist.forEach(item => {
-                    container.appendChild(createContentCard(item));
-                });
-            }
-        }
-
-        // Search functionality
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            const query = e.target.value.trim();
-            const resultsContainer = document.getElementById('search-results');
-
-            if (query.length < 2) {
-                resultsContainer.style.display = 'none';
-                return;
-            }
-
-            // Debounce search
-            clearTimeout(state.searchTimeout);
-            state.searchTimeout = setTimeout(async () => {
-                const response = await apiRequest(`/content/search?q=${encodeURIComponent(query)}`);
-                if (!response || !response.ok) return;
-
-                const data = await response.json();
-                
-                resultsContainer.innerHTML = '';
-                if (data.results && data.results.length > 0) {
-                    data.results.slice(0, 10).forEach(item => {
-                        const resultItem = document.createElement('div');
-                        resultItem.className = 'search-result-item';
-                        resultItem.onclick = () => {
-                            showContentDetails(item.id);
-                            resultsContainer.style.display = 'none';
-                            e.target.value = '';
-                        };
-
-                        resultItem.innerHTML = `
-                            <img src="${item.poster_url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 90"><rect fill="%23333" width="60" height="90"/></svg>'}" alt="${item.title}">
-                            <div>
-                                <div class="font-semibold">${item.title}</div>
-                                <div class="text-sm text-gray-400">${item.content_type} • ${item.language || 'Unknown'}</div>
-                            </div>
-                        `;
-
-                        resultsContainer.appendChild(resultItem);
-                    });
-                    resultsContainer.style.display = 'block';
-                } else {
-                    resultsContainer.innerHTML = '<div class="search-result-item">No results found</div>';
-                    resultsContainer.style.display = 'block';
-                }
-            }, 300);
-        });
-
-        // Close search results when clicking outside
-        document.addEventListener('click', (e) => {
-            const searchContainer = document.querySelector('.search-container');
-            if (!searchContainer.contains(e.target)) {
-                document.getElementById('search-results').style.display = 'none';
-            }
-        });
-
-        // Show content details
-        function showContentDetails(contentId) {
-            // Store content ID for details page
-            window.location.hash = btoa(JSON.stringify({
+        // View Content
+        function viewContent(contentId) {
+            const authData = btoa(JSON.stringify({
                 token: state.authToken,
                 user: state.userData,
                 contentId: contentId
             }));
-            window.location.href = 'details.html';
+            window.location.href = `movie-detail.html#${authData}`;
         }
 
-        // Profile dropdown
-        document.getElementById('profile-btn').addEventListener('click', () => {
-            const dropdown = document.getElementById('profile-dropdown');
-            dropdown.classList.toggle('show');
-        });
+        // Toggle Watchlist
+        async function toggleWatchlist(contentId) {
+            const isInWatchlist = state.watchlist.some(w => w.id === contentId);
+            
+            if (isInWatchlist) {
+                const response = await apiRequest(`/user/watchlist?content_id=${contentId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response && response.ok) {
+                    state.watchlist = state.watchlist.filter(w => w.id !== contentId);
+                    showToast('Removed from watchlist');
+                }
+            } else {
+                const response = await apiRequest('/user/watchlist', {
+                    method: 'POST',
+                    body: JSON.stringify({ content_id: contentId })
+                });
+                
+                if (response && response.ok) {
+                    showToast('Added to watchlist');
+                    loadWatchlist(); // Reload watchlist
+                }
+            }
+        }
+
+        // Toggle Favorite
+        async function toggleFavorite(contentId) {
+            const isFavorite = state.favorites.some(f => f.id === contentId);
+            
+            if (isFavorite) {
+                const response = await apiRequest(`/user/favorites?content_id=${contentId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response && response.ok) {
+                    state.favorites = state.favorites.filter(f => f.id !== contentId);
+                    showToast('Removed from favorites');
+                }
+            } else {
+                const response = await apiRequest('/user/favorites', {
+                    method: 'POST',
+                    body: JSON.stringify({ content_id: contentId })
+                });
+                
+                if (response && response.ok) {
+                    showToast('Added to favorites');
+                }
+            }
+        }
+
+        // Show Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Get Placeholder Image
+        function getPlaceholderImage() {
+            return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><rect fill="%23333" width="200" height="300"/><text x="50%" y="50%" fill="%23666" text-anchor="middle" dy=".3em">No Image</text></svg>';
+        }
 
         // Logout
-        document.getElementById('logout-btn').addEventListener('click', (e) => {
-            e.preventDefault();
+        function logout() {
             state.authToken = null;
             state.userData = null;
-            window.location.href = 'index.html';
-        });
+            window.location.href = 'login.html';
+        }
 
-        // Genre filter
-        document.querySelectorAll('.genre-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                const genre = btn.dataset.genre;
-                // Implement genre filtering
-                console.log('Filter by genre:', genre);
-            });
-        });
-
-        // Navbar scroll effect
-        window.addEventListener('scroll', () => {
-            const navbar = document.getElementById('navbar');
-            if (window.scrollY > 100) {
-                navbar.classList.remove('transparent');
-            } else {
-                navbar.classList.add('transparent');
+        // Handle clicks outside search
+        document.addEventListener('click', (e) => {
+            const searchContainer = document.querySelector('.search-container');
+            if (!searchContainer.contains(e.target)) {
+                document.getElementById('searchResults').classList.remove('show');
             }
         });
-
-        // Initialize
-        if (initializeState()) {
-            loadHomepageRecommendations();
-        }
     </script>
 </body>
 </html>

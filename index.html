@@ -2,327 +2,922 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieRec - Your Personal Movie Recommendation Engine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#141414">
+    <title>MovieRec - Discover Your Next Favorite</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* CSS Variables */
+        :root {
+            --mobile: 320px;
+            --tablet: 768px;
+            --desktop: 1024px;
+            --large: 1440px;
+            --netflix-red: #E50914;
+            --netflix-black: #141414;
+            --netflix-gray: #333333;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            font-family: 'Netflix Sans', 'Helvetica Neue', Arial, sans-serif;
-            background: #141414;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--netflix-black);
             color: #fff;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            touch-action: pan-y;
         }
 
-        .hero-bg {
-            position: relative;
+        /* Mobile Navigation */
+        .mobile-nav {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 80%;
+            max-width: 320px;
             height: 100vh;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.8) 100%),
-                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><rect fill="%23141414" width="1920" height="1080"/><path fill="%23E50914" opacity="0.1" d="M0,540 Q480,440 960,540 T1920,540 L1920,1080 L0,1080 Z"/></svg>');
-            background-size: cover;
-            background-position: center;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            transition: left 0.3s ease;
+            overflow-y: auto;
         }
 
-        .navbar {
+        .mobile-nav.active {
+            left: 0;
+        }
+
+        .nav-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1999;
+            display: none;
+        }
+
+        .nav-overlay.active {
+            display: block;
+        }
+
+        /* Header */
+        .header {
             position: fixed;
             top: 0;
             width: 100%;
-            padding: 20px 50px;
             background: linear-gradient(to bottom, rgba(0,0,0,0.7) 10%, transparent);
             z-index: 1000;
             transition: all 0.3s ease;
         }
 
-        .navbar.scrolled {
+        .header.scrolled {
             background: rgba(20, 20, 20, 0.95);
-            padding: 15px 50px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .header-content {
+                padding: 1.5rem 3rem;
+            }
         }
 
         .logo {
-            font-size: 2.5rem;
+            font-size: 1.5rem;
             font-weight: bold;
-            color: #E50914;
+            color: var(--netflix-red);
             text-transform: uppercase;
             letter-spacing: 2px;
         }
 
-        .login-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.75);
-            padding: 60px;
-            border-radius: 8px;
-            width: 450px;
-            max-width: 90%;
+        @media (min-width: 768px) {
+            .logo {
+                font-size: 2rem;
+            }
         }
 
-        .form-input {
-            width: 100%;
-            padding: 16px 20px;
-            background: #333;
-            border: none;
-            border-radius: 4px;
+        /* Hamburger Menu */
+        .hamburger {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 2001;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background: #fff;
+            margin: 3px 0;
+            transition: 0.3s;
+        }
+
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(-45deg) translate(-5px, 6px);
+        }
+
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(45deg) translate(-5px, -6px);
+        }
+
+        @media (min-width: 768px) {
+            .hamburger {
+                display: none;
+            }
+        }
+
+        /* Desktop Navigation */
+        .desktop-nav {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .desktop-nav {
+                display: flex;
+                gap: 2rem;
+                align-items: center;
+            }
+        }
+
+        .nav-link {
             color: #fff;
-            font-size: 16px;
-            margin-bottom: 16px;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
             transition: background 0.3s ease;
         }
 
-        .form-input:focus {
-            outline: none;
-            background: #454545;
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        .submit-btn {
-            width: 100%;
-            padding: 16px;
-            background: #E50914;
-            color: #fff;
+        /* Hero Section */
+        .hero {
+            position: relative;
+            height: 100vh;
+            min-height: 500px;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            background: linear-gradient(to bottom, transparent 0%, rgba(20,20,20,0.3) 50%, var(--netflix-black) 100%),
+                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><rect fill="%23141414" width="1920" height="1080"/><path fill="%23E50914" opacity="0.1" d="M0,540 Q480,440 960,540 T1920,540 L1920,1080 L0,1080 Z"/></svg>');
+            background-size: cover;
+            background-position: center;
+        }
+
+        @media (min-width: 768px) {
+            .hero {
+                padding: 0 3rem;
+            }
+        }
+
+        .hero-content {
+            max-width: 600px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        @media (min-width: 768px) {
+            .hero h1 {
+                font-size: 3.5rem;
+            }
+        }
+
+        .hero p {
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        @media (min-width: 768px) {
+            .hero p {
+                font-size: 1.25rem;
+            }
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
             border: none;
             border-radius: 4px;
-            font-size: 16px;
+            font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.3s ease;
+            transition: all 0.3s ease;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
         }
 
-        .submit-btn:hover {
+        .btn-primary {
+            background: var(--netflix-red);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
             background: #f40612;
+            transform: scale(1.05);
         }
 
-        .submit-btn:disabled {
-            background: #666;
-            cursor: not-allowed;
+        .btn-primary:active {
+            transform: scale(0.98);
         }
 
-        .error-message {
-            background: #831212;
-            padding: 10px;
+        .btn-secondary {
+            background: rgba(109, 109, 110, 0.7);
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(109, 109, 110, 0.4);
+        }
+
+        /* Content Carousel */
+        .content-section {
+            padding: 2rem 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .content-section {
+                padding: 3rem;
+            }
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .content-carousel {
+            position: relative;
+            overflow: hidden;
+            margin: 0 -1rem;
+            padding: 0 1rem;
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 1rem;
+        }
+
+        .carousel-track::-webkit-scrollbar {
+            display: none;
+        }
+
+        .content-card {
+            flex: 0 0 150px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            position: relative;
             border-radius: 4px;
-            margin-bottom: 16px;
-            display: none;
+            overflow: hidden;
+            touch-action: manipulation;
         }
 
-        .loader {
-            display: none;
-            border: 3px solid #333;
-            border-radius: 50%;
-            border-top: 3px solid #E50914;
+        @media (min-width: 768px) {
+            .content-card {
+                flex: 0 0 200px;
+            }
+        }
+
+        .content-card:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .content-card:active {
+            transform: scale(0.98);
+        }
+
+        .content-card img {
+            width: 100%;
+            height: 225px;
+            object-fit: cover;
+            background: var(--netflix-gray);
+        }
+
+        @media (min-width: 768px) {
+            .content-card img {
+                height: 300px;
+            }
+        }
+
+        .content-card-placeholder {
+            width: 100%;
+            height: 225px;
+            background: var(--netflix-gray);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+
+        @media (min-width: 768px) {
+            .content-card-placeholder {
+                height: 300px;
+            }
+        }
+
+        .lazy-img {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .lazy-img.loaded {
+            opacity: 1;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 3rem 1rem;
+            background: rgba(20, 20, 20, 0.5);
+        }
+
+        @media (min-width: 768px) {
+            .features {
+                padding: 5rem 3rem;
+            }
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        @media (min-width: 768px) {
+            .features-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .feature-card {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* Loading Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--netflix-gray) 25%, #444 50%, var(--netflix-gray) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Footer */
+        .footer {
+            padding: 2rem 1rem;
+            text-align: center;
+            background: #000;
+            margin-top: 3rem;
+        }
+
+        @media (min-width: 768px) {
+            .footer {
+                padding: 3rem;
+            }
+        }
+
+        /* Scroll Hint */
+        .scroll-hint {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
             width: 40px;
             height: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .carousel-container:hover .scroll-hint {
+            opacity: 1;
+        }
+
+        /* Touch feedback */
+        .touchable {
+            -webkit-tap-highlight-color: rgba(229, 9, 20, 0.1);
+        }
+
+        /* Pull to refresh */
+        .pull-to-refresh {
+            position: fixed;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            background: var(--netflix-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: top 0.3s ease;
+            z-index: 3000;
+        }
+
+        .pull-to-refresh.active {
+            top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            padding: 50px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .feature-card {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 30px;
-            border-radius: 8px;
-            text-align: center;
-            transition: transform 0.3s ease, background 0.3s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 20px;
-            color: #E50914;
-        }
-
-        @media (max-width: 768px) {
-            .login-container {
-                padding: 40px 30px;
-            }
-            
-            .navbar {
-                padding: 15px 20px;
-            }
-        }
     </style>
 </head>
 <body>
-    <nav class="navbar" id="navbar">
-        <div class="flex justify-between items-center">
-            <div class="logo">MovieRec</div>
-            <div>
-                <a href="register.html" class="text-white hover:text-gray-300 transition">Sign Up</a>
+    <!-- Pull to Refresh Indicator -->
+    <div class="pull-to-refresh" id="pullToRefresh">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+        <div class="p-6">
+            <h2 class="text-2xl font-bold mb-6 text-red-600">MovieRec</h2>
+            <div class="space-y-4">
+                <a href="login.html" class="block py-3 text-lg touchable">Sign In</a>
+                <a href="login.html" class="block py-3 text-lg touchable">Sign Up</a>
+                <a href="#trending" class="block py-3 text-lg touchable">Trending</a>
+                <a href="#popular" class="block py-3 text-lg touchable">Popular</a>
+                <a href="#anime" class="block py-3 text-lg touchable">Anime</a>
+                <a href="#regional" class="block py-3 text-lg touchable">Regional</a>
             </div>
         </div>
     </nav>
+    <div class="nav-overlay" id="navOverlay"></div>
 
-    <div class="hero-bg">
-        <div class="login-container">
-            <h1 class="text-3xl font-bold mb-8">Sign In</h1>
-            
-            <div class="error-message" id="error-message"></div>
-            
-            <form id="login-form">
-                <input type="text" class="form-input" placeholder="Username or Email" id="username" required>
-                <input type="password" class="form-input" placeholder="Password" id="password" required>
-                
-                <button type="submit" class="submit-btn" id="submit-btn">Sign In</button>
-            </form>
-            
-            <div class="loader" id="loader"></div>
-            
-            <div class="mt-6 text-gray-400">
-                <p>New to MovieRec? <a href="register.html" class="text-white hover:underline">Sign up now</a></p>
+    <!-- Header -->
+    <header class="header" id="header">
+        <div class="header-content">
+            <div class="hamburger touchable" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
             </div>
-            
-            <div class="mt-4 text-sm text-gray-500">
-                <p>Demo Admin: admin / AdminPass123!</p>
-            </div>
+            <div class="logo">MovieRec</div>
+            <nav class="desktop-nav">
+                <a href="#trending" class="nav-link">Trending</a>
+                <a href="#popular" class="nav-link">Popular</a>
+                <a href="#anime" class="nav-link">Anime</a>
+                <a href="#regional" class="nav-link">Regional</a>
+                <a href="login.html" class="btn btn-primary">Sign In</a>
+            </nav>
         </div>
-    </div>
+    </header>
 
-    <section class="py-20 px-4">
-        <h2 class="text-4xl font-bold text-center mb-12">Why Choose MovieRec?</h2>
-        <div class="feature-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🎬</div>
-                <h3 class="text-xl font-bold mb-3">Personalized Recommendations</h3>
-                <p class="text-gray-400">AI-powered recommendations based on your viewing history and preferences</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🌏</div>
-                <h3 class="text-xl font-bold mb-3">Regional Content</h3>
-                <p class="text-gray-400">Discover movies in Telugu, Hindi, Tamil, Kannada, and more languages</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">⚡</div>
-                <h3 class="text-xl font-bold mb-3">Real-time Updates</h3>
-                <p class="text-gray-400">Get the latest trending movies, TV shows, and anime instantly</p>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Unlimited movies, TV shows, and anime</h1>
+            <p>Watch anywhere. Discover anytime. Get personalized recommendations powered by AI.</p>
+            <div class="cta-buttons">
+                <a href="login.html" class="btn btn-primary touchable">Get Started</a>
+                <button class="btn btn-secondary touchable" onclick="scrollToContent()">Browse Content</button>
             </div>
         </div>
     </section>
 
+    <!-- Trending Section -->
+    <section class="content-section" id="trending">
+        <h2 class="section-title">Trending Now</h2>
+        <div class="content-carousel">
+            <div class="carousel-track" id="trendingCarousel">
+                <!-- Loading skeletons -->
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+            </div>
+            <div class="scroll-hint">→</div>
+        </div>
+    </section>
+
+    <!-- Popular Movies Section -->
+    <section class="content-section" id="popular">
+        <h2 class="section-title">Popular Movies</h2>
+        <div class="content-carousel">
+            <div class="carousel-track" id="popularCarousel">
+                <!-- Loading skeletons -->
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+            </div>
+            <div class="scroll-hint">→</div>
+        </div>
+    </section>
+
+    <!-- Anime Section -->
+    <section class="content-section" id="anime">
+        <h2 class="section-title">Top Anime</h2>
+        <div class="content-carousel">
+            <div class="carousel-track" id="animeCarousel">
+                <!-- Loading skeletons -->
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+            </div>
+            <div class="scroll-hint">→</div>
+        </div>
+    </section>
+
+    <!-- Regional Content Section -->
+    <section class="content-section" id="regional">
+        <h2 class="section-title">Regional Favorites</h2>
+        <div class="content-carousel">
+            <div class="carousel-track" id="regionalCarousel">
+                <!-- Loading skeletons -->
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+                <div class="content-card skeleton"></div>
+            </div>
+            <div class="scroll-hint">→</div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="features-grid">
+            <div class="feature-card touchable">
+                <span class="feature-icon">🎬</span>
+                <h3 class="text-xl font-bold mb-3">Personalized for You</h3>
+                <p class="text-gray-400">AI-powered recommendations that learn your taste</p>
+            </div>
+            <div class="feature-card touchable">
+                <span class="feature-icon">🌏</span>
+                <h3 class="text-xl font-bold mb-3">Regional Content</h3>
+                <p class="text-gray-400">Discover movies in Telugu, Hindi, Tamil, and more</p>
+            </div>
+            <div class="feature-card touchable">
+                <span class="feature-icon">📱</span>
+                <h3 class="text-xl font-bold mb-3">Watch Anywhere</h3>
+                <p class="text-gray-400">Seamless experience across all your devices</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="text-gray-400">&copy; 2024 MovieRec. All rights reserved.</p>
+    </footer>
+
     <script>
-        // API configuration
-       const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        // Navbar scroll effect
-        window.addEventListener('scroll', () => {
-            const navbar = document.getElementById('navbar');
-            if (window.scrollY > 100) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
+        // API Configuration
+        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        
+        // Global State
+        const state = {
+            sessionId: Math.random().toString(36).substring(7),
+            touchStartY: 0,
+            pullDistance: 0,
+            isRefreshing: false
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeNavigation();
+            initializeScrollEffects();
+            initializeTouchGestures();
+            loadHomepageContent();
         });
 
-        // Login form handler
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const loader = document.getElementById('loader');
-            const errorMsg = document.getElementById('error-message');
-            const submitBtn = document.getElementById('submit-btn');
-            const form = e.target;
-            
-            // Reset error message
-            errorMsg.style.display = 'none';
-            errorMsg.textContent = '';
-            
-            // Show loader and disable form
-            loader.style.display = 'block';
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Signing in...';
-            
-            const formData = {
-                username: document.getElementById('username').value.trim(),
-                password: document.getElementById('password').value
-            };
-            
-            try {
-                const response = await fetch(`${API_BASE}/auth/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.token) {
-                    // Successfully logged in
-                    // Create auth data for passing to next page
-                    const authData = btoa(JSON.stringify({
-                        token: data.token,
-                        user: data.user
-                    }));
-                    
-                    // Redirect based on user type
-                    if (data.user.is_admin) {
-                        window.location.href = `admin.html#${authData}`;
-                    } else {
-                        window.location.href = `dashboard.html#${authData}`;
-                    }
+        // Navigation
+        function initializeNavigation() {
+            const hamburger = document.getElementById('hamburger');
+            const mobileNav = document.getElementById('mobileNav');
+            const navOverlay = document.getElementById('navOverlay');
+
+            hamburger.addEventListener('click', toggleMobileNav);
+            navOverlay.addEventListener('click', closeMobileNav);
+
+            // Close mobile nav on link click
+            mobileNav.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', closeMobileNav);
+            });
+
+            function toggleMobileNav() {
+                hamburger.classList.toggle('active');
+                mobileNav.classList.toggle('active');
+                navOverlay.classList.toggle('active');
+                document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+            }
+
+            function closeMobileNav() {
+                hamburger.classList.remove('active');
+                mobileNav.classList.remove('active');
+                navOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Scroll Effects
+        function initializeScrollEffects() {
+            const header = document.getElementById('header');
+            let lastScrollY = window.scrollY;
+
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 100) {
+                    header.classList.add('scrolled');
                 } else {
-                    // Show error message
-                    errorMsg.textContent = data.message || 'Invalid credentials. Please try again.';
-                    errorMsg.style.display = 'block';
-                    
-                    // Re-enable form
-                    loader.style.display = 'none';
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Sign In';
+                    header.classList.remove('scrolled');
                 }
-            } catch (error) {
-                console.error('Login error:', error);
-                errorMsg.textContent = 'Network error. Please check your connection and try again.';
-                errorMsg.style.display = 'block';
-                
-                // Re-enable form
-                loader.style.display = 'none';
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Sign In';
-            }
-        });
 
-        // Check if user is already logged in (came back from another page)
-        window.addEventListener('load', () => {
-            const hash = window.location.hash.substring(1);
-            if (hash) {
-                try {
-                    const authData = JSON.parse(atob(hash));
-                    if (authData.token && authData.user) {
-                        // User is already logged in, redirect appropriately
-                        if (authData.user.is_admin) {
-                            window.location.href = `admin.html#${hash}`;
-                        } else {
-                            window.location.href = `dashboard.html#${hash}`;
+                lastScrollY = window.scrollY;
+            });
+        }
+
+        // Touch Gestures
+        function initializeTouchGestures() {
+            const pullToRefresh = document.getElementById('pullToRefresh');
+            let touchStartY = 0;
+            let touchEndY = 0;
+
+            // Pull to refresh (mobile only)
+            if ('ontouchstart' in window) {
+                document.addEventListener('touchstart', (e) => {
+                    if (window.scrollY === 0) {
+                        touchStartY = e.touches[0].clientY;
+                    }
+                }, { passive: true });
+
+                document.addEventListener('touchmove', (e) => {
+                    if (window.scrollY === 0 && touchStartY > 0) {
+                        touchEndY = e.touches[0].clientY;
+                        const pullDistance = touchEndY - touchStartY;
+                        
+                        if (pullDistance > 0 && pullDistance < 150) {
+                            e.preventDefault();
+                            pullToRefresh.style.top = `${Math.min(pullDistance - 60, 20)}px`;
+                            
+                            if (pullDistance > 80) {
+                                pullToRefresh.classList.add('active');
+                            }
                         }
                     }
-                } catch (e) {
-                    // Invalid hash, ignore
-                    window.location.hash = '';
-                }
+                }, { passive: false });
+
+                document.addEventListener('touchend', () => {
+                    const pullDistance = touchEndY - touchStartY;
+                    
+                    if (pullDistance > 80 && !state.isRefreshing) {
+                        refreshContent();
+                    } else {
+                        pullToRefresh.style.top = '-60px';
+                        pullToRefresh.classList.remove('active');
+                    }
+                    
+                    touchStartY = 0;
+                    touchEndY = 0;
+                });
             }
+
+            // Horizontal scroll for carousels
+            document.querySelectorAll('.carousel-track').forEach(carousel => {
+                let isDown = false;
+                let startX;
+                let scrollLeft;
+
+                carousel.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    startX = e.pageX - carousel.offsetLeft;
+                    scrollLeft = carousel.scrollLeft;
+                });
+
+                carousel.addEventListener('mouseleave', () => {
+                    isDown = false;
+                });
+
+                carousel.addEventListener('mouseup', () => {
+                    isDown = false;
+                });
+
+                carousel.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - carousel.offsetLeft;
+                    const walk = (x - startX) * 2;
+                    carousel.scrollLeft = scrollLeft - walk;
+                });
+            });
+        }
+
+        // Scroll to content
+        function scrollToContent() {
+            document.getElementById('trending').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Refresh content
+        async function refreshContent() {
+            if (state.isRefreshing) return;
+            
+            state.isRefreshing = true;
+            const pullToRefresh = document.getElementById('pullToRefresh');
+            pullToRefresh.classList.add('active');
+
+            await loadHomepageContent();
+
+            setTimeout(() => {
+                pullToRefresh.style.top = '-60px';
+                pullToRefresh.classList.remove('active');
+                state.isRefreshing = false;
+            }, 500);
+        }
+
+        // Load homepage content
+        async function loadHomepageContent() {
+            try {
+                const response = await fetch(`${API_BASE}/recommendations/homepage`, {
+                    headers: {
+                        'Session-ID': state.sessionId
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Populate carousels
+                    populateCarousel('trendingCarousel', data.trending || []);
+                    populateCarousel('popularCarousel', data.popular || []);
+                    populateCarousel('animeCarousel', data.anime || []);
+                    populateCarousel('regionalCarousel', data.regional || []);
+                }
+            } catch (error) {
+                console.error('Failed to load content:', error);
+                // Show error state
+                document.querySelectorAll('.carousel-track').forEach(carousel => {
+                    carousel.innerHTML = '<div class="content-card-placeholder">Failed to load content</div>';
+                });
+            }
+        }
+
+        // Populate carousel with content
+        function populateCarousel(carouselId, items) {
+            const carousel = document.getElementById(carouselId);
+            
+            if (items.length === 0) {
+                carousel.innerHTML = '<div class="content-card-placeholder">No content available</div>';
+                return;
+            }
+
+            carousel.innerHTML = items.map(item => createContentCard(item)).join('');
+            
+            // Lazy load images
+            carousel.querySelectorAll('.lazy-img').forEach(img => {
+                observeLazyImage(img);
+            });
+        }
+
+        // Create content card HTML
+        function createContentCard(content) {
+            const placeholderImage = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><rect fill="%23333" width="200" height="300"/><text x="50%" y="50%" fill="%23666" text-anchor="middle" dy=".3em">No Image</text></svg>';
+            
+            return `
+                <div class="content-card touchable" onclick="showContentDetails('${content.id}')">
+                    <img 
+                        class="lazy-img" 
+                        data-src="${content.poster_url || placeholderImage}" 
+                        src="${placeholderImage}"
+                        alt="${content.title}"
+                    >
+                </div>
+            `;
+        }
+
+        // Lazy loading
+        function observeLazyImage(img) {
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const image = entry.target;
+                        image.src = image.dataset.src;
+                        image.classList.add('loaded');
+                        observer.unobserve(image);
+                    }
+                });
+            });
+            
+            imageObserver.observe(img);
+        }
+
+        // Show content details
+        function showContentDetails(contentId) {
+            // Store content ID for details page
+            const detailsUrl = `movie-detail.html#${btoa(JSON.stringify({
+                contentId: contentId,
+                sessionId: state.sessionId
+            }))}`;
+            window.location.href = detailsUrl;
+        }
+
+        // Handle smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Add touch feedback
+        document.querySelectorAll('.touchable').forEach(element => {
+            element.addEventListener('touchstart', function() {
+                this.style.opacity = '0.7';
+            });
+            
+            element.addEventListener('touchend', function() {
+                this.style.opacity = '1';
+            });
         });
     </script>
 </body>
