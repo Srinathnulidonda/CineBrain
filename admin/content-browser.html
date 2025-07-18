@@ -110,6 +110,25 @@
             background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(10px);
         }
+
+        .telegram-status {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            margin-top: 8px;
+        }
+
+        .telegram-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .telegram-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -119,7 +138,7 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
                     <h1 class="text-2xl font-bold text-red-600">CineScope Admin</h1>
-                    <span class="text-gray-400">Content Browser</span>
+                    <span class="text-gray-400">Content Browser & Telegram Posting</span>
                 </div>
                 
                 <div class="flex items-center space-x-4">
@@ -138,7 +157,7 @@
                     📊 Dashboard
                 </a>
                 <a href="#" class="nav-item" style="background: var(--primary); color: white;">
-                    🔍 Browse Content
+                    🔍 Browse & Post
                 </a>
                 <a href="posts.html" class="nav-item">
                     📝 Manage Posts
@@ -150,6 +169,17 @@
                     👤 User View
                 </a>
             </nav>
+
+            <!-- Telegram Status -->
+            <div class="mt-6 p-4 bg-gray-800 rounded-lg">
+                <h3 class="text-sm font-semibold mb-2">📱 Telegram Channel</h3>
+                <div id="telegramStatus" class="text-xs text-gray-400">
+                    Checking connection...
+                </div>
+                <button onclick="testTelegramConnection()" class="mt-2 text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">
+                    Test Connection
+                </button>
+            </div>
         </div>
     </div>
 
@@ -158,8 +188,8 @@
         <div class="p-6">
             <!-- Header -->
             <div class="mb-8">
-                <h1 class="text-3xl font-bold mb-2">Content Browser</h1>
-                <p class="text-gray-400">Search and curate content from multiple sources</p>
+                <h1 class="text-3xl font-bold mb-2">Content Browser & Telegram Posting</h1>
+                <p class="text-gray-400">Search content from multiple sources and post recommendations to Telegram channel</p>
             </div>
 
             <!-- Search Section -->
@@ -180,7 +210,7 @@
                         id="searchBtn"
                         class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition whitespace-nowrap"
                     >
-                        🔍 Search
+                        🔍 Search Content
                     </button>
                 </div>
 
@@ -193,7 +223,7 @@
                         🎌 Anime (Jikan)
                     </div>
                     <div class="source-tab" data-source="omdb">
-                        🎭 OMDb
+                        🎭 OMDb Database
                     </div>
                 </div>
 
@@ -230,13 +260,13 @@
             <!-- Search Results -->
             <div class="admin-card p-6">
                 <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xl font-bold">Search Results</h2>
+                    <h2 class="text-xl font-bold">🎯 Search Results</h2>
                     <div id="resultsCount" class="text-gray-400"></div>
                 </div>
                 
                 <div id="searchResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     <div class="text-center text-gray-400 py-12 col-span-full">
-                        Use the search above to find content from multiple sources
+                        💡 Use the search above to find content from multiple sources and post to Telegram
                     </div>
                 </div>
 
@@ -248,7 +278,7 @@
         </div>
     </div>
 
-    <!-- Recommendation Modal -->
+    <!-- Recommendation & Telegram Posting Modal -->
     <div id="recommendationModal" class="hidden fixed inset-0 recommendation-modal z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-screen overflow-y-auto">
             <div class="flex items-start space-x-6 mb-6">
@@ -266,31 +296,53 @@
 
             <form id="recommendationForm">
                 <div class="mb-4">
-                    <label class="block text-gray-300 font-medium mb-2">Recommendation Type</label>
+                    <label class="block text-gray-300 font-medium mb-2">📋 Recommendation Type</label>
                     <select id="recommendationType" class="search-input w-full">
-                        <option value="admin_choice">Admin's Choice</option>
-                        <option value="trending">Trending</option>
-                        <option value="popular">Popular</option>
-                        <option value="critics_choice">Critics' Choice</option>
+                        <option value="admin_choice">👑 Admin's Choice</option>
+                        <option value="trending">🔥 Trending Now</option>
+                        <option value="popular">⭐ Popular Pick</option>
+                        <option value="critics_choice">🏆 Critics' Choice</option>
                     </select>
                 </div>
 
-                <div class="mb-6">
-                    <label class="block text-gray-300 font-medium mb-2">Your Recommendation</label>
+                <div class="mb-4">
+                    <label class="block text-gray-300 font-medium mb-2">📝 Your Recommendation Description</label>
                     <textarea 
                         id="recommendationDescription" 
                         class="search-input w-full h-24 resize-none"
-                        placeholder="Why do you recommend this content? What makes it special?"
+                        placeholder="Why do you recommend this content? What makes it special? This will be posted to Telegram..."
                         required
                     ></textarea>
+                    <div class="text-xs text-gray-500 mt-1">
+                        💡 This description will be included in the Telegram post to your channel
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="postToTelegram" class="mr-2" checked>
+                        <span class="text-gray-300">📱 Post to Telegram Channel</span>
+                    </label>
+                    <div class="text-xs text-gray-500 mt-1">
+                        Automatically share this recommendation with your Telegram audience
+                    </div>
+                </div>
+
+                <!-- Telegram Preview -->
+                <div class="mb-6 p-4 bg-gray-700 rounded-lg">
+                    <h4 class="text-sm font-semibold mb-2 text-blue-400">📱 Telegram Post Preview:</h4>
+                    <div id="telegramPreview" class="text-xs text-gray-300 whitespace-pre-line">
+                        Preview will appear here...
+                    </div>
                 </div>
 
                 <div class="flex space-x-4">
                     <button 
                         type="submit" 
                         class="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-700 transition font-medium"
+                        id="submitBtn"
                     >
-                        📝 Create Recommendation
+                        📝 Create & Post Recommendation
                     </button>
                     <button 
                         type="button" 
@@ -300,6 +352,9 @@
                         Cancel
                     </button>
                 </div>
+
+                <!-- Status Messages -->
+                <div id="statusMessage" class="hidden mt-4"></div>
             </form>
         </div>
     </div>
@@ -378,7 +433,7 @@
         async function performSearch(page = 1) {
             const query = document.getElementById('searchInput').value.trim();
             if (!query) {
-                alert('Please enter a search term');
+                showStatus('Please enter a search term', 'error');
                 return;
             }
 
@@ -466,7 +521,7 @@
                                 onclick="openRecommendationModal(${JSON.stringify(item).replace(/"/g, '&quot;')})"
                                 class="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition text-sm font-medium"
                             >
-                                📝 Create Recommendation
+                                📝 Recommend & Post to Telegram
                             </button>
                         </div>
                     </div>
@@ -537,13 +592,55 @@
             document.getElementById('modalYear').textContent = content.release_date ? new Date(content.release_date).getFullYear() : 'Unknown';
             document.getElementById('modalType').textContent = (content.content_type || 'movie').toUpperCase();
             
+            // Setup live preview
+            setupTelegramPreview();
+            
             document.getElementById('recommendationModal').classList.remove('hidden');
         }
 
         function closeRecommendationModal() {
             document.getElementById('recommendationModal').classList.add('hidden');
             document.getElementById('recommendationForm').reset();
+            document.getElementById('statusMessage').classList.add('hidden');
             selectedContent = null;
+        }
+
+        function setupTelegramPreview() {
+            const typeSelect = document.getElementById('recommendationType');
+            const descriptionTextarea = document.getElementById('recommendationDescription');
+            
+            function updatePreview() {
+                const type = typeSelect.value;
+                const description = descriptionTextarea.value;
+                
+                const typeEmojis = {
+                    'admin_choice': '👑 Admin\'s Choice',
+                    'trending': '🔥 Trending Now',
+                    'popular': '⭐ Popular Pick',
+                    'critics_choice': '🏆 Critics\' Choice'
+                };
+                
+                const preview = `🎬 ${typeEmojis[type]} by ${currentUser.username}
+
+**${selectedContent.title}**
+⭐ Rating: ${selectedContent.rating ? selectedContent.rating.toFixed(1) : 'N/A'}/10
+📅 Release: ${selectedContent.release_date ? new Date(selectedContent.release_date).getFullYear() : 'N/A'}
+🎭 Type: ${(selectedContent.content_type || 'movie').toUpperCase()}
+
+📝 **Admin's Note:** ${description || '[Your recommendation will appear here]'}
+
+📖 **Synopsis:** ${selectedContent.overview ? (selectedContent.overview.substring(0, 200) + '...') : 'No synopsis available'}
+
+#AdminChoice #MovieRecommendation #CineScope`;
+                
+                document.getElementById('telegramPreview').textContent = preview;
+            }
+            
+            typeSelect.addEventListener('change', updatePreview);
+            descriptionTextarea.addEventListener('input', updatePreview);
+            
+            // Initial preview
+            updatePreview();
         }
 
         // Submit recommendation
@@ -551,37 +648,120 @@
             e.preventDefault();
             
             if (!selectedContent) {
-                alert('No content selected');
+                showStatus('No content selected', 'error');
                 return;
             }
 
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Creating...';
+            submitBtn.disabled = true;
+
             const recommendationType = document.getElementById('recommendationType').value;
             const description = document.getElementById('recommendationDescription').value;
+            const postToTelegram = document.getElementById('postToTelegram').checked;
 
             try {
-                // Create the recommendation
+                // First, save the content to our database
+                showStatus('Saving content to database...', 'info');
+                
+                const saveContentResponse = await fetch(`${API_BASE}/admin/content`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        id: selectedContent.id,
+                        title: selectedContent.title,
+                        original_title: selectedContent.original_title,
+                        content_type: selectedContent.content_type || 'movie',
+                        overview: selectedContent.overview,
+                        poster_path: selectedContent.poster_path,
+                        backdrop_path: selectedContent.backdrop_path,
+                        release_date: selectedContent.release_date,
+                        rating: selectedContent.rating,
+                        vote_count: selectedContent.vote_count,
+                        popularity: selectedContent.popularity,
+                        runtime: selectedContent.runtime,
+                        genres: selectedContent.genres || [],
+                        languages: selectedContent.languages || ['en']
+                    })
+                });
+
+                if (!saveContentResponse.ok) {
+                    const errorData = await saveContentResponse.json();
+                    throw new Error(errorData.error || 'Failed to save content');
+                }
+
+                const savedContentData = await saveContentResponse.json();
+                const internalContentId = savedContentData.content_id;
+
+                // Then create the recommendation using the internal content ID
+                showStatus('Creating recommendation...', 'info');
+                
                 const response = await fetch(`${API_BASE}/admin/recommendations`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
                     body: JSON.stringify({
-                        content_id: selectedContent.id,
+                        content_id: internalContentId,
                         recommendation_type: recommendationType,
                         description: description
                     })
                 });
 
                 if (response.ok) {
-                    alert('Recommendation created successfully and posted to Telegram!');
-                    closeRecommendationModal();
+                    const result = await response.json();
+                    
+                    if (result.telegram_sent) {
+                        showStatus('✅ Recommendation created and posted to Telegram successfully!', 'success');
+                    } else {
+                        showStatus('⚠️ Recommendation created but Telegram posting failed. Please check your bot configuration.', 'warning');
+                    }
+                    
+                    setTimeout(() => {
+                        closeRecommendationModal();
+                    }, 3000);
                 } else {
                     const errorData = await response.json();
-                    alert(`Failed to create recommendation: ${errorData.error || 'Unknown error'}`);
+                    throw new Error(errorData.error || 'Unknown error');
                 }
             } catch (error) {
                 console.error('Create recommendation error:', error);
-                alert('Failed to create recommendation. Please try again.');
+                showStatus(`❌ Failed to create recommendation: ${error.message}`, 'error');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
             }
         });
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = `mt-4 p-3 rounded-lg text-sm ${type === 'success' ? 'telegram-success' : 
+                                   type === 'error' ? 'telegram-error' : 
+                                   type === 'warning' ? 'bg-yellow-600 bg-opacity-20 text-yellow-400 border border-yellow-600 border-opacity-30' :
+                                   'bg-blue-600 bg-opacity-20 text-blue-400 border border-blue-600 border-opacity-30'}`;
+            statusDiv.textContent = message;
+            statusDiv.classList.remove('hidden');
+        }
+
+        // Telegram connection test
+        async function testTelegramConnection() {
+            document.getElementById('telegramStatus').textContent = 'Testing connection...';
+            
+            try {
+                // Test by creating a simple health check
+                const response = await fetch(`${API_BASE}/health`);
+                
+                if (response.ok) {
+                    document.getElementById('telegramStatus').innerHTML = 
+                        '<span class="text-green-400">✅ Backend Connected</span><br><span class="text-xs">Telegram will be tested when posting</span>';
+                } else {
+                    document.getElementById('telegramStatus').innerHTML = 
+                        '<span class="text-red-400">❌ Backend Connection Failed</span>';
+                }
+            } catch (error) {
+                document.getElementById('telegramStatus').innerHTML = 
+                    '<span class="text-red-400">❌ Connection Error</span>';
+            }
+        }
 
         // Close modal on escape key
         document.addEventListener('keydown', (e) => {
@@ -594,6 +774,7 @@
         function initializePage() {
             if (!checkAuth()) return;
             setupSearch();
+            testTelegramConnection();
         }
 
         document.addEventListener('DOMContentLoaded', initializePage);
