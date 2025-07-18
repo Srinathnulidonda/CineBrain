@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieFlix - Your Entertainment Hub</title>
+    <title>MovieFlix - Your Personal Movie Recommendation Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #e50914;
-            --secondary: #141414;
-            --text-primary: #ffffff;
-            --text-secondary: #b3b3b3;
-            --hover: #ffffff1a;
+            --netflix-red: #E50914;
+            --netflix-black: #141414;
+            --netflix-gray: #2F2F2F;
+            --text-gray: #B3B3B3;
         }
 
         * {
@@ -22,514 +20,303 @@
         }
 
         body {
-            background-color: var(--secondary);
-            color: var(--text-primary);
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: var(--netflix-black);
+            color: white;
             overflow-x: hidden;
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #1a1a1a;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #4a4a4a;
-            border-radius: 4px;
-        }
-
-        /* Hero Section */
-        .hero {
-            position: relative;
-            height: 80vh;
-            background: linear-gradient(to bottom, transparent 70%, var(--secondary) 100%);
-        }
-
-        .hero-bg {
-            position: absolute;
+        .hero-background {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
             z-index: -1;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.8) 100%),
+                        url('https://assets.nflxext.com/ffe/siteui/vlv3/fc164b4b-f085-44ee-bb7f-ec7df8539eff/d23a1608-7d90-4da1-93d6-bae2fe60a69b/IN-en-20230814-popsignuptwoweeks-perspective_alpha_website_large.jpg');
+            background-size: cover;
+            background-position: center;
         }
 
-        /* Navigation */
-        nav {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            padding: 20px 50px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 10%, transparent);
-            z-index: 1000;
-            transition: background 0.3s;
+        .form-container {
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 8px;
+            padding: 60px;
+            max-width: 450px;
+            width: 90%;
+            margin: 100px auto;
+            animation: fadeIn 0.5s ease-in;
         }
 
-        nav.scrolled {
-            background: var(--secondary);
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .logo {
-            font-size: 2rem;
+            font-size: 3rem;
             font-weight: bold;
-            color: var(--primary);
-            text-decoration: none;
+            color: var(--netflix-red);
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
-        /* Content Cards */
-        .content-row {
-            margin: 40px 0;
-            padding: 0 50px;
-        }
-
-        .content-row h2 {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-
-        .content-carousel {
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            scroll-behavior: smooth;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-
-        .content-carousel::-webkit-scrollbar {
-            display: none;
-        }
-
-        .content-card {
-            flex: 0 0 200px;
-            cursor: pointer;
-            transition: transform 0.3s;
-            position: relative;
-        }
-
-        .content-card:hover {
-            transform: scale(1.05);
-        }
-
-        .content-card img {
+        .input-field {
             width: 100%;
-            height: 300px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-
-        .content-info {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 10px;
-            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
-            border-radius: 0 0 8px 8px;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .content-card:hover .content-info {
-            opacity: 1;
-        }
-
-        /* Loading Skeleton */
-        .skeleton {
-            background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-        }
-
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            nav {
-                padding: 15px 20px;
-            }
-
-            .content-row {
-                padding: 0 20px;
-            }
-
-            .content-card {
-                flex: 0 0 150px;
-            }
-
-            .content-card img {
-                height: 225px;
-            }
-
-            .hero {
-                height: 60vh;
-            }
-        }
-
-        /* Search Modal */
-        .search-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 2000;
-            display: none;
-            padding: 20px;
-        }
-
-        .search-modal.active {
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding-top: 100px;
-        }
-
-        .search-input {
-            width: 100%;
-            max-width: 600px;
-            padding: 15px 20px;
-            font-size: 1.5rem;
-            background: transparent;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            background: #333;
             border: none;
-            border-bottom: 2px solid var(--text-secondary);
-            color: var(--text-primary);
-            outline: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 16px;
+            transition: background 0.3s;
         }
 
-        .search-results {
+        .input-field:focus {
+            outline: none;
+            background: #454545;
+        }
+
+        .btn-primary {
             width: 100%;
-            max-width: 800px;
-            margin-top: 40px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 20px;
+            padding: 16px;
+            background: var(--netflix-red);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 24px;
+        }
+
+        .btn-primary:hover {
+            background: #F40612;
+        }
+
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-gray);
+        }
+
+        .toggle-form a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .toggle-form a:hover {
+            color: var(--netflix-red);
+        }
+
+        .error-message {
+            background: rgba(229, 9, 20, 0.1);
+            border: 1px solid var(--netflix-red);
+            color: #ff6b6b;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            display: none;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav id="navbar">
-        <div class="flex justify-between items-center">
-            <div class="flex items-center gap-8">
-                <a href="#" class="logo">MovieFlix</a>
-                <div class="hidden md:flex gap-6">
-                    <a href="#movies" class="hover:text-gray-300 transition">Movies</a>
-                    <a href="#tv" class="hover:text-gray-300 transition">TV Shows</a>
-                    <a href="#anime" class="hover:text-gray-300 transition">Anime</a>
-                </div>
+    <div class="hero-background"></div>
+    
+    <div class="form-container">
+        <h1 class="logo">MovieFlix</h1>
+        
+        <div id="error-message" class="error-message"></div>
+        
+        <!-- Login Form -->
+        <form id="login-form">
+            <h2 class="text-3xl font-bold mb-6">Sign In</h2>
+            <input type="text" id="login-username" placeholder="Username or Email" class="input-field" required>
+            <input type="password" id="login-password" placeholder="Password" class="input-field" required>
+            <button type="submit" class="btn-primary" id="login-btn">
+                <span id="login-text">Sign In</span>
+            </button>
+            <div class="toggle-form">
+                New to MovieFlix? <a href="#" id="show-register">Sign up now</a>
             </div>
-            <div class="flex items-center gap-4">
-                <button id="searchBtn" class="text-xl hover:text-gray-300 transition">
-                    <i class="fas fa-search"></i>
-                </button>
-                <a href="login.html" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition">Sign In</a>
+        </form>
+        
+        <!-- Register Form -->
+        <form id="register-form" style="display: none;">
+            <h2 class="text-3xl font-bold mb-6">Sign Up</h2>
+            <input type="text" id="register-username" placeholder="Username" class="input-field" required>
+            <input type="email" id="register-email" placeholder="Email" class="input-field" required>
+            <input type="password" id="register-password" placeholder="Password" class="input-field" required>
+            <button type="submit" class="btn-primary" id="register-btn">
+                <span id="register-text">Create Account</span>
+            </button>
+            <div class="toggle-form">
+                Already have an account? <a href="#" id="show-login">Sign in</a>
             </div>
-        </div>
-    </nav>
-
-    <!-- Search Modal -->
-    <div id="searchModal" class="search-modal">
-        <div class="w-full">
-            <div class="flex items-center gap-4">
-                <input type="text" id="searchInput" class="search-input" placeholder="Search movies, TV shows, anime...">
-                <button id="closeSearch" class="text-2xl">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div id="searchResults" class="search-results"></div>
-        </div>
+        </form>
     </div>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <img id="heroBg" class="hero-bg" src="" alt="Hero Background">
-        <div class="absolute bottom-0 left-0 p-12 max-w-2xl">
-            <h1 id="heroTitle" class="text-5xl font-bold mb-4"></h1>
-            <p id="heroDescription" class="text-lg mb-6 text-gray-300"></p>
-            <div class="flex gap-4">
-                <button class="bg-white text-black px-8 py-3 rounded font-semibold hover:bg-gray-200 transition">
-                    <i class="fas fa-play mr-2"></i> Play
-                </button>
-                <button class="bg-gray-700 px-8 py-3 rounded font-semibold hover:bg-gray-600 transition">
-                    <i class="fas fa-info-circle mr-2"></i> More Info
-                </button>
-            </div>
-        </div>
-    </section>
-
-    <!-- Content Sections -->
-    <main>
-        <!-- Trending -->
-        <section id="trending" class="content-row">
-            <h2>Trending Now</h2>
-            <div class="content-carousel" id="trendingCarousel">
-                <!-- Dynamic content -->
-            </div>
-        </section>
-
-        <!-- Popular -->
-        <section id="popular" class="content-row">
-            <h2>Popular on MovieFlix</h2>
-            <div class="content-carousel" id="popularCarousel">
-                <!-- Dynamic content -->
-            </div>
-        </section>
-
-        <!-- Admin Recommendations -->
-        <section id="adminPicks" class="content-row">
-            <h2>Editor's Picks</h2>
-            <div class="content-carousel" id="adminCarousel">
-                <!-- Dynamic content -->
-            </div>
-        </section>
-
-        <!-- Anime -->
-        <section id="anime" class="content-row">
-            <h2>Anime Collection</h2>
-            <div class="content-carousel" id="animeCarousel">
-                <!-- Dynamic content -->
-            </div>
-        </section>
-
-        <!-- Regional Content -->
-        <section id="regional" class="content-row">
-            <h2>Regional Favorites</h2>
-            <div class="content-carousel" id="regionalCarousel">
-                <!-- Dynamic content -->
-            </div>
-        </section>
-
-        <!-- Genre Sections -->
-        <div id="genreSections"></div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="mt-20 p-12 text-gray-400">
-        <div class="max-w-6xl mx-auto">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-                <div>
-                    <h4 class="mb-4">Navigation</h4>
-                    <ul class="space-y-2 text-sm">
-                        <li><a href="#" class="hover:underline">Home</a></li>
-                        <li><a href="#" class="hover:underline">Movies</a></li>
-                        <li><a href="#" class="hover:underline">TV Shows</a></li>
-                        <li><a href="#" class="hover:underline">Anime</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="mb-4">Account</h4>
-                    <ul class="space-y-2 text-sm">
-                        <li><a href="login.html" class="hover:underline">Sign In</a></li>
-                        <li><a href="login.html" class="hover:underline">Register</a></li>
-                    </ul>
-                </div>
-            </div>
-            <p class="text-center text-sm">&copy; 2024 MovieFlix. All rights reserved.</p>
-        </div>
-    </footer>
-
     <script>
-        // API Configuration
-        const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        let sessionId = localStorage.getItem('sessionId') || generateSessionId();
+        // Global variables
+        let authToken = null;
+        let currentUser = null;
+        const API_BASE = 'http://localhost:5000/api';
 
-        function generateSessionId() {
-            const id = 'sess_' + Math.random().toString(36).substr(2, 16);
-            localStorage.setItem('sessionId', id);
-            return id;
+        // Toggle between login and register forms
+        document.getElementById('show-register').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+        });
+
+        document.getElementById('show-login').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+        });
+
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
         }
 
-        // Navbar scroll effect
-        window.addEventListener('scroll', () => {
-            const navbar = document.getElementById('navbar');
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
+        // Show loading state
+        function setLoading(buttonId, isLoading) {
+            const button = document.getElementById(buttonId);
+            const textSpan = button.querySelector('span');
+            if (isLoading) {
+                textSpan.innerHTML = '<div class="loading"></div>';
+                button.disabled = true;
             } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
-
-        // Search functionality
-        const searchBtn = document.getElementById('searchBtn');
-        const searchModal = document.getElementById('searchModal');
-        const closeSearch = document.getElementById('closeSearch');
-        const searchInput = document.getElementById('searchInput');
-        const searchResults = document.getElementById('searchResults');
-        let searchTimeout;
-
-        searchBtn.addEventListener('click', () => {
-            searchModal.classList.add('active');
-            searchInput.focus();
-        });
-
-        closeSearch.addEventListener('click', () => {
-            searchModal.classList.remove('active');
-            searchInput.value = '';
-            searchResults.innerHTML = '';
-        });
-
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            const query = e.target.value.trim();
-            
-            if (query.length < 2) {
-                searchResults.innerHTML = '';
-                return;
-            }
-
-            searchTimeout = setTimeout(() => {
-                searchContent(query);
-            }, 300);
-        });
-
-        async function searchContent(query) {
-            try {
-                searchResults.innerHTML = '<div class="col-span-full text-center">Searching...</div>';
-                
-                const response = await fetch(`${API_BASE}/content/search?q=${encodeURIComponent(query)}&type=all`, {
-                    headers: {
-                        'Session-ID': sessionId
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (data.results && data.results.length > 0) {
-                    searchResults.innerHTML = data.results.map(item => `
-                        <div class="content-card" onclick="viewContent('${item.tmdb_id || item.mal_id}', '${item.content_type}')">
-                            <img src="${item.poster_url || '/placeholder.jpg'}" alt="${item.title}" onerror="this.src='/placeholder.jpg'">
-                            <div class="content-info">
-                                <h3 class="text-sm font-semibold">${item.title}</h3>
-                                <p class="text-xs text-gray-400">${item.content_type}</p>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    searchResults.innerHTML = '<div class="col-span-full text-center text-gray-400">No results found</div>';
-                }
-            } catch (error) {
-                console.error('Search error:', error);
-                searchResults.innerHTML = '<div class="col-span-full text-center text-red-500">Error searching content</div>';
+                textSpan.textContent = buttonId === 'login-btn' ? 'Sign In' : 'Create Account';
+                button.disabled = false;
             }
         }
 
-        // Load homepage content
-        async function loadHomepageContent() {
+        // Login handler
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setLoading('login-btn', true);
+
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
             try {
-                const response = await fetch(`${API_BASE}/recommendations/homepage`, {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
                     headers: {
-                        'Session-ID': sessionId
-                    }
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
                 });
-                
+
                 const data = await response.json();
-                
-                // Load trending
-                if (data.trending && data.trending.length > 0) {
-                    displayCarousel('trendingCarousel', data.trending);
+
+                if (response.ok) {
+                    authToken = data.token;
+                    currentUser = data.user;
                     
-                    // Set hero section with first trending item
-                    const hero = data.trending[0];
-                    document.getElementById('heroBg').src = hero.backdrop_url || hero.poster_url;
-                    document.getElementById('heroTitle').textContent = hero.title;
-                    document.getElementById('heroDescription').textContent = hero.synopsis || '';
-                }
-                
-                // Load popular
-                if (data.popular) {
-                    displayCarousel('popularCarousel', data.popular);
-                }
-                
-                // Load anime
-                if (data.anime) {
-                    displayCarousel('animeCarousel', data.anime);
-                }
-                
-                // Load regional
-                if (data.regional) {
-                    displayCarousel('regionalCarousel', data.regional);
-                }
-                
-                // Load admin recommendations
-                loadAdminRecommendations();
-                
-                // Load genre sections
-                if (data.by_genre) {
-                    loadGenreSections(data.by_genre);
-                }
-                
-            } catch (error) {
-                console.error('Error loading homepage:', error);
-            }
-        }
+                    // Store in memory only
+                    window.movieFlixAuth = {
+                        token: authToken,
+                        user: currentUser
+                    };
 
-        async function loadAdminRecommendations() {
+                    // Redirect based on user type
+                    if (currentUser.is_admin) {
+                        window.location.href = '/admin-dashboard.html';
+                    } else {
+                        window.location.href = '/dashboard.html';
+                    }
+                } else {
+                    showError(data.error || 'Invalid credentials');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            } finally {
+                setLoading('login-btn', false);
+            }
+        });
+
+        // Register handler
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setLoading('register-btn', true);
+
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
             try {
-                const response = await fetch(`${API_BASE}/public/recommendations`);
+                const response = await fetch(`${API_BASE}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+
                 const data = await response.json();
-                
-                if (data.recommendations && data.recommendations.length > 0) {
-                    const content = data.recommendations.map(rec => rec.content);
-                    displayCarousel('adminCarousel', content);
+
+                if (response.ok) {
+                    authToken = data.token;
+                    currentUser = data.user;
+                    
+                    // Store in memory only
+                    window.movieFlixAuth = {
+                        token: authToken,
+                        user: currentUser
+                    };
+
+                    // Redirect to dashboard
+                    window.location.href = '/dashboard.html';
+                } else {
+                    showError(data.error || 'Registration failed');
                 }
             } catch (error) {
-                console.error('Error loading admin recommendations:', error);
+                showError('Network error. Please try again.');
+            } finally {
+                setLoading('register-btn', false);
             }
-        }
+        });
 
-        function loadGenreSections(genreData) {
-            const container = document.getElementById('genreSections');
-            container.innerHTML = '';
-            
-            Object.entries(genreData).forEach(([genre, items]) => {
-                if (items && items.length > 0) {
-                    const section = document.createElement('section');
-                    section.className = 'content-row';
-                    section.innerHTML = `
-                        <h2>${genre} Movies</h2>
-                        <div class="content-carousel" id="${genre.toLowerCase()}Carousel"></div>
-                    `;
-                    container.appendChild(section);
-                    displayCarousel(`${genre.toLowerCase()}Carousel`, items);
-                }
-            });
-        }
-
-        function displayCarousel(carouselId, items) {
-            const carousel = document.getElementById(carouselId);
-            if (!carousel) return;
-            
-            carousel.innerHTML = items.map(item => `
-                <div class="content-card" onclick="viewContent('${item.id}')">
-                    <img src="${item.poster_url || '/placeholder.jpg'}" alt="${item.title}" 
-                         onerror="this.src='/placeholder.jpg'" loading="lazy">
-                    <div class="content-info">
-                        <h3 class="text-sm font-semibold">${item.title}</h3>
-                        ${item.rating ? `<p class="text-xs text-yellow-400">★ ${item.rating}</p>` : ''}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function viewContent(contentId) {
-            // Store content ID and redirect to detail page
-            sessionStorage.setItem('selectedContentId', contentId);
-            window.location.href = 'movie-detail.html';
-        }
-
-        // Initialize
-        loadHomepageContent();
+        // Animate form on load
+        window.addEventListener('load', () => {
+            document.querySelector('.form-container').style.animation = 'fadeIn 0.5s ease-in';
+        });
     </script>
 </body>
 </html>
