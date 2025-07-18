@@ -97,6 +97,11 @@
             background: #f40612;
         }
 
+        .submit-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
         .error-message {
             background: #831212;
             padding: 10px;
@@ -180,7 +185,7 @@
                 <input type="text" class="form-input" placeholder="Username or Email" id="username" required>
                 <input type="password" class="form-input" placeholder="Password" id="password" required>
                 
-                <button type="submit" class="submit-btn">Sign In</button>
+                <button type="submit" class="submit-btn" id="submit-btn">Sign In</button>
             </form>
             
             <div class="loader" id="loader"></div>
@@ -217,15 +222,8 @@
     </section>
 
     <script>
-        // Global state management
-        const state = {
-            authToken: null,
-            userData: null,
-            sessionId: Math.random().toString(36).substring(7)
-        };
-
         // API configuration
-       const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        const API_BASE = 'http://localhost:5000/api';
 
         // Navbar scroll effect
         window.addEventListener('scroll', () => {
@@ -243,19 +241,20 @@
             
             const loader = document.getElementById('loader');
             const errorMsg = document.getElementById('error-message');
-            const submitBtn = e.target.querySelector('.submit-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            const form = e.target;
             
             // Reset error message
             errorMsg.style.display = 'none';
             errorMsg.textContent = '';
             
-            // Show loader
+            // Show loader and disable form
             loader.style.display = 'block';
             submitBtn.disabled = true;
             submitBtn.textContent = 'Signing in...';
             
             const formData = {
-                username: document.getElementById('username').value,
+                username: document.getElementById('username').value.trim(),
                 password: document.getElementById('password').value
             };
             
@@ -270,58 +269,60 @@
                 
                 const data = await response.json();
                 
-                if (response.ok) {
-                    // Store auth data in memory
-                    state.authToken = data.token;
-                    state.userData = data.user;
+                if (response.ok && data.token) {
+                    // Successfully logged in
+                    // Create auth data for passing to next page
+                    const authData = btoa(JSON.stringify({
+                        token: data.token,
+                        user: data.user
+                    }));
                     
                     // Redirect based on user type
                     if (data.user.is_admin) {
-                        window.location.href = 'admin.html';
+                        window.location.href = `admin.html#${authData}`;
                     } else {
-                        window.location.href = 'dashboard.html';
+                        window.location.href = `dashboard.html#${authData}`;
                     }
                 } else {
-                    errorMsg.textContent = data.message || 'Invalid credentials';
+                    // Show error message
+                    errorMsg.textContent = data.message || 'Invalid credentials. Please try again.';
                     errorMsg.style.display = 'block';
+                    
+                    // Re-enable form
+                    loader.style.display = 'none';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign In';
                 }
             } catch (error) {
-                errorMsg.textContent = 'Network error. Please try again.';
+                console.error('Login error:', error);
+                errorMsg.textContent = 'Network error. Please check your connection and try again.';
                 errorMsg.style.display = 'block';
-            } finally {
+                
+                // Re-enable form
                 loader.style.display = 'none';
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Sign In';
             }
         });
 
-        // Pass state to next page via sessionStorage temporarily (will be replaced with proper state management)
-        window.addEventListener('beforeunload', () => {
-            if (state.authToken) {
-                // Create a temporary form to pass data
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = state.userData.is_admin ? 'admin.html' : 'dashboard.html';
-                
-                const tokenInput = document.createElement('input');
-                tokenInput.type = 'hidden';
-                tokenInput.name = 'token';
-                tokenInput.value = state.authToken;
-                
-                const userInput = document.createElement('input');
-                userInput.type = 'hidden';
-                userInput.name = 'user';
-                userInput.value = JSON.stringify(state.userData);
-                
-                form.appendChild(tokenInput);
-                form.appendChild(userInput);
-                document.body.appendChild(form);
-                
-                // Store in URL hash temporarily
-                window.location.hash = btoa(JSON.stringify({
-                    token: state.authToken,
-                    user: state.userData
-                }));
+        // Check if user is already logged in (came back from another page)
+        window.addEventListener('load', () => {
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                try {
+                    const authData = JSON.parse(atob(hash));
+                    if (authData.token && authData.user) {
+                        // User is already logged in, redirect appropriately
+                        if (authData.user.is_admin) {
+                            window.location.href = `admin.html#${hash}`;
+                        } else {
+                            window.location.href = `dashboard.html#${hash}`;
+                        }
+                    }
+                } catch (e) {
+                    // Invalid hash, ignore
+                    window.location.hash = '';
+                }
             }
         });
     </script>
