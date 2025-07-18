@@ -129,6 +129,89 @@
             color: #ef4444;
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
+
+        .ott-availability-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .platform-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            margin: 4px 0;
+        }
+
+        .platform-free {
+            border-left: 3px solid #22c55e;
+        }
+
+        .platform-paid {
+            border-left: 3px solid #f59e0b;
+        }
+
+        .platform-youtube {
+            border-left: 3px solid #ff0000;
+        }
+
+        .loading-ott {
+            text-align: center;
+            padding: 20px;
+            color: #9ca3af;
+        }
+
+        .availability-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .preview-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 0.875rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .include-toggle {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+
+        .include-toggle input {
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
@@ -189,7 +272,7 @@
             <!-- Header -->
             <div class="mb-8">
                 <h1 class="text-3xl font-bold mb-2">Content Browser & Telegram Posting</h1>
-                <p class="text-gray-400">Search content from multiple sources and post recommendations to Telegram channel</p>
+                <p class="text-gray-400">Search content and post recommendations with OTT availability to Telegram channel</p>
             </div>
 
             <!-- Search Section -->
@@ -266,7 +349,7 @@
                 
                 <div id="searchResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     <div class="text-center text-gray-400 py-12 col-span-full">
-                        💡 Use the search above to find content from multiple sources and post to Telegram
+                        💡 Search for content to create recommendations with OTT availability info
                     </div>
                 </div>
 
@@ -278,9 +361,9 @@
         </div>
     </div>
 
-    <!-- Recommendation & Telegram Posting Modal -->
+    <!-- Enhanced Recommendation & Telegram Posting Modal -->
     <div id="recommendationModal" class="hidden fixed inset-0 recommendation-modal z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-screen overflow-y-auto">
+        <div class="bg-gray-800 rounded-xl p-6 max-w-4xl w-full max-h-screen overflow-y-auto">
             <div class="flex items-start space-x-6 mb-6">
                 <img id="modalPoster" src="" alt="" class="w-32 h-48 object-cover rounded-lg">
                 <div class="flex-1">
@@ -290,6 +373,43 @@
                         <span id="modalRating" class="bg-yellow-600 px-2 py-1 rounded text-sm"></span>
                         <span id="modalYear" class="bg-blue-600 px-2 py-1 rounded text-sm"></span>
                         <span id="modalType" class="bg-green-600 px-2 py-1 rounded text-sm"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OTT Availability Section -->
+            <div class="ott-availability-section">
+                <h4 class="text-lg font-semibold mb-3">📺 OTT Availability</h4>
+                
+                <div id="ottLoadingIndicator" class="loading-ott">
+                    <div class="loading mx-auto mb-2"></div>
+                    <p class="text-sm">Loading OTT availability...</p>
+                </div>
+                
+                <div id="ottAvailabilityContent" class="hidden">
+                    <!-- Availability Stats -->
+                    <div class="availability-stats">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalPlatforms">0</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="freePlatforms">0</div>
+                            <div class="stat-label">Free</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="youtubePlatforms">0</div>
+                            <div class="stat-label">YouTube</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="paidPlatforms">0</div>
+                            <div class="stat-label">Subscription</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Platform List -->
+                    <div id="platformsList" class="mt-4">
+                        <!-- Platforms will be populated here -->
                     </div>
                 </div>
             </div>
@@ -310,28 +430,36 @@
                     <textarea 
                         id="recommendationDescription" 
                         class="search-input w-full h-24 resize-none"
-                        placeholder="Why do you recommend this content? What makes it special? This will be posted to Telegram..."
+                        placeholder="Why do you recommend this content? What makes it special?"
                         required
                     ></textarea>
-                    <div class="text-xs text-gray-500 mt-1">
-                        💡 This description will be included in the Telegram post to your channel
-                    </div>
                 </div>
 
+                <!-- Include Options -->
                 <div class="mb-4">
-                    <label class="flex items-center">
-                        <input type="checkbox" id="postToTelegram" class="mr-2" checked>
-                        <span class="text-gray-300">📱 Post to Telegram Channel</span>
-                    </label>
-                    <div class="text-xs text-gray-500 mt-1">
-                        Automatically share this recommendation with your Telegram audience
+                    <h4 class="text-gray-300 font-medium mb-2">Include in Telegram Post:</h4>
+                    <div class="include-toggle">
+                        <input type="checkbox" id="includeOTT" checked>
+                        <label for="includeOTT">📺 OTT Platform Availability</label>
+                    </div>
+                    <div class="include-toggle">
+                        <input type="checkbox" id="includeWatchLinks" checked>
+                        <label for="includeWatchLinks">🔗 Direct Watch Links</label>
+                    </div>
+                    <div class="include-toggle">
+                        <input type="checkbox" id="includeFreeOptions" checked>
+                        <label for="includeFreeOptions">🆓 Highlight Free Options</label>
+                    </div>
+                    <div class="include-toggle">
+                        <input type="checkbox" id="includeYouTube" checked>
+                        <label for="includeYouTube">🎥 YouTube Availability</label>
                     </div>
                 </div>
 
                 <!-- Telegram Preview -->
-                <div class="mb-6 p-4 bg-gray-700 rounded-lg">
+                <div class="mb-6">
                     <h4 class="text-sm font-semibold mb-2 text-blue-400">📱 Telegram Post Preview:</h4>
-                    <div id="telegramPreview" class="text-xs text-gray-300 whitespace-pre-line">
+                    <div id="telegramPreview" class="preview-section">
                         Preview will appear here...
                     </div>
                 </div>
@@ -369,6 +497,8 @@
         let currentPage = 1;
         let totalPages = 1;
         let selectedContent = null;
+        let ottAvailabilityData = null;
+        let savedContentId = null;
 
         // Authentication check
         function checkAuth() {
@@ -581,10 +711,13 @@
             pagination.innerHTML = paginationHTML;
         }
 
-        // Recommendation modal
-        function openRecommendationModal(content) {
+        // Enhanced Recommendation modal
+        async function openRecommendationModal(content) {
             selectedContent = content;
+            ottAvailabilityData = null;
+            savedContentId = null;
             
+            // Set basic content info
             document.getElementById('modalTitle').textContent = content.title;
             document.getElementById('modalOverview').textContent = content.overview || 'No description available';
             document.getElementById('modalPoster').src = content.poster_path || '/api/placeholder/200/300';
@@ -592,10 +725,268 @@
             document.getElementById('modalYear').textContent = content.release_date ? new Date(content.release_date).getFullYear() : 'Unknown';
             document.getElementById('modalType').textContent = (content.content_type || 'movie').toUpperCase();
             
+            // Show modal
+            document.getElementById('recommendationModal').classList.remove('hidden');
+            
+            // Load OTT availability
+            loadOTTAvailability(content);
+            
             // Setup live preview
             setupTelegramPreview();
+        }
+
+        async function loadOTTAvailability(content) {
+            document.getElementById('ottLoadingIndicator').classList.remove('hidden');
+            document.getElementById('ottAvailabilityContent').classList.add('hidden');
             
-            document.getElementById('recommendationModal').classList.remove('hidden');
+            try {
+                // First, save the content to get internal ID
+                const saveContentResponse = await fetch(`${API_BASE}/admin/content`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        id: content.id,
+                        title: content.title,
+                        original_title: content.original_title,
+                        content_type: content.content_type || 'movie',
+                        overview: content.overview,
+                        poster_path: content.poster_path,
+                        backdrop_path: content.backdrop_path,
+                        release_date: content.release_date,
+                        rating: content.rating,
+                        vote_count: content.vote_count,
+                        popularity: content.popularity,
+                        runtime: content.runtime,
+                        genres: content.genres || [],
+                        languages: content.languages || ['en']
+                    })
+                });
+
+                if (!saveContentResponse.ok) {
+                    throw new Error('Failed to save content');
+                }
+
+                const savedContentData = await saveContentResponse.json();
+                savedContentId = savedContentData.content_id;
+                
+                // Now get OTT availability
+                const ottResponse = await fetch(`${API_BASE}/ott/availability/${savedContentId}?region=IN&refresh=true`);
+                
+                if (ottResponse.ok) {
+                    const data = await ottResponse.json();
+                    ottAvailabilityData = data.availability;
+                    displayOTTAvailability();
+                    updateTelegramPreview();
+                } else {
+                    throw new Error('Failed to load OTT availability');
+                }
+            } catch (error) {
+                console.error('OTT availability error:', error);
+                document.getElementById('ottLoadingIndicator').innerHTML = `
+                    <div class="text-red-500">
+                        <p>Failed to load OTT availability</p>
+                        <button onclick="loadOTTAvailability(selectedContent)" class="text-blue-400 underline mt-2">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        function displayOTTAvailability() {
+            if (!ottAvailabilityData) return;
+            
+            document.getElementById('ottLoadingIndicator').classList.add('hidden');
+            document.getElementById('ottAvailabilityContent').classList.remove('hidden');
+            
+            const platforms = ottAvailabilityData.platforms || [];
+            
+            // Update statistics
+            const stats = {
+                total: platforms.length,
+                free: platforms.filter(p => p.is_free).length,
+                youtube: platforms.filter(p => p.platform_id.includes('youtube')).length,
+                paid: platforms.filter(p => !p.is_free && p.availability_type === 'subscription').length
+            };
+            
+            document.getElementById('totalPlatforms').textContent = stats.total;
+            document.getElementById('freePlatforms').textContent = stats.free;
+            document.getElementById('youtubePlatforms').textContent = stats.youtube;
+            document.getElementById('paidPlatforms').textContent = stats.paid;
+            
+            // Display platforms
+            const platformsList = document.getElementById('platformsList');
+            
+            if (platforms.length === 0) {
+                platformsList.innerHTML = '<p class="text-gray-400 text-center">No streaming platforms found</p>';
+                return;
+            }
+            
+            // Group platforms by type
+            const freePlatforms = platforms.filter(p => p.is_free);
+            const paidPlatforms = platforms.filter(p => !p.is_free);
+            
+            let html = '';
+            
+            if (freePlatforms.length > 0) {
+                html += '<h5 class="text-green-400 font-semibold mb-2">🆓 Free Options:</h5>';
+                freePlatforms.forEach(platform => {
+                    const platformClass = platform.platform_id.includes('youtube') ? 'platform-youtube' : 'platform-free';
+                    html += `
+                        <div class="platform-item ${platformClass}">
+                            <div>
+                                <span class="font-medium">${platform.platform_name}</span>
+                                ${platform.video_title ? `<span class="text-xs text-gray-400 ml-2">${platform.video_title}</span>` : ''}
+                            </div>
+                            <a href="${platform.watch_url}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm">
+                                Watch →
+                            </a>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (paidPlatforms.length > 0) {
+                html += '<h5 class="text-yellow-400 font-semibold mb-2 mt-4">💰 Subscription Required:</h5>';
+                paidPlatforms.forEach(platform => {
+                    html += `
+                        <div class="platform-item platform-paid">
+                            <div>
+                                <span class="font-medium">${platform.platform_name}</span>
+                                ${platform.availability_type === 'rent' ? '<span class="text-xs text-gray-400 ml-2">(Rent)</span>' : ''}
+                                ${platform.availability_type === 'buy' ? '<span class="text-xs text-gray-400 ml-2">(Buy)</span>' : ''}
+                            </div>
+                            <a href="${platform.watch_url}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm">
+                                Watch →
+                            </a>
+                        </div>
+                    `;
+                });
+            }
+            
+            platformsList.innerHTML = html;
+        }
+
+        function setupTelegramPreview() {
+            const typeSelect = document.getElementById('recommendationType');
+            const descriptionTextarea = document.getElementById('recommendationDescription');
+            const includeOTT = document.getElementById('includeOTT');
+            const includeWatchLinks = document.getElementById('includeWatchLinks');
+            const includeFreeOptions = document.getElementById('includeFreeOptions');
+            const includeYouTube = document.getElementById('includeYouTube');
+            
+            function updatePreview() {
+                updateTelegramPreview();
+            }
+            
+            typeSelect.addEventListener('change', updatePreview);
+            descriptionTextarea.addEventListener('input', updatePreview);
+            includeOTT.addEventListener('change', updatePreview);
+            includeWatchLinks.addEventListener('change', updatePreview);
+            includeFreeOptions.addEventListener('change', updatePreview);
+            includeYouTube.addEventListener('change', updatePreview);
+            
+            // Initial preview
+            updatePreview();
+        }
+
+        function updateTelegramPreview() {
+            const type = document.getElementById('recommendationType').value;
+            const description = document.getElementById('recommendationDescription').value;
+            const includeOTT = document.getElementById('includeOTT').checked;
+            const includeWatchLinks = document.getElementById('includeWatchLinks').checked;
+            const includeFreeOptions = document.getElementById('includeFreeOptions').checked;
+            const includeYouTube = document.getElementById('includeYouTube').checked;
+            
+            const typeEmojis = {
+                'admin_choice': '👑 Admin\'s Choice',
+                'trending': '🔥 Trending Now',
+                'popular': '⭐ Popular Pick',
+                'critics_choice': '🏆 Critics\' Choice'
+            };
+            
+            let preview = `🎬 ${typeEmojis[type]} by ${currentUser.username}\n\n`;
+            preview += `**${selectedContent.title}**\n`;
+            preview += `⭐ Rating: ${selectedContent.rating ? selectedContent.rating.toFixed(1) : 'N/A'}/10\n`;
+            preview += `📅 Release: ${selectedContent.release_date ? new Date(selectedContent.release_date).getFullYear() : 'N/A'}\n`;
+            preview += `🎭 Type: ${(selectedContent.content_type || 'movie').toUpperCase()}\n\n`;
+            preview += `📝 **Admin's Note:** ${description || '[Your recommendation will appear here]'}\n\n`;
+            preview += `📖 **Synopsis:** ${selectedContent.overview ? (selectedContent.overview.substring(0, 200) + '...') : 'No synopsis available'}\n`;
+            
+            // Add OTT availability
+            if (includeOTT && ottAvailabilityData && ottAvailabilityData.platforms) {
+                const platforms = ottAvailabilityData.platforms;
+                const freePlatforms = platforms.filter(p => p.is_free);
+                const paidPlatforms = platforms.filter(p => !p.is_free);
+                const youtubePlatforms = platforms.filter(p => p.platform_id.includes('youtube'));
+                
+                if (platforms.length > 0) {
+                    preview += '\n━━━━━━━━━━━━━━━━━\n';
+                    preview += '📺 **WHERE TO WATCH**\n\n';
+                    
+                    // YouTube availability
+                    if (includeYouTube && youtubePlatforms.length > 0) {
+                        const freeYouTube = youtubePlatforms.filter(p => p.platform_id === 'youtube');
+                        if (freeYouTube.length > 0) {
+                            preview += '🎥 **FREE on YouTube!**\n';
+                            if (includeWatchLinks) {
+                                freeYouTube.forEach(yt => {
+                                    preview += `▶️ Watch Now: ${yt.watch_url}\n`;
+                                });
+                            }
+                            preview += '\n';
+                        }
+                    }
+                    
+                    // Free platforms
+                    if (includeFreeOptions && freePlatforms.length > 0) {
+                        const nonYoutubeFree = freePlatforms.filter(p => !p.platform_id.includes('youtube'));
+                        if (nonYoutubeFree.length > 0) {
+                            preview += '🆓 **FREE Platforms:**\n';
+                            nonYoutubeFree.forEach(platform => {
+                                preview += `• ${platform.platform_name}`;
+                                if (includeWatchLinks) {
+                                    preview += ` - ${platform.watch_url}`;
+                                }
+                                preview += '\n';
+                            });
+                            preview += '\n';
+                        }
+                    }
+                    
+                    // Paid platforms
+                    if (paidPlatforms.length > 0) {
+                        preview += '💰 **Subscription/Paid:**\n';
+                        paidPlatforms.slice(0, 5).forEach(platform => {
+                            preview += `• ${platform.platform_name}`;
+                            if (platform.availability_type === 'rent') preview += ' (Rent)';
+                            if (platform.availability_type === 'buy') preview += ' (Buy)';
+                            if (includeWatchLinks) {
+                                preview += ` - ${platform.watch_url}`;
+                            }
+                            preview += '\n';
+                        });
+                    }
+                    
+                    preview += '\n━━━━━━━━━━━━━━━━━';
+                }
+            }
+            
+            preview += '\n\n#AdminChoice #MovieRecommendation #CineScope';
+            
+            // Add hashtags based on availability
+            if (ottAvailabilityData && ottAvailabilityData.platforms) {
+                const platforms = ottAvailabilityData.platforms;
+                if (platforms.some(p => p.platform_id.includes('youtube') && p.is_free)) {
+                    preview += ' #FreeOnYouTube';
+                }
+                if (platforms.some(p => p.platform_id === 'netflix')) {
+                    preview += ' #Netflix';
+                }
+                if (platforms.some(p => p.platform_id === 'amazon_prime')) {
+                    preview += ' #PrimeVideo';
+                }
+            }
+            
+            document.getElementById('telegramPreview').textContent = preview;
         }
 
         function closeRecommendationModal() {
@@ -603,52 +994,16 @@
             document.getElementById('recommendationForm').reset();
             document.getElementById('statusMessage').classList.add('hidden');
             selectedContent = null;
-        }
-
-        function setupTelegramPreview() {
-            const typeSelect = document.getElementById('recommendationType');
-            const descriptionTextarea = document.getElementById('recommendationDescription');
-            
-            function updatePreview() {
-                const type = typeSelect.value;
-                const description = descriptionTextarea.value;
-                
-                const typeEmojis = {
-                    'admin_choice': '👑 Admin\'s Choice',
-                    'trending': '🔥 Trending Now',
-                    'popular': '⭐ Popular Pick',
-                    'critics_choice': '🏆 Critics\' Choice'
-                };
-                
-                const preview = `🎬 ${typeEmojis[type]} by ${currentUser.username}
-
-**${selectedContent.title}**
-⭐ Rating: ${selectedContent.rating ? selectedContent.rating.toFixed(1) : 'N/A'}/10
-📅 Release: ${selectedContent.release_date ? new Date(selectedContent.release_date).getFullYear() : 'N/A'}
-🎭 Type: ${(selectedContent.content_type || 'movie').toUpperCase()}
-
-📝 **Admin's Note:** ${description || '[Your recommendation will appear here]'}
-
-📖 **Synopsis:** ${selectedContent.overview ? (selectedContent.overview.substring(0, 200) + '...') : 'No synopsis available'}
-
-#AdminChoice #MovieRecommendation #CineScope`;
-                
-                document.getElementById('telegramPreview').textContent = preview;
-            }
-            
-            typeSelect.addEventListener('change', updatePreview);
-            descriptionTextarea.addEventListener('input', updatePreview);
-            
-            // Initial preview
-            updatePreview();
+            ottAvailabilityData = null;
+            savedContentId = null;
         }
 
         // Submit recommendation
         document.getElementById('recommendationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!selectedContent) {
-                showStatus('No content selected', 'error');
+            if (!selectedContent || !savedContentId) {
+                showStatus('No content selected or saved', 'error');
                 return;
             }
 
@@ -659,49 +1014,16 @@
 
             const recommendationType = document.getElementById('recommendationType').value;
             const description = document.getElementById('recommendationDescription').value;
-            const postToTelegram = document.getElementById('postToTelegram').checked;
 
             try {
-                // First, save the content to our database
-                showStatus('Saving content to database...', 'info');
-                
-                const saveContentResponse = await fetch(`${API_BASE}/admin/content`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        id: selectedContent.id,
-                        title: selectedContent.title,
-                        original_title: selectedContent.original_title,
-                        content_type: selectedContent.content_type || 'movie',
-                        overview: selectedContent.overview,
-                        poster_path: selectedContent.poster_path,
-                        backdrop_path: selectedContent.backdrop_path,
-                        release_date: selectedContent.release_date,
-                        rating: selectedContent.rating,
-                        vote_count: selectedContent.vote_count,
-                        popularity: selectedContent.popularity,
-                        runtime: selectedContent.runtime,
-                        genres: selectedContent.genres || [],
-                        languages: selectedContent.languages || ['en']
-                    })
-                });
-
-                if (!saveContentResponse.ok) {
-                    const errorData = await saveContentResponse.json();
-                    throw new Error(errorData.error || 'Failed to save content');
-                }
-
-                const savedContentData = await saveContentResponse.json();
-                const internalContentId = savedContentData.content_id;
-
-                // Then create the recommendation using the internal content ID
+                // Create the recommendation
                 showStatus('Creating recommendation...', 'info');
                 
                 const response = await fetch(`${API_BASE}/admin/recommendations`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
                     body: JSON.stringify({
-                        content_id: internalContentId,
+                        content_id: savedContentId,
                         recommendation_type: recommendationType,
                         description: description
                     })
@@ -747,7 +1069,6 @@
             document.getElementById('telegramStatus').textContent = 'Testing connection...';
             
             try {
-                // Test by creating a simple health check
                 const response = await fetch(`${API_BASE}/health`);
                 
                 if (response.ok) {
