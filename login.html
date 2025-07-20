@@ -7,16 +7,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            --primary: #e50914;
-            --secondary: #221f1f;
-            --dark: #141414;
-            --light: #f5f5f1;
+            --netflix-red: #e50914;
+            --netflix-black: #141414;
+            --netflix-gray: #333333;
         }
 
         body {
-            background: linear-gradient(135deg, var(--dark) 0%, var(--secondary) 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #141414 0%, #000000 100%);
             min-height: 100vh;
-            font-family: 'Arial', sans-serif;
         }
 
         .auth-container {
@@ -33,10 +32,9 @@
         }
 
         .form-input:focus {
+            border-color: var(--netflix-red);
             background: rgba(255, 255, 255, 0.15);
-            border-color: var(--primary);
             outline: none;
-            box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.3);
         }
 
         .form-input::placeholder {
@@ -44,247 +42,385 @@
         }
 
         .btn-primary {
-            background: var(--primary);
+            background: var(--netflix-red);
+            color: white;
+            font-weight: 600;
             transition: all 0.3s ease;
         }
 
         .btn-primary:hover {
-            background: #f40612;
-            transform: translateY(-1px);
+            background: #b8070e;
+            transform: translateY(-2px);
         }
 
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .btn-primary:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .error-message {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #ef4444;
+            background: rgba(229, 9, 20, 0.1);
+            border: 1px solid rgba(229, 9, 20, 0.3);
+            color: #ff6b6b;
         }
 
         .success-message {
-            background: rgba(34, 197, 94, 0.1);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            color: #22c55e;
+            background: rgba(46, 125, 50, 0.1);
+            border: 1px solid rgba(46, 125, 50, 0.3);
+            color: #4caf50;
+        }
+
+        .preference-pill {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .preference-pill.selected {
+            background: var(--netflix-red);
+            border-color: var(--netflix-red);
+        }
+
+        .loading-spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 2px solid white;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .form-section {
+            transition: all 0.5s ease;
+        }
+
+        .form-section.hidden {
+            display: none;
+        }
+
+        .toggle-link {
+            color: var(--netflix-red);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .toggle-link:hover {
+            color: #b8070e;
+        }
+
+        @media (max-width: 768px) {
+            .auth-container {
+                margin: 1rem;
+            }
         }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
-    <div class="auth-container rounded-xl p-8 w-full max-w-md">
-        <!-- Logo -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-red-500 mb-2">CineScope</h1>
-            <p class="text-gray-400">Your entertainment gateway</p>
-        </div>
-
-        <!-- Toggle Buttons -->
-        <div class="flex mb-6 bg-gray-800 rounded-lg p-1">
-            <button id="loginTab" class="flex-1 py-2 px-4 rounded-md text-white bg-red-600 transition-all">
-                Sign In
-            </button>
-            <button id="registerTab" class="flex-1 py-2 px-4 rounded-md text-gray-400 hover:text-white transition-all">
-                Sign Up
-            </button>
-        </div>
-
-        <!-- Login Form -->
-        <form id="loginForm" class="space-y-4">
-            <div>
-                <label class="block text-gray-300 text-sm font-medium mb-2">Username or Email</label>
-                <input 
-                    type="text" 
-                    id="loginUsername"
-                    class="form-input w-full px-4 py-3 rounded-lg"
-                    placeholder="Enter your username or email"
-                    required
-                >
-            </div>
-            
-            <div>
-                <label class="block text-gray-300 text-sm font-medium mb-2">Password</label>
-                <input 
-                    type="password" 
-                    id="loginPassword"
-                    class="form-input w-full px-4 py-3 rounded-lg"
-                    placeholder="Enter your password"
-                    required
-                >
+<body>
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="auth-container rounded-lg p-8 w-full max-w-md">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-red-600 mb-2">CineScope</h1>
+                <p class="text-gray-400">Your entertainment destination</p>
             </div>
 
-            <button type="submit" id="loginBtn" class="btn-primary w-full py-3 rounded-lg text-white font-medium">
-                Sign In
-            </button>
-        </form>
-
-        <!-- Register Form -->
-        <form id="registerForm" class="space-y-4 hidden">
-            <div>
-                <label class="block text-gray-300 text-sm font-medium mb-2">Username</label>
-                <input 
-                    type="text" 
-                    id="registerUsername"
-                    class="form-input w-full px-4 py-3 rounded-lg"
-                    placeholder="Choose a username"
-                    required
-                >
-            </div>
-            
-            <div>
-                <label class="block text-gray-300 text-sm font-medium mb-2">Email</label>
-                <input 
-                    type="email" 
-                    id="registerEmail"
-                    class="form-input w-full px-4 py-3 rounded-lg"
-                    placeholder="Enter your email"
-                    required
-                >
-            </div>
-            
-            <div>
-                <label class="block text-gray-300 text-sm font-medium mb-2">Password</label>
-                <input 
-                    type="password" 
-                    id="registerPassword"
-                    class="form-input w-full px-4 py-3 rounded-lg"
-                    placeholder="Create a password"
-                    required
-                >
+            <!-- Error/Success Messages -->
+            <div id="messageContainer" class="hidden mb-6 p-4 rounded-lg">
+                <p id="messageText"></p>
             </div>
 
-            <!-- Preferences -->
-            <div>
-                <label class="block text-gray-300 text-sm font-medium mb-2">Preferred Languages</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <label class="flex items-center text-sm">
-                        <input type="checkbox" value="english" class="mr-2"> English
-                    </label>
-                    <label class="flex items-center text-sm">
-                        <input type="checkbox" value="hindi" class="mr-2"> Hindi
-                    </label>
-                    <label class="flex items-center text-sm">
-                        <input type="checkbox" value="telugu" class="mr-2"> Telugu
-                    </label>
-                    <label class="flex items-center text-sm">
-                        <input type="checkbox" value="tamil" class="mr-2"> Tamil
-                    </label>
+            <!-- Sign In Form -->
+            <form id="signInForm" class="form-section">
+                <h2 class="text-2xl font-bold text-white mb-6">Sign In</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <input 
+                            type="text" 
+                            id="signInUsername" 
+                            class="form-input w-full px-4 py-3 rounded-lg" 
+                            placeholder="Username"
+                            required
+                        >
+                    </div>
+                    
+                    <div>
+                        <input 
+                            type="password" 
+                            id="signInPassword" 
+                            class="form-input w-full px-4 py-3 rounded-lg" 
+                            placeholder="Password"
+                            required
+                        >
+                    </div>
+                    
+                    <button 
+                        type="submit" 
+                        id="signInButton" 
+                        class="btn-primary w-full py-3 rounded-lg flex items-center justify-center"
+                    >
+                        <span id="signInButtonText">Sign In</span>
+                        <div id="signInSpinner" class="loading-spinner ml-2 hidden"></div>
+                    </button>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <p class="text-gray-400">
+                        Don't have an account? 
+                        <span class="toggle-link" onclick="showSignUp()">Sign up here</span>
+                    </p>
+                </div>
+            </form>
+
+            <!-- Sign Up Form -->
+            <form id="signUpForm" class="form-section hidden">
+                <h2 class="text-2xl font-bold text-white mb-6">Create Account</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <input 
+                            type="text" 
+                            id="signUpUsername" 
+                            class="form-input w-full px-4 py-3 rounded-lg" 
+                            placeholder="Username"
+                            required
+                        >
+                    </div>
+                    
+                    <div>
+                        <input 
+                            type="email" 
+                            id="signUpEmail" 
+                            class="form-input w-full px-4 py-3 rounded-lg" 
+                            placeholder="Email"
+                            required
+                        >
+                    </div>
+                    
+                    <div>
+                        <input 
+                            type="password" 
+                            id="signUpPassword" 
+                            class="form-input w-full px-4 py-3 rounded-lg" 
+                            placeholder="Password (min 6 characters)"
+                            required
+                            minlength="6"
+                        >
+                    </div>
+                    
+                    <div>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            class="form-input w-full px-4 py-3 rounded-lg" 
+                            placeholder="Confirm Password"
+                            required
+                        >
+                    </div>
+                    
+                    <button 
+                        type="button" 
+                        id="nextButton" 
+                        class="btn-primary w-full py-3 rounded-lg"
+                        onclick="showPreferences()"
+                    >
+                        Next: Set Preferences
+                    </button>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <p class="text-gray-400">
+                        Already have an account? 
+                        <span class="toggle-link" onclick="showSignIn()">Sign in here</span>
+                    </p>
+                </div>
+            </form>
+
+            <!-- Preferences Form -->
+            <div id="preferencesForm" class="form-section hidden">
+                <h2 class="text-2xl font-bold text-white mb-6">Set Your Preferences</h2>
+                
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-white mb-3">Preferred Languages</h3>
+                    <div id="languagePreferences" class="flex flex-wrap gap-2">
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="english">English</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="hindi">Hindi</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="telugu">Telugu</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="tamil">Tamil</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="kannada">Kannada</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-lang="malayalam">Malayalam</span>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-white mb-3">Favorite Genres</h3>
+                    <div id="genrePreferences" class="flex flex-wrap gap-2">
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="action">Action</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="comedy">Comedy</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="drama">Drama</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="thriller">Thriller</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="romance">Romance</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="horror">Horror</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="sci-fi">Sci-Fi</span>
+                        <span class="preference-pill px-3 py-2 rounded-full text-sm" data-genre="animation">Animation</span>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <button 
+                        type="button" 
+                        id="completeSignUpButton" 
+                        class="btn-primary w-full py-3 rounded-lg flex items-center justify-center"
+                        onclick="completeSignUp()"
+                    >
+                        <span id="completeSignUpText">Complete Sign Up</span>
+                        <div id="completeSignUpSpinner" class="loading-spinner ml-2 hidden"></div>
+                    </button>
+                    
+                    <button 
+                        type="button" 
+                        class="w-full py-3 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-gray-400 transition"
+                        onclick="skipPreferences()"
+                    >
+                        Skip for Now
+                    </button>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <p class="text-gray-400">
+                        <span class="toggle-link" onclick="showSignUp()">← Back to Sign Up</span>
+                    </p>
                 </div>
             </div>
-
-            <div>
-                <label class="block text-gray-300 text-sm font-medium mb-2">Favorite Genres</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <label class="flex items-center text-sm">
-                        <input type="checkbox" value="action" class="mr-2"> Action
-                    </label>
-                    <label class="flex items-center text-sm">
-                        <input type="checkbox" value="comedy" class="mr-2"> Comedy
-                    </label>
-                    <label class="flex items-center text-sm">
-                        <input type="checkbox" value="drama" class="mr-2"> Drama
-                    </label>
-                    <label class="flex items-center text-sm">
-                        <input type="checkbox" value="horror" class="mr-2"> Horror
-                    </label>
-                </div>
-            </div>
-
-            <button type="submit" id="registerBtn" class="btn-primary w-full py-3 rounded-lg text-white font-medium">
-                Create Account
-            </button>
-        </form>
-
-        <!-- Messages -->
-        <div id="messageContainer" class="mt-4 hidden">
-            <div id="messageText" class="p-3 rounded-lg text-sm"></div>
-        </div>
-
-        <!-- Back to Home -->
-        <div class="text-center mt-6">
-            <a href="index.html" class="text-gray-400 hover:text-white text-sm transition-colors">
-                ← Back to Home
-            </a>
         </div>
     </div>
 
     <script>
+        // Constants
         const API_BASE = 'https://backend-app-970m.onrender.com/api';
         
-        // Global variables
-        let currentTab = 'login';
+        // State
+        let selectedLanguages = [];
+        let selectedGenres = [];
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+            checkExistingAuth();
+        });
 
-        // Utility functions
-        function showMessage(message, type = 'error') {
-            const container = document.getElementById('messageContainer');
-            const text = document.getElementById('messageText');
+        function initializeEventListeners() {
+            // Form submissions
+            document.getElementById('signInForm').addEventListener('submit', handleSignIn);
             
-            container.classList.remove('hidden');
-            text.textContent = message;
-            text.className = `p-3 rounded-lg text-sm ${type === 'success' ? 'success-message' : 'error-message'}`;
+            // Preference selection
+            document.querySelectorAll('#languagePreferences .preference-pill').forEach(pill => {
+                pill.addEventListener('click', function() {
+                    togglePreference(this, 'lang', selectedLanguages);
+                });
+            });
             
-            setTimeout(() => {
-                container.classList.add('hidden');
-            }, 5000);
+            document.querySelectorAll('#genrePreferences .preference-pill').forEach(pill => {
+                pill.addEventListener('click', function() {
+                    togglePreference(this, 'genre', selectedGenres);
+                });
+            });
+
+            // Input validation
+            document.getElementById('signUpPassword').addEventListener('input', validatePassword);
+            document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
         }
 
-        function setLoading(buttonId, loading = true) {
-            const button = document.getElementById(buttonId);
-            if (loading) {
-                button.innerHTML = '<div class="loading mr-2"></div> Please wait...';
-                button.disabled = true;
-            } else {
-                button.innerHTML = currentTab === 'login' ? 'Sign In' : 'Create Account';
-                button.disabled = false;
+        function checkExistingAuth() {
+            // Check if user is already logged in (from session data)
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectTo = urlParams.get('redirect') || 'dashboard.html';
+            
+            // If user is already authenticated, redirect
+            if (window.currentUser) {
+                window.location.href = redirectTo;
             }
         }
 
-        // Tab switching
-        function setupTabs() {
-            const loginTab = document.getElementById('loginTab');
-            const registerTab = document.getElementById('registerTab');
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-
-            loginTab.addEventListener('click', () => {
-                currentTab = 'login';
-                loginTab.classList.add('bg-red-600', 'text-white');
-                loginTab.classList.remove('text-gray-400');
-                registerTab.classList.remove('bg-red-600', 'text-white');
-                registerTab.classList.add('text-gray-400');
-                
-                loginForm.classList.remove('hidden');
-                registerForm.classList.add('hidden');
-            });
-
-            registerTab.addEventListener('click', () => {
-                currentTab = 'register';
-                registerTab.classList.add('bg-red-600', 'text-white');
-                registerTab.classList.remove('text-gray-400');
-                loginTab.classList.remove('bg-red-600', 'text-white');
-                loginTab.classList.add('text-gray-400');
-                
-                registerForm.classList.remove('hidden');
-                loginForm.classList.add('hidden');
-            });
+        function showSignUp() {
+            document.getElementById('signInForm').classList.add('hidden');
+            document.getElementById('signUpForm').classList.remove('hidden');
+            document.getElementById('preferencesForm').classList.add('hidden');
+            clearMessages();
         }
 
-        // Authentication functions
-        async function handleLogin(event) {
-            event.preventDefault();
-            setLoading('loginBtn', true);
+        function showSignIn() {
+            document.getElementById('signInForm').classList.remove('hidden');
+            document.getElementById('signUpForm').classList.add('hidden');
+            document.getElementById('preferencesForm').classList.add('hidden');
+            clearMessages();
+        }
 
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
+        function showPreferences() {
+            // Validate sign up form first
+            const username = document.getElementById('signUpUsername').value.trim();
+            const email = document.getElementById('signUpEmail').value.trim();
+            const password = document.getElementById('signUpPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!username || !email || !password || !confirmPassword) {
+                showMessage('Please fill in all fields', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                showMessage('Please enter a valid email address', 'error');
+                return;
+            }
+
+            document.getElementById('signUpForm').classList.add('hidden');
+            document.getElementById('preferencesForm').classList.remove('hidden');
+            clearMessages();
+        }
+
+        function togglePreference(element, type, array) {
+            const value = element.dataset[type];
+            const index = array.indexOf(value);
+
+            if (index > -1) {
+                array.splice(index, 1);
+                element.classList.remove('selected');
+            } else {
+                array.push(value);
+                element.classList.add('selected');
+            }
+        }
+
+        async function handleSignIn(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('signInUsername').value.trim();
+            const password = document.getElementById('signInPassword').value;
+
+            if (!username || !password) {
+                showMessage('Please enter both username and password', 'error');
+                return;
+            }
+
+            setSignInLoading(true);
 
             try {
                 const response = await fetch(`${API_BASE}/login`, {
@@ -292,53 +428,48 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    showMessage('Login successful! Redirecting...', 'success');
+                    showMessage('Sign in successful! Redirecting...', 'success');
                     
-                    // Store auth token and user data
-                    sessionStorage.setItem('authToken', data.token);
-                    sessionStorage.setItem('currentUser', JSON.stringify(data.user));
+                    // Store user data in memory
+                    window.currentUser = data.user;
+                    window.authToken = data.token;
                     
                     // Redirect based on user role
                     setTimeout(() => {
                         if (data.user.is_admin) {
                             window.location.href = 'admin/dashboard.html';
                         } else {
-                            window.location.href = 'dashboard.html';
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const redirectTo = urlParams.get('redirect') || 'dashboard.html';
+                            window.location.href = redirectTo;
                         }
                     }, 1500);
                 } else {
-                    showMessage(data.error || 'Login failed');
+                    showMessage(data.error || 'Sign in failed', 'error');
                 }
             } catch (error) {
-                showMessage('Network error. Please try again.');
-                console.error('Login error:', error);
+                console.error('Sign in error:', error);
+                showMessage('Network error. Please try again.', 'error');
             } finally {
-                setLoading('loginBtn', false);
+                setSignInLoading(false);
             }
         }
 
-        async function handleRegister(event) {
-            event.preventDefault();
-            setLoading('registerBtn', true);
+        async function completeSignUp() {
+            const username = document.getElementById('signUpUsername').value.trim();
+            const email = document.getElementById('signUpEmail').value.trim();
+            const password = document.getElementById('signUpPassword').value;
 
-            const username = document.getElementById('registerUsername').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-
-            // Get preferences
-            const languages = Array.from(document.querySelectorAll('#registerForm input[type="checkbox"]:checked'))
-                .filter(cb => ['english', 'hindi', 'telugu', 'tamil'].includes(cb.value))
-                .map(cb => cb.value);
-
-            const genres = Array.from(document.querySelectorAll('#registerForm input[type="checkbox"]:checked'))
-                .filter(cb => ['action', 'comedy', 'drama', 'horror'].includes(cb.value))
-                .map(cb => cb.value);
+            setCompleteSignUpLoading(true);
 
             try {
                 const response = await fetch(`${API_BASE}/register`, {
@@ -347,11 +478,11 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        username,
-                        email,
-                        password,
-                        preferred_languages: languages,
-                        preferred_genres: genres
+                        username: username,
+                        email: email,
+                        password: password,
+                        preferred_languages: selectedLanguages,
+                        preferred_genres: selectedGenres
                     })
                 });
 
@@ -360,66 +491,122 @@
                 if (response.ok) {
                     showMessage('Account created successfully! Redirecting...', 'success');
                     
-                    // Store auth token and user data
-                    sessionStorage.setItem('authToken', data.token);
-                    sessionStorage.setItem('currentUser', JSON.stringify(data.user));
+                    // Store user data in memory
+                    window.currentUser = data.user;
+                    window.authToken = data.token;
                     
                     // Redirect to dashboard
                     setTimeout(() => {
                         window.location.href = 'dashboard.html';
                     }, 1500);
                 } else {
-                    showMessage(data.error || 'Registration failed');
+                    showMessage(data.error || 'Registration failed', 'error');
                 }
             } catch (error) {
-                showMessage('Network error. Please try again.');
                 console.error('Registration error:', error);
+                showMessage('Network error. Please try again.', 'error');
             } finally {
-                setLoading('registerBtn', false);
+                setCompleteSignUpLoading(false);
             }
         }
 
-        // Check if user is already logged in
-        function checkAuthStatus() {
-            const token = sessionStorage.getItem('authToken');
-            const user = sessionStorage.getItem('currentUser');
-            
-            if (token && user) {
-                const userData = JSON.parse(user);
-                if (userData.is_admin) {
-                    window.location.href = 'admin/dashboard.html';
-                } else {
-                    window.location.href = 'dashboard.html';
-                }
+        function skipPreferences() {
+            completeSignUp();
+        }
+
+        function setSignInLoading(loading) {
+            const button = document.getElementById('signInButton');
+            const text = document.getElementById('signInButtonText');
+            const spinner = document.getElementById('signInSpinner');
+
+            if (loading) {
+                button.disabled = true;
+                text.textContent = 'Signing In...';
+                spinner.classList.remove('hidden');
+            } else {
+                button.disabled = false;
+                text.textContent = 'Sign In';
+                spinner.classList.add('hidden');
             }
         }
 
-        // Initialize page
-        function initializePage() {
-            // Check if already logged in
-            checkAuthStatus();
-            
-            // Setup tabs
-            setupTabs();
-            
-            // Setup form handlers
-            document.getElementById('loginForm').addEventListener('submit', handleLogin);
-            document.getElementById('registerForm').addEventListener('submit', handleRegister);
-            
-            // Focus on first input
-            document.getElementById('loginUsername').focus();
+        function setCompleteSignUpLoading(loading) {
+            const button = document.getElementById('completeSignUpButton');
+            const text = document.getElementById('completeSignUpText');
+            const spinner = document.getElementById('completeSignUpSpinner');
+
+            if (loading) {
+                button.disabled = true;
+                text.textContent = 'Creating Account...';
+                spinner.classList.remove('hidden');
+            } else {
+                button.disabled = false;
+                text.textContent = 'Complete Sign Up';
+                spinner.classList.add('hidden');
+            }
         }
 
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', initializePage);
+        function showMessage(message, type) {
+            const container = document.getElementById('messageContainer');
+            const text = document.getElementById('messageText');
 
-        // Handle Enter key for form submission
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                if (currentTab === 'login') {
-                    document.getElementById('loginForm').dispatchEvent(new Event('submit'));
-                } else {
-                    document.getElementById('registerForm').dispatchEvent(new Event('submit'));
+            text.textContent = message;
+            container.className = `mb-6 p-4 rounded-lg ${type === 'error' ? 'error-message' : 'success-message'}`;
+            container.classList.remove('hidden');
+
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(clearMessages, 3000);
+            }
+        }
+
+        function clearMessages() {
+            document.getElementById('messageContainer').classList.add('hidden');
+        }
+
+        function validatePassword() {
+            const password = document.getElementById('signUpPassword').value;
+            const input = document.getElementById('signUpPassword');
+
+            if (password.length > 0 && password.length < 6) {
+                input.style.borderColor = '#ef4444';
+            } else {
+                input.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            }
+        }
+
+        function validateConfirmPassword() {
+            const password = document.getElementById('signUpPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const input = document.getElementById('confirmPassword');
+
+            if (confirmPassword.length > 0 && password !== confirmPassword) {
+                input.style.borderColor = '#ef4444';
+            } else {
+                input.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            }
+        }
+
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // Handle browser back button
+        window.addEventListener('popstate', function() {
+            showSignIn();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
+                const visibleForm = document.querySelector('.form-section:not(.hidden)');
+                if (visibleForm && visibleForm.id === 'signInForm') {
+                    handleSignIn(e);
+                } else if (visibleForm && visibleForm.id === 'signUpForm') {
+                    showPreferences();
+                } else if (visibleForm && visibleForm.id === 'preferencesForm') {
+                    completeSignUp();
                 }
             }
         });

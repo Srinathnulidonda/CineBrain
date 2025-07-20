@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Favorites - CineScope</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --netflix-red: #e50914;
+            --netflix-black: #141414;
+            --netflix-gray: #333333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--netflix-black);
+            color: white;
+        }
+
+        .navbar {
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .content-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--netflix-red);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .content-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .favorite-heart {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--netflix-red);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .favorite-heart:hover {
+            background: rgba(0,0,0,1);
+            transform: scale(1.1);
+        }
+
+        .btn-primary {
+            background: var(--netflix-red);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-primary:hover {
+            background: #b8070e;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .filter-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--netflix-red);
+        }
+
+        .genre-tag {
+            background: rgba(229, 9, 20, 0.2);
+            color: var(--netflix-red);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            margin: 2px;
+            display: inline-block;
+        }
+
+        .rating-stars {
+            color: #ffd700;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .loading-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+            animation: pulse 2s infinite;
+        }
+
+        .loading-image {
+            width: 100%;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .loading-content {
+            padding: 1rem;
+        }
+
+        .loading-line {
+            height: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @media (max-width: 768px) {
+            .grid-layout {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar fixed top-0 left-0 right-0 z-30 px-4 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <button onclick="goBack()" class="text-white hover:text-red-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <h1 class="text-xl font-bold text-red-600">My Favorites</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="../dashboard.html" class="text-white hover:text-red-500">Dashboard</a>
+                <a href="../profile.html" class="text-white hover:text-red-500">Profile</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-20 p-6 max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">My Favorites ❤️</h1>
+                <p class="text-gray-400">Content you absolutely love</p>
+            </div>
+            
+            <!-- Controls -->
+            <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                <!-- Sort Filter -->
+                <select id="sortFilter" class="filter-select">
+                    <option value="added">Recently Added</option>
+                    <option value="title">Title</option>
+                    <option value="rating">Rating</option>
+                    <option value="release">Release Date</option>
+                </select>
+                
+                <!-- Type Filter -->
+                <select id="typeFilter" class="filter-select">
+                    <option value="all">All Types</option>
+                    <option value="movie">Movies</option>
+                    <option value="tv">TV Shows</option>
+                    <option value="anime">Anime</option>
+                </select>
+                
+                <!-- Genre Filter -->
+                <select id="genreFilter" class="filter-select">
+                    <option value="all">All Genres</option>
+                    <option value="action">Action</option>
+                    <option value="comedy">Comedy</option>
+                    <option value="drama">Drama</option>
+                    <option value="romance">Romance</option>
+                    <option value="thriller">Thriller</option>
+                    <option value="horror">Horror</option>
+                    <option value="sci-fi">Sci-Fi</option>
+                    <option value="animation">Animation</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <div class="bg-gray-800 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-red-500" id="totalFavorites">0</div>
+                <div class="text-sm text-gray-400">Total Favorites</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-blue-500" id="movieCount">0</div>
+                <div class="text-sm text-gray-400">Movies</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-green-500" id="tvCount">0</div>
+                <div class="text-sm text-gray-400">TV Shows</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-purple-500" id="animeCount">0</div>
+                <div class="text-sm text-gray-400">Anime</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-yellow-500" id="avgRating">0.0</div>
+                <div class="text-sm text-gray-400">Avg Rating</div>
+            </div>
+        </div>
+
+        <!-- Content Grid -->
+        <div id="favoritesContainer" class="grid-layout">
+            <!-- Loading State -->
+            <div class="loading-card">
+                <div class="loading-image"></div>
+                <div class="loading-content">
+                    <div class="loading-line w-3/4 mb-2"></div>
+                    <div class="loading-line w-1/2 mb-2"></div>
+                    <div class="loading-line w-full"></div>
+                </div>
+            </div>
+            <div class="loading-card">
+                <div class="loading-image"></div>
+                <div class="loading-content">
+                    <div class="loading-line w-3/4 mb-2"></div>
+                    <div class="loading-line w-1/2 mb-2"></div>
+                    <div class="loading-line w-full"></div>
+                </div>
+            </div>
+            <div class="loading-card">
+                <div class="loading-image"></div>
+                <div class="loading-content">
+                    <div class="loading-line w-3/4 mb-2"></div>
+                    <div class="loading-line w-1/2 mb-2"></div>
+                    <div class="loading-line w-full"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state hidden">
+            <div class="empty-state-icon">💔</div>
+            <h3 class="text-xl font-bold mb-2">No favorites yet</h3>
+            <p class="text-gray-400 mb-6">Start favoriting content you love to see them here</p>
+            <a href="../index.html" class="btn-primary">Discover Content</a>
+        </div>
+
+        <!-- Recommendations -->
+        <div id="recommendationsSection" class="mt-16 hidden">
+            <h2 class="text-2xl font-bold mb-6">Based on Your Favorites</h2>
+            <div id="recommendationsContainer" class="grid-layout">
+                <!-- Recommendations will be loaded here -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Constants
+        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        
+        // State
+        let currentUser = window.currentUser;
+        let authToken = window.authToken;
+        let favoritesData = [];
+        let currentSort = 'added';
+        let currentTypeFilter = 'all';
+        let currentGenreFilter = 'all';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthentication();
+            initializeEventListeners();
+            loadFavorites();
+        });
+
+        function checkAuthentication() {
+            if (!currentUser || !authToken) {
+                window.location.href = '../login.html?redirect=user/favorites.html';
+                return;
+            }
+        }
+
+        function initializeEventListeners() {
+            // Sort and filter changes
+            document.getElementById('sortFilter').addEventListener('change', function() {
+                currentSort = this.value;
+                renderFavorites();
+            });
+
+            document.getElementById('typeFilter').addEventListener('change', function() {
+                currentTypeFilter = this.value;
+                renderFavorites();
+            });
+
+            document.getElementById('genreFilter').addEventListener('change', function() {
+                currentGenreFilter = this.value;
+                renderFavorites();
+            });
+        }
+
+        async function loadFavorites() {
+            try {
+                const response = await fetch(`${API_BASE}/user/favorites`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    favoritesData = data.favorites || [];
+                    renderFavorites();
+                    updateStats();
+                    
+                    if (favoritesData.length > 0) {
+                        loadRecommendations();
+                    }
+                } else {
+                    showError(data.error || 'Failed to load favorites');
+                }
+            } catch (error) {
+                console.error('Error loading favorites:', error);
+                showError('Failed to load favorites');
+            }
+        }
+
+        function renderFavorites() {
+            const container = document.getElementById('favoritesContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            // Filter data
+            let filteredData = favoritesData.filter(item => {
+                // Type filter
+                if (currentTypeFilter !== 'all' && item.content_type !== currentTypeFilter) {
+                    return false;
+                }
+                
+                // Genre filter
+                if (currentGenreFilter !== 'all') {
+                    const genres = item.genres || [];
+                    if (!genres.some(genre => genre.toLowerCase().includes(currentGenreFilter.toLowerCase()))) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+
+            // Sort data
+            filteredData.sort((a, b) => {
+                switch (currentSort) {
+                    case 'title':
+                        return a.title.localeCompare(b.title);
+                    case 'rating':
+                        return (b.rating || 0) - (a.rating || 0);
+                    case 'release':
+                        return new Date(b.release_date || 0) - new Date(a.release_date || 0);
+                    default: // 'added'
+                        return new Date(b.favorited_at || 0) - new Date(a.favorited_at || 0);
+                }
+            });
+
+            if (filteredData.length === 0) {
+                container.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            container.innerHTML = filteredData.map(item => createFavoriteCard(item)).join('');
+        }
+
+        function createFavoriteCard(item) {
+            const posterUrl = item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image';
+            const rating = item.rating ? item.rating.toFixed(1) : 'N/A';
+            const ottInfo = getOTTInfo(item.ott_platforms);
+
+            return `
+                <div class="content-card" onclick="openContentDetails(${item.id})">
+                    <div class="relative">
+                        <img src="${posterUrl}" alt="${item.title}" class="content-image" loading="lazy">
+                        <div class="favorite-heart" onclick="event.stopPropagation(); removeFromFavorites(${item.id})" title="Remove from favorites">
+                            ❤️
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-2 line-clamp-1">${item.title}</h3>
+                        
+                        <div class="flex items-center justify-between text-sm text-gray-400 mb-2">
+                            <span class="capitalize">${item.content_type}</span>
+                            <span class="rating-stars">⭐ ${rating}</span>
+                        </div>
+                        
+                        ${item.release_date ? `
+                            <div class="text-sm text-gray-400 mb-2">
+                                ${new Date(item.release_date).getFullYear()}
+                            </div>
+                        ` : ''}
+                        
+                        <p class="text-gray-300 text-sm mb-3 line-clamp-2">${item.overview || 'No description available.'}</p>
+                        
+                        <div class="mb-3">
+                            ${(item.genres || []).slice(0, 3).map(genre => 
+                                `<span class="genre-tag">${genre}</span>`
+                            ).join('')}
+                        </div>
+                        
+                        ${ottInfo}
+                        
+                        <div class="flex space-x-2 mt-4">
+                            <button class="btn-primary flex-1" onclick="event.stopPropagation(); watchContent(${item.id})">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
+                                </svg>
+                                Watch
+                            </button>
+                            <button class="btn-secondary" onclick="event.stopPropagation(); addToWatchlist(${item.id})" title="Add to Watchlist">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getOTTInfo(ottPlatforms) {
+            if (!ottPlatforms || ottPlatforms.length === 0) {
+                return '<div class="text-xs text-gray-500 mb-2">No streaming info</div>';
+            }
+
+            const platforms = typeof ottPlatforms === 'string' ? JSON.parse(ottPlatforms) : ottPlatforms;
+            const freePlatforms = platforms.filter(p => p.is_free);
+            const paidPlatforms = platforms.filter(p => !p.is_free);
+
+            let html = '<div class="text-xs mb-2">';
+            
+            if (freePlatforms.length > 0) {
+                html += `<span class="bg-green-600 bg-opacity-20 text-green-400 px-2 py-1 rounded mr-1">FREE (${freePlatforms.length})</span>`;
+            }
+            
+            if (paidPlatforms.length > 0) {
+                html += `<span class="bg-orange-600 bg-opacity-20 text-orange-400 px-2 py-1 rounded">PAID (${paidPlatforms.length})</span>`;
+            }
+            
+            html += '</div>';
+            return html;
+        }
+
+        function updateStats() {
+            const total = favoritesData.length;
+            const movies = favoritesData.filter(item => item.content_type === 'movie').length;
+            const tvShows = favoritesData.filter(item => item.content_type === 'tv').length;
+            const anime = favoritesData.filter(item => item.content_type === 'anime').length;
+            
+            // Calculate average rating
+            const ratingsSum = favoritesData.reduce((sum, item) => sum + (item.rating || 0), 0);
+            const avgRating = total > 0 ? (ratingsSum / total).toFixed(1) : '0.0';
+
+            document.getElementById('totalFavorites').textContent = total;
+            document.getElementById('movieCount').textContent = movies;
+            document.getElementById('tvCount').textContent = tvShows;
+            document.getElementById('animeCount').textContent = anime;
+            document.getElementById('avgRating').textContent = avgRating;
+        }
+
+        async function loadRecommendations() {
+            try {
+                // Get recommendations based on user's favorite genres
+                const favoriteGenres = getFavoriteGenres();
+                if (favoriteGenres.length === 0) return;
+
+                const response = await fetch(`${API_BASE}/recommendations/popular/${favoriteGenres[0]}?limit=12`);
+                const data = await response.json();
+
+                if (response.ok && data.recommendations?.length > 0) {
+                    // Filter out items already in favorites
+                    const favoriteIds = favoritesData.map(item => item.id);
+                    const newRecommendations = data.recommendations.filter(item => !favoriteIds.includes(item.id));
+                    
+                    if (newRecommendations.length > 0) {
+                        displayRecommendations(newRecommendations.slice(0, 8));
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading recommendations:', error);
+            }
+        }
+
+        function getFavoriteGenres() {
+            const genreCounts = {};
+            
+            favoritesData.forEach(item => {
+                (item.genres || []).forEach(genre => {
+                    genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+                });
+            });
+            
+            return Object.keys(genreCounts).sort((a, b) => genreCounts[b] - genreCounts[a]);
+        }
+
+        function displayRecommendations(recommendations) {
+            const section = document.getElementById('recommendationsSection');
+            const container = document.getElementById('recommendationsContainer');
+            
+            section.classList.remove('hidden');
+            container.innerHTML = recommendations.map(item => createRecommendationCard(item)).join('');
+        }
+
+        function createRecommendationCard(item) {
+            const posterUrl = item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image';
+            const rating = item.rating ? item.rating.toFixed(1) : 'N/A';
+
+            return `
+                <div class="content-card" onclick="openContentDetails(${item.id})">
+                    <div class="relative">
+                        <img src="${posterUrl}" alt="${item.title}" class="content-image" loading="lazy">
+                        <div class="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">
+                            Recommended
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-2 line-clamp-1">${item.title}</h3>
+                        <div class="flex items-center justify-between text-sm text-gray-400 mb-2">
+                            <span class="capitalize">${item.content_type}</span>
+                            <span class="rating-stars">⭐ ${rating}</span>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3 line-clamp-2">${item.overview || 'No description available.'}</p>
+                        <div class="flex space-x-2">
+                            <button class="btn-primary flex-1" onclick="event.stopPropagation(); openContentDetails(${item.id})">
+                                View Details
+                            </button>
+                            <button class="btn-secondary" onclick="event.stopPropagation(); addToFavorites(${item.id})" title="Add to Favorites">
+                                ❤️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function removeFromFavorites(contentId) {
+            if (!confirm('Remove this item from your favorites?')) return;
+
+            try {
+                // Note: API endpoint for removing from favorites would be needed
+                // For now, just remove from local data
+                favoritesData = favoritesData.filter(item => item.id !== contentId);
+                renderFavorites();
+                updateStats();
+                showNotification('Removed from favorites');
+                
+                // Reload recommendations if favorites change significantly
+                if (favoritesData.length > 0) {
+                    loadRecommendations();
+                }
+            } catch (error) {
+                console.error('Failed to remove from favorites:', error);
+                showNotification('Failed to remove from favorites');
+            }
+        }
+
+        async function addToFavorites(contentId) {
+            try {
+                const response = await fetch(`${API_BASE}/interactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content_id: contentId,
+                        interaction_type: 'favorite'
+                    })
+                });
+
+                if (response.ok) {
+                    showNotification('Added to favorites!');
+                    // Reload favorites to include new item
+                    loadFavorites();
+                }
+            } catch (error) {
+                console.error('Failed to add to favorites:', error);
+                showNotification('Failed to add to favorites');
+            }
+        }
+
+        async function addToWatchlist(contentId) {
+            try {
+                const response = await fetch(`${API_BASE}/interactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content_id: contentId,
+                        interaction_type: 'watchlist'
+                    })
+                });
+
+                if (response.ok) {
+                    showNotification('Added to watchlist!');
+                }
+            } catch (error) {
+                console.error('Failed to add to watchlist:', error);
+                showNotification('Failed to add to watchlist');
+            }
+        }
+
+        function watchContent(contentId) {
+            // Record a view interaction and then open details
+            recordInteraction(contentId, 'view');
+            openContentDetails(contentId);
+        }
+
+        async function recordInteraction(contentId, type) {
+            try {
+                await fetch(`${API_BASE}/interactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content_id: contentId,
+                        interaction_type: type
+                    })
+                });
+            } catch (error) {
+                console.error('Failed to record interaction:', error);
+            }
+        }
+
+        function openContentDetails(contentId) {
+            window.location.href = `../details.html?id=${contentId}`;
+        }
+
+        function showError(message) {
+            const container = document.getElementById('favoritesContainer');
+            container.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <p class="text-xl text-red-500">${message}</p>
+                    <button onclick="loadFavorites()" class="btn-primary mt-4">Try Again</button>
+                </div>
+            `;
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function goBack() {
+            window.location.href = '../dashboard.html';
+        }
+    </script>
+</body>
+</html>

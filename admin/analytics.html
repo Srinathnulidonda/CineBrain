@@ -4,844 +4,856 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics - CineScope Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-            color: #ffffff;
-            min-height: 100vh;
+        :root {
+            --netflix-red: #e50914;
+            --netflix-black: #141414;
+            --netflix-gray: #333333;
         }
 
-        .admin-container {
-            min-height: 100vh;
-            padding-top: 80px;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--netflix-black);
+            color: white;
         }
 
         .navbar {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(15, 15, 35, 0.95);
+            background: rgba(20, 20, 20, 0.95);
             backdrop-filter: blur(10px);
-            z-index: 1000;
-            padding: 1rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .admin-badge {
-            background: linear-gradient(45deg, #ef4444, #dc2626);
-            color: #ffffff;
-            padding: 0.25rem 0.75rem;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-left: 0.5rem;
-        }
-
-        .page-header {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(168, 85, 247, 0.1));
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-radius: 1.5rem;
-            padding: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .date-filter {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 3rem;
-            flex-wrap: wrap;
-        }
-
-        .date-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-        }
-
-        .date-btn.active {
-            background: linear-gradient(45deg, #ef4444, #dc2626);
-            border-color: #ef4444;
-        }
-
-        .date-btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        .stats-overview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-
-        .stat-card {
+        .analytics-card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
-            padding: 2rem;
+            border-radius: 12px;
+            padding: 1.5rem;
             transition: all 0.3s ease;
         }
 
-        .stat-card:hover {
+        .analytics-card:hover {
             transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--netflix-red);
         }
 
-        .stat-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            background: linear-gradient(45deg, #ef4444, #dc2626);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .stat-value {
+        .stat-number {
             font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-weight: bold;
+            color: var(--netflix-red);
         }
 
         .stat-change {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            margin-top: 0.5rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 50px;
-            font-size: 0.8rem;
+            font-size: 0.875rem;
             font-weight: 600;
         }
 
         .stat-change.positive {
-            background: rgba(34, 197, 94, 0.1);
-            color: #22c55e;
+            color: #4caf50;
         }
 
         .stat-change.negative {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
+            color: #f44336;
         }
 
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
+        .stat-change.neutral {
+            color: #ff9800;
         }
 
         .chart-container {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
-            padding: 2rem;
+            border-radius: 12px;
+            padding: 1.5rem;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
         }
 
-        .chart-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            color: #ffffff;
+        .chart-placeholder {
+            font-size: 4rem;
+            opacity: 0.3;
+            margin-bottom: 1rem;
+        }
+
+        .filter-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--netflix-red);
+        }
+
+        .btn-primary {
+            background: var(--netflix-red);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: #b8070e;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
         }
 
         .table-container {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
-            padding: 2rem;
-            overflow-x: auto;
+            border-radius: 12px;
+            overflow: hidden;
         }
 
-        .data-table {
+        .table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .data-table th {
-            background: rgba(255, 255, 255, 0.08);
+        .table th {
+            background: rgba(255, 255, 255, 0.1);
             padding: 1rem;
             text-align: left;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .data-table td {
+        .table td {
             padding: 1rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .data-table tr:hover {
+        .table tr:hover {
             background: rgba(255, 255, 255, 0.05);
         }
 
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 600;
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.2);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
         }
 
-        .badge.movie {
-            background: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
         }
 
-        .badge.tv {
-            background: rgba(147, 51, 234, 0.2);
-            color: #9333ea;
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2rem;
         }
 
-        .badge.anime {
-            background: rgba(236, 72, 153, 0.2);
-            color: #ec4899;
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.7);
         }
 
-        .export-btn {
-            background: linear-gradient(45deg, #22c55e, #16a34a);
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
+        .tab.active {
+            color: white;
+            border-bottom-color: var(--netflix-red);
+        }
+
+        .tab:hover {
+            color: white;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .export-button {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid #4caf50;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
             cursor: pointer;
             transition: all 0.3s ease;
-            color: #ffffff;
         }
 
-        .export-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
+        .export-button:hover {
+            background: rgba(76, 175, 80, 0.3);
         }
 
         @media (max-width: 768px) {
-            .admin-container {
-                padding-top: 70px;
-            }
-
-            .page-header {
-                padding: 1.5rem;
-                margin-bottom: 2rem;
-            }
-
-            .date-filter {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            .stats-overview {
-                grid-template-columns: 1fr;
-            }
-
-            .charts-grid {
-                grid-template-columns: 1fr;
+            .stat-number {
+                font-size: 2rem;
             }
 
             .chart-container {
-                padding: 1rem;
+                height: 300px;
             }
 
             .table-container {
-                padding: 1rem;
+                overflow-x: auto;
             }
         }
     </style>
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center">
-                    <div class="logo">CineScope</div>
-                    <span class="admin-badge">ADMIN</span>
-                </div>
-                
-                <div class="hidden md:flex space-x-6">
-                    <a href="dashboard.html" class="text-white hover:text-red-400 transition-colors">Dashboard</a>
-                    <a href="content-browser.html" class="text-white hover:text-red-400 transition-colors">Content Browser</a>
-                    <a href="posts.html" class="text-white hover:text-red-400 transition-colors">Posts</a>
-                    <a href="analytics.html" class="text-red-400">Analytics</a>
-                </div>
-
-                <div class="flex items-center space-x-4">
-                    <span class="text-red-400 font-semibold" id="adminName">Admin</span>
-                    <button onclick="logout()" class="text-white hover:text-red-400 transition-colors">
-                        <i class="fas fa-sign-out-alt text-xl"></i>
-                    </button>
-                </div>
+    <nav class="navbar fixed top-0 left-0 right-0 z-30 px-4 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <button onclick="goBack()" class="text-white hover:text-red-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <h1 class="text-xl font-bold text-red-600">Analytics Dashboard</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <select id="dateRange" class="filter-select">
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                    <option value="1y">Last year</option>
+                </select>
+                <button class="export-button" onclick="exportReport()">📊 Export</button>
+                <a href="dashboard.html" class="text-white hover:text-red-500">Dashboard</a>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="admin-container">
-        <div class="container mx-auto px-4">
-            <!-- Page Header -->
-            <div class="page-header">
-                <div class="flex justify-between items-center flex-wrap">
-                    <div>
-                        <h1 class="text-3xl font-bold text-white mb-2">
-                            <i class="fas fa-chart-line mr-3"></i>
-                            Platform Analytics
-                        </h1>
-                        <p class="text-gray-300">Monitor platform performance and user behavior</p>
-                    </div>
-                    <button class="export-btn mt-4 md:mt-0">
-                        <i class="fas fa-download mr-2"></i>
-                        Export Report
-                    </button>
-                </div>
+    <main class="pt-20 p-6 max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Analytics Overview</h1>
+                <p class="text-gray-400">Comprehensive platform insights and performance metrics</p>
             </div>
-
-            <!-- Date Filter -->
-            <div class="date-filter">
-                <button class="date-btn active" data-range="today">Today</button>
-                <button class="date-btn" data-range="week">This Week</button>
-                <button class="date-btn" data-range="month">This Month</button>
-                <button class="date-btn" data-range="quarter">This Quarter</button>
-                <button class="date-btn" data-range="year">This Year</button>
+            <div class="flex gap-2">
+                <button class="btn-secondary" onclick="refreshData()">🔄 Refresh</button>
+                <button class="btn-primary" onclick="generateReport()">📈 Generate Report</button>
             </div>
+        </div>
 
-            <!-- Stats Overview -->
-            <div class="stats-overview">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-value" id="totalUsers">0</div>
-                    <div class="stat-label">Total Users</div>
-                    <div class="stat-change positive">
-                        <i class="fas fa-arrow-up"></i>
-                        <span>12.5%</span>
-                    </div>
+        <!-- Key Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="analytics-card">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-gray-400">Total Users</h3>
+                    <span class="text-2xl">👥</span>
                 </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-film"></i>
-                    </div>
-                    <div class="stat-value" id="totalContent">0</div>
-                    <div class="stat-label">Content Items</div>
-                    <div class="stat-change positive">
-                        <i class="fas fa-arrow-up"></i>
-                        <span>8.3%</span>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-mouse-pointer"></i>
-                    </div>
-                    <div class="stat-value" id="totalInteractions">0</div>
-                    <div class="stat-label">Interactions</div>
-                    <div class="stat-change positive">
-                        <i class="fas fa-arrow-up"></i>
-                        <span>24.7%</span>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-heart"></i>
-                    </div>
-                    <div class="stat-value" id="engagementRate">0%</div>
-                    <div class="stat-label">Engagement Rate</div>
-                    <div class="stat-change negative">
-                        <i class="fas fa-arrow-down"></i>
-                        <span>2.1%</span>
-                    </div>
-                </div>
+                <div class="stat-number" id="totalUsers">1,247</div>
+                <div class="stat-change positive">+12.5% vs last month</div>
             </div>
+            
+            <div class="analytics-card">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-gray-400">Active Users</h3>
+                    <span class="text-2xl">🟢</span>
+                </div>
+                <div class="stat-number" id="activeUsers">834</div>
+                <div class="stat-change positive">+8.3% vs last week</div>
+            </div>
+            
+            <div class="analytics-card">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-gray-400">Content Views</h3>
+                    <span class="text-2xl">👀</span>
+                </div>
+                <div class="stat-number" id="contentViews">25,431</div>
+                <div class="stat-change positive">+15.7% vs yesterday</div>
+            </div>
+            
+            <div class="analytics-card">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-gray-400">Engagement Rate</h3>
+                    <span class="text-2xl">📊</span>
+                </div>
+                <div class="stat-number" id="engagementRate">68.2%</div>
+                <div class="stat-change negative">-2.1% vs last week</div>
+            </div>
+        </div>
 
-            <!-- Charts Grid -->
-            <div class="charts-grid">
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('overview')">📈 Overview</div>
+            <div class="tab" onclick="switchTab('users')">👥 Users</div>
+            <div class="tab" onclick="switchTab('content')">🎬 Content</div>
+            <div class="tab" onclick="switchTab('engagement')">💝 Engagement</div>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overviewTab" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <!-- User Growth Chart -->
                 <div class="chart-container">
-                    <h3 class="chart-title">User Growth</h3>
-                    <canvas id="userGrowthChart"></canvas>
+                    <h3 class="text-lg font-semibold mb-4 self-start">User Growth Over Time</h3>
+                    <div class="chart-placeholder">📈</div>
+                    <p class="text-gray-400 text-center">Interactive chart showing user registration trends</p>
+                    <p class="text-sm text-gray-500 mt-2">Would integrate Chart.js, D3.js, or similar library</p>
                 </div>
-
-                <!-- Content Distribution Chart -->
+                
+                <!-- Content Performance -->
                 <div class="chart-container">
-                    <h3 class="chart-title">Content Distribution</h3>
-                    <canvas id="contentDistributionChart"></canvas>
+                    <h3 class="text-lg font-semibold mb-4 self-start">Content Performance</h3>
+                    <div class="chart-placeholder">🥧</div>
+                    <p class="text-gray-400 text-center">Distribution of content types and their popularity</p>
+                    <p class="text-sm text-gray-500 mt-2">Movies vs TV Shows vs Anime engagement</p>
                 </div>
+            </div>
 
-                <!-- Engagement Over Time -->
-                <div class="chart-container">
-                    <h3 class="chart-title">Engagement Over Time</h3>
-                    <canvas id="engagementChart"></canvas>
+            <!-- Quick Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="metric-card">
+                    <div class="text-2xl font-bold text-blue-500">3,456</div>
+                    <div class="text-sm text-gray-400">Total Content</div>
                 </div>
-
-                <!-- Popular Genres -->
-                <div class="chart-container">
-                    <h3 class="chart-title">Popular Genres</h3>
-                    <canvas id="genresChart"></canvas>
+                <div class="metric-card">
+                    <div class="text-2xl font-bold text-green-500">89.3%</div>
+                    <div class="text-sm text-gray-400">User Satisfaction</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-2xl font-bold text-purple-500">4.2</div>
+                    <div class="text-sm text-gray-400">Avg. Rating</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-2xl font-bold text-yellow-500">12.5m</div>
+                    <div class="text-sm text-gray-400">Total Views</div>
                 </div>
             </div>
 
             <!-- Popular Content Table -->
             <div class="table-container">
-                <h3 class="chart-title mb-4">Most Popular Content</h3>
-                <table class="data-table">
+                <table class="table">
                     <thead>
                         <tr>
-                            <th>Title</th>
+                            <th>Content</th>
                             <th>Type</th>
                             <th>Views</th>
-                            <th>Favorites</th>
                             <th>Rating</th>
                             <th>Engagement</th>
                         </tr>
                     </thead>
                     <tbody id="popularContentTable">
-                        <!-- Table rows will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- User Activity Table -->
-            <div class="table-container mt-6">
-                <h3 class="chart-title mb-4">Most Active Users</h3>
-                <table class="data-table">
-                    <thead>
                         <tr>
-                            <th>Username</th>
-                            <th>Joined</th>
-                            <th>Interactions</th>
-                            <th>Favorites</th>
-                            <th>Watchlist</th>
-                            <th>Last Active</th>
+                            <td>
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-12 h-16 bg-gray-600 rounded"></div>
+                                    <div>
+                                        <div class="font-semibold">Spider-Man: No Way Home</div>
+                                        <div class="text-sm text-gray-400">2021 • Action</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="px-2 py-1 bg-blue-600 bg-opacity-20 text-blue-400 rounded text-sm">Movie</span></td>
+                            <td>15,423</td>
+                            <td>⭐ 8.9</td>
+                            <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill bg-green-500" style="width: 89%"></div>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody id="activeUsersTable">
-                        <!-- Table rows will be populated here -->
+                        <tr>
+                            <td>
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-12 h-16 bg-gray-600 rounded"></div>
+                                    <div>
+                                        <div class="font-semibold">Breaking Bad</div>
+                                        <div class="text-sm text-gray-400">2008-2013 • Drama</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="px-2 py-1 bg-green-600 bg-opacity-20 text-green-400 rounded text-sm">TV Show</span></td>
+                            <td>12,891</td>
+                            <td>⭐ 9.5</td>
+                            <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill bg-green-500" style="width: 95%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-12 h-16 bg-gray-600 rounded"></div>
+                                    <div>
+                                        <div class="font-semibold">Attack on Titan</div>
+                                        <div class="text-sm text-gray-400">2013-2023 • Action/Drama</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="px-2 py-1 bg-purple-600 bg-opacity-20 text-purple-400 rounded text-sm">Anime</span></td>
+                            <td>11,234</td>
+                            <td>⭐ 9.2</td>
+                            <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill bg-green-500" style="width: 92%"></div>
+                                </div>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-    </div>
+
+        <!-- Users Tab -->
+        <div id="usersTab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- User Demographics -->
+                <div class="analytics-card">
+                    <h3 class="text-lg font-semibold mb-4">User Demographics</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Age 18-25</span>
+                                <span>35%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-blue-500" style="width: 35%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Age 26-35</span>
+                                <span>42%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-green-500" style="width: 42%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Age 36-45</span>
+                                <span>18%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-yellow-500" style="width: 18%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Age 45+</span>
+                                <span>5%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-red-500" style="width: 5%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Activity -->
+                <div class="analytics-card">
+                    <h3 class="text-lg font-semibold mb-4">User Activity Patterns</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span>Daily Active Users</span>
+                            <span class="font-bold text-green-500">68%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Weekly Active Users</span>
+                            <span class="font-bold text-blue-500">84%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Monthly Active Users</span>
+                            <span class="font-bold text-purple-500">92%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Avg. Session Duration</span>
+                            <span class="font-bold text-yellow-500">12m 34s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Engagement Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="metric-card">
+                    <div class="text-xl font-bold text-red-500">2,345</div>
+                    <div class="text-sm text-gray-400">New Users This Month</div>
+                    <div class="text-xs text-green-500 mt-1">+23% vs last month</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-xl font-bold text-blue-500">87.3%</div>
+                    <div class="text-sm text-gray-400">User Retention Rate</div>
+                    <div class="text-xs text-green-500 mt-1">+5.2% vs last month</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-xl font-bold text-purple-500">4.7</div>
+                    <div class="text-sm text-gray-400">Avg. Content Per Session</div>
+                    <div class="text-xs text-yellow-500 mt-1">No change</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Tab -->
+        <div id="contentTab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Content Distribution -->
+                <div class="chart-container">
+                    <h3 class="text-lg font-semibold mb-4 self-start">Content Distribution</h3>
+                    <div class="chart-placeholder">📊</div>
+                    <p class="text-gray-400 text-center">Breakdown by content type and genre</p>
+                    <div class="flex justify-center space-x-4 mt-4 text-sm">
+                        <span class="text-blue-400">● Movies (65%)</span>
+                        <span class="text-green-400">● TV Shows (25%)</span>
+                        <span class="text-purple-400">● Anime (10%)</span>
+                    </div>
+                </div>
+
+                <!-- Content Performance -->
+                <div class="analytics-card">
+                    <h3 class="text-lg font-semibold mb-4">Top Performing Genres</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span>Action</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="progress-bar w-24">
+                                    <div class="progress-fill bg-red-500" style="width: 85%"></div>
+                                </div>
+                                <span class="text-sm">85%</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Drama</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="progress-bar w-24">
+                                    <div class="progress-fill bg-blue-500" style="width: 78%"></div>
+                                </div>
+                                <span class="text-sm">78%</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Comedy</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="progress-bar w-24">
+                                    <div class="progress-fill bg-green-500" style="width: 72%"></div>
+                                </div>
+                                <span class="text-sm">72%</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Thriller</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="progress-bar w-24">
+                                    <div class="progress-fill bg-purple-500" style="width: 68%"></div>
+                                </div>
+                                <span class="text-sm">68%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Metrics -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="metric-card">
+                    <div class="text-xl font-bold text-blue-500">2,156</div>
+                    <div class="text-sm text-gray-400">Total Movies</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-xl font-bold text-green-500">867</div>
+                    <div class="text-sm text-gray-400">Total TV Shows</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-xl font-bold text-purple-500">433</div>
+                    <div class="text-sm text-gray-400">Total Anime</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-xl font-bold text-yellow-500">156</div>
+                    <div class="text-sm text-gray-400">Added This Month</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Engagement Tab -->
+        <div id="engagementTab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- User Interactions -->
+                <div class="analytics-card">
+                    <h3 class="text-lg font-semibold mb-4">User Interactions</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span>Content Views</span>
+                            <span class="font-bold text-blue-500">25,431</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Watchlist Additions</span>
+                            <span class="font-bold text-green-500">8,234</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Favorites Added</span>
+                            <span class="font-bold text-red-500">3,567</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Searches Performed</span>
+                            <span class="font-bold text-purple-500">12,890</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Ratings Given</span>
+                            <span class="font-bold text-yellow-500">4,123</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engagement Trends -->
+                <div class="chart-container">
+                    <h3 class="text-lg font-semibold mb-4 self-start">Engagement Trends</h3>
+                    <div class="chart-placeholder">📈</div>
+                    <p class="text-gray-400 text-center">Weekly engagement metrics</p>
+                    <p class="text-sm text-gray-500 mt-2">Views, likes, watchlist additions over time</p>
+                </div>
+            </div>
+
+            <!-- Platform Performance -->
+            <div class="analytics-card">
+                <h3 class="text-lg font-semibold mb-4">Platform Performance</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-500">↗️ 15.7%</div>
+                        <div class="text-sm text-gray-400">Daily Growth</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-500">68.2%</div>
+                        <div class="text-sm text-gray-400">Engagement Rate</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-purple-500">4.8/5</div>
+                        <div class="text-sm text-gray-400">User Satisfaction</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script>
+        // Constants
         const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        let authToken = window.authToken;
+        
+        // State
         let currentUser = window.currentUser;
-        let currentDateRange = 'today';
-        let charts = {};
+        let authToken = window.authToken;
+        let currentTab = 'overview';
 
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            checkAdminAuth();
-            initializeAnalytics();
+            checkAdminAuthentication();
+            initializeEventListeners();
+            loadAnalyticsData();
         });
 
-        function checkAdminAuth() {
-            if (!authToken || !currentUser || !currentUser.is_admin) {
-                window.location.href = '../login.html';
+        function checkAdminAuthentication() {
+            if (!currentUser || !authToken || !currentUser.is_admin) {
+                window.location.href = '../login.html?redirect=admin/analytics.html';
                 return;
             }
-
-            document.getElementById('adminName').textContent = currentUser.username;
         }
 
-        function initializeAnalytics() {
-            setupEventListeners();
-            loadAnalyticsData();
-            setupCharts();
-        }
-
-        function setupEventListeners() {
-            // Date filter buttons
-            document.querySelectorAll('.date-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    currentDateRange = this.dataset.range;
-                    loadAnalyticsData();
-                });
+        function initializeEventListeners() {
+            // Date range change
+            document.getElementById('dateRange').addEventListener('change', function() {
+                loadAnalyticsData();
             });
+        }
 
-            // Export button
-            document.querySelector('.export-btn').addEventListener('click', exportReport);
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Load specific data for tab
+            loadTabData(tabName);
         }
 
         async function loadAnalyticsData() {
+            const dateRange = document.getElementById('dateRange').value;
+            
             try {
-                const response = await fetch(`${API_BASE}/admin/analytics?range=${currentDateRange}`, {
+                const response = await fetch(`${API_BASE}/admin/analytics?range=${dateRange}`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
                 });
 
+                const data = await response.json();
+
                 if (response.ok) {
-                    const data = await response.json();
-                    updateStats(data);
-                    updateCharts(data);
-                    updateTables(data);
+                    updateAnalyticsDisplay(data);
                 } else {
-                    // Use mock data for demonstration
-                    const mockData = generateMockData();
-                    updateStats(mockData);
-                    updateCharts(mockData);
-                    updateTables(mockData);
+                    console.error('Failed to load analytics:', data.error);
+                    // Keep showing simulated data
+                    updateSimulatedData();
                 }
             } catch (error) {
                 console.error('Error loading analytics:', error);
-                // Use mock data as fallback
-                const mockData = generateMockData();
-                updateStats(mockData);
-                updateCharts(mockData);
-                updateTables(mockData);
+                updateSimulatedData();
             }
         }
 
-        function generateMockData() {
-            return {
-                total_users: Math.floor(Math.random() * 10000) + 5000,
-                total_content: Math.floor(Math.random() * 50000) + 25000,
-                total_interactions: Math.floor(Math.random() * 100000) + 50000,
-                engagement_rate: (Math.random() * 30 + 50).toFixed(1),
-                user_growth: generateTimeSeriesData(30, 100, 500),
-                content_distribution: {
-                    movie: Math.floor(Math.random() * 30000) + 15000,
-                    tv: Math.floor(Math.random() * 20000) + 10000,
-                    anime: Math.floor(Math.random() * 10000) + 5000
-                },
-                engagement_over_time: generateTimeSeriesData(30, 1000, 5000),
-                popular_genres: [
-                    { genre: 'Action', count: Math.floor(Math.random() * 10000) + 5000 },
-                    { genre: 'Drama', count: Math.floor(Math.random() * 8000) + 4000 },
-                    { genre: 'Comedy', count: Math.floor(Math.random() * 7000) + 3500 },
-                    { genre: 'Thriller', count: Math.floor(Math.random() * 6000) + 3000 },
-                    { genre: 'Romance', count: Math.floor(Math.random() * 5000) + 2500 },
-                    { genre: 'Horror', count: Math.floor(Math.random() * 4000) + 2000 }
-                ],
-                popular_content: generatePopularContent(10),
-                active_users: generateActiveUsers(10)
+        function updateAnalyticsDisplay(data) {
+            // Update key metrics
+            document.getElementById('totalUsers').textContent = data.total_users?.toLocaleString() || '1,247';
+            document.getElementById('activeUsers').textContent = data.active_users_last_week?.toLocaleString() || '834';
+            document.getElementById('contentViews').textContent = (data.total_interactions * 2)?.toLocaleString() || '25,431';
+            
+            // Calculate engagement rate
+            const engagementRate = data.active_users_last_week && data.total_users 
+                ? ((data.active_users_last_week / data.total_users) * 100).toFixed(1)
+                : '68.2';
+            document.getElementById('engagementRate').textContent = engagementRate + '%';
+        }
+
+        function updateSimulatedData() {
+            // Simulate real-time data updates
+            const baseValues = {
+                totalUsers: 1247,
+                activeUsers: 834,
+                contentViews: 25431,
+                engagementRate: 68.2
             };
+
+            // Add some random variation
+            document.getElementById('totalUsers').textContent = (baseValues.totalUsers + Math.floor(Math.random() * 50)).toLocaleString();
+            document.getElementById('activeUsers').textContent = (baseValues.activeUsers + Math.floor(Math.random() * 20)).toLocaleString();
+            document.getElementById('contentViews').textContent = (baseValues.contentViews + Math.floor(Math.random() * 500)).toLocaleString();
+            document.getElementById('engagementRate').textContent = (baseValues.engagementRate + (Math.random() * 4 - 2)).toFixed(1) + '%';
         }
 
-        function generateTimeSeriesData(days, min, max) {
-            const data = [];
-            const now = new Date();
-            
-            for (let i = days - 1; i >= 0; i--) {
-                const date = new Date(now);
-                date.setDate(date.getDate() - i);
-                data.push({
-                    date: date.toISOString().split('T')[0],
-                    value: Math.floor(Math.random() * (max - min) + min)
-                });
+        function loadTabData(tabName) {
+            switch(tabName) {
+                case 'users':
+                    loadUserAnalytics();
+                    break;
+                case 'content':
+                    loadContentAnalytics();
+                    break;
+                case 'engagement':
+                    loadEngagementAnalytics();
+                    break;
+                default:
+                    loadOverviewAnalytics();
             }
-            
-            return data;
         }
 
-        function generatePopularContent(count) {
-            const titles = ['The Shawshank Redemption', 'Breaking Bad', 'Attack on Titan', 'Inception', 'Game of Thrones', 
-                          'Death Note', 'The Dark Knight', 'Stranger Things', 'Naruto', 'Interstellar'];
-            const types = ['movie', 'tv', 'anime'];
-            
-            return titles.slice(0, count).map(title => ({
-                title: title,
-                content_type: types[Math.floor(Math.random() * types.length)],
-                views: Math.floor(Math.random() * 100000) + 10000,
-                favorites: Math.floor(Math.random() * 5000) + 500,
-                rating: (Math.random() * 2 + 7).toFixed(1),
-                engagement: (Math.random() * 50 + 30).toFixed(1)
-            }));
+        function loadUserAnalytics() {
+            // Simulate loading user analytics data
+            console.log('Loading user analytics...');
         }
 
-        function generateActiveUsers(count) {
-            const usernames = ['john_doe', 'movie_buff', 'anime_lover', 'sarah_smith', 'cinephile_123',
-                             'series_addict', 'film_critic', 'binge_watcher', 'content_king', 'review_master'];
-            
-            return usernames.slice(0, count).map(username => ({
-                username: username,
-                joined: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-                interactions: Math.floor(Math.random() * 1000) + 100,
-                favorites: Math.floor(Math.random() * 100) + 10,
-                watchlist: Math.floor(Math.random() * 200) + 20,
-                last_active: Math.random() > 0.5 ? 'Today' : 'Yesterday'
-            }));
+        function loadContentAnalytics() {
+            // Simulate loading content analytics data
+            console.log('Loading content analytics...');
         }
 
-        function updateStats(data) {
-            document.getElementById('totalUsers').textContent = data.total_users.toLocaleString();
-            document.getElementById('totalContent').textContent = data.total_content.toLocaleString();
-            document.getElementById('totalInteractions').textContent = data.total_interactions.toLocaleString();
-            document.getElementById('engagementRate').textContent = data.engagement_rate + '%';
+        function loadEngagementAnalytics() {
+            // Simulate loading engagement analytics data
+            console.log('Loading engagement analytics...');
         }
 
-        function setupCharts() {
-            // Chart.js default configuration
-            Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
-            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+        function loadOverviewAnalytics() {
+            // Simulate loading overview analytics data
+            console.log('Loading overview analytics...');
         }
 
-        function updateCharts(data) {
-            // User Growth Chart
-            if (charts.userGrowth) {
-                charts.userGrowth.destroy();
-            }
+        function refreshData() {
+            showNotification('Refreshing analytics data...');
+            loadAnalyticsData();
             
-            const userGrowthCtx = document.getElementById('userGrowthChart').getContext('2d');
-            charts.userGrowth = new Chart(userGrowthCtx, {
-                type: 'line',
-                data: {
-                    labels: data.user_growth.map(d => d.date),
-                    datasets: [{
-                        label: 'New Users',
-                        data: data.user_growth.map(d => d.value),
-                        borderColor: '#4ecdc4',
-                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.05)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Content Distribution Chart
-            if (charts.contentDistribution) {
-                charts.contentDistribution.destroy();
-            }
-            
-            const contentDistCtx = document.getElementById('contentDistributionChart').getContext('2d');
-            charts.contentDistribution = new Chart(contentDistCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Movies', 'TV Shows', 'Anime'],
-                    datasets: [{
-                        data: [
-                            data.content_distribution.movie,
-                            data.content_distribution.tv,
-                            data.content_distribution.anime
-                        ],
-                        backgroundColor: ['#3b82f6', '#9333ea', '#ec4899'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-
-            // Engagement Chart
-            if (charts.engagement) {
-                charts.engagement.destroy();
-            }
-            
-            const engagementCtx = document.getElementById('engagementChart').getContext('2d');
-            charts.engagement = new Chart(engagementCtx, {
-                type: 'bar',
-                data: {
-                    labels: data.engagement_over_time.map(d => d.date),
-                    datasets: [{
-                        label: 'Interactions',
-                        data: data.engagement_over_time.map(d => d.value),
-                        backgroundColor: 'rgba(239, 68, 68, 0.5)',
-                        borderColor: '#ef4444',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.05)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Genres Chart
-            if (charts.genres) {
-                charts.genres.destroy();
-            }
-            
-            const genresCtx = document.getElementById('genresChart').getContext('2d');
-            charts.genres = new Chart(genresCtx, {
-                type: 'radar',
-                data: {
-                    labels: data.popular_genres.map(g => g.genre),
-                    datasets: [{
-                        label: 'Popular Genres',
-                        data: data.popular_genres.map(g => g.count),
-                        borderColor: '#fbbf24',
-                        backgroundColor: 'rgba(251, 191, 36, 0.2)',
-                        pointBackgroundColor: '#fbbf24',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: '#fbbf24'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        r: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.05)'
-                            },
-                            angleLines: {
-                                color: 'rgba(255, 255, 255, 0.05)'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function updateTables(data) {
-            // Popular Content Table
-            const popularContentHTML = data.popular_content.map(content => {
-                const typeColor = content.content_type === 'movie' ? 'movie' : 
-                                content.content_type === 'tv' ? 'tv' : 'anime';
-                
-                return `
-                    <tr>
-                        <td class="font-medium">${content.title}</td>
-                        <td><span class="badge ${typeColor}">${content.content_type.toUpperCase()}</span></td>
-                        <td>${content.views.toLocaleString()}</td>
-                        <td>${content.favorites.toLocaleString()}</td>
-                        <td>⭐ ${content.rating}</td>
-                        <td>${content.engagement}%</td>
-                    </tr>
-                `;
-            }).join('');
-            
-            document.getElementById('popularContentTable').innerHTML = popularContentHTML;
-
-            // Active Users Table
-            const activeUsersHTML = data.active_users.map(user => `
-                <tr>
-                    <td class="font-medium">${user.username}</td>
-                    <td>${user.joined}</td>
-                    <td>${user.interactions.toLocaleString()}</td>
-                    <td>${user.favorites}</td>
-                    <td>${user.watchlist}</td>
-                    <td>
-                        <span class="${user.last_active === 'Today' ? 'text-green-400' : 'text-gray-400'}">
-                            ${user.last_active}
-                        </span>
-                    </td>
-                </tr>
-            `).join('');
-            
-            document.getElementById('activeUsersTable').innerHTML = activeUsersHTML;
-        }
-
-        function exportReport() {
-            showToast('Generating report...', 'info');
-            
-            // In a real implementation, this would generate a PDF or CSV report
+            // Simulate refresh delay
             setTimeout(() => {
-                showToast('Report exported successfully!', 'success');
+                showNotification('Analytics data refreshed successfully!');
+            }, 1500);
+        }
+
+        function generateReport() {
+            showNotification('Generating comprehensive report...');
+            
+            // Simulate report generation
+            setTimeout(() => {
+                showNotification('Report generated successfully!');
+                // In a real app, this would trigger a download or open a new page
             }, 2000);
         }
 
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 transform translate-x-full`;
+        function exportReport() {
+            const dateRange = document.getElementById('dateRange').value;
+            showNotification(`Exporting ${dateRange} report...`);
             
-            if (type === 'success') {
-                toast.classList.add('bg-green-600');
-            } else if (type === 'error') {
-                toast.classList.add('bg-red-600');
-            } else {
-                toast.classList.add('bg-blue-600');
-            }
-            
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+            // Simulate export
             setTimeout(() => {
-                toast.classList.add('translate-x-full');
-                setTimeout(() => document.body.removeChild(toast), 300);
+                showNotification('Report exported successfully!');
+                // In a real app, this would trigger a file download
+            }, 1500);
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-600' : type === 'success' ? 'bg-green-600' : 'bg-blue-600';
+            notification.className = `fixed top-20 right-4 ${bgColor} text-white px-4 py-2 rounded-lg z-50`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
             }, 3000);
         }
 
-        function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                window.authToken = null;
-                window.currentUser = null;
-                window.location.href = '../login.html';
-            }
+        function goBack() {
+            window.location.href = 'dashboard.html';
         }
+
+        // Simulate real-time updates
+        setInterval(() => {
+            if (Math.random() > 0.7) { // 30% chance every 5 seconds
+                updateSimulatedData();
+            }
+        }, 5000);
+
+        // Initial data load
+        updateSimulatedData();
     </script>
 </body>
 </html>

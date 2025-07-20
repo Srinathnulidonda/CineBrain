@@ -4,740 +4,560 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - CineScope</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-            color: #ffffff;
-            min-height: 100vh;
+        :root {
+            --netflix-red: #e50914;
+            --netflix-black: #141414;
+            --netflix-gray: #333333;
         }
 
-        .dashboard-container {
-            min-height: 100vh;
-            padding-top: 80px;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--netflix-black);
+            color: white;
+            overflow-x: hidden;
         }
 
         .navbar {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(15, 15, 35, 0.95);
+            background: rgba(20, 20, 20, 0.95);
             backdrop-filter: blur(10px);
-            z-index: 1000;
-            padding: 1rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .sidebar {
+            width: 280px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
         }
 
-        .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
+        .sidebar.hidden {
+            transform: translateX(-100%);
         }
 
-        .nav-link:hover, .nav-link.active {
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.1);
+        .main-content {
+            margin-left: 280px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.full-width {
+            margin-left: 0;
         }
 
         .welcome-banner {
-            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1.5rem;
+            background: linear-gradient(135deg, var(--netflix-red) 0%, #b8070e 100%);
+            border-radius: 12px;
             padding: 2rem;
-            margin-bottom: 3rem;
-            position: relative;
-            overflow: hidden;
+            margin-bottom: 2rem;
         }
 
-        .welcome-banner::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><defs><radialGradient id="a" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="%23ff6b6b" stop-opacity="0.1"/><stop offset="100%" stop-color="%234ecdc4" stop-opacity="0.05"/></radialGradient></defs><rect width="100" height="20" fill="url(%23a)"/></svg>');
-            opacity: 0.3;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-
-        .stat-card {
+        .stats-card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
+            border-radius: 12px;
             padding: 1.5rem;
             text-align: center;
             transition: all 0.3s ease;
         }
 
-        .stat-card:hover {
+        .stats-card:hover {
             transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--netflix-red);
         }
 
-        .stat-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-            color: #4ecdc4;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.9rem;
-        }
-
-        .section {
+        .content-row {
             margin-bottom: 3rem;
         }
 
         .section-header {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 1.5rem;
         }
 
         .section-title {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            color: #ffffff;
+            color: white;
         }
 
         .view-all-btn {
-            color: #4ecdc4;
+            color: var(--netflix-red);
             text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
         }
 
         .view-all-btn:hover {
-            color: #fff;
+            color: #b8070e;
         }
 
-        .content-carousel {
+        .scroll-container {
             display: flex;
-            gap: 1.5rem;
             overflow-x: auto;
-            padding: 1rem 0;
             scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
+            gap: 1rem;
+            padding: 0.5rem 0 1rem;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
 
-        .content-carousel::-webkit-scrollbar {
-            height: 8px;
-        }
-
-        .content-carousel::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-        }
-
-        .content-carousel::-webkit-scrollbar-thumb {
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            border-radius: 4px;
+        .scroll-container::-webkit-scrollbar {
+            display: none;
         }
 
         .content-card {
-            min-width: 280px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 1rem;
+            flex: 0 0 auto;
+            width: 200px;
+            height: 300px;
+            border-radius: 8px;
             overflow: hidden;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--netflix-gray);
         }
 
         .content-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .card-image {
-            width: 100%;
-            height: 350px;
-            object-fit: cover;
-            transition: all 0.3s ease;
-        }
-
-        .content-card:hover .card-image {
             transform: scale(1.05);
+            z-index: 10;
         }
 
-        .card-content {
-            padding: 1.5rem;
+        .content-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #ffffff;
+        .content-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.9));
+            padding: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        .card-info {
+        .content-card:hover .content-overlay {
+            opacity: 1;
+        }
+
+        .sidebar-link {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
+            padding: 0.75rem 1.5rem;
             color: rgba(255, 255, 255, 0.7);
-        }
-
-        .rating {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            color: #ffd700;
-        }
-
-        .card-description {
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1.5;
-            margin-bottom: 1rem;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .action-btn {
-            flex: 1;
-            padding: 0.5rem;
-            border: none;
-            border-radius: 0.5rem;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
+            text-decoration: none;
             transition: all 0.3s ease;
+            border-radius: 8px;
+            margin: 0.25rem 1rem;
         }
 
-        .btn-watch {
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            color: #ffffff;
+        .sidebar-link:hover, .sidebar-link.active {
+            background: rgba(229, 9, 20, 0.1);
+            color: var(--netflix-red);
         }
 
-        .btn-watch:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        .sidebar-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 0.75rem;
         }
 
-        .btn-secondary {
+        .quick-action-btn {
             background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
             border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-
-        .quick-action-card {
-            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
-            padding: 2rem;
-            text-align: center;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .quick-action-card:hover {
-            transform: translateY(-5px);
-            background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(78, 205, 196, 0.15));
+        .quick-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--netflix-red);
         }
 
-        .quick-action-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.2);
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 0.5rem;
         }
 
-        .loading-spinner {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #4ecdc4;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .progress-fill {
+            background: var(--netflix-red);
+            height: 100%;
+            transition: width 0.3s ease;
         }
 
         .user-avatar {
-            width: 60px;
-            height: 60px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            background: var(--netflix-red);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #ffffff;
+            font-weight: bold;
+            color: white;
         }
 
-        /* Mobile Responsive */
+        .notification-badge {
+            background: var(--netflix-red);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .loading-shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                height: 100vh;
+                z-index: 40;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .content-card {
+                width: 150px;
+                height: 225px;
+            }
+        }
+
         @media (max-width: 768px) {
-            .dashboard-container {
-                padding-top: 70px;
-            }
-
             .welcome-banner {
                 padding: 1.5rem;
-                margin-bottom: 2rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1rem;
-            }
-
-            .stat-card {
-                padding: 1rem;
-            }
-
-            .stat-icon {
-                font-size: 1.5rem;
-            }
-
-            .stat-number {
-                font-size: 1.5rem;
             }
 
             .content-card {
-                min-width: 250px;
+                width: 120px;
+                height: 180px;
             }
 
-            .card-image {
-                height: 300px;
-            }
-
-            .section-title {
-                font-size: 1.5rem;
-            }
-
-            .quick-actions {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-
-            .quick-action-card {
-                padding: 1.5rem;
-            }
-
-            .quick-action-icon {
-                font-size: 2.5rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .content-card {
-                min-width: 220px;
-            }
-
-            .welcome-banner {
+            .stats-card {
                 padding: 1rem;
-            }
-
-            .user-avatar {
-                width: 50px;
-                height: 50px;
-                font-size: 1.25rem;
             }
         }
     </style>
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center">
-                <div class="logo">CineScope</div>
-                
-                <div class="hidden md:flex space-x-6">
-                    <a href="dashboard.html" class="nav-link active">Dashboard</a>
-                    <a href="user/watchlist.html" class="nav-link">Watchlist</a>
-                    <a href="user/favorites.html" class="nav-link">Favorites</a>
-                    <a href="categories/trending.html" class="nav-link">Trending</a>
-                </div>
-
-                <div class="flex items-center space-x-4">
-                    <button id="searchToggle" class="text-white hover:text-blue-400 transition-colors">
-                        <i class="fas fa-search text-xl"></i>
-                    </button>
-                    <div class="relative">
-                        <button id="userMenuBtn" class="flex items-center space-x-2">
-                            <div class="user-avatar" id="userAvatar">U</div>
-                        </button>
-                        <div id="userMenu" class="absolute right-0 top-full mt-2 w-48 bg-gray-900 rounded-lg shadow-lg hidden z-50">
-                            <a href="profile.html" class="block px-4 py-2 hover:bg-gray-800 rounded-lg">
-                                <i class="fas fa-user mr-2"></i>Profile
-                            </a>
-                            <a href="#" onclick="logout()" class="block px-4 py-2 hover:bg-gray-800 rounded-lg text-red-400">
-                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mobile Menu Button -->
-                <button id="mobileMenuBtn" class="md:hidden text-white">
-                    <i class="fas fa-bars text-xl"></i>
+    <nav class="navbar fixed top-0 left-0 right-0 z-30 px-4 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <button id="sidebarToggle" class="lg:hidden text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
                 </button>
+                <h1 class="text-xl font-bold text-red-600">CineScope</h1>
             </div>
-
-            <!-- Mobile Menu -->
-            <div id="mobileMenu" class="md:hidden mt-4 hidden">
-                <div class="flex flex-col space-y-3">
-                    <a href="dashboard.html" class="nav-link active">Dashboard</a>
-                    <a href="user/watchlist.html" class="nav-link">Watchlist</a>
-                    <a href="user/favorites.html" class="nav-link">Favorites</a>
-                    <a href="categories/trending.html" class="nav-link">Trending</a>
+            
+            <div class="flex items-center space-x-4">
+                <button id="searchToggle" class="text-white hover:text-red-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </button>
+                
+                <div class="relative">
+                    <button id="notificationToggle" class="text-white hover:text-red-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.97 4.97a.75.75 0 0 0-1.08 1.08l-3.5 3.5a.75.75 0 0 0 1.08 1.08l3.5-3.5zm4.06 0a.75.75 0 0 1 1.08 1.08l3.5 3.5a.75.75 0 0 1-1.08 1.08l-3.5-3.5z"></path>
+                        </svg>
+                    </button>
+                    <div id="notificationBadge" class="notification-badge absolute -top-2 -right-2 hidden">3</div>
                 </div>
-            </div>
-
-            <!-- Search Bar -->
-            <div id="searchBar" class="mt-4 hidden">
-                <div class="relative max-w-md mx-auto">
-                    <input type="text" id="searchInput" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" placeholder="Search...">
-                    <div id="searchResults" class="absolute w-full mt-2 bg-gray-900 rounded-lg shadow-lg hidden max-h-80 overflow-y-auto z-50"></div>
+                
+                <div class="relative">
+                    <button id="userMenuToggle" class="user-avatar">
+                        <span id="userInitial">U</span>
+                    </button>
+                    <div id="userMenu" class="hidden absolute right-0 top-12 bg-black border border-gray-700 rounded-lg py-2 w-48">
+                        <a href="profile.html" class="block px-4 py-2 text-white hover:bg-gray-800">Profile</a>
+                        <a href="user/watchlist.html" class="block px-4 py-2 text-white hover:bg-gray-800">Watchlist</a>
+                        <a href="user/favorites.html" class="block px-4 py-2 text-white hover:bg-gray-800">Favorites</a>
+                        <hr class="border-gray-700 my-2">
+                        <button id="logoutBtn" class="block w-full text-left px-4 py-2 text-white hover:bg-gray-800">Logout</button>
+                    </div>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Dashboard Content -->
-    <div class="dashboard-container">
-        <div class="container mx-auto px-4">
-            <!-- Welcome Banner -->
-            <div class="welcome-banner">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center relative z-10">
-                    <div class="flex items-center space-x-4 mb-4 md:mb-0">
-                        <div class="user-avatar" id="welcomeAvatar">U</div>
-                        <div>
-                            <h1 class="text-2xl md:text-3xl font-bold text-white">Welcome back, <span id="userName">User</span>!</h1>
-                            <p class="text-gray-300 mt-1">Ready to discover something amazing?</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-sm text-gray-400">Last active</p>
-                        <p class="text-white font-medium" id="lastActive">Today</p>
-                    </div>
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar fixed left-0 top-16 h-full z-20">
+        <div class="py-6">
+            <nav class="space-y-2">
+                <a href="dashboard.html" class="sidebar-link active">
+                    <svg class="sidebar-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                    </svg>
+                    Dashboard
+                </a>
+                
+                <a href="index.html" class="sidebar-link">
+                    <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 011 1v4a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h4z"></path>
+                    </svg>
+                    Browse
+                </a>
+                
+                <a href="user/watchlist.html" class="sidebar-link">
+                    <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                    </svg>
+                    Watchlist
+                    <span id="watchlistCount" class="notification-badge ml-auto">0</span>
+                </a>
+                
+                <a href="user/favorites.html" class="sidebar-link">
+                    <svg class="sidebar-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+                    </svg>
+                    Favorites
+                    <span id="favoritesCount" class="notification-badge ml-auto">0</span>
+                </a>
+                
+                <a href="profile.html" class="sidebar-link">
+                    <svg class="sidebar-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                    </svg>
+                    Profile
+                </a>
+            </nav>
+            
+            <div class="mt-8 px-6">
+                <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Actions</h3>
+                <div class="space-y-2">
+                    <button class="quick-action-btn w-full text-left" onclick="openRandomContent()">Random Pick</button>
+                    <button class="quick-action-btn w-full text-left" onclick="openFreeContent()">Free Content</button>
+                    <button class="quick-action-btn w-full text-left" onclick="openTrending()">Trending Now</button>
                 </div>
             </div>
+        </div>
+    </aside>
 
-            <!-- Stats Grid -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-eye"></i>
-                    </div>
-                    <div class="stat-number" id="watchedCount">0</div>
-                    <div class="stat-label">Watched</div>
+    <!-- Main Content -->
+    <main id="mainContent" class="main-content pt-20 p-6">
+        <!-- Welcome Banner -->
+        <div class="welcome-banner">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold mb-2">Welcome back, <span id="userName">User</span>!</h1>
+                    <p class="text-lg opacity-90">Ready to discover something amazing?</p>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-bookmark"></i>
-                    </div>
-                    <div class="stat-number" id="watchlistCount">0</div>
-                    <div class="stat-label">Watchlist</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-heart"></i>
-                    </div>
-                    <div class="stat-number" id="favoritesCount">0</div>
-                    <div class="stat-label">Favorites</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-star"></i>
-                    </div>
-                    <div class="stat-number" id="ratingCount">0</div>
-                    <div class="stat-label">Rated</div>
+                <div class="hidden md:flex items-center space-x-4">
+                    <button class="bg-white bg-opacity-20 hover:bg-opacity-30 px-6 py-3 rounded-lg font-semibold transition" onclick="openRandomContent()">
+                        🎲 Random Pick
+                    </button>
+                    <button class="bg-white bg-opacity-20 hover:bg-opacity-30 px-6 py-3 rounded-lg font-semibold transition" onclick="continueWatching()">
+                        ▶️ Continue Watching
+                    </button>
                 </div>
             </div>
+        </div>
 
-            <!-- Quick Actions -->
-            <div class="quick-actions">
-                <div class="quick-action-card" onclick="window.location.href='user/watchlist.html'">
-                    <div class="quick-action-icon">
-                        <i class="fas fa-bookmark"></i>
-                    </div>
-                    <h3 class="text-xl font-semibold text-white mb-2">My Watchlist</h3>
-                    <p class="text-gray-400">Content saved for later</p>
-                </div>
-                <div class="quick-action-card" onclick="window.location.href='user/favorites.html'">
-                    <div class="quick-action-icon">
-                        <i class="fas fa-heart"></i>
-                    </div>
-                    <h3 class="text-xl font-semibold text-white mb-2">My Favorites</h3>
-                    <p class="text-gray-400">Your most loved content</p>
-                </div>
-                <div class="quick-action-card" onclick="window.location.href='categories/trending.html'">
-                    <div class="quick-action-icon">
-                        <i class="fas fa-fire"></i>
-                    </div>
-                    <h3 class="text-xl font-semibold text-white mb-2">Trending Now</h3>
-                    <p class="text-gray-400">What's popular today</p>
-                </div>
-                <div class="quick-action-card" onclick="window.location.href='categories/anime.html'">
-                    <div class="quick-action-icon">
-                        <i class="fas fa-dragon"></i>
-                    </div>
-                    <h3 class="text-xl font-semibold text-white mb-2">Anime</h3>
-                    <p class="text-gray-400">Discover amazing anime</p>
-                </div>
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="stats-card">
+                <div class="text-2xl font-bold text-red-500" id="totalWatched">-</div>
+                <div class="text-sm text-gray-400">Watched</div>
             </div>
+            <div class="stats-card">
+                <div class="text-2xl font-bold text-blue-500" id="totalWatchlist">-</div>
+                <div class="text-sm text-gray-400">Watchlist</div>
+            </div>
+            <div class="stats-card">
+                <div class="text-2xl font-bold text-green-500" id="totalFavorites">-</div>
+                <div class="text-sm text-gray-400">Favorites</div>
+            </div>
+            <div class="stats-card">
+                <div class="text-2xl font-bold text-purple-500" id="hoursWatched">-</div>
+                <div class="text-sm text-gray-400">Hours</div>
+            </div>
+        </div>
 
-            <!-- Recommended For You -->
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">🎯 Recommended For You</h2>
-                    <a href="#" class="view-all-btn">View All</a>
-                </div>
-                <div id="personalizedRecommendations" class="content-carousel">
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
+        <!-- Continue Watching -->
+        <div id="continueWatchingSection" class="content-row hidden">
+            <div class="section-header">
+                <h2 class="section-title">Continue Watching</h2>
+                <a href="#" class="view-all-btn">View All</a>
             </div>
+            <div id="continueWatchingContainer" class="scroll-container"></div>
+        </div>
 
-            <!-- Continue Watching -->
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">📺 Continue Watching</h2>
-                    <a href="user/watchlist.html" class="view-all-btn">View All</a>
-                </div>
-                <div id="continueWatching" class="content-carousel">
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
+        <!-- Recommended For You -->
+        <div class="content-row">
+            <div class="section-header">
+                <h2 class="section-title">Recommended For You</h2>
+                <a href="#" class="view-all-btn">View All</a>
             </div>
+            <div id="recommendedContainer" class="scroll-container">
+                <div class="loading-placeholder">Loading recommendations...</div>
+            </div>
+        </div>
 
-            <!-- Based on Your Activity -->
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">📊 Based on Your Activity</h2>
-                    <a href="#" class="view-all-btn">View All</a>
-                </div>
-                <div id="activityBasedRecommendations" class="content-carousel">
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
+        <!-- Trending Now -->
+        <div class="content-row">
+            <div class="section-header">
+                <h2 class="section-title">Trending Now</h2>
+                <a href="#" class="view-all-btn">View All</a>
             </div>
+            <div id="trendingContainer" class="scroll-container">
+                <div class="loading-placeholder">Loading trending content...</div>
+            </div>
+        </div>
 
-            <!-- Trending -->
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">🔥 Trending Now</h2>
-                    <a href="categories/trending.html" class="view-all-btn">View All</a>
-                </div>
-                <div id="trendingContent" class="content-carousel">
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
+        <!-- Your Genres -->
+        <div class="content-row">
+            <div class="section-header">
+                <h2 class="section-title">Based on Your Preferences</h2>
+                <a href="#" class="view-all-btn">View All</a>
             </div>
+            <div id="preferredGenresContainer" class="scroll-container">
+                <div class="loading-placeholder">Loading personalized content...</div>
+            </div>
+        </div>
+
+        <!-- Recently Added -->
+        <div class="content-row">
+            <div class="section-header">
+                <h2 class="section-title">Recently Added</h2>
+                <a href="#" class="view-all-btn">View All</a>
+            </div>
+            <div id="recentlyAddedContainer" class="scroll-container">
+                <div class="loading-placeholder">Loading new content...</div>
+            </div>
+        </div>
+
+        <!-- Free to Watch -->
+        <div class="content-row">
+            <div class="section-header">
+                <h2 class="section-title">Free to Watch</h2>
+                <a href="#" class="view-all-btn">View All</a>
+            </div>
+            <div id="freeContentContainer" class="scroll-container">
+                <div class="loading-placeholder">Loading free content...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Search Overlay -->
+    <div id="searchOverlay" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-start justify-center pt-20">
+        <div class="w-full max-w-2xl px-4">
+            <div class="relative">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="w-full px-6 py-4 text-xl bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
+                    placeholder="Search for movies, TV shows, anime..."
+                    autocomplete="off"
+                >
+                <button id="closeSearch" class="absolute right-4 top-4 text-white hover:text-red-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="searchResults" class="mt-4 space-y-2 max-h-96 overflow-y-auto"></div>
         </div>
     </div>
 
     <script>
+        // Constants
         const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        let authToken = window.authToken;
+        
+        // State
         let currentUser = window.currentUser;
+        let authToken = window.authToken;
+        let userStats = {};
 
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             checkAuthentication();
-            initializeDashboard();
+            initializeEventListeners();
+            loadDashboardData();
         });
 
         function checkAuthentication() {
-            if (!authToken || !currentUser) {
-                window.location.href = 'login.html';
+            if (!currentUser || !authToken) {
+                window.location.href = 'login.html?redirect=dashboard.html';
                 return;
             }
-
-            // Update UI with user info
+            
+            // Update UI with user data
             document.getElementById('userName').textContent = currentUser.username;
-            const initials = currentUser.username.substring(0, 2).toUpperCase();
-            document.getElementById('userAvatar').textContent = initials;
-            document.getElementById('welcomeAvatar').textContent = initials;
+            document.getElementById('userInitial').textContent = currentUser.username.charAt(0).toUpperCase();
         }
 
-        function initializeDashboard() {
-            setupEventListeners();
-            loadDashboardData();
-        }
-
-        function setupEventListeners() {
-            // Navigation
-            document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileMenu);
-            document.getElementById('searchToggle').addEventListener('click', toggleSearchBar);
-            document.getElementById('userMenuBtn').addEventListener('click', toggleUserMenu);
-            document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, 300));
-
-            // Close dropdowns when clicking outside
+        function initializeEventListeners() {
+            // Sidebar toggle
+            document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+            
+            // User menu
+            document.getElementById('userMenuToggle').addEventListener('click', toggleUserMenu);
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            
+            // Search
+            document.getElementById('searchToggle').addEventListener('click', openSearch);
+            document.getElementById('closeSearch').addEventListener('click', closeSearch);
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+            
+            // Close user menu when clicking outside
             document.addEventListener('click', function(e) {
-                if (!e.target.closest('#userMenuBtn')) {
+                if (!e.target.closest('#userMenuToggle') && !e.target.closest('#userMenu')) {
                     document.getElementById('userMenu').classList.add('hidden');
                 }
-                if (!e.target.closest('#searchBar')) {
-                    hideSearchResults();
+            });
+
+            // Close search overlay on escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeSearch();
                 }
             });
-        }
-
-        function toggleMobileMenu() {
-            document.getElementById('mobileMenu').classList.toggle('hidden');
-        }
-
-        function toggleSearchBar() {
-            const searchBar = document.getElementById('searchBar');
-            searchBar.classList.toggle('hidden');
-            if (!searchBar.classList.contains('hidden')) {
-                document.getElementById('searchInput').focus();
-            }
-        }
-
-        function toggleUserMenu() {
-            document.getElementById('userMenu').classList.toggle('hidden');
-        }
-
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        async function handleSearch(e) {
-            const query = e.target.value.trim();
-            if (query.length < 3) {
-                hideSearchResults();
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/search?query=${encodeURIComponent(query)}`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-                const data = await response.json();
-                
-                if (data.results) {
-                    displaySearchResults(data.results);
-                }
-            } catch (error) {
-                console.error('Search error:', error);
-            }
-        }
-
-        function displaySearchResults(results) {
-            const searchResults = document.getElementById('searchResults');
-            
-            if (!results.length) {
-                searchResults.innerHTML = '<div class="p-4 text-center text-gray-400">No results found</div>';
-                searchResults.classList.remove('hidden');
-                return;
-            }
-
-            const resultsHTML = results.slice(0, 8).map(item => `
-                <div class="p-3 hover:bg-gray-800 cursor-pointer border-b border-gray-700 last:border-b-0" onclick="viewDetails(${item.id})">
-                    <div class="flex items-center space-x-3">
-                        <img src="${item.poster_path || 'assets/images/placeholder.jpg'}" 
-                             alt="${item.title}" 
-                             class="w-12 h-16 object-cover rounded">
-                        <div class="flex-1">
-                            <h4 class="text-white font-medium">${item.title}</h4>
-                            <div class="flex items-center space-x-2 text-sm text-gray-400">
-                                <span class="px-2 py-1 bg-blue-600 rounded text-xs">${item.content_type.toUpperCase()}</span>
-                                ${item.rating ? `<span>⭐ ${item.rating}</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            searchResults.innerHTML = resultsHTML;
-            searchResults.classList.remove('hidden');
-        }
-
-        function hideSearchResults() {
-            document.getElementById('searchResults').classList.add('hidden');
         }
 
         async function loadDashboardData() {
             await Promise.all([
                 loadUserStats(),
-                loadPersonalizedRecommendations(),
-                loadContinueWatching(),
-                loadActivityBasedRecommendations(),
-                loadTrendingContent()
+                loadRecommendedContent(),
+                loadTrendingContent(),
+                loadPreferredGenreContent(),
+                loadRecentlyAdded(),
+                loadFreeContent(),
+                loadContinueWatching()
             ]);
         }
 
@@ -745,169 +565,177 @@
             try {
                 // Load watchlist
                 const watchlistResponse = await fetch(`${API_BASE}/user/watchlist`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
-                if (watchlistResponse.ok) {
-                    const watchlistData = await watchlistResponse.json();
-                    document.getElementById('watchlistCount').textContent = watchlistData.watchlist?.length || 0;
-                }
-
+                const watchlistData = await watchlistResponse.json();
+                
                 // Load favorites
                 const favoritesResponse = await fetch(`${API_BASE}/user/favorites`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
-                if (favoritesResponse.ok) {
-                    const favoritesData = await favoritesResponse.json();
-                    document.getElementById('favoritesCount').textContent = favoritesData.favorites?.length || 0;
-                }
+                const favoritesData = await favoritesResponse.json();
 
-                // Mock other stats for now
-                document.getElementById('watchedCount').textContent = Math.floor(Math.random() * 50) + 10;
-                document.getElementById('ratingCount').textContent = Math.floor(Math.random() * 30) + 5;
+                // Update stats
+                const watchlistCount = watchlistData.watchlist?.length || 0;
+                const favoritesCount = favoritesData.favorites?.length || 0;
+
+                document.getElementById('totalWatchlist').textContent = watchlistCount;
+                document.getElementById('totalFavorites').textContent = favoritesCount;
+                document.getElementById('watchlistCount').textContent = watchlistCount;
+                document.getElementById('favoritesCount').textContent = favoritesCount;
+
+                // Simulate other stats
+                document.getElementById('totalWatched').textContent = Math.floor(Math.random() * 50) + 10;
+                document.getElementById('hoursWatched').textContent = Math.floor(Math.random() * 200) + 50;
+
             } catch (error) {
-                console.error('Error loading user stats:', error);
+                console.error('Failed to load user stats:', error);
             }
         }
 
-        async function loadPersonalizedRecommendations() {
+        async function loadRecommendedContent() {
             try {
                 const response = await fetch(`${API_BASE}/recommendations/personalized`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
+                const data = await response.json();
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    displayContent('personalizedRecommendations', data.recommendations || []);
-                } else {
-                    // Fallback to trending if personalized fails
-                    const fallbackResponse = await fetch(`${API_BASE}/recommendations/trending?limit=10`);
-                    const fallbackData = await fallbackResponse.json();
-                    displayContent('personalizedRecommendations', fallbackData.recommendations || []);
+                    displayContent('recommendedContainer', data.recommendations || []);
                 }
             } catch (error) {
-                console.error('Error loading personalized recommendations:', error);
-                displayError('personalizedRecommendations');
+                console.error('Failed to load recommendations:', error);
+                // Fallback to trending
+                loadTrendingContent('recommendedContainer');
+            }
+        }
+
+        async function loadTrendingContent(containerId = 'trendingContainer') {
+            try {
+                const response = await fetch(`${API_BASE}/recommendations/trending?limit=20`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayContent(containerId, data.recommendations || []);
+                }
+            } catch (error) {
+                console.error('Failed to load trending:', error);
+            }
+        }
+
+        async function loadPreferredGenreContent() {
+            try {
+                // Use user's preferred genres or fallback to popular
+                const genres = currentUser.preferred_genres?.length > 0 
+                    ? currentUser.preferred_genres 
+                    : ['action', 'comedy', 'drama'];
+                
+                const response = await fetch(`${API_BASE}/recommendations/popular/${genres[0]}?limit=20`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayContent('preferredGenresContainer', data.recommendations || []);
+                }
+            } catch (error) {
+                console.error('Failed to load preferred genre content:', error);
+            }
+        }
+
+        async function loadRecentlyAdded() {
+            try {
+                // Use trending as recently added for now
+                const response = await fetch(`${API_BASE}/recommendations/trending?limit=20`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayContent('recentlyAddedContainer', data.recommendations || []);
+                }
+            } catch (error) {
+                console.error('Failed to load recently added:', error);
+            }
+        }
+
+        async function loadFreeContent() {
+            try {
+                const response = await fetch(`${API_BASE}/recommendations/trending?limit=20`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const freeContent = (data.recommendations || []).filter(item => 
+                        item.ott_platforms?.free_platforms?.length > 0
+                    );
+                    displayContent('freeContentContainer', freeContent.slice(0, 20));
+                }
+            } catch (error) {
+                console.error('Failed to load free content:', error);
             }
         }
 
         async function loadContinueWatching() {
-            try {
-                const response = await fetch(`${API_BASE}/user/watchlist`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    displayContent('continueWatching', data.watchlist || []);
-                } else {
-                    displayNoContent('continueWatching', 'No content in watchlist');
-                }
-            } catch (error) {
-                console.error('Error loading continue watching:', error);
-                displayError('continueWatching');
-            }
-        }
-
-        async function loadActivityBasedRecommendations() {
-            try {
-                // For now, load popular content as activity-based
-                const response = await fetch(`${API_BASE}/recommendations/popular/action?limit=10`);
-                const data = await response.json();
-                displayContent('activityBasedRecommendations', data.recommendations || []);
-            } catch (error) {
-                console.error('Error loading activity-based recommendations:', error);
-                displayError('activityBasedRecommendations');
-            }
-        }
-
-        async function loadTrendingContent() {
-            try {
-                const response = await fetch(`${API_BASE}/recommendations/trending?limit=10`);
-                const data = await response.json();
-                displayContent('trendingContent', data.recommendations || []);
-            } catch (error) {
-                console.error('Error loading trending content:', error);
-                displayError('trendingContent');
+            // Simulate continue watching data
+            // In a real app, this would come from user's viewing history
+            const continueWatchingData = [];
+            
+            if (continueWatchingData.length > 0) {
+                document.getElementById('continueWatchingSection').classList.remove('hidden');
+                displayContinueWatching('continueWatchingContainer', continueWatchingData);
             }
         }
 
         function displayContent(containerId, items) {
             const container = document.getElementById(containerId);
-            
-            if (!items.length) {
-                displayNoContent(containerId, 'No content available');
+            if (!container) return;
+
+            if (items.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-8">No content available</p>';
                 return;
             }
 
-            const contentHTML = items.map(item => createContentCard(item)).join('');
-            container.innerHTML = contentHTML;
+            container.innerHTML = items.map(item => createContentCard(item)).join('');
+        }
+
+        function displayContinueWatching(containerId, items) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            container.innerHTML = items.map(item => createContinueWatchingCard(item)).join('');
         }
 
         function createContentCard(item) {
+            const posterUrl = item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image';
+            const rating = item.rating ? `⭐ ${item.rating.toFixed(1)}` : '';
+            
             return `
-                <div class="content-card" onclick="viewDetails(${item.id})">
-                    <img src="${item.poster_path || 'assets/images/placeholder.jpg'}" 
-                         alt="${item.title}" 
-                         class="card-image"
-                         loading="lazy"
-                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgwIiBoZWlnaHQ9IjM1MCIgdmlld0JveD0iMCAwIDI4MCAzNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyODAiIGhlaWdodD0iMzUwIiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0xMjAgMTUwVjIwMEgxNjBWMTUwSDEyMFoiIGZpbGw9IiM2QjcyODAiLz4KPC9zdmc+'">
-                    <div class="card-content">
-                        <h3 class="card-title">${item.title}</h3>
-                        <div class="card-info">
-                            <span class="px-2 py-1 bg-blue-600 rounded text-xs">${item.content_type?.toUpperCase() || 'MOVIE'}</span>
-                            ${item.rating ? `
-                                <div class="rating">
-                                    <i class="fas fa-star"></i>
-                                    <span>${item.rating}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                        <p class="card-description">${item.overview ? item.overview.substring(0, 80) + '...' : 'No description available'}</p>
-                        <div class="action-buttons">
-                            <button class="action-btn btn-watch" onclick="event.stopPropagation(); viewDetails(${item.id})">
-                                <i class="fas fa-play mr-1"></i>
-                                Watch
-                            </button>
-                            <button class="action-btn btn-secondary" onclick="event.stopPropagation(); addToWatchlist(${item.id})">
-                                <i class="fas fa-bookmark mr-1"></i>
-                                Save
-                            </button>
+                <div class="content-card" onclick="openContentDetails(${item.id})">
+                    <img src="${posterUrl}" alt="${item.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450/333/fff?text=No+Image'">
+                    <div class="content-overlay">
+                        <h3 class="font-bold text-sm mb-1">${item.title}</h3>
+                        <p class="text-xs text-gray-300 mb-2">${rating}</p>
+                        <div class="flex space-x-2">
+                            <button class="quick-action-btn text-xs" onclick="event.stopPropagation(); addToWatchlist(${item.id})">+ Watchlist</button>
+                            <button class="quick-action-btn text-xs" onclick="event.stopPropagation(); addToFavorites(${item.id})">❤️</button>
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        function displayNoContent(containerId, message) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = `
-                <div class="text-center text-gray-400 py-8 w-full">
-                    <i class="fas fa-film text-4xl mb-4 opacity-50"></i>
-                    <p>${message}</p>
+        function createContinueWatchingCard(item) {
+            const posterUrl = item.poster_path || 'https://via.placeholder.com/300x450/333/fff?text=No+Image';
+            const progress = item.progress || 0;
+            
+            return `
+                <div class="content-card" onclick="openContentDetails(${item.id})">
+                    <img src="${posterUrl}" alt="${item.title}" loading="lazy">
+                    <div class="content-overlay">
+                        <h3 class="font-bold text-sm mb-1">${item.title}</h3>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${progress}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-300 mt-1">${progress}% watched</p>
+                    </div>
                 </div>
             `;
-        }
-
-        function displayError(containerId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = `
-                <div class="text-center text-red-400 py-8 w-full">
-                    <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
-                    <p>Failed to load content</p>
-                </div>
-            `;
-        }
-
-        function viewDetails(contentId) {
-            window.location.href = `details.html?id=${contentId}`;
         }
 
         async function addToWatchlist(contentId) {
@@ -915,8 +743,8 @@
                 const response = await fetch(`${API_BASE}/interactions`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         content_id: contentId,
@@ -925,53 +753,178 @@
                 });
 
                 if (response.ok) {
-                    // Show success feedback
-                    showToast('Added to watchlist!', 'success');
-                    // Update watchlist count
-                    loadUserStats();
-                } else {
-                    showToast('Failed to add to watchlist', 'error');
+                    showNotification('Added to watchlist!');
+                    loadUserStats(); // Refresh stats
                 }
             } catch (error) {
-                console.error('Error adding to watchlist:', error);
-                showToast('Network error', 'error');
+                console.error('Failed to add to watchlist:', error);
             }
         }
 
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 transform translate-x-full`;
-            
-            if (type === 'success') {
-                toast.classList.add('bg-green-600');
-            } else if (type === 'error') {
-                toast.classList.add('bg-red-600');
-            } else {
-                toast.classList.add('bg-blue-600');
+        async function addToFavorites(contentId) {
+            try {
+                const response = await fetch(`${API_BASE}/interactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content_id: contentId,
+                        interaction_type: 'favorite'
+                    })
+                });
+
+                if (response.ok) {
+                    showNotification('Added to favorites!');
+                    loadUserStats(); // Refresh stats
+                }
+            } catch (error) {
+                console.error('Failed to add to favorites:', error);
             }
+        }
+
+        function openContentDetails(contentId) {
+            window.location.href = `details.html?id=${contentId}`;
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
             
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            // Slide in
-            setTimeout(() => {
-                toast.classList.remove('translate-x-full');
-            }, 100);
-            
-            // Slide out and remove
-            setTimeout(() => {
-                toast.classList.add('translate-x-full');
-                setTimeout(() => {
-                    document.body.removeChild(toast);
-                }, 300);
-            }, 3000);
+            sidebar.classList.toggle('hidden');
+            mainContent.classList.toggle('full-width');
+        }
+
+        function toggleUserMenu() {
+            document.getElementById('userMenu').classList.toggle('hidden');
         }
 
         function logout() {
-            window.authToken = null;
+            // Clear user data
             window.currentUser = null;
+            window.authToken = null;
+            
+            // Redirect to login
             window.location.href = 'login.html';
         }
+
+        function openSearch() {
+            document.getElementById('searchOverlay').classList.remove('hidden');
+            document.getElementById('searchInput').focus();
+        }
+
+        function closeSearch() {
+            document.getElementById('searchOverlay').classList.add('hidden');
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+        }
+
+        let searchTimeout;
+        async function handleSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                document.getElementById('searchResults').innerHTML = '';
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/search?query=${encodeURIComponent(query)}&limit=10`);
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        displaySearchResults(data.results || []);
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
+        }
+
+        function displaySearchResults(results) {
+            const container = document.getElementById('searchResults');
+            
+            if (results.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-4">No results found</p>';
+                return;
+            }
+
+            container.innerHTML = results.map(item => `
+                <div class="flex items-center space-x-4 p-3 hover:bg-white hover:bg-opacity-10 rounded-lg cursor-pointer" onclick="openContentDetails(${item.id}); closeSearch();">
+                    <img src="${item.poster_path || 'https://via.placeholder.com/60x90/333/fff?text=No+Image'}" alt="${item.title}" class="w-12 h-18 object-cover rounded">
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-white">${item.title}</h3>
+                        <p class="text-sm text-gray-400">${item.content_type} • ${item.rating ? item.rating.toFixed(1) + '⭐' : 'Not rated'}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openRandomContent() {
+            // Get a random content from trending
+            loadTrendingContent().then(() => {
+                const cards = document.querySelectorAll('#trendingContainer .content-card');
+                if (cards.length > 0) {
+                    const randomCard = cards[Math.floor(Math.random() * cards.length)];
+                    randomCard.click();
+                }
+            });
+        }
+
+        function openFreeContent() {
+            window.location.href = 'index.html#free-content';
+        }
+
+        function openTrending() {
+            window.location.href = 'index.html#trending';
+        }
+
+        function continueWatching() {
+            // Scroll to continue watching section or load content
+            const section = document.getElementById('continueWatchingSection');
+            if (!section.classList.contains('hidden')) {
+                section.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                openTrending();
+            }
+        }
+
+        function showNotification(message) {
+            // Simple notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Auto-hide sidebar on mobile when clicking outside
+        document.addEventListener('click', function(e) {
+            if (window.innerWidth <= 1024) {
+                const sidebar = document.getElementById('sidebar');
+                const sidebarToggle = document.getElementById('sidebarToggle');
+                
+                if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                    sidebar.classList.add('hidden');
+                    document.getElementById('mainContent').classList.add('full-width');
+                }
+            }
+        });
+
+        // Handle responsive behavior
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 1024) {
+                document.getElementById('sidebar').classList.remove('hidden');
+                document.getElementById('mainContent').classList.remove('full-width');
+            }
+        });
     </script>
 </body>
 </html>

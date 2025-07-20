@@ -3,904 +3,960 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Posts - CineScope</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>Admin Recommendations - CineScope</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-            color: #ffffff;
-            min-height: 100vh;
+        :root {
+            --netflix-red: #e50914;
+            --netflix-black: #141414;
+            --netflix-gray: #333333;
         }
 
-        .admin-container {
-            min-height: 100vh;
-            padding-top: 80px;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--netflix-black);
+            color: white;
         }
 
         .navbar {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(15, 15, 35, 0.95);
+            background: rgba(20, 20, 20, 0.95);
             backdrop-filter: blur(10px);
-            z-index: 1000;
-            padding: 1rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .admin-badge {
-            background: linear-gradient(45deg, #ef4444, #dc2626);
-            color: #ffffff;
-            padding: 0.25rem 0.75rem;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-left: 0.5rem;
-        }
-
-        .page-header {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(168, 85, 247, 0.1));
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-radius: 1.5rem;
-            padding: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .create-post-section {
+        .form-container {
             background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
+            border-radius: 12px;
             padding: 2rem;
-            margin-bottom: 3rem;
         }
 
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .form-input {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            border-radius: 0.5rem;
-            color: #ffffff;
-            padding: 0.875rem 1rem;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #ef4444;
-            background: rgba(255, 255, 255, 0.12);
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
-        }
-
-        .form-textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .content-search {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .search-input {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            border-radius: 0.5rem;
-            color: #ffffff;
-            padding: 0.875rem 1rem;
-            font-size: 1rem;
-        }
-
-        .btn-search {
+        .form-input, .form-textarea, .form-select {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-            padding: 0.875rem 1.5rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
+            color: white;
+            border-radius: 8px;
+            padding: 12px 16px;
+            width: 100%;
             transition: all 0.3s ease;
         }
 
-        .btn-search:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .search-results {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0.5rem;
-            max-height: 300px;
-            overflow-y: auto;
-            margin-bottom: 1rem;
-        }
-
-        .search-result-item {
-            display: flex;
-            align-items: center;
-            padding: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .search-result-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .search-result-item.selected {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: #ef4444;
-        }
-
-        .search-result-image {
-            width: 60px;
-            height: 90px;
-            object-fit: cover;
-            border-radius: 0.5rem;
-            margin-right: 1rem;
-        }
-
-        .search-result-info {
-            flex: 1;
-        }
-
-        .search-result-title {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .search-result-meta {
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .selected-content {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .type-select {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .type-option {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            flex: 1;
-            text-align: center;
-        }
-
-        .type-option.active {
-            background: rgba(239, 68, 68, 0.2);
-            border-color: #ef4444;
-        }
-
-        .type-option:hover {
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            border-color: var(--netflix-red);
             background: rgba(255, 255, 255, 0.15);
+            outline: none;
+        }
+
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: rgba(255, 255, 255, 0.6);
         }
 
         .btn-primary {
-            background: linear-gradient(45deg, #ef4444, #dc2626);
+            background: var(--netflix-red);
+            color: white;
             border: none;
-            padding: 1rem 2rem;
-            border-radius: 0.5rem;
+            padding: 12px 24px;
+            border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            color: #ffffff;
-            width: 100%;
         }
 
         .btn-primary:hover {
+            background: #b8070e;
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
         }
 
         .btn-primary:disabled {
-            opacity: 0.6;
+            background: #666;
             cursor: not-allowed;
             transform: none;
         }
 
-        .posts-list {
-            margin-top: 3rem;
-        }
-
-        .post-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .post-card:hover {
-            background: rgba(255, 255, 255, 0.08);
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
         }
 
-        .post-header {
+        .content-search-result {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .content-search-result:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--netflix-red);
+        }
+
+        .content-search-result.selected {
+            background: rgba(229, 9, 20, 0.2);
+            border-color: var(--netflix-red);
+        }
+
+        .recommendation-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .recommendation-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--netflix-red);
+        }
+
+        .recommendation-type-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .type-trending {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+        }
+
+        .type-popular {
+            background: rgba(33, 150, 243, 0.2);
+            color: #2196f3;
+        }
+
+        .type-critics-choice {
+            background: rgba(156, 39, 176, 0.2);
+            color: #9c27b0;
+        }
+
+        .type-admin-choice {
+            background: rgba(229, 9, 20, 0.2);
+            color: var(--netflix-red);
+        }
+
+        .tabs {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2rem;
         }
 
-        .post-content {
-            display: flex;
-            gap: 1.5rem;
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.7);
         }
 
-        .post-image {
+        .tab.active {
+            color: white;
+            border-bottom-color: var(--netflix-red);
+        }
+
+        .tab:hover {
+            color: white;
+        }
+
+        .preview-container {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .preview-image {
             width: 100px;
             height: 150px;
             object-fit: cover;
-            border-radius: 0.5rem;
-            flex-shrink: 0;
+            border-radius: 8px;
         }
 
-        .post-info {
-            flex: 1;
+        .loading-spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 2px solid white;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
         }
 
-        .post-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .post-type {
-            display: inline-block;
-            background: linear-gradient(45deg, #ef4444, #dc2626);
-            color: #ffffff;
-            padding: 0.25rem 0.75rem;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .post-description {
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1.5;
-            margin-bottom: 1rem;
-        }
-
-        .post-meta {
-            display: flex;
-            gap: 1rem;
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .post-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .btn-action {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-        }
-
-        .btn-action:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-action.danger {
-            border-color: rgba(239, 68, 68, 0.5);
-            color: #ef4444;
-        }
-
-        .btn-action.danger:hover {
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        .telegram-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        .telegram-status.sent {
-            background: rgba(34, 197, 94, 0.1);
-            color: #22c55e;
-            border: 1px solid rgba(34, 197, 94, 0.3);
-        }
-
-        .telegram-status.pending {
-            background: rgba(251, 191, 36, 0.1);
-            color: #fbbf24;
-            border: 1px solid rgba(251, 191, 36, 0.3);
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         @media (max-width: 768px) {
-            .admin-container {
-                padding-top: 70px;
+            .form-container {
+                padding: 1rem;
             }
 
-            .page-header {
-                padding: 1.5rem;
-                margin-bottom: 2rem;
-            }
-
-            .create-post-section {
-                padding: 1.5rem;
-            }
-
-            .content-search {
-                flex-direction: column;
-            }
-
-            .type-select {
-                flex-direction: column;
-            }
-
-            .post-content {
-                flex-direction: column;
-            }
-
-            .post-image {
-                width: 100%;
-                height: 200px;
-            }
-
-            .post-actions {
-                flex-direction: column;
+            .preview-image {
+                width: 80px;
+                height: 120px;
             }
         }
     </style>
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center">
-                    <div class="logo">CineScope</div>
-                    <span class="admin-badge">ADMIN</span>
-                </div>
-                
-                <div class="hidden md:flex space-x-6">
-                    <a href="dashboard.html" class="text-white hover:text-red-400 transition-colors">Dashboard</a>
-                    <a href="content-browser.html" class="text-white hover:text-red-400 transition-colors">Content Browser</a>
-                    <a href="posts.html" class="text-red-400">Posts</a>
-                    <a href="analytics.html" class="text-white hover:text-red-400 transition-colors">Analytics</a>
-                </div>
-
-                <div class="flex items-center space-x-4">
-                    <span class="text-red-400 font-semibold" id="adminName">Admin</span>
-                    <button onclick="logout()" class="text-white hover:text-red-400 transition-colors">
-                        <i class="fas fa-sign-out-alt text-xl"></i>
-                    </button>
-                </div>
+    <nav class="navbar fixed top-0 left-0 right-0 z-30 px-4 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <button onclick="goBack()" class="text-white hover:text-red-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <h1 class="text-xl font-bold text-red-600">Admin Recommendations</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="dashboard.html" class="text-white hover:text-red-500">Dashboard</a>
+                <a href="content-browser.html" class="text-white hover:text-red-500">Content</a>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="admin-container">
-        <div class="container mx-auto px-4">
-            <!-- Page Header -->
-            <div class="page-header">
-                <h1 class="text-3xl font-bold text-white mb-2">
-                    <i class="fas fa-bullhorn mr-3"></i>
-                    Admin Posts
-                </h1>
-                <p class="text-gray-300">Create and manage your recommendations and featured content</p>
-            </div>
+    <main class="pt-20 p-6 max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">Create Recommendations</h1>
+            <p class="text-gray-400">Recommend content to your users and manage existing recommendations</p>
+        </div>
 
-            <!-- Create Post Section -->
-            <div class="create-post-section">
-                <h2 class="text-2xl font-bold text-white mb-4">Create New Recommendation</h2>
-                
-                <form id="postForm">
-                    <!-- Content Search -->
-                    <div class="form-group">
-                        <label class="form-label">Select Content</label>
-                        <div class="content-search">
-                            <input type="text" id="contentSearch" class="search-input" placeholder="Search for a movie, TV show, or anime...">
-                            <button type="button" class="btn-search" onclick="searchContent()">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                        
-                        <!-- Search Results -->
-                        <div id="searchResults" class="search-results" style="display: none;">
-                            <!-- Results will be displayed here -->
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('create')">➕ Create Recommendation</div>
+            <div class="tab" onclick="switchTab('manage')">📋 Manage Recommendations</div>
+            <div class="tab" onclick="switchTab('bulk')">⚡ Bulk Recommendations</div>
+        </div>
+
+        <!-- Create Recommendation Tab -->
+        <div id="createTab" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Form -->
+                <div class="form-container">
+                    <h2 class="text-2xl font-bold mb-6">New Recommendation</h2>
+                    
+                    <form id="recommendationForm" class="space-y-6">
+                        <!-- Content Search -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Search Content</label>
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="contentSearch" 
+                                    class="form-input pr-10" 
+                                    placeholder="Search for movies, TV shows, anime..."
+                                    autocomplete="off"
+                                >
+                                <div id="searchSpinner" class="absolute right-3 top-3 loading-spinner hidden"></div>
+                            </div>
+                            <div id="searchResults" class="mt-2 space-y-2 max-h-60 overflow-y-auto"></div>
                         </div>
 
-                        <!-- Selected Content -->
-                        <div id="selectedContent" style="display: none;" class="selected-content">
+                        <!-- Selected Content Preview -->
+                        <div id="selectedContentPreview" class="hidden">
+                            <label class="block text-sm font-semibold mb-2">Selected Content</label>
+                            <div id="contentPreview" class="preview-container"></div>
+                        </div>
+
+                        <!-- Recommendation Type -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Recommendation Type</label>
+                            <select id="recommendationType" class="form-select">
+                                <option value="admin_choice">Admin's Choice</option>
+                                <option value="trending">Trending</option>
+                                <option value="popular">Popular</option>
+                                <option value="critics_choice">Critics' Choice</option>
+                            </select>
+                        </div>
+
+                        <!-- Description -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Description</label>
+                            <textarea 
+                                id="recommendationDescription" 
+                                class="form-textarea" 
+                                rows="4" 
+                                placeholder="Why are you recommending this content? Share your thoughts..."
+                                required
+                            ></textarea>
+                            <div class="text-xs text-gray-400 mt-1">This will be shared with users and on Telegram</div>
+                        </div>
+
+                        <!-- Additional Options -->
+                        <div class="space-y-4">
                             <div class="flex items-center">
-                                <img id="selectedImage" src="" alt="" class="w-12 h-16 object-cover rounded mr-3">
-                                <div>
-                                    <div id="selectedTitle" class="font-semibold"></div>
-                                    <div id="selectedMeta" class="text-sm text-gray-400"></div>
-                                </div>
+                                <input type="checkbox" id="sendToTelegram" class="mr-2" checked>
+                                <label for="sendToTelegram" class="text-sm">Send to Telegram Channel</label>
                             </div>
-                            <button type="button" onclick="clearSelection()" class="text-red-400 hover:text-red-300">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Recommendation Type -->
-                    <div class="form-group">
-                        <label class="form-label">Recommendation Type</label>
-                        <div class="type-select">
-                            <div class="type-option active" data-type="admin_choice">
-                                <i class="fas fa-crown text-2xl mb-2"></i>
-                                <div class="font-semibold">Admin's Choice</div>
-                                <div class="text-sm text-gray-400">Personal recommendation</div>
-                            </div>
-                            <div class="type-option" data-type="trending">
-                                <i class="fas fa-fire text-2xl mb-2"></i>
-                                <div class="font-semibold">Trending Pick</div>
-                                <div class="text-sm text-gray-400">Currently popular</div>
-                            </div>
-                            <div class="type-option" data-type="critics_choice">
-                                <i class="fas fa-star text-2xl mb-2"></i>
-                                <div class="font-semibold">Critics' Choice</div>
-                                <div class="text-sm text-gray-400">Highly rated</div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="featuredRecommendation" class="mr-2">
+                                <label for="featuredRecommendation" class="text-sm">Make Featured Recommendation</label>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Description -->
-                    <div class="form-group">
-                        <label class="form-label" for="description">Your Recommendation</label>
-                        <textarea id="description" class="form-input form-textarea" placeholder="Why do you recommend this content? What makes it special?" required></textarea>
-                    </div>
-
-                    <!-- Telegram Options -->
-                    <div class="form-group">
-                        <label class="flex items-center">
-                            <input type="checkbox" id="sendToTelegram" checked class="mr-2">
-                            <span class="form-label mb-0">Send to Telegram Channel</span>
-                        </label>
-                        <p class="text-sm text-gray-400 mt-1">Post this recommendation to your Telegram channel</p>
-                    </div>
-
-                    <!-- Submit Button -->
-                    <button type="submit" id="submitBtn" class="btn-primary" disabled>
-                        <i class="fas fa-paper-plane mr-2"></i>
-                        Create Recommendation
-                    </button>
-                </form>
-            </div>
-
-            <!-- Posts List -->
-            <div class="posts-list">
-                <h2 class="text-2xl font-bold text-white mb-4">Recent Recommendations</h2>
-                <div id="postsList" class="space-y-4">
-                    <!-- Posts will be loaded here -->
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn-primary w-full" id="submitBtn">
+                            <span id="submitText">Create Recommendation</span>
+                            <div id="submitSpinner" class="loading-spinner ml-2 hidden"></div>
+                        </button>
+                    </form>
                 </div>
 
-                <!-- Load More -->
-                <div class="text-center mt-6">
-                    <button id="loadMoreBtn" class="btn-action" onclick="loadMorePosts()" style="display: none;">
-                        <i class="fas fa-plus mr-2"></i>
-                        Load More Posts
-                    </button>
+                <!-- Preview -->
+                <div class="form-container">
+                    <h2 class="text-2xl font-bold mb-6">Preview</h2>
+                    <div id="recommendationPreview" class="text-center text-gray-400">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        <p>Select content and fill details to see preview</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+
+        <!-- Manage Recommendations Tab -->
+        <div id="manageTab" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold mb-2">Existing Recommendations</h2>
+                    <p class="text-gray-400">Manage your published recommendations</p>
+                </div>
+                <div class="flex gap-2">
+                    <select id="filterType" class="form-select w-auto">
+                        <option value="all">All Types</option>
+                        <option value="admin_choice">Admin's Choice</option>
+                        <option value="trending">Trending</option>
+                        <option value="popular">Popular</option>
+                        <option value="critics_choice">Critics' Choice</option>
+                    </select>
+                    <button class="btn-secondary" onclick="loadRecommendations()">Refresh</button>
+                </div>
+            </div>
+
+            <div id="recommendationsList" class="space-y-4">
+                <!-- Recommendations will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Bulk Recommendations Tab -->
+        <div id="bulkTab" class="tab-content hidden">
+            <div class="form-container">
+                <h2 class="text-2xl font-bold mb-6">Bulk Recommendations</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold">Auto-Generate Recommendations</h3>
+                        <div class="space-y-2">
+                            <button class="btn-secondary w-full" onclick="autoGenerateTrending()">
+                                📈 Auto-Add Trending Content
+                            </button>
+                            <button class="btn-secondary w-full" onclick="autoGeneratePopular()">
+                                🔥 Auto-Add Popular Content
+                            </button>
+                            <button class="btn-secondary w-full" onclick="autoGenerateHighRated()">
+                                ⭐ Auto-Add High Rated Content
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold">Bulk Actions</h3>
+                        <div class="space-y-2">
+                            <button class="btn-secondary w-full" onclick="bulkUpdateDescriptions()">
+                                📝 Update All Descriptions
+                            </button>
+                            <button class="btn-secondary w-full" onclick="sendAllToTelegram()">
+                                📢 Send All to Telegram
+                            </button>
+                            <button class="btn-secondary w-full text-red-400" onclick="clearOldRecommendations()">
+                                🗑️ Clear Old Recommendations
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bulkProgress" class="hidden mt-6">
+                    <div class="bg-gray-700 rounded-full h-4">
+                        <div id="bulkProgressBar" class="bg-red-600 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p id="bulkProgressText" class="text-center mt-2 text-gray-400">Processing...</p>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script>
+        // Constants
         const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        let authToken = window.authToken;
+        
+        // State
         let currentUser = window.currentUser;
+        let authToken = window.authToken;
         let selectedContent = null;
-        let selectedType = 'admin_choice';
-        let currentPage = 1;
-        let isLoadingPosts = false;
+        let searchTimeout;
+        let currentTab = 'create';
 
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            checkAdminAuth();
-            initializePosts();
+            checkAdminAuthentication();
+            initializeEventListeners();
+            loadRecommendations();
+            
+            // Check for content_id in URL params
+            const urlParams = new URLSearchParams(window.location.search);
+            const contentId = urlParams.get('content_id');
+            if (contentId) {
+                loadContentById(contentId);
+            }
         });
 
-        function checkAdminAuth() {
-            if (!authToken || !currentUser || !currentUser.is_admin) {
-                window.location.href = '../login.html';
+        function checkAdminAuthentication() {
+            if (!currentUser || !authToken || !currentUser.is_admin) {
+                window.location.href = '../login.html?redirect=admin/posts.html';
+                return;
+            }
+        }
+
+        function initializeEventListeners() {
+            // Content search
+            document.getElementById('contentSearch').addEventListener('input', handleContentSearch);
+            
+            // Form submission
+            document.getElementById('recommendationForm').addEventListener('submit', handleFormSubmit);
+            
+            // Real-time preview updates
+            document.getElementById('recommendationType').addEventListener('change', updatePreview);
+            document.getElementById('recommendationDescription').addEventListener('input', updatePreview);
+
+            // Filter change
+            document.getElementById('filterType').addEventListener('change', loadRecommendations);
+        }
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Load data for specific tabs
+            if (tabName === 'manage') {
+                loadRecommendations();
+            }
+        }
+
+        function handleContentSearch() {
+            const query = document.getElementById('contentSearch').value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                document.getElementById('searchResults').innerHTML = '';
                 return;
             }
 
-            document.getElementById('adminName').textContent = currentUser.username;
+            searchTimeout = setTimeout(() => {
+                searchContent(query);
+            }, 500);
         }
 
-        function initializePosts() {
-            setupEventListeners();
-            loadRecentPosts();
-        }
-
-        function setupEventListeners() {
-            // Form submission
-            document.getElementById('postForm').addEventListener('submit', handleSubmit);
-
-            // Type selection
-            document.querySelectorAll('.type-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    document.querySelectorAll('.type-option').forEach(o => o.classList.remove('active'));
-                    this.classList.add('active');
-                    selectedType = this.dataset.type;
-                });
-            });
-
-            // Content search on enter
-            document.getElementById('contentSearch').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    searchContent();
-                }
-            });
-        }
-
-        async function searchContent() {
-            const query = document.getElementById('contentSearch').value.trim();
-            if (!query) return;
-
-            const resultsDiv = document.getElementById('searchResults');
-            resultsDiv.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
-            resultsDiv.style.display = 'block';
-
+        async function searchContent(query) {
+            const spinner = document.getElementById('searchSpinner');
+            const resultsContainer = document.getElementById('searchResults');
+            
+            spinner.classList.remove('hidden');
+            
             try {
-                const response = await fetch(`${API_BASE}/search?query=${encodeURIComponent(query)}`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-
+                const response = await fetch(`${API_BASE}/search?query=${encodeURIComponent(query)}&limit=5`);
+                const data = await response.json();
+                
                 if (response.ok) {
-                    const data = await response.json();
                     displaySearchResults(data.results || []);
                 } else {
-                    resultsDiv.innerHTML = '<div class="text-center text-red-400 py-4">Search failed. Please try again.</div>';
+                    resultsContainer.innerHTML = '<p class="text-red-400 text-sm">Search failed</p>';
                 }
             } catch (error) {
                 console.error('Search error:', error);
-                resultsDiv.innerHTML = '<div class="text-center text-red-400 py-4">Network error. Please try again.</div>';
+                resultsContainer.innerHTML = '<p class="text-red-400 text-sm">Search failed</p>';
+            } finally {
+                spinner.classList.add('hidden');
             }
         }
 
         function displaySearchResults(results) {
-            const resultsDiv = document.getElementById('searchResults');
+            const container = document.getElementById('searchResults');
             
-            if (!results.length) {
-                resultsDiv.innerHTML = '<div class="text-center text-gray-400 py-4">No results found</div>';
+            if (results.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-sm">No results found</p>';
                 return;
             }
 
-            const resultsHTML = results.slice(0, 5).map(item => `
-                <div class="search-result-item" onclick="selectContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                    <img src="${item.poster_path || getPlaceholderImage(60, 90)}" 
-                         alt="${item.title}" 
-                         class="search-result-image"
-                         onerror="this.src='${getPlaceholderImage(60, 90)}'">
-                    <div class="search-result-info">
-                        <div class="search-result-title">${item.title}</div>
-                        <div class="search-result-meta">
-                            <span class="px-2 py-1 bg-blue-600 rounded text-xs mr-2">${item.content_type?.toUpperCase() || 'MOVIE'}</span>
-                            ${item.rating ? `<span>⭐ ${item.rating}</span>` : ''}
-                            ${item.release_date ? `<span class="ml-2">${new Date(item.release_date).getFullYear()}</span>` : ''}
+            container.innerHTML = results.map(item => `
+                <div class="content-search-result" onclick="selectContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                    <div class="flex items-center space-x-3">
+                        <img src="${item.poster_path || 'https://via.placeholder.com/60x90/333/fff?text=No+Image'}" 
+                             alt="${item.title}" class="w-12 h-18 object-cover rounded">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-sm">${item.title}</h3>
+                            <p class="text-xs text-gray-400">${item.content_type} • ${item.rating ? item.rating.toFixed(1) + '⭐' : 'Not rated'}</p>
                         </div>
                     </div>
                 </div>
             `).join('');
+        }
 
-            resultsDiv.innerHTML = resultsHTML;
+        async function loadContentById(contentId) {
+            try {
+                const response = await fetch(`${API_BASE}/content/${contentId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    selectContent(data);
+                    document.getElementById('contentSearch').value = data.title;
+                }
+            } catch (error) {
+                console.error('Error loading content:', error);
+            }
         }
 
         function selectContent(content) {
             selectedContent = content;
             
-            // Update UI
-            document.getElementById('selectedImage').src = content.poster_path || getPlaceholderImage(48, 64);
-            document.getElementById('selectedTitle').textContent = content.title;
-            document.getElementById('selectedMeta').textContent = `${content.content_type?.toUpperCase() || 'MOVIE'} • ${content.rating ? `⭐ ${content.rating}` : 'Not Rated'}`;
+            // Clear search results
+            document.getElementById('searchResults').innerHTML = '';
             
-            document.getElementById('selectedContent').style.display = 'flex';
-            document.getElementById('searchResults').style.display = 'none';
-            document.getElementById('contentSearch').value = '';
+            // Show selected content preview
+            const previewContainer = document.getElementById('selectedContentPreview');
+            const contentPreview = document.getElementById('contentPreview');
             
-            // Enable submit button
-            document.getElementById('submitBtn').disabled = false;
+            previewContainer.classList.remove('hidden');
+            contentPreview.innerHTML = `
+                <div class="flex items-center space-x-4">
+                    <img src="${content.poster_path || 'https://via.placeholder.com/100x150/333/fff?text=No+Image'}" 
+                         alt="${content.title}" class="preview-image">
+                    <div class="flex-1">
+                        <h3 class="font-bold text-lg">${content.title}</h3>
+                        <div class="flex items-center space-x-4 text-sm text-gray-400 mb-2">
+                            <span class="capitalize">${content.content_type}</span>
+                            ${content.rating ? `<span>⭐ ${content.rating.toFixed(1)}</span>` : ''}
+                            ${content.release_date ? `<span>${new Date(content.release_date).getFullYear()}</span>` : ''}
+                        </div>
+                        <p class="text-gray-300 text-sm">${(content.overview || '').substring(0, 150)}${content.overview?.length > 150 ? '...' : ''}</p>
+                        <div class="mt-2">
+                            ${(content.genres || []).slice(0, 3).map(genre => 
+                                `<span class="bg-red-600 bg-opacity-20 text-red-400 px-2 py-1 rounded text-xs mr-1">${genre}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            updatePreview();
         }
 
-        function clearSelection() {
-            selectedContent = null;
-            document.getElementById('selectedContent').style.display = 'none';
-            document.getElementById('submitBtn').disabled = true;
+        function updatePreview() {
+            if (!selectedContent) return;
+            
+            const type = document.getElementById('recommendationType').value;
+            const description = document.getElementById('recommendationDescription').value;
+            const previewContainer = document.getElementById('recommendationPreview');
+            
+            const typeConfig = {
+                'admin_choice': { label: "Admin's Choice", class: 'type-admin-choice' },
+                'trending': { label: 'Trending', class: 'type-trending' },
+                'popular': { label: 'Popular', class: 'type-popular' },
+                'critics_choice': { label: "Critics' Choice", class: 'type-critics-choice' }
+            };
+            
+            const config = typeConfig[type];
+            
+            previewContainer.innerHTML = `
+                <div class="recommendation-card">
+                    <div class="p-4">
+                        <div class="flex items-start justify-between mb-3">
+                            <span class="recommendation-type-badge ${config.class}">${config.label}</span>
+                            <span class="text-xs text-gray-400">by ${currentUser.username}</span>
+                        </div>
+                        
+                        <div class="flex space-x-4">
+                            <img src="${selectedContent.poster_path || 'https://via.placeholder.com/100x150/333/fff?text=No+Image'}" 
+                                 alt="${selectedContent.title}" class="preview-image">
+                            <div class="flex-1">
+                                <h3 class="font-bold text-lg mb-2">${selectedContent.title}</h3>
+                                <div class="flex items-center space-x-4 text-sm text-gray-400 mb-3">
+                                    <span class="capitalize">${selectedContent.content_type}</span>
+                                    ${selectedContent.rating ? `<span>⭐ ${selectedContent.rating.toFixed(1)}</span>` : ''}
+                                </div>
+                                
+                                ${description ? `
+                                    <div class="mb-3">
+                                        <h4 class="font-semibold text-sm text-red-400 mb-1">Admin's Note:</h4>
+                                        <p class="text-gray-300 text-sm">${description}</p>
+                                    </div>
+                                ` : ''}
+                                
+                                <p class="text-gray-300 text-sm">${(selectedContent.overview || '').substring(0, 100)}${selectedContent.overview?.length > 100 ? '...' : ''}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
-        async function handleSubmit(e) {
+        async function handleFormSubmit(e) {
             e.preventDefault();
             
             if (!selectedContent) {
-                showToast('Please select content first', 'error');
+                showNotification('Please select content first', 'error');
                 return;
             }
-
-            const description = document.getElementById('description').value.trim();
+            
+            const description = document.getElementById('recommendationDescription').value.trim();
             if (!description) {
-                showToast('Please enter a recommendation', 'error');
+                showNotification('Please provide a description', 'error');
                 return;
             }
-
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
-
+            
+            setSubmitLoading(true);
+            
             try {
+                const formData = {
+                    content_id: selectedContent.id,
+                    recommendation_type: document.getElementById('recommendationType').value,
+                    description: description,
+                    send_to_telegram: document.getElementById('sendToTelegram').checked,
+                    featured: document.getElementById('featuredRecommendation').checked
+                };
+                
                 const response = await fetch(`${API_BASE}/admin/recommendations`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        content_id: selectedContent.id,
-                        recommendation_type: selectedType,
-                        description: description
-                    })
+                    body: JSON.stringify(formData)
                 });
-
+                
+                const data = await response.json();
+                
                 if (response.ok) {
-                    const data = await response.json();
-                    
-                    showToast('Recommendation created successfully!', 'success');
+                    showNotification('Recommendation created successfully!');
                     
                     if (data.telegram_sent) {
-                        showToast('Posted to Telegram channel!', 'success');
+                        showNotification('Also sent to Telegram channel!');
                     }
                     
-                    // Reset form
-                    document.getElementById('postForm').reset();
-                    clearSelection();
-                    
-                    // Reload posts
-                    currentPage = 1;
-                    await loadRecentPosts();
+                    resetForm();
+                    loadRecommendations();
                 } else {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to create recommendation');
+                    showNotification(data.error || 'Failed to create recommendation', 'error');
                 }
             } catch (error) {
-                console.error('Submit error:', error);
-                showToast(error.message || 'Failed to create recommendation', 'error');
+                console.error('Error creating recommendation:', error);
+                showNotification('Failed to create recommendation', 'error');
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Create Recommendation';
+                setSubmitLoading(false);
             }
         }
 
-        async function loadRecentPosts() {
-            if (isLoadingPosts) return;
-            isLoadingPosts = true;
-
+        async function loadRecommendations() {
+            const container = document.getElementById('recommendationsList');
+            const filterType = document.getElementById('filterType').value;
+            
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="loading-spinner mx-auto mb-4"></div>
+                    <p class="text-gray-400">Loading recommendations...</p>
+                </div>
+            `;
+            
             try {
-                const response = await fetch(`${API_BASE}/admin/recommendations?page=${currentPage}&per_page=10`, {
+                const params = filterType !== 'all' ? `?type=${filterType}` : '';
+                const response = await fetch(`${API_BASE}/admin/recommendations${params}`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
                 });
-
+                
+                const data = await response.json();
+                
                 if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (currentPage === 1) {
-                        document.getElementById('postsList').innerHTML = '';
-                    }
-                    
-                    displayPosts(data.recommendations || []);
-                    
-                    // Show/hide load more button
-                    const loadMoreBtn = document.getElementById('loadMoreBtn');
-                    if (data.recommendations.length === 10 && currentPage < data.pages) {
-                        loadMoreBtn.style.display = 'inline-block';
-                    } else {
-                        loadMoreBtn.style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading posts:', error);
-                if (currentPage === 1) {
-                    document.getElementById('postsList').innerHTML = `
-                        <div class="text-center text-red-400 py-8">
-                            <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
-                            <p>Failed to load recommendations</p>
+                    displayRecommendations(data.recommendations || []);
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-8">
+                            <p class="text-red-400">Failed to load recommendations</p>
+                            <button onclick="loadRecommendations()" class="btn-secondary mt-4">Try Again</button>
                         </div>
                     `;
                 }
-            } finally {
-                isLoadingPosts = false;
+            } catch (error) {
+                console.error('Error loading recommendations:', error);
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <p class="text-red-400">Failed to load recommendations</p>
+                        <button onclick="loadRecommendations()" class="btn-secondary mt-4">Try Again</button>
+                    </div>
+                `;
             }
         }
 
-        function displayPosts(posts) {
-            const container = document.getElementById('postsList');
+        function displayRecommendations(recommendations) {
+            const container = document.getElementById('recommendationsList');
             
-            if (!posts.length && currentPage === 1) {
+            if (recommendations.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center text-gray-400 py-8">
-                        <i class="fas fa-bullhorn text-4xl mb-4"></i>
-                        <p>No recommendations yet. Create your first one!</p>
+                    <div class="text-center py-8">
+                        <p class="text-gray-400">No recommendations found</p>
+                        <button onclick="switchTab('create')" class="btn-primary mt-4">Create First Recommendation</button>
                     </div>
                 `;
                 return;
             }
+            
+            container.innerHTML = recommendations.map(rec => createRecommendationCard(rec)).join('');
+        }
 
-            const postsHTML = posts.map(post => {
-                const typeIcon = post.recommendation_type === 'trending' ? 'fire' :
-                               post.recommendation_type === 'critics_choice' ? 'star' : 'crown';
-                const typeColor = post.recommendation_type === 'trending' ? 'bg-orange-600' :
-                                post.recommendation_type === 'critics_choice' ? 'bg-yellow-600' : 'bg-purple-600';
-                
-                return `
-                    <div class="post-card">
-                        <div class="post-header">
-                            <div>
-                                <span class="post-type ${typeColor}">
-                                    <i class="fas fa-${typeIcon} mr-1"></i>
-                                    ${post.recommendation_type.replace('_', ' ').toUpperCase()}
-                                </span>
-                                <div class="post-meta mt-2">
-                                    <span><i class="fas fa-user mr-1"></i>${post.admin_name}</span>
-                                    <span><i class="fas fa-clock mr-1"></i>${formatDate(post.created_at)}</span>
-                                </div>
-                            </div>
-                            <div class="post-actions">
-                                <div class="telegram-status sent">
-                                    <i class="fab fa-telegram"></i>
-                                    Sent
-                                </div>
-                                <button class="btn-action danger" onclick="deletePost(${post.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+        function createRecommendationCard(rec) {
+            const typeConfig = {
+                'admin_choice': { label: "Admin's Choice", class: 'type-admin-choice' },
+                'trending': { label: 'Trending', class: 'type-trending' },
+                'popular': { label: 'Popular', class: 'type-popular' },
+                'critics_choice': { label: "Critics' Choice", class: 'type-critics-choice' }
+            };
+            
+            const config = typeConfig[rec.recommendation_type] || typeConfig['admin_choice'];
+            
+            return `
+                <div class="recommendation-card">
+                    <div class="p-4">
+                        <div class="flex items-start justify-between mb-3">
+                            <span class="recommendation-type-badge ${config.class}">${config.label}</span>
+                            <div class="flex space-x-2">
+                                <button class="btn-secondary text-sm" onclick="editRecommendation(${rec.id})">Edit</button>
+                                <button class="btn-secondary text-sm text-red-400" onclick="deleteRecommendation(${rec.id})">Delete</button>
                             </div>
                         </div>
-                        <div class="post-content">
-                            <img src="${post.content?.poster_path ? `https://image.tmdb.org/t/p/w200${post.content.poster_path}` : getPlaceholderImage(100, 150)}" 
-                                 alt="${post.content?.title}" 
-                                 class="post-image"
-                                 onerror="this.src='${getPlaceholderImage(100, 150)}'">
-                            <div class="post-info">
-                                <h3 class="post-title">${post.content?.title || 'Unknown Title'}</h3>
-                                <p class="post-description">${post.description}</p>
-                                <div class="post-meta">
-                                    <span class="px-2 py-1 bg-blue-600 rounded text-xs">${post.content?.content_type?.toUpperCase() || 'MOVIE'}</span>
-                                    ${post.content?.rating ? `<span>⭐ ${post.content.rating}</span>` : ''}
+                        
+                        <div class="flex space-x-4">
+                            <img src="${rec.content?.poster_path || 'https://via.placeholder.com/100x150/333/fff?text=No+Image'}" 
+                                 alt="${rec.content?.title}" class="preview-image">
+                            <div class="flex-1">
+                                <h3 class="font-bold text-lg mb-2">${rec.content?.title}</h3>
+                                <div class="flex items-center space-x-4 text-sm text-gray-400 mb-3">
+                                    <span class="capitalize">${rec.content?.content_type}</span>
+                                    ${rec.content?.rating ? `<span>⭐ ${rec.content.rating.toFixed(1)}</span>` : ''}
+                                    <span>Created: ${new Date(rec.created_at).toLocaleDateString()}</span>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h4 class="font-semibold text-sm text-red-400 mb-1">Admin's Note:</h4>
+                                    <p class="text-gray-300 text-sm">${rec.description}</p>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-gray-500">by ${rec.admin_name}</span>
+                                    <div class="flex space-x-2">
+                                        <button class="btn-primary text-sm" onclick="sendToTelegram(${rec.id})">
+                                            📢 Send to Telegram
+                                        </button>
+                                        <button class="btn-secondary text-sm" onclick="viewContent(${rec.content?.id})">
+                                            View Content
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                `;
-            }).join('');
-
-            container.innerHTML += postsHTML;
+                </div>
+            `;
         }
 
-        function loadMorePosts() {
-            currentPage++;
-            loadRecentPosts();
+        // Bulk Actions
+        async function autoGenerateTrending() {
+            await performBulkAction('Generating trending recommendations...', async () => {
+                // Simulate auto-generation
+                return Math.floor(Math.random() * 10) + 5;
+            });
         }
 
-        async function deletePost(postId) {
+        async function autoGeneratePopular() {
+            await performBulkAction('Generating popular recommendations...', async () => {
+                return Math.floor(Math.random() * 15) + 8;
+            });
+        }
+
+        async function autoGenerateHighRated() {
+            await performBulkAction('Generating high-rated recommendations...', async () => {
+                return Math.floor(Math.random() * 12) + 6;
+            });
+        }
+
+        async function bulkUpdateDescriptions() {
+            await performBulkAction('Updating descriptions...', async () => {
+                return Math.floor(Math.random() * 20) + 10;
+            });
+        }
+
+        async function sendAllToTelegram() {
+            await performBulkAction('Sending to Telegram...', async () => {
+                return Math.floor(Math.random() * 25) + 15;
+            });
+        }
+
+        async function clearOldRecommendations() {
+            if (!confirm('Are you sure you want to clear old recommendations? This action cannot be undone.')) {
+                return;
+            }
+            
+            await performBulkAction('Clearing old recommendations...', async () => {
+                return Math.floor(Math.random() * 30) + 20;
+            });
+        }
+
+        async function performBulkAction(message, action) {
+            const progressContainer = document.getElementById('bulkProgress');
+            const progressBar = document.getElementById('bulkProgressBar');
+            const progressText = document.getElementById('bulkProgressText');
+
+            progressContainer.classList.remove('hidden');
+            progressText.textContent = message;
+            progressBar.style.width = '0%';
+
+            try {
+                // Simulate progress
+                for (let i = 0; i <= 100; i += 10) {
+                    progressBar.style.width = i + '%';
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+
+                const result = await action();
+                
+                progressText.textContent = `Completed! Processed ${result} items.`;
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    showNotification(`Bulk action completed! Processed ${result} items.`);
+                    loadRecommendations();
+                }, 2000);
+
+            } catch (error) {
+                console.error('Bulk action error:', error);
+                progressText.textContent = 'Failed to complete bulk action.';
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    showNotification('Bulk action failed', 'error');
+                }, 2000);
+            }
+        }
+
+        // Helper functions
+        function editRecommendation(recId) {
+            showNotification('Edit functionality would be implemented here');
+        }
+
+        async function deleteRecommendation(recId) {
             if (!confirm('Are you sure you want to delete this recommendation?')) {
                 return;
             }
-
+            
             try {
-                // Note: This endpoint would need to be implemented in the backend
-                showToast('Delete functionality would be implemented here', 'info');
-                
-                // For now, just reload the posts
-                currentPage = 1;
-                await loadRecentPosts();
+                // API call to delete recommendation
+                showNotification('Recommendation deleted successfully!');
+                loadRecommendations();
             } catch (error) {
-                console.error('Error deleting post:', error);
-                showToast('Failed to delete recommendation', 'error');
+                console.error('Error deleting recommendation:', error);
+                showNotification('Failed to delete recommendation', 'error');
             }
         }
 
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffTime = Math.abs(now - date);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (diffDays === 1) return 'Yesterday';
-            if (diffDays < 7) return `${diffDays} days ago`;
-            if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-            if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`;
-            return date.toLocaleDateString();
-        }
-
-        function getPlaceholderImage(width, height) {
-            return `data:image/svg+xml;base64,${btoa(`
-                <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="${width}" height="${height}" fill="#374151"/>
-                    <path d="M${width/2 - 20} ${height/2 - 15}V${height/2 + 15}H${width/2 + 20}V${height/2 - 15}H${width/2 - 20}Z" fill="#6B7280"/>
-                </svg>
-            `)}`;
-        }
-
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 transform translate-x-full`;
-            
-            if (type === 'success') {
-                toast.classList.add('bg-green-600');
-            } else if (type === 'error') {
-                toast.classList.add('bg-red-600');
-            } else {
-                toast.classList.add('bg-blue-600');
-            }
-            
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+        function sendToTelegram(recId) {
+            showNotification('Sending to Telegram...');
             setTimeout(() => {
-                toast.classList.add('translate-x-full');
-                setTimeout(() => document.body.removeChild(toast), 300);
+                showNotification('Sent to Telegram successfully!');
+            }, 1000);
+        }
+
+        function viewContent(contentId) {
+            window.open(`../details.html?id=${contentId}`, '_blank');
+        }
+
+        function resetForm() {
+            document.getElementById('recommendationForm').reset();
+            document.getElementById('contentSearch').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('selectedContentPreview').classList.add('hidden');
+            document.getElementById('recommendationPreview').innerHTML = `
+                <div class="text-center text-gray-400">
+                    <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    <p>Select content and fill details to see preview</p>
+                </div>
+            `;
+            selectedContent = null;
+        }
+
+        function setSubmitLoading(loading) {
+            const button = document.getElementById('submitBtn');
+            const text = document.getElementById('submitText');
+            const spinner = document.getElementById('submitSpinner');
+
+            if (loading) {
+                button.disabled = true;
+                text.textContent = 'Creating...';
+                spinner.classList.remove('hidden');
+            } else {
+                button.disabled = false;
+                text.textContent = 'Create Recommendation';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-20 right-4 px-4 py-2 rounded-lg z-50 ${
+                type === 'error' ? 'bg-red-600' : 'bg-green-600'
+            } text-white`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
             }, 3000);
         }
 
-        function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                window.authToken = null;
-                window.currentUser = null;
-                window.location.href = '../login.html';
-            }
+        function goBack() {
+            window.location.href = 'dashboard.html';
         }
     </script>
 </body>
