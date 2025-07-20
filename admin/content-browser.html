@@ -4,575 +4,456 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Content Browser - CineScope Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary: #e50914;
-            --secondary: #221f1f;
-            --dark: #141414;
-            --light: #f5f5f1;
-        }
-
         body {
-            background: var(--dark);
-            color: var(--light);
-            font-family: 'Arial', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
         }
 
-        .admin-card {
-            background: rgba(255, 255, 255, 0.05);
+        .admin-container {
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(15, 15, 35, 0.95);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            z-index: 1000;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .sidebar {
-            background: linear-gradient(180deg, var(--secondary) 0%, var(--dark) 100%);
-            transition: transform 0.3s ease;
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        .nav-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            color: #cbd5e1;
-            text-decoration: none;
-            border-radius: 8px;
-            margin: 4px 0;
-            transition: all 0.3s ease;
+        .admin-badge {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            color: #ffffff;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
         }
 
-        .nav-item:hover {
-            background: var(--primary);
-            color: white;
+        .page-header {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(168, 85, 247, 0.1));
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            margin-bottom: 3rem;
         }
 
-        .content-card {
+        .search-section {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-            transition: all 0.3s ease;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
         }
 
-        .content-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        .search-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
         }
 
-        .source-tab {
-            padding: 8px 16px;
-            border-radius: 6px;
+        .search-tab {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 1rem 1.5rem;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            border: 1px solid transparent;
+            position: relative;
         }
 
-        .source-tab.active {
-            background: var(--primary);
-            color: white;
+        .search-tab.active {
+            color: #ef4444;
         }
 
-        .source-tab:not(.active) {
-            background: rgba(255, 255, 255, 0.1);
-            color: #cbd5e1;
+        .search-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #ef4444;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
         }
 
         .search-input {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
+            flex: 1;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 0.5rem;
+            color: #ffffff;
+            padding: 0.875rem 1rem;
+            font-size: 1rem;
             transition: all 0.3s ease;
         }
 
         .search-input:focus {
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.3);
+            border-color: #ef4444;
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
         }
 
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
+        .btn-search {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            border: none;
+            padding: 0.875rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #ffffff;
+        }
+
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
+        }
+
+        .search-filters {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 0.5rem;
+            color: #ffffff;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+
+        .results-section {
+            margin-top: 2rem;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .results-count {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .result-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-card.added {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .result-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .result-content {
+            padding: 1.5rem;
+        }
+
+        .result-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+
+        .result-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .result-description {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.4;
+            margin-bottom: 1rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-add {
+            flex: 1;
+            background: linear-gradient(45deg, #22c55e, #16a34a);
+            border: none;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #ffffff;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-add:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-view {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-view:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #ef4444;
             border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s ease-in-out infinite;
+            animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        .recommendation-modal {
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-        }
-
-        .telegram-status {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            margin-top: 8px;
-        }
-
-        .telegram-success {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            border: 1px solid rgba(34, 197, 94, 0.3);
-        }
-
-        .telegram-error {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-
-        .ott-availability-section {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            padding: 16px;
-            margin: 16px 0;
-        }
-
-        .platform-item {
+        .pagination {
             display: flex;
+            justify-content: center;
             align-items: center;
-            justify-content: space-between;
-            padding: 8px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 6px;
-            margin: 4px 0;
+            gap: 1rem;
+            margin-top: 3rem;
         }
 
-        .platform-free {
-            border-left: 3px solid #22c55e;
-        }
-
-        .platform-paid {
-            border-left: 3px solid #f59e0b;
-        }
-
-        .platform-youtube {
-            border-left: 3px solid #ff0000;
-        }
-
-        .loading-ott {
-            text-align: center;
-            padding: 20px;
-            color: #9ca3af;
-        }
-
-        .availability-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .stat-card {
+        .page-btn {
             background: rgba(255, 255, 255, 0.1);
-            padding: 12px;
-            border-radius: 6px;
-            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        .stat-number {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary);
+        .page-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
         }
 
-        .stat-label {
-            font-size: 0.75rem;
-            color: #9ca3af;
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
-        .preview-section {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 16px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            font-size: 0.875rem;
-            max-height: 400px;
-            overflow-y: auto;
+        .page-info {
+            color: rgba(255, 255, 255, 0.8);
         }
 
-        .include-toggle {
-            display: flex;
-            align-items: center;
-            margin: 8px 0;
+        .source-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: linear-gradient(45deg, #3b82f6, #2563eb);
+            color: #ffffff;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
 
-        .include-toggle input {
-            margin-right: 8px;
+        .source-badge.tmdb {
+            background: linear-gradient(45deg, #01d277, #00a858);
         }
 
-        /* Mobile Responsiveness */
+        .source-badge.omdb {
+            background: linear-gradient(45deg, #f5c518, #f59e0b);
+        }
+
+        .source-badge.anime {
+            background: linear-gradient(45deg, #e11d48, #be123c);
+        }
+
         @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                z-index: 60;
+            .admin-container {
+                padding-top: 70px;
             }
 
-            .sidebar.mobile-open {
-                transform: translateX(0);
+            .page-header {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
             }
 
-            .main-content {
-                margin-left: 0 !important;
-            }
-
-            .mobile-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 50;
-                opacity: 0;
-                visibility: hidden;
-                transition: all 0.3s ease;
-            }
-
-            .mobile-overlay.active {
-                opacity: 1;
-                visibility: visible;
-            }
-
-            /* Navigation adjustments */
-            .mobile-nav {
-                padding: 8px 16px;
-            }
-
-            .mobile-nav h1 {
-                font-size: 1.25rem;
-            }
-
-            .mobile-nav span {
-                font-size: 0.875rem;
-            }
-
-            /* Content cards responsive */
-            .content-grid {
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 16px;
-            }
-
-            /* Search section mobile */
             .search-section {
+                padding: 1.5rem;
+            }
+
+            .search-tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .search-form {
                 flex-direction: column;
-                gap: 12px;
             }
 
-            .search-btn-mobile {
-                width: 100%;
-                padding: 14px;
-                font-size: 16px;
-            }
-
-            /* Source tabs mobile */
-            .source-tabs-mobile {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-            }
-
-            .source-tab {
-                text-align: center;
-                font-size: 0.875rem;
-                padding: 10px 8px;
-            }
-
-            /* Filters mobile */
-            .filters-mobile {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-
-            /* Modal mobile adjustments */
-            .modal-content-mobile {
-                margin: 10px;
-                max-height: calc(100vh - 20px);
-                width: calc(100% - 20px);
-            }
-
-            .modal-header-mobile {
-                flex-direction: column;
-                text-align: center;
-                gap: 16px;
-            }
-
-            .modal-poster-mobile {
-                width: 120px;
-                height: 180px;
-                margin: 0 auto;
-            }
-
-            /* Availability stats mobile */
-            .availability-stats {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
-            }
-
-            .stat-number {
-                font-size: 1.25rem;
-            }
-
-            /* Platform items mobile */
-            .platform-item {
-                flex-direction: column;
-                text-align: center;
-                gap: 8px;
-                padding: 12px;
-            }
-
-            /* Form elements mobile */
-            .search-input {
-                font-size: 16px; /* Prevents zoom on iOS */
-                padding: 14px 16px;
-            }
-
-            textarea.search-input {
-                min-height: 100px;
-            }
-
-            /* Button adjustments */
-            .btn-mobile {
-                padding: 14px 20px;
-                font-size: 16px;
-                min-height: 48px;
-            }
-
-            /* Pagination mobile */
-            .pagination-mobile {
-                flex-wrap: wrap;
-                gap: 8px;
-                justify-content: center;
-            }
-
-            .pagination-mobile button {
-                min-width: 44px;
-                min-height: 44px;
-            }
-
-            /* Preview section mobile */
-            .preview-section {
-                font-size: 0.75rem;
-                max-height: 250px;
-                padding: 12px;
-            }
-
-            /* Include toggles mobile */
-            .include-toggle {
-                padding: 8px 0;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            .include-toggle:last-child {
-                border-bottom: none;
-            }
-
-            .include-toggle input {
-                transform: scale(1.2);
-                margin-right: 12px;
-            }
-
-            /* Status message mobile */
-            .status-mobile {
-                position: fixed;
-                bottom: 20px;
-                left: 20px;
-                right: 20px;
-                z-index: 70;
-                border-radius: 8px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            /* Extra small screens */
-            .content-grid {
+            .results-grid {
                 grid-template-columns: 1fr;
             }
 
-            .source-tabs-mobile {
-                grid-template-columns: 1fr;
-            }
-
-            .availability-stats {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .modal-content-mobile {
-                margin: 5px;
-                width: calc(100% - 10px);
-            }
-
-            .admin-card {
-                margin: 8px;
-                border-radius: 8px;
-            }
-
-            .ott-availability-section {
-                padding: 12px;
-                margin: 12px 0;
-            }
-        }
-
-        /* Touch improvements */
-        @media (hover: none) and (pointer: coarse) {
-            .nav-item {
-                min-height: 48px;
-            }
-
-            .source-tab {
-                min-height: 44px;
-            }
-
-            .content-card {
-                transition: none;
-            }
-
-            .content-card:hover {
-                transform: none;
-                box-shadow: none;
-            }
-
-            .btn-mobile {
-                min-height: 48px;
+            .result-actions {
+                flex-direction: column;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Mobile Overlay -->
-    <div id="mobileOverlay" class="mobile-overlay" onclick="closeMobileSidebar()"></div>
-
     <!-- Navigation -->
-    <nav class="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-90 backdrop-blur-sm">
-        <div class="container mx-auto px-4 py-3 mobile-nav">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <!-- Mobile Menu Button -->
-                    <button onclick="toggleMobileSidebar()" class="md:hidden text-white p-2">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
-                    <h1 class="text-2xl md:text-2xl font-bold text-red-600">CineScope Admin</h1>
-                    <span class="hidden sm:block text-gray-400">Content Browser & Telegram Posting</span>
+    <nav class="navbar">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <div class="logo">CineScope</div>
+                    <span class="admin-badge">ADMIN</span>
                 </div>
                 
+                <div class="hidden md:flex space-x-6">
+                    <a href="dashboard.html" class="text-white hover:text-red-400 transition-colors">Dashboard</a>
+                    <a href="content-browser.html" class="text-red-400">Content Browser</a>
+                    <a href="posts.html" class="text-white hover:text-red-400 transition-colors">Posts</a>
+                    <a href="analytics.html" class="text-white hover:text-red-400 transition-colors">Analytics</a>
+                </div>
+
                 <div class="flex items-center space-x-4">
-                    <span class="hidden sm:block text-gray-300">Welcome, <span id="adminName">Admin</span></span>
-                    <button onclick="logout()" class="text-white hover:text-red-500 transition">Logout</button>
+                    <span class="text-red-400 font-semibold" id="adminName">Admin</span>
+                    <button onclick="logout()" class="text-white hover:text-red-400 transition-colors">
+                        <i class="fas fa-sign-out-alt text-xl"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Sidebar -->
-    <div id="sidebar" class="fixed left-0 top-16 bottom-0 w-64 sidebar z-40 overflow-y-auto">
-        <div class="p-4">
-            <nav class="space-y-2">
-                <a href="dashboard.html" class="nav-item">
-                    📊 Dashboard
-                </a>
-                <a href="#" class="nav-item" style="background: var(--primary); color: white;">
-                    🔍 Browse & Post
-                </a>
-                <a href="posts.html" class="nav-item">
-                    📝 Manage Posts
-                </a>
-                <a href="analytics.html" class="nav-item">
-                    📈 Analytics
-                </a>
-                <a href="../dashboard.html" class="nav-item">
-                    👤 User View
-                </a>
-            </nav>
-
-            <!-- Telegram Status -->
-            <div class="mt-6 p-4 bg-gray-800 rounded-lg">
-                <h3 class="text-sm font-semibold mb-2">📱 Telegram Channel</h3>
-                <div id="telegramStatus" class="text-xs text-gray-400">
-                    Checking connection...
-                </div>
-                <button onclick="testTelegramConnection()" class="mt-2 text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition btn-mobile">
-                    Test Connection
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Main Content -->
-    <div class="main-content ml-0 md:ml-64 pt-16 min-h-screen">
-        <div class="p-4 md:p-6">
-            <!-- Header -->
-            <div class="mb-6 md:mb-8">
-                <h1 class="text-2xl md:text-3xl font-bold mb-2">Content Browser & Telegram Posting</h1>
-                <p class="text-gray-400 text-sm md:text-base">Search content and post recommendations with OTT availability to Telegram channel</p>
+    <div class="admin-container">
+        <div class="container mx-auto px-4">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="text-3xl font-bold text-white mb-2">
+                    <i class="fas fa-search mr-3"></i>
+                    Content Browser
+                </h1>
+                <p class="text-gray-300">Search and add movies, TV shows, and anime from external sources</p>
             </div>
 
             <!-- Search Section -->
-            <div class="admin-card p-4 md:p-6 mb-6 md:mb-8">
-                <div class="search-section flex flex-col lg:flex-row gap-4 mb-6">
-                    <!-- Search Input -->
-                    <div class="flex-1">
-                        <input 
-                            type="text" 
-                            id="searchInput"
-                            class="search-input w-full"
-                            placeholder="Search for movies, TV shows, or anime..."
-                        >
-                    </div>
-                    
-                    <!-- Search Button -->
-                    <button 
-                        id="searchBtn"
-                        class="search-btn-mobile bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition whitespace-nowrap btn-mobile"
-                    >
-                        🔍 Search Content
+            <div class="search-section">
+                <!-- Search Tabs -->
+                <div class="search-tabs">
+                    <button class="search-tab active" data-source="tmdb">
+                        <i class="fas fa-film mr-2"></i>
+                        TMDB
+                    </button>
+                    <button class="search-tab" data-source="omdb">
+                        <i class="fas fa-database mr-2"></i>
+                        OMDb
+                    </button>
+                    <button class="search-tab" data-source="anime">
+                        <i class="fas fa-dragon mr-2"></i>
+                        Anime (Jikan)
                     </button>
                 </div>
 
-                <!-- Source Tabs -->
-                <div class="source-tabs-mobile flex flex-wrap gap-2 mb-6">
-                    <div class="source-tab active" data-source="tmdb">
-                        🎬 TMDB (Movies & TV)
-                    </div>
-                    <div class="source-tab" data-source="anime">
-                        🎌 Anime (Jikan)
-                    </div>
-                    <div class="source-tab" data-source="omdb">
-                        🎭 OMDb Database
-                    </div>
-                </div>
+                <!-- Search Form -->
+                <form id="searchForm" class="search-form">
+                    <input type="text" id="searchQuery" class="search-input" placeholder="Search for movies, TV shows, or anime..." required>
+                    <button type="submit" class="btn-search">
+                        <i class="fas fa-search mr-2"></i>
+                        Search
+                    </button>
+                </form>
 
-                <!-- Filters -->
-                <div class="filters-mobile grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <select id="contentTypeFilter" class="search-input">
-                        <option value="">All Types</option>
+                <!-- Search Filters -->
+                <div class="search-filters">
+                    <select id="contentType" class="filter-select">
+                        <option value="multi">All Types</option>
                         <option value="movie">Movies</option>
                         <option value="tv">TV Shows</option>
-                        <option value="anime">Anime</option>
                     </select>
-                    
-                    <select id="languageFilter" class="search-input">
-                        <option value="">All Languages</option>
-                        <option value="en">English</option>
-                        <option value="hi">Hindi</option>
-                        <option value="te">Telugu</option>
-                        <option value="ta">Tamil</option>
-                        <option value="kn">Kannada</option>
-                        <option value="ja">Japanese</option>
-                    </select>
-                    
-                    <select id="yearFilter" class="search-input">
+                    <select id="yearFilter" class="filter-select">
                         <option value="">All Years</option>
                         <option value="2024">2024</option>
                         <option value="2023">2023</option>
@@ -580,812 +461,490 @@
                         <option value="2021">2021</option>
                         <option value="2020">2020</option>
                     </select>
+                    <select id="languageFilter" class="filter-select">
+                        <option value="">All Languages</option>
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="te">Telugu</option>
+                        <option value="ta">Tamil</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Search Results -->
-            <div class="admin-card p-4 md:p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-lg md:text-xl font-bold">🎯 Search Results</h2>
-                    <div id="resultsCount" class="text-gray-400 text-sm md:text-base"></div>
+            <!-- Results Section -->
+            <div class="results-section">
+                <div class="results-header">
+                    <h2 class="text-2xl font-bold text-white">Search Results</h2>
+                    <span class="results-count" id="resultsCount">0 results found</span>
                 </div>
-                
-                <div id="searchResults" class="content-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                    <div class="text-center text-gray-400 py-12 col-span-full">
-                        💡 Search for content to create recommendations with OTT availability info
-                    </div>
+
+                <!-- Results Grid -->
+                <div id="resultsGrid" class="results-grid">
+                    <!-- Results will be loaded here -->
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="loading-spinner" style="display: none;">
+                    <div class="spinner"></div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="text-center py-16" style="display: none;">
+                    <i class="fas fa-search text-6xl text-gray-600 mb-4"></i>
+                    <h3 class="text-2xl font-semibold text-gray-400 mb-2">No results found</h3>
+                    <p class="text-gray-500">Try searching with different keywords or filters</p>
                 </div>
 
                 <!-- Pagination -->
-                <div id="pagination" class="pagination-mobile flex justify-center mt-8 space-x-2 hidden">
-                    <!-- Pagination buttons will be generated here -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Enhanced Recommendation & Telegram Posting Modal -->
-    <div id="recommendationModal" class="hidden fixed inset-0 recommendation-modal z-50 flex items-center justify-center p-4">
-        <div class="modal-content-mobile bg-gray-800 rounded-xl p-4 md:p-6 max-w-4xl w-full max-h-screen overflow-y-auto">
-            <div class="modal-header-mobile flex items-start space-x-6 mb-6">
-                <img id="modalPoster" src="" alt="" class="modal-poster-mobile w-24 md:w-32 h-36 md:h-48 object-cover rounded-lg">
-                <div class="flex-1">
-                    <h3 id="modalTitle" class="text-lg md:text-2xl font-bold mb-2"></h3>
-                    <p id="modalOverview" class="text-gray-300 mb-4 text-sm md:text-base"></p>
-                    <div class="flex flex-wrap gap-2 mb-4">
-                        <span id="modalRating" class="bg-yellow-600 px-2 py-1 rounded text-xs md:text-sm"></span>
-                        <span id="modalYear" class="bg-blue-600 px-2 py-1 rounded text-xs md:text-sm"></span>
-                        <span id="modalType" class="bg-green-600 px-2 py-1 rounded text-xs md:text-sm"></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- OTT Availability Section -->
-            <div class="ott-availability-section">
-                <h4 class="text-base md:text-lg font-semibold mb-3">📺 OTT Availability</h4>
-                
-                <div id="ottLoadingIndicator" class="loading-ott">
-                    <div class="loading mx-auto mb-2"></div>
-                    <p class="text-sm">Loading OTT availability...</p>
-                </div>
-                
-                <div id="ottAvailabilityContent" class="hidden">
-                    <!-- Availability Stats -->
-                    <div class="availability-stats">
-                        <div class="stat-card">
-                            <div class="stat-number" id="totalPlatforms">0</div>
-                            <div class="stat-label">Total</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" id="freePlatforms">0</div>
-                            <div class="stat-label">Free</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" id="youtubePlatforms">0</div>
-                            <div class="stat-label">YouTube</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" id="paidPlatforms">0</div>
-                            <div class="stat-label">Subscription</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Platform List -->
-                    <div id="platformsList" class="mt-4">
-                        <!-- Platforms will be populated here -->
-                    </div>
-                </div>
-            </div>
-
-            <form id="recommendationForm">
-                <div class="mb-4">
-                    <label class="block text-gray-300 font-medium mb-2 text-sm md:text-base">📋 Recommendation Type</label>
-                    <select id="recommendationType" class="search-input w-full">
-                        <option value="admin_choice">👑 Admin's Choice</option>
-                        <option value="trending">🔥 Trending Now</option>
-                        <option value="popular">⭐ Popular Pick</option>
-                        <option value="critics_choice">🏆 Critics' Choice</option>
-                    </select>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-300 font-medium mb-2 text-sm md:text-base">📝 Your Recommendation Description</label>
-                    <textarea 
-                        id="recommendationDescription" 
-                        class="search-input w-full h-20 md:h-24 resize-none"
-                        placeholder="Why do you recommend this content? What makes it special?"
-                        required
-                    ></textarea>
-                </div>
-
-                <!-- Include Options -->
-                <div class="mb-4">
-                    <h4 class="text-gray-300 font-medium mb-2 text-sm md:text-base">Include in Telegram Post:</h4>
-                    <div class="include-toggle">
-                        <input type="checkbox" id="includeOTT" checked>
-                        <label for="includeOTT" class="text-sm md:text-base">📺 OTT Platform Availability</label>
-                    </div>
-                    <div class="include-toggle">
-                        <input type="checkbox" id="includeWatchLinks" checked>
-                        <label for="includeWatchLinks" class="text-sm md:text-base">🔗 Direct Watch Links</label>
-                    </div>
-                    <div class="include-toggle">
-                        <input type="checkbox" id="includeFreeOptions" checked>
-                        <label for="includeFreeOptions" class="text-sm md:text-base">🆓 Highlight Free Options</label>
-                    </div>
-                    <div class="include-toggle">
-                        <input type="checkbox" id="includeYouTube" checked>
-                        <label for="includeYouTube" class="text-sm md:text-base">🎥 YouTube Availability</label>
-                    </div>
-                </div>
-
-                <!-- Telegram Preview -->
-                <div class="mb-6">
-                    <h4 class="text-sm font-semibold mb-2 text-blue-400">📱 Telegram Post Preview:</h4>
-                    <div id="telegramPreview" class="preview-section">
-                        Preview will appear here...
-                    </div>
-                </div>
-
-                <div class="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-4">
-                    <button 
-                        type="submit" 
-                        class="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-700 transition font-medium btn-mobile"
-                        id="submitBtn"
-                    >
-                        📝 Create & Post Recommendation
+                <div id="pagination" class="pagination" style="display: none;">
+                    <button id="prevBtn" class="page-btn" onclick="changePage(-1)">
+                        <i class="fas fa-chevron-left"></i>
                     </button>
-                    <button 
-                        type="button" 
-                        onclick="closeRecommendationModal()"
-                        class="flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition font-medium btn-mobile"
-                    >
-                        Cancel
+                    <span class="page-info">
+                        Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                    </span>
+                    <button id="nextBtn" class="page-btn" onclick="changePage(1)">
+                        <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
-
-                <!-- Status Messages -->
-                <div id="statusMessage" class="status-mobile hidden mt-4"></div>
-            </form>
+            </div>
         </div>
     </div>
 
     <script>
         const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        
-        // Global variables
-        let currentUser = null;
-        let authToken = null;
+        let authToken = window.authToken;
+        let currentUser = window.currentUser;
         let currentSource = 'tmdb';
         let currentPage = 1;
         let totalPages = 1;
-        let selectedContent = null;
-        let ottAvailabilityData = null;
-        let savedContentId = null;
+        let searchResults = [];
+        let addedContent = new Set();
 
-        // Mobile sidebar functions
-        function toggleMobileSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobileOverlay');
-            
-            if (sidebar.classList.contains('mobile-open')) {
-                closeMobileSidebar();
-            } else {
-                sidebar.classList.add('mobile-open');
-                overlay.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
-        }
-
-        function closeMobileSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobileOverlay');
-            
-            sidebar.classList.remove('mobile-open');
-            overlay.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-
-        // Close sidebar when clicking nav items on mobile
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', () => {
-                if (window.innerWidth < 768) {
-                    closeMobileSidebar();
-                }
-            });
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAdminAuth();
+            initializeContentBrowser();
         });
 
-        // Authentication check
-        function checkAuth() {
-            authToken = sessionStorage.getItem('authToken');
-            const userStr = sessionStorage.getItem('currentUser');
-            
-            if (!authToken || !userStr) {
+        function checkAdminAuth() {
+            if (!authToken || !currentUser || !currentUser.is_admin) {
                 window.location.href = '../login.html';
-                return false;
-            }
-            
-            currentUser = JSON.parse(userStr);
-            
-            if (!currentUser.is_admin) {
-                window.location.href = '../dashboard.html';
-                return false;
-            }
-            
-            document.getElementById('adminName').textContent = currentUser.username;
-            return true;
-        }
-
-        function getAuthHeaders() {
-            return {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            };
-        }
-
-        function logout() {
-            sessionStorage.clear();
-            window.location.href = '../login.html';
-        }
-
-        // Search functionality
-        function setupSearch() {
-            const searchInput = document.getElementById('searchInput');
-            const searchBtn = document.getElementById('searchBtn');
-            
-            searchBtn.addEventListener('click', performSearch);
-            searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    performSearch();
-                }
-            });
-
-            // Source tabs
-            document.querySelectorAll('.source-tab').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    currentSource = tab.dataset.source;
-                });
-            });
-
-            // Filters
-            document.getElementById('contentTypeFilter').addEventListener('change', performSearch);
-            document.getElementById('languageFilter').addEventListener('change', performSearch);
-            document.getElementById('yearFilter').addEventListener('change', performSearch);
-        }
-
-        async function performSearch(page = 1) {
-            const query = document.getElementById('searchInput').value.trim();
-            if (!query) {
-                showStatus('Please enter a search term', 'error');
                 return;
             }
 
-            currentPage = page;
-            showLoading();
+            document.getElementById('adminName').textContent = currentUser.username;
+        }
+
+        function initializeContentBrowser() {
+            setupEventListeners();
+            loadAddedContent();
+        }
+
+        function setupEventListeners() {
+            // Search tabs
+            document.querySelectorAll('.search-tab').forEach(tab => {
+                tab.addEventListener('click', handleTabClick);
+            });
+
+            // Search form
+            document.getElementById('searchForm').addEventListener('submit', handleSearch);
+
+            // Filters
+            document.getElementById('contentType').addEventListener('change', () => {
+                if (searchResults.length > 0) {
+                    filterResults();
+                }
+            });
+        }
+
+        function handleTabClick(e) {
+            const tab = e.currentTarget;
+            const source = tab.dataset.source;
+
+            // Update active state
+            document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // Update current source
+            currentSource = source;
+
+            // Update form based on source
+            updateSearchForm(source);
+
+            // Clear results
+            clearResults();
+        }
+
+        function updateSearchForm(source) {
+            const contentTypeSelect = document.getElementById('contentType');
+            
+            if (source === 'anime') {
+                contentTypeSelect.innerHTML = `
+                    <option value="tv">TV Series</option>
+                    <option value="movie">Movies</option>
+                    <option value="ova">OVA</option>
+                    <option value="special">Special</option>
+                `;
+            } else if (source === 'omdb') {
+                contentTypeSelect.innerHTML = `
+                    <option value="movie">Movies</option>
+                    <option value="series">TV Series</option>
+                    <option value="episode">Episodes</option>
+                `;
+            } else {
+                contentTypeSelect.innerHTML = `
+                    <option value="multi">All Types</option>
+                    <option value="movie">Movies</option>
+                    <option value="tv">TV Shows</option>
+                `;
+            }
+        }
+
+        async function handleSearch(e) {
+            e.preventDefault();
+            
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) return;
+
+            currentPage = 1;
+            await performSearch(query);
+        }
+
+        async function performSearch(query) {
+            showLoading(true);
+            clearResults();
 
             try {
-                const params = new URLSearchParams({
-                    query: query,
-                    source: currentSource,
-                    page: page.toString()
-                });
-
-                // Add filters
-                const contentType = document.getElementById('contentTypeFilter').value;
-                const language = document.getElementById('languageFilter').value;
-                const year = document.getElementById('yearFilter').value;
-
-                if (contentType) params.append('type', contentType);
-                if (language) params.append('language', language);
-                if (year) params.append('year', year);
-
-                const response = await fetch(`${API_BASE}/admin/search?${params}`, {
-                    headers: getAuthHeaders()
+                const response = await fetch(`${API_BASE}/admin/search?query=${encodeURIComponent(query)}&source=${currentSource}&page=${currentPage}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    displaySearchResults(data.results || []);
-                    updatePagination(data.total_pages || 1, data.total_results || 0);
+                    searchResults = data.results || [];
+                    totalPages = data.total_pages || 1;
+                    
+                    displayResults(searchResults);
+                    updateResultsCount(searchResults.length);
+                    updatePagination();
                 } else {
-                    showError('Failed to search content');
+                    showError('Search failed. Please try again.');
                 }
             } catch (error) {
                 console.error('Search error:', error);
-                showError('Search failed. Please try again.');
+                showError('Network error. Please check your connection.');
+            } finally {
+                showLoading(false);
             }
         }
 
-        function showLoading() {
-            document.getElementById('searchResults').innerHTML = `
-                <div class="col-span-full flex justify-center py-12">
-                    <div class="loading"></div>
-                </div>
-            `;
-        }
-
-        function showError(message) {
-            document.getElementById('searchResults').innerHTML = `
-                <div class="col-span-full text-center text-red-500 py-12">
-                    ${message}
-                </div>
-            `;
-        }
-
-        function displaySearchResults(results) {
-            const container = document.getElementById('searchResults');
+        function displayResults(results) {
+            const grid = document.getElementById('resultsGrid');
             
-            if (!results || results.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full text-center text-gray-400 py-12">
-                        No results found. Try different search terms or sources.
-                    </div>
-                `;
+            if (!results.length) {
+                showEmptyState();
                 return;
             }
 
-            container.innerHTML = results.map(item => {
-                const posterUrl = item.poster_path || '/api/placeholder/200/300';
-                const rating = item.rating ? `⭐ ${item.rating.toFixed(1)}` : 'No rating';
-                const year = item.release_date ? new Date(item.release_date).getFullYear() : 'Unknown';
-                
-                return `
-                    <div class="content-card">
-                        <img src="${posterUrl}" alt="${item.title}" class="w-full h-48 md:h-64 object-cover">
-                        <div class="p-3 md:p-4">
-                            <h3 class="font-bold text-white mb-2 line-clamp-2 text-sm md:text-base">${item.title}</h3>
-                            <p class="text-gray-400 text-xs md:text-sm mb-2">${year} • ${(item.content_type || 'movie').toUpperCase()}</p>
-                            <p class="text-gray-300 text-xs md:text-sm mb-3 line-clamp-3">${item.overview || 'No description available'}</p>
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-yellow-400 text-xs md:text-sm">${rating}</span>
-                                <span class="text-blue-400 text-xs md:text-sm">${item.source?.toUpperCase() || currentSource.toUpperCase()}</span>
-                            </div>
-                            <button 
-                                onclick="openRecommendationModal(${JSON.stringify(item).replace(/"/g, '&quot;')})"
-                                class="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition text-xs md:text-sm font-medium btn-mobile"
-                            >
-                                📝 Recommend & Post to Telegram
+            const resultsHTML = results.map(item => createResultCard(item)).join('');
+            grid.innerHTML = resultsHTML;
+            
+            document.getElementById('emptyState').style.display = 'none';
+            grid.style.display = 'grid';
+        }
+
+        function createResultCard(item) {
+            const isAdded = addedContent.has(item.id) || addedContent.has(item.imdb_id);
+            const sourceBadgeClass = currentSource === 'tmdb' ? 'tmdb' : currentSource === 'omdb' ? 'omdb' : 'anime';
+            
+            return `
+                <div class="result-card ${isAdded ? 'added' : ''}" id="card-${item.id}">
+                    <div class="source-badge ${sourceBadgeClass}">${currentSource.toUpperCase()}</div>
+                    <img src="${item.poster_path || getPlaceholderImage(300, 200)}" 
+                         alt="${item.title}" 
+                         class="result-image"
+                         onerror="this.src='${getPlaceholderImage(300, 200)}'">
+                    <div class="result-content">
+                        <h3 class="result-title">${item.title}</h3>
+                        <div class="result-meta">
+                            <span class="px-2 py-1 bg-blue-600 rounded text-xs">${item.content_type?.toUpperCase() || 'MOVIE'}</span>
+                            ${item.release_date ? `<span>${new Date(item.release_date).getFullYear()}</span>` : ''}
+                            ${item.rating ? `<span>⭐ ${item.rating}</span>` : ''}
+                        </div>
+                        <p class="result-description">${item.overview || 'No description available'}</p>
+                        <div class="result-actions">
+                            ${!isAdded ? `
+                                <button class="btn-add" onclick="addContent('${item.id}', '${currentSource}')">
+                                    <i class="fas fa-plus mr-2"></i>
+                                    Add to Platform
+                                </button>
+                            ` : `
+                                <button class="btn-add" disabled>
+                                    <i class="fas fa-check mr-2"></i>
+                                    Already Added
+                                </button>
+                            `}
+                            <button class="btn-view" onclick="viewExternalDetails('${item.id}', '${currentSource}')">
+                                <i class="fas fa-external-link-alt"></i>
                             </button>
                         </div>
                     </div>
-                `;
-            }).join('');
+                </div>
+            `;
         }
 
-        function updatePagination(totalPagesCount, totalResults) {
-            totalPages = totalPagesCount;
-            document.getElementById('resultsCount').textContent = `${totalResults} results found`;
+        async function addContent(contentId, source) {
+            const card = document.getElementById(`card-${contentId}`);
+            const addBtn = card.querySelector('.btn-add');
             
-            const pagination = document.getElementById('pagination');
-            
-            if (totalPages <= 1) {
-                pagination.classList.add('hidden');
-                return;
-            }
+            // Disable button and show loading
+            addBtn.disabled = true;
+            addBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding...';
 
-            pagination.classList.remove('hidden');
-            
-            let paginationHTML = '';
-            
-            // Previous button
-            if (currentPage > 1) {
-                paginationHTML += `
-                    <button onclick="performSearch(${currentPage - 1})" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition btn-mobile">
-                        Previous
-                    </button>
-                `;
-            }
-
-            // Page numbers
-            const startPage = Math.max(1, currentPage - 2);
-            const endPage = Math.min(totalPages, currentPage + 2);
-
-            for (let i = startPage; i <= endPage; i++) {
-                const isActive = i === currentPage;
-                paginationHTML += `
-                    <button 
-                        onclick="performSearch(${i})" 
-                        class="px-3 py-2 rounded transition btn-mobile ${isActive ? 'bg-red-600 text-white' : 'bg-gray-700 text-white hover:bg-gray-600'}"
-                    >
-                        ${i}
-                    </button>
-                `;
-            }
-
-            // Next button
-            if (currentPage < totalPages) {
-                paginationHTML += `
-                    <button onclick="performSearch(${currentPage + 1})" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition btn-mobile">
-                        Next
-                    </button>
-                `;
-            }
-
-            pagination.innerHTML = paginationHTML;
-        }
-
-        // Enhanced Recommendation modal
-        async function openRecommendationModal(content) {
-            selectedContent = content;
-            ottAvailabilityData = null;
-            savedContentId = null;
-            
-            // Set basic content info
-            document.getElementById('modalTitle').textContent = content.title;
-            document.getElementById('modalOverview').textContent = content.overview || 'No description available';
-            document.getElementById('modalPoster').src = content.poster_path || '/api/placeholder/200/300';
-            document.getElementById('modalRating').textContent = content.rating ? `⭐ ${content.rating.toFixed(1)}` : 'No rating';
-            document.getElementById('modalYear').textContent = content.release_date ? new Date(content.release_date).getFullYear() : 'Unknown';
-            document.getElementById('modalType').textContent = (content.content_type || 'movie').toUpperCase();
-            
-            // Show modal
-            document.getElementById('recommendationModal').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-            
-            // Load OTT availability
-            loadOTTAvailability(content);
-            
-            // Setup live preview
-            setupTelegramPreview();
-        }
-
-        async function loadOTTAvailability(content) {
-            document.getElementById('ottLoadingIndicator').classList.remove('hidden');
-            document.getElementById('ottAvailabilityContent').classList.add('hidden');
-            
             try {
-                // First, save the content to get internal ID
-                const saveContentResponse = await fetch(`${API_BASE}/admin/content`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        id: content.id,
-                        title: content.title,
-                        original_title: content.original_title,
-                        content_type: content.content_type || 'movie',
-                        overview: content.overview,
-                        poster_path: content.poster_path,
-                        backdrop_path: content.backdrop_path,
-                        release_date: content.release_date,
-                        rating: content.rating,
-                        vote_count: content.vote_count,
-                        popularity: content.popularity,
-                        runtime: content.runtime,
-                        genres: content.genres || [],
-                        languages: content.languages || ['en']
-                    })
-                });
-
-                if (!saveContentResponse.ok) {
-                    throw new Error('Failed to save content');
+                // Find the content in search results
+                const content = searchResults.find(item => item.id == contentId);
+                if (!content) {
+                    throw new Error('Content not found');
                 }
 
-                const savedContentData = await saveContentResponse.json();
-                savedContentId = savedContentData.content_id;
-                
-                // Now get OTT availability
-                const ottResponse = await fetch(`${API_BASE}/ott/availability/${savedContentId}?region=IN&refresh=true`);
-                
-                if (ottResponse.ok) {
-                    const data = await ottResponse.json();
-                    ottAvailabilityData = data.availability;
-                    displayOTTAvailability();
-                    updateTelegramPreview();
+                // Prepare content data
+                const contentData = {
+                    id: content.id,
+                    title: content.title,
+                    content_type: content.content_type || 'movie',
+                    overview: content.overview,
+                    release_date: content.release_date,
+                    poster_path: content.poster_path,
+                    rating: content.rating,
+                    source: source,
+                    genres: content.genres || [],
+                    languages: content.languages || ['en']
+                };
+
+                const response = await fetch(`${API_BASE}/admin/content`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(contentData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Mark as added
+                    addedContent.add(contentId);
+                    card.classList.add('added');
+                    
+                    // Update button
+                    addBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Already Added';
+                    
+                    showToast('Content added successfully!', 'success');
+                    
+                    // Check if we should create a recommendation
+                    if (confirm('Would you like to create a recommendation for this content?')) {
+                        createRecommendation(data.content_id || contentId, content.title);
+                    }
                 } else {
-                    throw new Error('Failed to load OTT availability');
+                    throw new Error(data.error || 'Failed to add content');
                 }
             } catch (error) {
-                console.error('OTT availability error:', error);
-                document.getElementById('ottLoadingIndicator').innerHTML = `
-                    <div class="text-red-500">
-                        <p>Failed to load OTT availability</p>
-                        <button onclick="loadOTTAvailability(selectedContent)" class="text-blue-400 underline mt-2 btn-mobile">Retry</button>
-                    </div>
-                `;
-            }
-        }
-
-        function displayOTTAvailability() {
-            if (!ottAvailabilityData) return;
-            
-            document.getElementById('ottLoadingIndicator').classList.add('hidden');
-            document.getElementById('ottAvailabilityContent').classList.remove('hidden');
-            
-            const platforms = ottAvailabilityData.platforms || [];
-            
-            // Update statistics
-            const stats = {
-                total: platforms.length,
-                free: platforms.filter(p => p.is_free).length,
-                youtube: platforms.filter(p => p.platform_id.includes('youtube')).length,
-                paid: platforms.filter(p => !p.is_free && p.availability_type === 'subscription').length
-            };
-            
-            document.getElementById('totalPlatforms').textContent = stats.total;
-            document.getElementById('freePlatforms').textContent = stats.free;
-            document.getElementById('youtubePlatforms').textContent = stats.youtube;
-            document.getElementById('paidPlatforms').textContent = stats.paid;
-            
-            // Display platforms
-            const platformsList = document.getElementById('platformsList');
-            
-            if (platforms.length === 0) {
-                platformsList.innerHTML = '<p class="text-gray-400 text-center">No streaming platforms found</p>';
-                return;
-            }
-            
-            // Group platforms by type
-            const freePlatforms = platforms.filter(p => p.is_free);
-            const paidPlatforms = platforms.filter(p => !p.is_free);
-            
-            let html = '';
-            
-            if (freePlatforms.length > 0) {
-                html += '<h5 class="text-green-400 font-semibold mb-2">🆓 Free Options:</h5>';
-                freePlatforms.forEach(platform => {
-                    const platformClass = platform.platform_id.includes('youtube') ? 'platform-youtube' : 'platform-free';
-                    html += `
-                        <div class="platform-item ${platformClass}">
-                            <div>
-                                <span class="font-medium">${platform.platform_name}</span>
-                                ${platform.video_title ? `<span class="text-xs text-gray-400 ml-2">${platform.video_title}</span>` : ''}
-                            </div>
-                            <a href="${platform.watch_url}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm btn-mobile">
-                                Watch →
-                            </a>
-                        </div>
-                    `;
-                });
-            }
-            
-            if (paidPlatforms.length > 0) {
-                html += '<h5 class="text-yellow-400 font-semibold mb-2 mt-4">💰 Subscription Required:</h5>';
-                paidPlatforms.forEach(platform => {
-                    html += `
-                        <div class="platform-item platform-paid">
-                            <div>
-                                <span class="font-medium">${platform.platform_name}</span>
-                                ${platform.availability_type === 'rent' ? '<span class="text-xs text-gray-400 ml-2">(Rent)</span>' : ''}
-                                ${platform.availability_type === 'buy' ? '<span class="text-xs text-gray-400 ml-2">(Buy)</span>' : ''}
-                            </div>
-                            <a href="${platform.watch_url}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm btn-mobile">
-                                Watch →
-                            </a>
-                        </div>
-                    `;
-                });
-            }
-            
-            platformsList.innerHTML = html;
-        }
-
-        function setupTelegramPreview() {
-            const typeSelect = document.getElementById('recommendationType');
-            const descriptionTextarea = document.getElementById('recommendationDescription');
-            const includeOTT = document.getElementById('includeOTT');
-            const includeWatchLinks = document.getElementById('includeWatchLinks');
-            const includeFreeOptions = document.getElementById('includeFreeOptions');
-            const includeYouTube = document.getElementById('includeYouTube');
-            
-            function updatePreview() {
-                updateTelegramPreview();
-            }
-            
-            typeSelect.addEventListener('change', updatePreview);
-            descriptionTextarea.addEventListener('input', updatePreview);
-            includeOTT.addEventListener('change', updatePreview);
-            includeWatchLinks.addEventListener('change', updatePreview);
-            includeFreeOptions.addEventListener('change', updatePreview);
-            includeYouTube.addEventListener('change', updatePreview);
-            
-            // Initial preview
-            updatePreview();
-        }
-
-        function updateTelegramPreview() {
-            const type = document.getElementById('recommendationType').value;
-            const description = document.getElementById('recommendationDescription').value;
-            const includeOTT = document.getElementById('includeOTT').checked;
-            const includeWatchLinks = document.getElementById('includeWatchLinks').checked;
-            const includeFreeOptions = document.getElementById('includeFreeOptions').checked;
-            const includeYouTube = document.getElementById('includeYouTube').checked;
-            
-            const typeEmojis = {
-                'admin_choice': '👑 Admin\'s Choice',
-                'trending': '🔥 Trending Now',
-                'popular': '⭐ Popular Pick',
-                'critics_choice': '🏆 Critics\' Choice'
-            };
-            
-            let preview = `🎬 ${typeEmojis[type]} by ${currentUser.username}\n\n`;
-            preview += `**${selectedContent.title}**\n`;
-            preview += `⭐ Rating: ${selectedContent.rating ? selectedContent.rating.toFixed(1) : 'N/A'}/10\n`;
-            preview += `📅 Release: ${selectedContent.release_date ? new Date(selectedContent.release_date).getFullYear() : 'N/A'}\n`;
-            preview += `🎭 Type: ${(selectedContent.content_type || 'movie').toUpperCase()}\n\n`;
-            preview += `📝 **Admin's Note:** ${description || '[Your recommendation will appear here]'}\n\n`;
-            preview += `📖 **Synopsis:** ${selectedContent.overview ? (selectedContent.overview.substring(0, 200) + '...') : 'No synopsis available'}\n`;
-            
-            // Add OTT availability
-            if (includeOTT && ottAvailabilityData && ottAvailabilityData.platforms) {
-                const platforms = ottAvailabilityData.platforms;
-                const freePlatforms = platforms.filter(p => p.is_free);
-                const paidPlatforms = platforms.filter(p => !p.is_free);
-                const youtubePlatforms = platforms.filter(p => p.platform_id.includes('youtube'));
+                console.error('Error adding content:', error);
+                showToast(error.message || 'Failed to add content', 'error');
                 
-                if (platforms.length > 0) {
-                    preview += '\n━━━━━━━━━━━━━━━━━\n';
-                    preview += '📺 **WHERE TO WATCH**\n\n';
-                    
-                    // YouTube availability
-                    if (includeYouTube && youtubePlatforms.length > 0) {
-                        const freeYouTube = youtubePlatforms.filter(p => p.platform_id === 'youtube');
-                        if (freeYouTube.length > 0) {
-                            preview += '🎥 **FREE on YouTube!**\n';
-                            if (includeWatchLinks) {
-                                freeYouTube.forEach(yt => {
-                                    preview += `▶️ Watch Now: ${yt.watch_url}\n`;
-                                });
-                            }
-                            preview += '\n';
-                        }
-                    }
-                    
-                    // Free platforms
-                    if (includeFreeOptions && freePlatforms.length > 0) {
-                        const nonYoutubeFree = freePlatforms.filter(p => !p.platform_id.includes('youtube'));
-                        if (nonYoutubeFree.length > 0) {
-                            preview += '🆓 **FREE Platforms:**\n';
-                            nonYoutubeFree.forEach(platform => {
-                                preview += `• ${platform.platform_name}`;
-                                if (includeWatchLinks) {
-                                    preview += ` - ${platform.watch_url}`;
-                                }
-                                preview += '\n';
-                            });
-                            preview += '\n';
-                        }
-                    }
-                    
-                    // Paid platforms
-                    if (paidPlatforms.length > 0) {
-                        preview += '💰 **Subscription/Paid:**\n';
-                        paidPlatforms.slice(0, 5).forEach(platform => {
-                            preview += `• ${platform.platform_name}`;
-                            if (platform.availability_type === 'rent') preview += ' (Rent)';
-                            if (platform.availability_type === 'buy') preview += ' (Buy)';
-                            if (includeWatchLinks) {
-                                preview += ` - ${platform.watch_url}`;
-                            }
-                            preview += '\n';
-                        });
-                    }
-                    
-                    preview += '\n━━━━━━━━━━━━━━━━━';
-                }
+                // Reset button
+                addBtn.disabled = false;
+                addBtn.innerHTML = '<i class="fas fa-plus mr-2"></i>Add to Platform';
             }
-            
-            preview += '\n\n#AdminChoice #MovieRecommendation #CineScope';
-            
-            // Add hashtags based on availability
-            if (ottAvailabilityData && ottAvailabilityData.platforms) {
-                const platforms = ottAvailabilityData.platforms;
-                if (platforms.some(p => p.platform_id.includes('youtube') && p.is_free)) {
-                    preview += ' #FreeOnYouTube';
-                }
-                if (platforms.some(p => p.platform_id === 'netflix')) {
-                    preview += ' #Netflix';
-                }
-                if (platforms.some(p => p.platform_id === 'amazon_prime')) {
-                    preview += ' #PrimeVideo';
-                }
-            }
-            
-            document.getElementById('telegramPreview').textContent = preview;
         }
 
-        function closeRecommendationModal() {
-            document.getElementById('recommendationModal').classList.add('hidden');
-            document.getElementById('recommendationForm').reset();
-            document.getElementById('statusMessage').classList.add('hidden');
-            document.body.style.overflow = '';
-            selectedContent = null;
-            ottAvailabilityData = null;
-            savedContentId = null;
-        }
-
-        // Submit recommendation
-        document.getElementById('recommendationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function createRecommendation(contentId, title) {
+            const description = prompt(`Enter your recommendation for "${title}":`);
             
-            if (!selectedContent || !savedContentId) {
-                showStatus('No content selected or saved', 'error');
-                return;
-            }
-
-            const submitBtn = document.getElementById('submitBtn');
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Creating...';
-            submitBtn.disabled = true;
-
-            const recommendationType = document.getElementById('recommendationType').value;
-            const description = document.getElementById('recommendationDescription').value;
+            if (!description) return;
 
             try {
-                // Create the recommendation
-                showStatus('Creating recommendation...', 'info');
-                
                 const response = await fetch(`${API_BASE}/admin/recommendations`, {
                     method: 'POST',
-                    headers: getAuthHeaders(),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
                     body: JSON.stringify({
-                        content_id: savedContentId,
-                        recommendation_type: recommendationType,
+                        content_id: contentId,
+                        recommendation_type: 'admin_choice',
                         description: description
                     })
                 });
 
                 if (response.ok) {
-                    const result = await response.json();
-                    
-                    if (result.telegram_sent) {
-                        showStatus('✅ Recommendation created and posted to Telegram successfully!', 'success');
-                    } else {
-                        showStatus('⚠️ Recommendation created but Telegram posting failed. Please check your bot configuration.', 'warning');
-                    }
-                    
-                    setTimeout(() => {
-                        closeRecommendationModal();
-                    }, 3000);
+                    const data = await response.json();
+                    showToast('Recommendation created and sent to Telegram!', 'success');
                 } else {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Unknown error');
+                    throw new Error('Failed to create recommendation');
                 }
             } catch (error) {
-                console.error('Create recommendation error:', error);
-                showStatus(`❌ Failed to create recommendation: ${error.message}`, 'error');
-            } finally {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
+                console.error('Error creating recommendation:', error);
+                showToast('Failed to create recommendation', 'error');
             }
-        });
-
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.className = `mt-4 p-3 rounded-lg text-sm ${type === 'success' ? 'telegram-success' : 
-                                   type === 'error' ? 'telegram-error' : 
-                                   type === 'warning' ? 'bg-yellow-600 bg-opacity-20 text-yellow-400 border border-yellow-600 border-opacity-30' :
-                                   'bg-blue-600 bg-opacity-20 text-blue-400 border border-blue-600 border-opacity-30'}`;
-            statusDiv.textContent = message;
-            statusDiv.classList.remove('hidden');
         }
 
-        // Telegram connection test
-        async function testTelegramConnection() {
-            document.getElementById('telegramStatus').textContent = 'Testing connection...';
+        function viewExternalDetails(contentId, source) {
+            let url = '';
             
-            try {
-                const response = await fetch(`${API_BASE}/health`);
+            switch (source) {
+                case 'tmdb':
+                    const item = searchResults.find(r => r.id == contentId);
+                    const type = item?.content_type === 'tv' ? 'tv' : 'movie';
+                    url = `https://www.themoviedb.org/${type}/${contentId}`;
+                    break;
+                case 'omdb':
+                    url = `https://www.imdb.com/title/${contentId}`;
+                    break;
+                case 'anime':
+                    url = `https://myanimelist.net/anime/${contentId}`;
+                    break;
+            }
+            
+            if (url) {
+                window.open(url, '_blank');
+            }
+        }
+
+        function filterResults() {
+            const contentType = document.getElementById('contentType').value;
+            const year = document.getElementById('yearFilter').value;
+            const language = document.getElementById('languageFilter').value;
+
+            let filteredResults = [...searchResults];
+
+            if (contentType && contentType !== 'multi') {
+                filteredResults = filteredResults.filter(item => 
+                    item.content_type === contentType
+                );
+            }
+
+            if (year) {
+                filteredResults = filteredResults.filter(item => {
+                    const releaseYear = item.release_date ? new Date(item.release_date).getFullYear() : '';
+                    return releaseYear == year;
+                });
+            }
+
+            displayResults(filteredResults);
+            updateResultsCount(filteredResults.length);
+        }
+
+        function changePage(direction) {
+            const newPage = currentPage + direction;
+            
+            if (newPage < 1 || newPage > totalPages) return;
+            
+            currentPage = newPage;
+            const query = document.getElementById('searchQuery').value;
+            performSearch(query);
+        }
+
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            const currentPageSpan = document.getElementById('currentPage');
+            const totalPagesSpan = document.getElementById('totalPages');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            if (totalPages > 1) {
+                pagination.style.display = 'flex';
+                currentPageSpan.textContent = currentPage;
+                totalPagesSpan.textContent = totalPages;
                 
-                if (response.ok) {
-                    document.getElementById('telegramStatus').innerHTML = 
-                        '<span class="text-green-400">✅ Backend Connected</span><br><span class="text-xs">Telegram will be tested when posting</span>';
-                } else {
-                    document.getElementById('telegramStatus').innerHTML = 
-                        '<span class="text-red-400">❌ Backend Connection Failed</span>';
-                }
-            } catch (error) {
-                document.getElementById('telegramStatus').innerHTML = 
-                    '<span class="text-red-400">❌ Connection Error</span>';
+                prevBtn.disabled = currentPage === 1;
+                nextBtn.disabled = currentPage === totalPages;
+            } else {
+                pagination.style.display = 'none';
             }
         }
 
-        // Close modal on escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeRecommendationModal();
-                if (window.innerWidth < 768) {
-                    closeMobileSidebar();
-                }
-            }
-        });
-
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            if (window.innerWidth >= 768) {
-                closeMobileSidebar();
-            }
-        });
-
-        // Initialize page
-        function initializePage() {
-            if (!checkAuth()) return;
-            setupSearch();
-            testTelegramConnection();
+        function updateResultsCount(count) {
+            document.getElementById('resultsCount').textContent = `${count} results found`;
         }
 
-        document.addEventListener('DOMContentLoaded', initializePage);
+        function showLoading(show) {
+            document.getElementById('loadingState').style.display = show ? 'flex' : 'none';
+            document.getElementById('resultsGrid').style.display = show ? 'none' : 'grid';
+        }
+
+        function showEmptyState() {
+            document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('resultsGrid').style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('resultsGrid').innerHTML = `
+                <div class="col-span-full text-center text-red-400 py-16">
+                    <i class="fas fa-exclamation-triangle text-6xl mb-4"></i>
+                    <h3 class="text-2xl font-semibold mb-2">Error</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function clearResults() {
+            document.getElementById('resultsGrid').innerHTML = '';
+            document.getElementById('resultsCount').textContent = '0 results found';
+            document.getElementById('pagination').style.display = 'none';
+            searchResults = [];
+        }
+
+        async function loadAddedContent() {
+            // This would load already added content IDs to prevent duplicates
+            // For now, we'll just initialize the set
+            addedContent = new Set();
+        }
+
+        function getPlaceholderImage(width, height) {
+            return `data:image/svg+xml;base64,${btoa(`
+                <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="${width}" height="${height}" fill="#374151"/>
+                    <path d="M${width/2 - 20} ${height/2 - 15}V${height/2 + 15}H${width/2 + 20}V${height/2 - 15}H${width/2 - 20}Z" fill="#6B7280"/>
+                </svg>
+            `)}`;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 transform translate-x-full`;
+            
+            if (type === 'success') {
+                toast.classList.add('bg-green-600');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-600');
+            } else {
+                toast.classList.add('bg-blue-600');
+            }
+            
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.authToken = null;
+                window.currentUser = null;
+                window.location.href = '../login.html';
+            }
+        }
     </script>
 </body>
 </html>

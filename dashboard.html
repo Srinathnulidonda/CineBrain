@@ -4,134 +4,400 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - CineScope</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary: #e50914;
-            --secondary: #221f1f;
-            --dark: #141414;
-            --light: #f5f5f1;
-            --gray: #564d4d;
-        }
-
         body {
-            background: var(--dark);
-            color: var(--light);
-            font-family: 'Arial', sans-serif;
-            overflow-x: hidden;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
         }
 
-        .sidebar {
-            background: linear-gradient(180deg, var(--secondary) 0%, var(--dark) 100%);
-            transition: transform 0.3s ease;
+        .dashboard-container {
+            min-height: 100vh;
+            padding-top: 80px;
         }
 
-        .sidebar-hidden {
-            transform: translateX(-100%);
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(15, 15, 35, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .movie-card {
-            min-width: 180px;
-            height: 270px;
-            background: var(--secondary);
-            border-radius: 8px;
-            overflow: hidden;
-            cursor: pointer;
-            position: relative;
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
             transition: all 0.3s ease;
         }
 
-        .movie-card:hover {
-            transform: scale(1.05);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-        }
-
-        .movie-card img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .movie-info {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.9));
-            padding: 15px 10px 10px;
-            transform: translateY(100%);
-            transition: transform 0.3s ease;
-        }
-
-        .movie-card:hover .movie-info {
-            transform: translateY(0);
-        }
-
-        .carousel-container {
-            overflow-x: auto;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-
-        .carousel-container::-webkit-scrollbar {
-            display: none;
-        }
-
-        .section-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 1rem;
-            color: var(--light);
+        .nav-link:hover, .nav-link.active {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .welcome-banner {
-            background: linear-gradient(135deg, var(--primary) 0%, #f40612 100%);
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .stats-card {
+        .welcome-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><defs><radialGradient id="a" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="%23ff6b6b" stop-opacity="0.1"/><stop offset="100%" stop-color="%234ecdc4" stop-opacity="0.05"/></radialGradient></defs><rect width="100" height="20" fill="url(%23a)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
         }
 
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s ease-in-out infinite;
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #4ecdc4;
         }
 
-        .preference-chip {
-            background: rgba(229, 9, 20, 0.2);
-            color: var(--primary);
-            border: 1px solid var(--primary);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .view-all-btn {
+            color: #4ecdc4;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .view-all-btn:hover {
+            color: #fff;
+        }
+
+        .content-carousel {
+            display: flex;
+            gap: 1.5rem;
+            overflow-x: auto;
+            padding: 1rem 0;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .content-carousel::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .content-carousel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .content-carousel::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border-radius: 4px;
+        }
+
+        .content-card {
+            min-width: 280px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .content-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 350px;
+            object-fit: cover;
+            transition: all 0.3s ease;
+        }
+
+        .content-card:hover .card-image {
+            transform: scale(1.05);
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+
+        .card-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #ffd700;
+        }
+
+        .card-description {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .preference-chip:hover,
-        .preference-chip.active {
-            background: var(--primary);
-            color: white;
+        .btn-watch {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: #ffffff;
         }
 
+        .btn-watch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .quick-action-card {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quick-action-card:hover {
+            transform: translateY(-5px);
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(78, 205, 196, 0.15));
+        }
+
+        .quick-action-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #4ecdc4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        /* Mobile Responsive */
         @media (max-width: 768px) {
-            .movie-card {
-                min-width: 140px;
-                height: 210px;
+            .dashboard-container {
+                padding-top: 70px;
             }
-            
+
+            .welcome-banner {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-icon {
+                font-size: 1.5rem;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+
+            .content-card {
+                min-width: 250px;
+            }
+
+            .card-image {
+                height: 300px;
+            }
+
             .section-title {
+                font-size: 1.5rem;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .quick-action-card {
+                padding: 1.5rem;
+            }
+
+            .quick-action-icon {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .content-card {
+                min-width: 220px;
+            }
+
+            .welcome-banner {
+                padding: 1rem;
+            }
+
+            .user-avatar {
+                width: 50px;
+                height: 50px;
                 font-size: 1.25rem;
             }
         }
@@ -139,633 +405,572 @@
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-90 backdrop-blur-sm">
-        <div class="container mx-auto px-4 py-3">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <button id="sidebarToggle" class="text-white md:hidden">
-                        ☰
-                    </button>
-                    <h1 class="text-2xl font-bold text-red-600">CineScope</h1>
-                </div>
+    <nav class="navbar">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <div class="logo">CineScope</div>
                 
+                <div class="hidden md:flex space-x-6">
+                    <a href="dashboard.html" class="nav-link active">Dashboard</a>
+                    <a href="user/watchlist.html" class="nav-link">Watchlist</a>
+                    <a href="user/favorites.html" class="nav-link">Favorites</a>
+                    <a href="categories/trending.html" class="nav-link">Trending</a>
+                </div>
+
                 <div class="flex items-center space-x-4">
+                    <button id="searchToggle" class="text-white hover:text-blue-400 transition-colors">
+                        <i class="fas fa-search text-xl"></i>
+                    </button>
                     <div class="relative">
-                        <input 
-                            type="text" 
-                            id="searchInput"
-                            placeholder="Search..." 
-                            class="bg-gray-800 text-white px-4 py-2 pr-10 rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 w-32 md:w-64"
-                        >
-                        <button id="searchBtn" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
-                            🔍
+                        <button id="userMenuBtn" class="flex items-center space-x-2">
+                            <div class="user-avatar" id="userAvatar">U</div>
                         </button>
-                    </div>
-                    <div class="relative">
-                        <button id="userMenuBtn" class="flex items-center space-x-2 text-white">
-                            <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
-                                <span id="userInitial">U</span>
-                            </div>
-                        </button>
-                        <div id="userMenu" class="absolute right-0 top-full mt-2 bg-gray-800 rounded-lg shadow-lg hidden min-w-48">
-                            <a href="profile.html" class="block px-4 py-2 text-white hover:bg-gray-700">Profile</a>
-                            <a href="#" id="logoutBtn" class="block px-4 py-2 text-white hover:bg-gray-700">Logout</a>
+                        <div id="userMenu" class="absolute right-0 top-full mt-2 w-48 bg-gray-900 rounded-lg shadow-lg hidden z-50">
+                            <a href="profile.html" class="block px-4 py-2 hover:bg-gray-800 rounded-lg">
+                                <i class="fas fa-user mr-2"></i>Profile
+                            </a>
+                            <a href="#" onclick="logout()" class="block px-4 py-2 hover:bg-gray-800 rounded-lg text-red-400">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                            </a>
                         </div>
                     </div>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn" class="md:hidden text-white">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Mobile Menu -->
+            <div id="mobileMenu" class="md:hidden mt-4 hidden">
+                <div class="flex flex-col space-y-3">
+                    <a href="dashboard.html" class="nav-link active">Dashboard</a>
+                    <a href="user/watchlist.html" class="nav-link">Watchlist</a>
+                    <a href="user/favorites.html" class="nav-link">Favorites</a>
+                    <a href="categories/trending.html" class="nav-link">Trending</a>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div id="searchBar" class="mt-4 hidden">
+                <div class="relative max-w-md mx-auto">
+                    <input type="text" id="searchInput" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" placeholder="Search...">
+                    <div id="searchResults" class="absolute w-full mt-2 bg-gray-900 rounded-lg shadow-lg hidden max-h-80 overflow-y-auto z-50"></div>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Sidebar -->
-    <div id="sidebar" class="sidebar fixed left-0 top-16 bottom-0 w-64 z-40 md:translate-x-0 sidebar-hidden">
-        <div class="p-4 h-full overflow-y-auto">
-            <div class="space-y-4">
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-400 mb-2">DISCOVER</h3>
-                    <ul class="space-y-2">
-                        <li><a href="#" onclick="loadSection('trending')" class="block text-white hover:text-red-500 transition">🔥 Trending</a></li>
-                        <li><a href="#" onclick="loadSection('popular')" class="block text-white hover:text-red-500 transition">⭐ Popular</a></li>
-                        <li><a href="#" onclick="loadSection('new')" class="block text-white hover:text-red-500 transition">🆕 New Releases</a></li>
-                    </ul>
+    <!-- Dashboard Content -->
+    <div class="dashboard-container">
+        <div class="container mx-auto px-4">
+            <!-- Welcome Banner -->
+            <div class="welcome-banner">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center relative z-10">
+                    <div class="flex items-center space-x-4 mb-4 md:mb-0">
+                        <div class="user-avatar" id="welcomeAvatar">U</div>
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-bold text-white">Welcome back, <span id="userName">User</span>!</h1>
+                            <p class="text-gray-300 mt-1">Ready to discover something amazing?</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-400">Last active</p>
+                        <p class="text-white font-medium" id="lastActive">Today</p>
+                    </div>
                 </div>
-                
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-400 mb-2">CATEGORIES</h3>
-                    <ul class="space-y-2">
-                        <li><a href="#" onclick="loadGenre('action')" class="block text-white hover:text-red-500 transition">🎬 Movies</a></li>
-                        <li><a href="#" onclick="loadGenre('drama')" class="block text-white hover:text-red-500 transition">📺 TV Shows</a></li>
-                        <li><a href="#" onclick="loadAnime()" class="block text-white hover:text-red-500 transition">🎌 Anime</a></li>
-                    </ul>
-                </div>
+            </div>
 
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-400 mb-2">MY LISTS</h3>
-                    <ul class="space-y-2">
-                        <li><a href="#" onclick="loadWatchlist()" class="block text-white hover:text-red-500 transition">📚 Watchlist</a></li>
-                        <li><a href="#" onclick="loadFavorites()" class="block text-white hover:text-red-500 transition">❤️ Favorites</a></li>
-                    </ul>
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <div class="stat-number" id="watchedCount">0</div>
+                    <div class="stat-label">Watched</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-bookmark"></i>
+                    </div>
+                    <div class="stat-number" id="watchlistCount">0</div>
+                    <div class="stat-label">Watchlist</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="stat-number" id="favoritesCount">0</div>
+                    <div class="stat-label">Favorites</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="stat-number" id="ratingCount">0</div>
+                    <div class="stat-label">Rated</div>
+                </div>
+            </div>
 
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-400 mb-2">REGIONAL</h3>
-                    <ul class="space-y-2">
-                        <li><a href="#" onclick="loadRegional('hindi')" class="block text-white hover:text-red-500 transition">🇮🇳 Hindi</a></li>
-                        <li><a href="#" onclick="loadRegional('telugu')" class="block text-white hover:text-red-500 transition">🎭 Telugu</a></li>
-                        <li><a href="#" onclick="loadRegional('tamil')" class="block text-white hover:text-red-500 transition">🎪 Tamil</a></li>
-                        <li><a href="#" onclick="loadRegional('kannada')" class="block text-white hover:text-red-500 transition">🎨 Kannada</a></li>
-                    </ul>
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <div class="quick-action-card" onclick="window.location.href='user/watchlist.html'">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-bookmark"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">My Watchlist</h3>
+                    <p class="text-gray-400">Content saved for later</p>
+                </div>
+                <div class="quick-action-card" onclick="window.location.href='user/favorites.html'">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">My Favorites</h3>
+                    <p class="text-gray-400">Your most loved content</p>
+                </div>
+                <div class="quick-action-card" onclick="window.location.href='categories/trending.html'">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">Trending Now</h3>
+                    <p class="text-gray-400">What's popular today</p>
+                </div>
+                <div class="quick-action-card" onclick="window.location.href='categories/anime.html'">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-dragon"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">Anime</h3>
+                    <p class="text-gray-400">Discover amazing anime</p>
+                </div>
+            </div>
+
+            <!-- Recommended For You -->
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">🎯 Recommended For You</h2>
+                    <a href="#" class="view-all-btn">View All</a>
+                </div>
+                <div id="personalizedRecommendations" class="content-carousel">
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Continue Watching -->
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">📺 Continue Watching</h2>
+                    <a href="user/watchlist.html" class="view-all-btn">View All</a>
+                </div>
+                <div id="continueWatching" class="content-carousel">
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Based on Your Activity -->
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">📊 Based on Your Activity</h2>
+                    <a href="#" class="view-all-btn">View All</a>
+                </div>
+                <div id="activityBasedRecommendations" class="content-carousel">
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trending -->
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">🔥 Trending Now</h2>
+                    <a href="categories/trending.html" class="view-all-btn">View All</a>
+                </div>
+                <div id="trendingContent" class="content-carousel">
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="md:ml-64 pt-16 min-h-screen">
-        <!-- Welcome Banner -->
-        <section class="welcome-banner p-6 m-4 rounded-xl">
-            <div class="flex flex-col md:flex-row items-center justify-between">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">
-                        Welcome back, <span id="userName">User</span>!
-                    </h1>
-                    <p class="text-gray-200">Discover your next favorite movie, show, or anime</p>
-                </div>
-                <div class="flex space-x-4 mt-4 md:mt-0">
-                    <div class="stats-card rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold" id="watchlistCount">0</div>
-                        <div class="text-sm text-gray-400">Watchlist</div>
-                    </div>
-                    <div class="stats-card rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold" id="favoritesCount">0</div>
-                        <div class="text-sm text-gray-400">Favorites</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Quick Preferences -->
-        <section class="p-4">
-            <h2 class="text-lg font-semibold mb-4">Quick Preferences</h2>
-            <div class="flex flex-wrap gap-2 mb-6">
-                <div class="preference-chip" onclick="togglePreference('action')">Action</div>
-                <div class="preference-chip" onclick="togglePreference('comedy')">Comedy</div>
-                <div class="preference-chip" onclick="togglePreference('drama')">Drama</div>
-                <div class="preference-chip" onclick="togglePreference('horror')">Horror</div>
-                <div class="preference-chip" onclick="togglePreference('romance')">Romance</div>
-                <div class="preference-chip" onclick="togglePreference('sci-fi')">Sci-Fi</div>
-            </div>
-        </section>
-
-        <!-- Search Results (Hidden by default) -->
-        <section id="searchResults" class="p-4 hidden">
-            <h2 class="section-title">Search Results</h2>
-            <div id="searchCarousel" class="carousel-container flex space-x-4 pb-4">
-                <!-- Search results will be populated here -->
-            </div>
-        </section>
-
-        <!-- Personalized Recommendations -->
-        <section class="p-4">
-            <h2 class="section-title">🎯 Recommended For You</h2>
-            <div id="personalizedCarousel" class="carousel-container flex space-x-4 pb-4">
-                <div class="loading mx-auto"></div>
-            </div>
-        </section>
-
-        <!-- Continue Watching -->
-        <section class="p-4">
-            <h2 class="section-title">▶️ Continue Watching</h2>
-            <div id="continueWatchingCarousel" class="carousel-container flex space-x-4 pb-4">
-                <!-- Will be populated with user's recently viewed content -->
-            </div>
-        </section>
-
-        <!-- Based on Your Activity -->
-        <section class="p-4">
-            <h2 class="section-title">📈 Based on Your Recent Activity</h2>
-            <div id="activityBasedCarousel" class="carousel-container flex space-x-4 pb-4">
-                <div class="loading mx-auto"></div>
-            </div>
-        </section>
-
-        <!-- Trending -->
-        <section class="p-4">
-            <h2 class="section-title">🔥 Trending Now</h2>
-            <div id="trendingCarousel" class="carousel-container flex space-x-4 pb-4">
-                <div class="loading mx-auto"></div>
-            </div>
-        </section>
-
-        <!-- Popular in Your Genres -->
-        <section class="p-4">
-            <h2 class="section-title">⭐ Popular in Your Favorite Genres</h2>
-            <div id="genreBasedCarousel" class="carousel-container flex space-x-4 pb-4">
-                <div class="loading mx-auto"></div>
-            </div>
-        </section>
-
-        <!-- New Releases -->
-        <section class="p-4">
-            <h2 class="section-title">🆕 Recently Added</h2>
-            <div id="newReleasesCarousel" class="carousel-container flex space-x-4 pb-4">
-                <div class="loading mx-auto"></div>
-            </div>
-        </section>
-
-        <!-- Admin's Choice -->
-        <section class="p-4">
-            <h2 class="section-title">👑 Admin's Choice</h2>
-            <div id="adminChoiceCarousel" class="carousel-container flex space-x-4 pb-4">
-                <div class="loading mx-auto"></div>
-            </div>
-        </section>
-    </div>
-
     <script>
         const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        
-        // Global variables
-        let currentUser = null;
-        let authToken = null;
-        let searchTimeout = null;
-        let activePreferences = new Set();
+        let authToken = window.authToken;
+        let currentUser = window.currentUser;
 
-        // Utility functions
-        function getAuthHeaders() {
-            return {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            };
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthentication();
+            initializeDashboard();
+        });
 
-        function showLoading(containerId) {
-            const container = document.getElementById(containerId);
-            if (container) {
-                container.innerHTML = '<div class="loading mx-auto"></div>';
-            }
-        }
-
-        function showError(containerId, message) {
-            const container = document.getElementById(containerId);
-            if (container) {
-                container.innerHTML = `<div class="text-red-500 text-center py-8">${message}</div>`;
-            }
-        }
-
-        function createMovieCard(content) {
-            const posterUrl = content.poster_path 
-                ? (content.poster_path.startsWith('http') 
-                    ? content.poster_path 
-                    : `https://image.tmdb.org/t/p/w300${content.poster_path}`)
-                : '/api/placeholder/180/270';
-
-            return `
-                <div class="movie-card" onclick="viewContentDetails(${content.id || content.content_id})">
-                    <img src="${posterUrl}" alt="${content.title}" loading="lazy" onerror="this.src='/api/placeholder/180/270'">
-                    <div class="movie-info">
-                        <h3 class="font-bold text-xs mb-1">${content.title}</h3>
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-yellow-400">⭐ ${content.rating ? content.rating.toFixed(1) : 'N/A'}</span>
-                            <span class="text-gray-400">${content.content_type?.toUpperCase() || 'MOVIE'}</span>
-                        </div>
-                        <div class="text-xs text-gray-400 mt-1">
-                            ${content.genres ? content.genres.slice(0, 2).join(', ') : ''}
-                        </div>
-                        ${content.recommendation_reason ? `<div class="text-xs text-blue-400 mt-1">${content.recommendation_reason}</div>` : ''}
-                    </div>
-                </div>
-            `;
-        }
-
-        function populateCarousel(containerId, data) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div class="text-gray-400 text-center py-8">No content available</div>';
+        function checkAuthentication() {
+            if (!authToken || !currentUser) {
+                window.location.href = 'login.html';
                 return;
             }
 
-            container.innerHTML = data.map(createMovieCard).join('');
-        }
-
-        // Authentication check
-        function checkAuthentication() {
-            authToken = sessionStorage.getItem('authToken');
-            const userStr = sessionStorage.getItem('currentUser');
-            
-            if (!authToken || !userStr) {
-                window.location.href = 'login.html';
-                return false;
-            }
-            
-            currentUser = JSON.parse(userStr);
-            
             // Update UI with user info
             document.getElementById('userName').textContent = currentUser.username;
-            document.getElementById('userInitial').textContent = currentUser.username.charAt(0).toUpperCase();
-            
-            return true;
+            const initials = currentUser.username.substring(0, 2).toUpperCase();
+            document.getElementById('userAvatar').textContent = initials;
+            document.getElementById('welcomeAvatar').textContent = initials;
         }
 
-        // API functions
-        async function fetchWithAuth(endpoint, options = {}) {
-            try {
-                const response = await fetch(`${API_BASE}${endpoint}`, {
-                    ...options,
-                    headers: {
-                        ...getAuthHeaders(),
-                        ...(options.headers || {})
-                    }
-                });
-                
-                if (response.status === 401) {
-                    // Token expired, redirect to login
-                    sessionStorage.clear();
-                    window.location.href = 'login.html';
-                    return null;
+        function initializeDashboard() {
+            setupEventListeners();
+            loadDashboardData();
+        }
+
+        function setupEventListeners() {
+            // Navigation
+            document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileMenu);
+            document.getElementById('searchToggle').addEventListener('click', toggleSearchBar);
+            document.getElementById('userMenuBtn').addEventListener('click', toggleUserMenu);
+            document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, 300));
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#userMenuBtn')) {
+                    document.getElementById('userMenu').classList.add('hidden');
                 }
-                
-                if (!response.ok) throw new Error('Request failed');
-                return await response.json();
-            } catch (error) {
-                console.error('API error:', error);
-                return null;
-            }
-        }
-
-        async function fetchRecommendations(endpoint) {
-            try {
-                const response = await fetch(`${API_BASE}${endpoint}`);
-                if (!response.ok) throw new Error('Failed to fetch');
-                const data = await response.json();
-                return data.recommendations || [];
-            } catch (error) {
-                console.error('Fetch error:', error);
-                return [];
-            }
-        }
-
-        // Content loading functions
-        async function loadPersonalizedRecommendations() {
-            showLoading('personalizedCarousel');
-            
-            const data = await fetchWithAuth('/recommendations/personalized', {
-                method: 'GET'
-            });
-            
-            if (data && data.recommendations) {
-                populateCarousel('personalizedCarousel', data.recommendations);
-            } else {
-                showError('personalizedCarousel', 'Failed to load personalized recommendations');
-            }
-        }
-
-        async function loadTrending() {
-            showLoading('trendingCarousel');
-            const data = await fetchRecommendations('/recommendations/trending?limit=20');
-            populateCarousel('trendingCarousel', data);
-        }
-
-        async function loadGenreBasedRecommendations() {
-            showLoading('genreBasedCarousel');
-            
-            // Load based on user's preferred genres
-            const preferredGenres = currentUser.preferred_genres || ['action'];
-            const genre = preferredGenres[0] || 'action';
-            
-            const data = await fetchRecommendations(`/recommendations/popular/${genre}?limit=20`);
-            populateCarousel('genreBasedCarousel', data);
-        }
-
-        async function loadNewReleases() {
-            showLoading('newReleasesCarousel');
-            const data = await fetchRecommendations('/recommendations/trending?limit=20');
-            populateCarousel('newReleasesCarousel', data);
-        }
-
-        async function loadAdminChoice() {
-            showLoading('adminChoiceCarousel');
-            const data = await fetchRecommendations('/recommendations/admin-choice?limit=20');
-            populateCarousel('adminChoiceCarousel', data);
-        }
-
-        async function loadActivityBased() {
-            showLoading('activityBasedCarousel');
-            
-            // This would typically load content based on recent user interactions
-            // For now, load content-based recommendations
-            const data = await fetchWithAuth('/recommendations/personalized');
-            if (data && data.recommendations) {
-                populateCarousel('activityBasedCarousel', data.recommendations);
-            } else {
-                populateCarousel('activityBasedCarousel', []);
-            }
-        }
-
-        async function loadContinueWatching() {
-            // Load user's recently viewed content
-            // This would track user's viewing progress
-            const container = document.getElementById('continueWatchingCarousel');
-            container.innerHTML = '<div class="text-gray-400 text-center py-8">No recent viewing activity</div>';
-        }
-
-        async function loadWatchlist() {
-            const data = await fetchWithAuth('/user/watchlist');
-            if (data && data.watchlist) {
-                populateCarousel('personalizedCarousel', data.watchlist);
-                document.getElementById('watchlistCount').textContent = data.watchlist.length;
-            }
-        }
-
-        async function loadFavorites() {
-            const data = await fetchWithAuth('/user/favorites');
-            if (data && data.favorites) {
-                populateCarousel('personalizedCarousel', data.favorites);
-                document.getElementById('favoritesCount').textContent = data.favorites.length;
-            }
-        }
-
-        // Search functionality
-        function setupSearch() {
-            const searchInput = document.getElementById('searchInput');
-            const searchBtn = document.getElementById('searchBtn');
-
-            // Check if there's a pending search from index page
-            const pendingSearch = localStorage.getItem('searchQuery');
-            if (pendingSearch) {
-                searchInput.value = pendingSearch;
-                performSearch(pendingSearch);
-                localStorage.removeItem('searchQuery');
-            }
-
-            searchInput.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                const query = e.target.value.trim();
-                
-                if (query.length > 2) {
-                    searchTimeout = setTimeout(() => performSearch(query), 500);
-                } else if (query.length === 0) {
+                if (!e.target.closest('#searchBar')) {
                     hideSearchResults();
                 }
             });
-
-            searchBtn.addEventListener('click', () => {
-                const query = searchInput.value.trim();
-                if (query) performSearch(query);
-            });
-
-            searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    const query = e.target.value.trim();
-                    if (query) performSearch(query);
-                }
-            });
         }
 
-        async function performSearch(query) {
-            showSearchResults();
-            showLoading('searchCarousel');
-            
-            try {
-                const response = await fetch(`${API_BASE}/search?query=${encodeURIComponent(query)}`);
-                if (!response.ok) throw new Error('Search failed');
-                
-                const data = await response.json();
-                populateCarousel('searchCarousel', data.results || []);
-            } catch (error) {
-                showError('searchCarousel', 'Search failed. Please try again.');
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('hidden');
+        }
+
+        function toggleSearchBar() {
+            const searchBar = document.getElementById('searchBar');
+            searchBar.classList.toggle('hidden');
+            if (!searchBar.classList.contains('hidden')) {
+                document.getElementById('searchInput').focus();
             }
         }
 
-        function showSearchResults() {
-            document.getElementById('searchResults').classList.remove('hidden');
-            document.getElementById('searchResults').scrollIntoView({ behavior: 'smooth' });
+        function toggleUserMenu() {
+            document.getElementById('userMenu').classList.toggle('hidden');
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        async function handleSearch(e) {
+            const query = e.target.value.trim();
+            if (query.length < 3) {
+                hideSearchResults();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/search?query=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.results) {
+                    displaySearchResults(data.results);
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+
+        function displaySearchResults(results) {
+            const searchResults = document.getElementById('searchResults');
+            
+            if (!results.length) {
+                searchResults.innerHTML = '<div class="p-4 text-center text-gray-400">No results found</div>';
+                searchResults.classList.remove('hidden');
+                return;
+            }
+
+            const resultsHTML = results.slice(0, 8).map(item => `
+                <div class="p-3 hover:bg-gray-800 cursor-pointer border-b border-gray-700 last:border-b-0" onclick="viewDetails(${item.id})">
+                    <div class="flex items-center space-x-3">
+                        <img src="${item.poster_path || 'assets/images/placeholder.jpg'}" 
+                             alt="${item.title}" 
+                             class="w-12 h-16 object-cover rounded">
+                        <div class="flex-1">
+                            <h4 class="text-white font-medium">${item.title}</h4>
+                            <div class="flex items-center space-x-2 text-sm text-gray-400">
+                                <span class="px-2 py-1 bg-blue-600 rounded text-xs">${item.content_type.toUpperCase()}</span>
+                                ${item.rating ? `<span>⭐ ${item.rating}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            searchResults.innerHTML = resultsHTML;
+            searchResults.classList.remove('hidden');
         }
 
         function hideSearchResults() {
             document.getElementById('searchResults').classList.add('hidden');
         }
 
-        // Preference management
-        function togglePreference(genre) {
-            const chip = event.target;
-            
-            if (activePreferences.has(genre)) {
-                activePreferences.delete(genre);
-                chip.classList.remove('active');
-            } else {
-                activePreferences.add(genre);
-                chip.classList.add('active');
-            }
-            
-            // Update recommendations based on new preferences
-            updateRecommendationsBasedOnPreferences();
-        }
-
-        async function updateRecommendationsBasedOnPreferences() {
-            if (activePreferences.size > 0) {
-                const genre = Array.from(activePreferences)[0];
-                showLoading('genreBasedCarousel');
-                const data = await fetchRecommendations(`/recommendations/popular/${genre}?limit=20`);
-                populateCarousel('genreBasedCarousel', data);
-            }
-        }
-
-        // Sidebar functionality
-        function setupSidebar() {
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            
-            sidebarToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('sidebar-hidden');
-            });
-            
-            // Close sidebar when clicking outside on mobile
-            document.addEventListener('click', (e) => {
-                if (window.innerWidth < 768 && 
-                    !sidebar.contains(e.target) && 
-                    !sidebarToggle.contains(e.target)) {
-                    sidebar.classList.add('sidebar-hidden');
-                }
-            });
-        }
-
-        // User menu functionality
-        function setupUserMenu() {
-            const userMenuBtn = document.getElementById('userMenuBtn');
-            const userMenu = document.getElementById('userMenu');
-            const logoutBtn = document.getElementById('logoutBtn');
-            
-            userMenuBtn.addEventListener('click', () => {
-                userMenu.classList.toggle('hidden');
-            });
-            
-            document.addEventListener('click', (e) => {
-                if (!userMenuBtn.contains(e.target) && !userMenu.contains(e.target)) {
-                    userMenu.classList.add('hidden');
-                }
-            });
-            
-            logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                logout();
-            });
-        }
-
-        function logout() {
-            sessionStorage.clear();
-            window.location.href = 'login.html';
-        }
-
-        // Navigation functions
-        function viewContentDetails(contentId) {
-            localStorage.setItem('selectedContentId', contentId);
-            window.location.href = 'movie-detail.html';
-        }
-
-        // Sidebar navigation functions
-        async function loadSection(section) {
-            switch(section) {
-                case 'trending':
-                    await loadTrending();
-                    break;
-                case 'popular':
-                    await loadGenreBasedRecommendations();
-                    break;
-                case 'new':
-                    await loadNewReleases();
-                    break;
-            }
-        }
-
-        async function loadGenre(genre) {
-            showLoading('personalizedCarousel');
-            const data = await fetchRecommendations(`/recommendations/popular/${genre}?limit=20`);
-            populateCarousel('personalizedCarousel', data);
-        }
-
-        async function loadAnime() {
-            showLoading('personalizedCarousel');
-            const data = await fetchRecommendations('/recommendations/anime?limit=20');
-            populateCarousel('personalizedCarousel', data);
-        }
-
-        async function loadRegional(language) {
-            showLoading('personalizedCarousel');
-            const data = await fetchRecommendations(`/recommendations/regional/${language}?limit=20`);
-            populateCarousel('personalizedCarousel', data);
-        }
-
-        // Initialize user preferences
-        function initializePreferences() {
-            if (currentUser.preferred_genres) {
-                currentUser.preferred_genres.forEach(genre => {
-                    const chip = document.querySelector(`.preference-chip[onclick*="${genre}"]`);
-                    if (chip) {
-                        chip.classList.add('active');
-                        activePreferences.add(genre);
-                    }
-                });
-            }
-        }
-
-        // Initialize page
-        async function initializePage() {
-            // Check authentication
-            if (!checkAuthentication()) return;
-            
-            // Setup UI components
-            setupSidebar();
-            setupUserMenu();
-            setupSearch();
-            initializePreferences();
-            
-            // Load initial content
+        async function loadDashboardData() {
             await Promise.all([
+                loadUserStats(),
                 loadPersonalizedRecommendations(),
-                loadTrending(),
-                loadGenreBasedRecommendations(),
-                loadNewReleases(),
-                loadAdminChoice(),
-                loadActivityBased(),
                 loadContinueWatching(),
-                loadWatchlist(),
-                loadFavorites()
+                loadActivityBasedRecommendations(),
+                loadTrendingContent()
             ]);
         }
 
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', initializePage);
-
-        // Touch/swipe functionality for mobile carousels
-        let touchStartX = 0;
-        let touchEndX = 0;
-
-        document.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-        });
-
-        document.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        });
-
-        function handleSwipe() {
-            const swipeThreshold = 50;
-            const swipeLength = touchEndX - touchStartX;
-
-            if (Math.abs(swipeLength) > swipeThreshold) {
-                const carousels = document.querySelectorAll('.carousel-container');
-                carousels.forEach(carousel => {
-                    if (swipeLength > 0) {
-                        carousel.scrollLeft -= 200;
-                    } else {
-                        carousel.scrollLeft += 200;
+        async function loadUserStats() {
+            try {
+                // Load watchlist
+                const watchlistResponse = await fetch(`${API_BASE}/user/watchlist`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
                     }
                 });
+                if (watchlistResponse.ok) {
+                    const watchlistData = await watchlistResponse.json();
+                    document.getElementById('watchlistCount').textContent = watchlistData.watchlist?.length || 0;
+                }
+
+                // Load favorites
+                const favoritesResponse = await fetch(`${API_BASE}/user/favorites`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                if (favoritesResponse.ok) {
+                    const favoritesData = await favoritesResponse.json();
+                    document.getElementById('favoritesCount').textContent = favoritesData.favorites?.length || 0;
+                }
+
+                // Mock other stats for now
+                document.getElementById('watchedCount').textContent = Math.floor(Math.random() * 50) + 10;
+                document.getElementById('ratingCount').textContent = Math.floor(Math.random() * 30) + 5;
+            } catch (error) {
+                console.error('Error loading user stats:', error);
             }
+        }
+
+        async function loadPersonalizedRecommendations() {
+            try {
+                const response = await fetch(`${API_BASE}/recommendations/personalized`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayContent('personalizedRecommendations', data.recommendations || []);
+                } else {
+                    // Fallback to trending if personalized fails
+                    const fallbackResponse = await fetch(`${API_BASE}/recommendations/trending?limit=10`);
+                    const fallbackData = await fallbackResponse.json();
+                    displayContent('personalizedRecommendations', fallbackData.recommendations || []);
+                }
+            } catch (error) {
+                console.error('Error loading personalized recommendations:', error);
+                displayError('personalizedRecommendations');
+            }
+        }
+
+        async function loadContinueWatching() {
+            try {
+                const response = await fetch(`${API_BASE}/user/watchlist`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayContent('continueWatching', data.watchlist || []);
+                } else {
+                    displayNoContent('continueWatching', 'No content in watchlist');
+                }
+            } catch (error) {
+                console.error('Error loading continue watching:', error);
+                displayError('continueWatching');
+            }
+        }
+
+        async function loadActivityBasedRecommendations() {
+            try {
+                // For now, load popular content as activity-based
+                const response = await fetch(`${API_BASE}/recommendations/popular/action?limit=10`);
+                const data = await response.json();
+                displayContent('activityBasedRecommendations', data.recommendations || []);
+            } catch (error) {
+                console.error('Error loading activity-based recommendations:', error);
+                displayError('activityBasedRecommendations');
+            }
+        }
+
+        async function loadTrendingContent() {
+            try {
+                const response = await fetch(`${API_BASE}/recommendations/trending?limit=10`);
+                const data = await response.json();
+                displayContent('trendingContent', data.recommendations || []);
+            } catch (error) {
+                console.error('Error loading trending content:', error);
+                displayError('trendingContent');
+            }
+        }
+
+        function displayContent(containerId, items) {
+            const container = document.getElementById(containerId);
+            
+            if (!items.length) {
+                displayNoContent(containerId, 'No content available');
+                return;
+            }
+
+            const contentHTML = items.map(item => createContentCard(item)).join('');
+            container.innerHTML = contentHTML;
+        }
+
+        function createContentCard(item) {
+            return `
+                <div class="content-card" onclick="viewDetails(${item.id})">
+                    <img src="${item.poster_path || 'assets/images/placeholder.jpg'}" 
+                         alt="${item.title}" 
+                         class="card-image"
+                         loading="lazy"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgwIiBoZWlnaHQ9IjM1MCIgdmlld0JveD0iMCAwIDI4MCAzNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyODAiIGhlaWdodD0iMzUwIiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0xMjAgMTUwVjIwMEgxNjBWMTUwSDEyMFoiIGZpbGw9IiM2QjcyODAiLz4KPC9zdmc+'">
+                    <div class="card-content">
+                        <h3 class="card-title">${item.title}</h3>
+                        <div class="card-info">
+                            <span class="px-2 py-1 bg-blue-600 rounded text-xs">${item.content_type?.toUpperCase() || 'MOVIE'}</span>
+                            ${item.rating ? `
+                                <div class="rating">
+                                    <i class="fas fa-star"></i>
+                                    <span>${item.rating}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <p class="card-description">${item.overview ? item.overview.substring(0, 80) + '...' : 'No description available'}</p>
+                        <div class="action-buttons">
+                            <button class="action-btn btn-watch" onclick="event.stopPropagation(); viewDetails(${item.id})">
+                                <i class="fas fa-play mr-1"></i>
+                                Watch
+                            </button>
+                            <button class="action-btn btn-secondary" onclick="event.stopPropagation(); addToWatchlist(${item.id})">
+                                <i class="fas fa-bookmark mr-1"></i>
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayNoContent(containerId, message) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <div class="text-center text-gray-400 py-8 w-full">
+                    <i class="fas fa-film text-4xl mb-4 opacity-50"></i>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function displayError(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <div class="text-center text-red-400 py-8 w-full">
+                    <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                    <p>Failed to load content</p>
+                </div>
+            `;
+        }
+
+        function viewDetails(contentId) {
+            window.location.href = `details.html?id=${contentId}`;
+        }
+
+        async function addToWatchlist(contentId) {
+            try {
+                const response = await fetch(`${API_BASE}/interactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        content_id: contentId,
+                        interaction_type: 'watchlist'
+                    })
+                });
+
+                if (response.ok) {
+                    // Show success feedback
+                    showToast('Added to watchlist!', 'success');
+                    // Update watchlist count
+                    loadUserStats();
+                } else {
+                    showToast('Failed to add to watchlist', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding to watchlist:', error);
+                showToast('Network error', 'error');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 transform translate-x-full`;
+            
+            if (type === 'success') {
+                toast.classList.add('bg-green-600');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-600');
+            } else {
+                toast.classList.add('bg-blue-600');
+            }
+            
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Slide in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Slide out and remove
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        function logout() {
+            window.authToken = null;
+            window.currentUser = null;
+            window.location.href = 'login.html';
         }
     </script>
 </body>

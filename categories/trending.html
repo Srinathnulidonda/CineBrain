@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trending - CineScope</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .category-container {
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(15, 15, 35, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .page-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
+        }
+
+        .filters-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-group {
+            margin-bottom: 1rem;
+        }
+
+        .filter-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .filter-chip.active {
+            background: rgba(78, 205, 196, 0.2);
+            border-color: #4ecdc4;
+            color: #4ecdc4;
+        }
+
+        .filter-chip:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .content-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            transition: all 0.3s ease;
+        }
+
+        .content-card:hover .card-image {
+            transform: scale(1.05);
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+
+        .card-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #ffd700;
+        }
+
+        .card-description {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .ott-platforms {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .ott-badge {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: #ffffff;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .ott-badge.free {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-watch {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: #ffffff;
+        }
+
+        .btn-watch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .load-more {
+            text-align: center;
+            margin: 3rem 0;
+        }
+
+        .load-more-btn {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            padding: 1rem 3rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #ffffff;
+        }
+
+        .load-more-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+        }
+
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #4ecdc4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .trending-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: #ffffff;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .category-container {
+                padding-top: 70px;
+            }
+
+            .page-header {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            .page-title {
+                font-size: 2rem;
+            }
+
+            .content-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1.5rem;
+            }
+
+            .card-image {
+                height: 350px;
+            }
+
+            .filters-section {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-title {
+                font-size: 1.5rem;
+            }
+
+            .content-grid {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 1rem;
+            }
+
+            .card-image {
+                height: 300px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <div class="logo">CineScope</div>
+                
+                <div class="hidden md:flex space-x-6">
+                    <a href="../index.html" class="text-white hover:text-blue-400 transition-colors">Home</a>
+                    <a href="../dashboard.html" class="text-white hover:text-blue-400 transition-colors">Dashboard</a>
+                    <a href="trending.html" class="text-blue-400">Trending</a>
+                    <a href="movies.html" class="text-white hover:text-blue-400 transition-colors">Movies</a>
+                    <a href="tv-shows.html" class="text-white hover:text-blue-400 transition-colors">TV Shows</a>
+                    <a href="anime.html" class="text-white hover:text-blue-400 transition-colors">Anime</a>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <button onclick="window.history.back()" class="text-white hover:text-blue-400 transition-colors">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="category-container">
+        <div class="container mx-auto px-4">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title">🔥 Trending Now</h1>
+                <p class="page-subtitle">Discover what's hot and popular right now across movies, TV shows, and anime</p>
+                
+                <!-- Quick Stats -->
+                <div class="flex justify-center space-x-8 text-sm">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-white" id="totalTrending">0</div>
+                        <div class="text-gray-400">Trending Items</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-white" id="newToday">0</div>
+                        <div class="text-gray-400">New Today</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-white" id="topRated">0</div>
+                        <div class="text-gray-400">Top Rated</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-section">
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div class="filter-group">
+                        <label class="filter-label">Content Type</label>
+                        <div class="filter-chips">
+                            <div class="filter-chip active" data-filter="type" data-value="all">All</div>
+                            <div class="filter-chip" data-filter="type" data-value="movie">Movies</div>
+                            <div class="filter-chip" data-filter="type" data-value="tv">TV Shows</div>
+                            <div class="filter-chip" data-filter="type" data-value="anime">Anime</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">Time Frame</label>
+                        <div class="filter-chips">
+                            <div class="filter-chip active" data-filter="time" data-value="day">Today</div>
+                            <div class="filter-chip" data-filter="time" data-value="week">This Week</div>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Language</label>
+                        <div class="filter-chips">
+                            <div class="filter-chip active" data-filter="language" data-value="all">All</div>
+                            <div class="filter-chip" data-filter="language" data-value="english">English</div>
+                            <div class="filter-chip" data-filter="language" data-value="hindi">Hindi</div>
+                            <div class="filter-chip" data-filter="language" data-value="regional">Regional</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Grid -->
+            <div id="contentGrid" class="content-grid">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <!-- Load More -->
+            <div class="load-more">
+                <button id="loadMoreBtn" class="load-more-btn" style="display: none;">
+                    <i class="fas fa-plus mr-2"></i>
+                    Load More Content
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        let authToken = window.authToken;
+        let currentPage = 1;
+        let currentFilters = {
+            type: 'all',
+            time: 'day',
+            language: 'all'
+        };
+        let isLoading = false;
+        let hasMoreContent = true;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePage();
+        });
+
+        function initializePage() {
+            setupEventListeners();
+            loadTrendingContent();
+            updateStats();
+        }
+
+        function setupEventListeners() {
+            // Filter chips
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.addEventListener('click', handleFilterClick);
+            });
+
+            // Load more button
+            document.getElementById('loadMoreBtn').addEventListener('click', loadMoreContent);
+
+            // Infinite scroll
+            window.addEventListener('scroll', handleScroll);
+        }
+
+        function handleFilterClick(e) {
+            const chip = e.target;
+            const filterType = chip.dataset.filter;
+            const filterValue = chip.dataset.value;
+
+            // Update active state
+            document.querySelectorAll(`[data-filter="${filterType}"]`).forEach(c => {
+                c.classList.remove('active');
+            });
+            chip.classList.add('active');
+
+            // Update filter and reload content
+            currentFilters[filterType] = filterValue;
+            currentPage = 1;
+            hasMoreContent = true;
+            loadTrendingContent(true);
+        }
+
+        function handleScroll() {
+            if (isLoading || !hasMoreContent) return;
+
+            const scrollTop = window.pageYOffset;
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+
+            if (scrollTop + windowHeight >= documentHeight - 1000) {
+                loadMoreContent();
+            }
+        }
+
+        async function loadTrendingContent(reset = false) {
+            if (isLoading) return;
+            
+            isLoading = true;
+            
+            if (reset) {
+                document.getElementById('contentGrid').innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+            }
+
+            try {
+                let url = `${API_BASE}/recommendations/trending?page=${currentPage}&limit=20`;
+                
+                // Add time filter
+                if (currentFilters.time !== 'day') {
+                    url += `&time_window=${currentFilters.time}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.recommendations) {
+                    let filteredContent = data.recommendations;
+
+                    // Apply client-side filters
+                    if (currentFilters.type !== 'all') {
+                        filteredContent = filteredContent.filter(item => 
+                            item.content_type === currentFilters.type
+                        );
+                    }
+
+                    if (currentFilters.language !== 'all') {
+                        filteredContent = filteredContent.filter(item => {
+                            if (currentFilters.language === 'english') {
+                                return item.languages?.includes('en') || item.languages?.includes('english');
+                            } else if (currentFilters.language === 'hindi') {
+                                return item.languages?.includes('hi') || item.languages?.includes('hindi');
+                            } else if (currentFilters.language === 'regional') {
+                                return !item.languages?.includes('en') && !item.languages?.includes('english');
+                            }
+                            return true;
+                        });
+                    }
+
+                    if (reset) {
+                        displayContent(filteredContent);
+                    } else {
+                        appendContent(filteredContent);
+                    }
+
+                    hasMoreContent = filteredContent.length === 20;
+                    
+                    if (hasMoreContent) {
+                        document.getElementById('loadMoreBtn').style.display = 'block';
+                    }
+                } else {
+                    if (reset) {
+                        displayNoContent();
+                    }
+                    hasMoreContent = false;
+                }
+            } catch (error) {
+                console.error('Error loading trending content:', error);
+                if (reset) {
+                    displayError();
+                }
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        async function loadMoreContent() {
+            currentPage++;
+            await loadTrendingContent(false);
+        }
+
+        function displayContent(items) {
+            const container = document.getElementById('contentGrid');
+            
+            if (!items.length) {
+                displayNoContent();
+                return;
+            }
+
+            const contentHTML = items.map(item => createContentCard(item)).join('');
+            container.innerHTML = contentHTML;
+        }
+
+        function appendContent(items) {
+            const container = document.getElementById('contentGrid');
+            const contentHTML = items.map(item => createContentCard(item)).join('');
+            container.innerHTML += contentHTML;
+        }
+
+        function createContentCard(item) {
+            const ottPlatforms = item.ott_platforms?.free_platforms || item.ott_platforms || [];
+            const paidPlatforms = item.ott_platforms?.paid_platforms || [];
+            
+            return `
+                <div class="content-card" onclick="viewDetails(${item.id})">
+                    <div class="trending-badge">
+                        <i class="fas fa-fire"></i>
+                        Trending
+                    </div>
+                    <img src="${item.poster_path || 'assets/images/placeholder.jpg'}" 
+                         alt="${item.title}" 
+                         class="card-image"
+                         loading="lazy"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDI4MCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyODAiIGhlaWdodD0iNDAwIiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0xMjAgMTgwVjIyMEgxNjBWMTgwSDEyMFoiIGZpbGw9IiM2QjcyODAiLz4KPC9zdmc+'">
+                    <div class="card-content">
+                        <h3 class="card-title">${item.title}</h3>
+                        <div class="card-info">
+                            <span class="px-2 py-1 bg-blue-600 rounded text-xs">${item.content_type?.toUpperCase() || 'MOVIE'}</span>
+                            ${item.rating ? `
+                                <div class="rating">
+                                    <i class="fas fa-star"></i>
+                                    <span>${item.rating}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <p class="card-description">${item.overview ? item.overview.substring(0, 100) + '...' : 'No description available'}</p>
+                        <div class="ott-platforms">
+                            ${ottPlatforms.slice(0, 2).map(platform => 
+                                `<span class="ott-badge free">📺 ${platform.name || platform}</span>`
+                            ).join('')}
+                            ${paidPlatforms.slice(0, 1).map(platform => 
+                                `<span class="ott-badge">💰 ${platform.name || platform}</span>`
+                            ).join('')}
+                            ${(ottPlatforms.length + paidPlatforms.length) > 3 ? 
+                                `<span class="ott-badge">+${(ottPlatforms.length + paidPlatforms.length) - 3}</span>` : ''}
+                        </div>
+                        <div class="action-buttons">
+                            <button class="action-btn btn-watch" onclick="event.stopPropagation(); viewDetails(${item.id})">
+                                <i class="fas fa-play mr-1"></i>
+                                Watch
+                            </button>
+                            <button class="action-btn btn-secondary" onclick="event.stopPropagation(); addToWatchlist(${item.id})">
+                                <i class="fas fa-bookmark mr-1"></i>
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayNoContent() {
+            document.getElementById('contentGrid').innerHTML = `
+                <div class="col-span-full text-center text-gray-400 py-16">
+                    <i class="fas fa-film text-6xl mb-4 opacity-50"></i>
+                    <h3 class="text-2xl font-semibold mb-2">No trending content found</h3>
+                    <p>Try adjusting your filters or check back later</p>
+                </div>
+            `;
+        }
+
+        function displayError() {
+            document.getElementById('contentGrid').innerHTML = `
+                <div class="col-span-full text-center text-red-400 py-16">
+                    <i class="fas fa-exclamation-triangle text-6xl mb-4"></i>
+                    <h3 class="text-2xl font-semibold mb-2">Failed to load content</h3>
+                    <p>Please try again later</p>
+                    <button onclick="loadTrendingContent(true)" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Retry
+                    </button>
+                </div>
+            `;
+        }
+
+        async function updateStats() {
+            // Mock stats for now
+            document.getElementById('totalTrending').textContent = Math.floor(Math.random() * 1000) + 500;
+            document.getElementById('newToday').textContent = Math.floor(Math.random() * 50) + 10;
+            document.getElementById('topRated').textContent = Math.floor(Math.random() * 100) + 50;
+        }
+
+        function viewDetails(contentId) {
+            window.location.href = `../details.html?id=${contentId}`;
+        }
+
+        async function addToWatchlist(contentId) {
+            if (!authToken) {
+                showToast('Please login to add to watchlist', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/interactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        content_id: contentId,
+                        interaction_type: 'watchlist'
+                    })
+                });
+
+                if (response.ok) {
+                    showToast('Added to watchlist!', 'success');
+                } else {
+                    showToast('Failed to add to watchlist', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding to watchlist:', error);
+                showToast('Network error', 'error');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 transform translate-x-full`;
+            
+            if (type === 'success') {
+                toast.classList.add('bg-green-600');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-600');
+            } else {
+                toast.classList.add('bg-blue-600');
+            }
+            
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

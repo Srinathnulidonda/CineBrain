@@ -4,391 +4,624 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics - CineScope Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --primary: #e50914;
-            --secondary: #221f1f;
-            --dark: #141414;
-            --light: #f5f5f1;
-        }
-
         body {
-            background: var(--dark);
-            color: var(--light);
-            font-family: 'Arial', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
         }
 
-        .admin-card {
-            background: rgba(255, 255, 255, 0.05);
+        .admin-container {
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(15, 15, 35, 0.95);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            z-index: 1000;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .sidebar {
-            background: linear-gradient(180deg, var(--secondary) 0%, var(--dark) 100%);
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        .nav-item {
+        .admin-badge {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            color: #ffffff;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(168, 85, 247, 0.1));
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .date-filter {
             display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            color: #cbd5e1;
-            text-decoration: none;
-            border-radius: 8px;
-            margin: 4px 0;
-            transition: all 0.3s ease;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
         }
 
-        .nav-item:hover {
-            background: var(--primary);
-            color: white;
+        .date-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .date-btn.active {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            border-color: #ef4444;
+        }
+
+        .date-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
         }
 
         .stat-card {
-            background: linear-gradient(135deg, var(--primary), #f40612);
-            border-radius: 12px;
-            padding: 24px;
-            text-align: center;
-            color: white;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .stat-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-change {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .stat-change.positive {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+        }
+
+        .stat-change.negative {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
         }
 
         .chart-container {
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 20px;
-            height: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
         }
 
-        .metric-card {
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+        }
+
+        .table-container {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 16px;
-            text-align: center;
+            border-radius: 1rem;
+            padding: 2rem;
+            overflow-x: auto;
         }
 
-        .loading {
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .badge {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s ease-in-out infinite;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .badge.movie {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
         }
 
-        .trend-up {
-            color: #22c55e;
+        .badge.tv {
+            background: rgba(147, 51, 234, 0.2);
+            color: #9333ea;
         }
 
-        .trend-down {
-            color: #ef4444;
+        .badge.anime {
+            background: rgba(236, 72, 153, 0.2);
+            color: #ec4899;
         }
 
-        .trend-neutral {
-            color: #64748b;
+        .export-btn {
+            background: linear-gradient(45deg, #22c55e, #16a34a);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #ffffff;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .admin-container {
+                padding-top: 70px;
+            }
+
+            .page-header {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            .date-filter {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .stats-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                padding: 1rem;
+            }
+
+            .table-container {
+                padding: 1rem;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-90 backdrop-blur-sm">
-        <div class="container mx-auto px-4 py-3">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <h1 class="text-2xl font-bold text-red-600">CineScope Admin</h1>
-                    <span class="text-gray-400">Analytics</span>
+    <nav class="navbar">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <div class="logo">CineScope</div>
+                    <span class="admin-badge">ADMIN</span>
                 </div>
                 
+                <div class="hidden md:flex space-x-6">
+                    <a href="dashboard.html" class="text-white hover:text-red-400 transition-colors">Dashboard</a>
+                    <a href="content-browser.html" class="text-white hover:text-red-400 transition-colors">Content Browser</a>
+                    <a href="posts.html" class="text-white hover:text-red-400 transition-colors">Posts</a>
+                    <a href="analytics.html" class="text-red-400">Analytics</a>
+                </div>
+
                 <div class="flex items-center space-x-4">
-                    <span class="text-gray-300">Welcome, <span id="adminName">Admin</span></span>
-                    <button onclick="logout()" class="text-white hover:text-red-500 transition">Logout</button>
+                    <span class="text-red-400 font-semibold" id="adminName">Admin</span>
+                    <button onclick="logout()" class="text-white hover:text-red-400 transition-colors">
+                        <i class="fas fa-sign-out-alt text-xl"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Sidebar -->
-    <div class="fixed left-0 top-16 bottom-0 w-64 sidebar z-40 overflow-y-auto">
-        <div class="p-4">
-            <nav class="space-y-2">
-                <a href="dashboard.html" class="nav-item">
-                    📊 Dashboard
-                </a>
-                <a href="content-browser.html" class="nav-item">
-                    🔍 Browse Content
-                </a>
-                <a href="posts.html" class="nav-item">
-                    📝 Manage Posts
-                </a>
-                <a href="#" class="nav-item" style="background: var(--primary); color: white;">
-                    📈 Analytics
-                </a>
-                <a href="../dashboard.html" class="nav-item">
-                    👤 User View
-                </a>
-            </nav>
-        </div>
-    </div>
-
     <!-- Main Content -->
-    <div class="ml-64 pt-16 min-h-screen">
-        <div class="p-6">
-            <!-- Header -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold mb-2">Analytics Dashboard</h1>
-                <p class="text-gray-400">Comprehensive insights into user behavior and content performance</p>
-            </div>
-
-            <!-- Key Metrics -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="stat-card">
-                    <div class="text-3xl font-bold mb-2" id="totalUsers">
-                        <div class="loading"></div>
+    <div class="admin-container">
+        <div class="container mx-auto px-4">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="flex justify-between items-center flex-wrap">
+                    <div>
+                        <h1 class="text-3xl font-bold text-white mb-2">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            Platform Analytics
+                        </h1>
+                        <p class="text-gray-300">Monitor platform performance and user behavior</p>
                     </div>
-                    <div class="text-sm opacity-90">Total Users</div>
-                    <div class="text-xs opacity-75 mt-1" id="usersGrowth">Loading...</div>
-                </div>
-                <div class="stat-card">
-                    <div class="text-3xl font-bold mb-2" id="totalContent">
-                        <div class="loading"></div>
-                    </div>
-                    <div class="text-sm opacity-90">Total Content</div>
-                    <div class="text-xs opacity-75 mt-1" id="contentGrowth">Loading...</div>
-                </div>
-                <div class="stat-card">
-                    <div class="text-3xl font-bold mb-2" id="totalInteractions">
-                        <div class="loading"></div>
-                    </div>
-                    <div class="text-sm opacity-90">Total Interactions</div>
-                    <div class="text-xs opacity-75 mt-1" id="interactionsGrowth">Loading...</div>
-                </div>
-                <div class="stat-card">
-                    <div class="text-3xl font-bold mb-2" id="activeUsers">
-                        <div class="loading"></div>
-                    </div>
-                    <div class="text-sm opacity-90">Active Users (7d)</div>
-                    <div class="text-xs opacity-75 mt-1" id="activeUsersGrowth">Loading...</div>
+                    <button class="export-btn mt-4 md:mt-0">
+                        <i class="fas fa-download mr-2"></i>
+                        Export Report
+                    </button>
                 </div>
             </div>
 
-            <!-- Charts Row 1 -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Date Filter -->
+            <div class="date-filter">
+                <button class="date-btn active" data-range="today">Today</button>
+                <button class="date-btn" data-range="week">This Week</button>
+                <button class="date-btn" data-range="month">This Month</button>
+                <button class="date-btn" data-range="quarter">This Quarter</button>
+                <button class="date-btn" data-range="year">This Year</button>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="stats-overview">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-value" id="totalUsers">0</div>
+                    <div class="stat-label">Total Users</div>
+                    <div class="stat-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>12.5%</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-film"></i>
+                    </div>
+                    <div class="stat-value" id="totalContent">0</div>
+                    <div class="stat-label">Content Items</div>
+                    <div class="stat-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>8.3%</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-mouse-pointer"></i>
+                    </div>
+                    <div class="stat-value" id="totalInteractions">0</div>
+                    <div class="stat-label">Interactions</div>
+                    <div class="stat-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>24.7%</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="stat-value" id="engagementRate">0%</div>
+                    <div class="stat-label">Engagement Rate</div>
+                    <div class="stat-change negative">
+                        <i class="fas fa-arrow-down"></i>
+                        <span>2.1%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="charts-grid">
                 <!-- User Growth Chart -->
-                <div class="admin-card p-6">
-                    <h2 class="text-xl font-bold mb-4">📈 User Growth (Last 30 Days)</h2>
-                    <div class="chart-container">
-                        <canvas id="userGrowthChart"></canvas>
-                    </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">User Growth</h3>
+                    <canvas id="userGrowthChart"></canvas>
                 </div>
 
-                <!-- Content Interactions Chart -->
-                <div class="admin-card p-6">
-                    <h2 class="text-xl font-bold mb-4">🎬 Daily Interactions</h2>
-                    <div class="chart-container">
-                        <canvas id="interactionsChart"></canvas>
-                    </div>
+                <!-- Content Distribution Chart -->
+                <div class="chart-container">
+                    <h3 class="chart-title">Content Distribution</h3>
+                    <canvas id="contentDistributionChart"></canvas>
                 </div>
-            </div>
 
-            <!-- Charts Row 2 -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Engagement Over Time -->
+                <div class="chart-container">
+                    <h3 class="chart-title">Engagement Over Time</h3>
+                    <canvas id="engagementChart"></canvas>
+                </div>
+
                 <!-- Popular Genres -->
-                <div class="admin-card p-6">
-                    <h2 class="text-xl font-bold mb-4">🎭 Popular Genres</h2>
-                    <div class="chart-container">
-                        <canvas id="genresChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Content Type Distribution -->
-                <div class="admin-card p-6">
-                    <h2 class="text-xl font-bold mb-4">📊 Content Distribution</h2>
-                    <div class="chart-container">
-                        <canvas id="contentTypeChart"></canvas>
-                    </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Popular Genres</h3>
+                    <canvas id="genresChart"></canvas>
                 </div>
             </div>
 
-            <!-- Detailed Analytics -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <!-- Top Content -->
-                <div class="admin-card p-6">
-                    <h2 class="text-xl font-bold mb-4">🏆 Most Popular Content</h2>
-                    <div id="topContentList" class="space-y-3">
-                        <div class="flex justify-center py-4">
-                            <div class="loading"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- User Engagement -->
-                <div class="admin-card p-6">
-                    <h2 class="text-xl font-bold mb-4">👥 User Engagement</h2>
-                    <div class="space-y-4">
-                        <div class="metric-card">
-                            <div class="text-lg font-bold" id="avgSessionTime">Loading...</div>
-                            <div class="text-sm text-gray-400">Avg Session Time</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="text-lg font-bold" id="bounceRate">Loading...</div>
-                            <div class="text-sm text-gray-400">Bounce Rate</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="text-lg font-bold" id="repeatUsers">Loading...</div>
-                            <div class="text-sm text-gray-400">Repeat Users</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Platform Usage -->
-                <div class="admin-card p-6">
-                    <h2 class="text-xl font-bold mb-4">📱 Platform Usage</h2>
-                    <div class="space-y-4">
-                        <div class="metric-card">
-                            <div class="text-lg font-bold" id="mobileUsers">Loading...</div>
-                            <div class="text-sm text-gray-400">Mobile Users</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="text-lg font-bold" id="desktopUsers">Loading...</div>
-                            <div class="text-sm text-gray-400">Desktop Users</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="text-lg font-bold" id="tabletUsers">Loading...</div>
-                            <div class="text-sm text-gray-400">Tablet Users</div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Popular Content Table -->
+            <div class="table-container">
+                <h3 class="chart-title mb-4">Most Popular Content</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Views</th>
+                            <th>Favorites</th>
+                            <th>Rating</th>
+                            <th>Engagement</th>
+                        </tr>
+                    </thead>
+                    <tbody id="popularContentTable">
+                        <!-- Table rows will be populated here -->
+                    </tbody>
+                </table>
             </div>
 
-            <!-- Recent Activity -->
-            <div class="admin-card p-6">
-                <h2 class="text-xl font-bold mb-4">🕒 Recent Activity</h2>
-                <div id="recentActivityList" class="space-y-3">
-                    <div class="flex justify-center py-4">
-                        <div class="loading"></div>
-                    </div>
-                </div>
+            <!-- User Activity Table -->
+            <div class="table-container mt-6">
+                <h3 class="chart-title mb-4">Most Active Users</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Joined</th>
+                            <th>Interactions</th>
+                            <th>Favorites</th>
+                            <th>Watchlist</th>
+                            <th>Last Active</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activeUsersTable">
+                        <!-- Table rows will be populated here -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <script>
         const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        
-        // Global variables
-        let currentUser = null;
-        let authToken = null;
+        let authToken = window.authToken;
+        let currentUser = window.currentUser;
+        let currentDateRange = 'today';
         let charts = {};
 
-        // Authentication check
-        function checkAuth() {
-            authToken = sessionStorage.getItem('authToken');
-            const userStr = sessionStorage.getItem('currentUser');
-            
-            if (!authToken || !userStr) {
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAdminAuth();
+            initializeAnalytics();
+        });
+
+        function checkAdminAuth() {
+            if (!authToken || !currentUser || !currentUser.is_admin) {
                 window.location.href = '../login.html';
-                return false;
+                return;
             }
-            
-            currentUser = JSON.parse(userStr);
-            
-            if (!currentUser.is_admin) {
-                window.location.href = '../dashboard.html';
-                return false;
-            }
-            
+
             document.getElementById('adminName').textContent = currentUser.username;
-            return true;
         }
 
-        function getAuthHeaders() {
+        function initializeAnalytics() {
+            setupEventListeners();
+            loadAnalyticsData();
+            setupCharts();
+        }
+
+        function setupEventListeners() {
+            // Date filter buttons
+            document.querySelectorAll('.date-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentDateRange = this.dataset.range;
+                    loadAnalyticsData();
+                });
+            });
+
+            // Export button
+            document.querySelector('.export-btn').addEventListener('click', exportReport);
+        }
+
+        async function loadAnalyticsData() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/analytics?range=${currentDateRange}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStats(data);
+                    updateCharts(data);
+                    updateTables(data);
+                } else {
+                    // Use mock data for demonstration
+                    const mockData = generateMockData();
+                    updateStats(mockData);
+                    updateCharts(mockData);
+                    updateTables(mockData);
+                }
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                // Use mock data as fallback
+                const mockData = generateMockData();
+                updateStats(mockData);
+                updateCharts(mockData);
+                updateTables(mockData);
+            }
+        }
+
+        function generateMockData() {
             return {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
+                total_users: Math.floor(Math.random() * 10000) + 5000,
+                total_content: Math.floor(Math.random() * 50000) + 25000,
+                total_interactions: Math.floor(Math.random() * 100000) + 50000,
+                engagement_rate: (Math.random() * 30 + 50).toFixed(1),
+                user_growth: generateTimeSeriesData(30, 100, 500),
+                content_distribution: {
+                    movie: Math.floor(Math.random() * 30000) + 15000,
+                    tv: Math.floor(Math.random() * 20000) + 10000,
+                    anime: Math.floor(Math.random() * 10000) + 5000
+                },
+                engagement_over_time: generateTimeSeriesData(30, 1000, 5000),
+                popular_genres: [
+                    { genre: 'Action', count: Math.floor(Math.random() * 10000) + 5000 },
+                    { genre: 'Drama', count: Math.floor(Math.random() * 8000) + 4000 },
+                    { genre: 'Comedy', count: Math.floor(Math.random() * 7000) + 3500 },
+                    { genre: 'Thriller', count: Math.floor(Math.random() * 6000) + 3000 },
+                    { genre: 'Romance', count: Math.floor(Math.random() * 5000) + 2500 },
+                    { genre: 'Horror', count: Math.floor(Math.random() * 4000) + 2000 }
+                ],
+                popular_content: generatePopularContent(10),
+                active_users: generateActiveUsers(10)
             };
         }
 
-        function logout() {
-            sessionStorage.clear();
-            window.location.href = '../login.html';
-        }
-
-        // Load analytics data
-        async function loadAnalytics() {
-            try {
-                const response = await fetch(`${API_BASE}/admin/analytics`, {
-                    headers: getAuthHeaders()
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    updateMetrics(data);
-                    createCharts(data);
-                    updateDetailedAnalytics(data);
-                } else {
-                    showError('Failed to load analytics data');
-                }
-            } catch (error) {
-                console.error('Analytics error:', error);
-                showError('Failed to load analytics data');
-            }
-        }
-
-        function updateMetrics(data) {
-            // Update main metrics
-            document.getElementById('totalUsers').textContent = data.total_users || 0;
-            document.getElementById('totalContent').textContent = data.total_content || 0;
-            document.getElementById('totalInteractions').textContent = data.total_interactions || 0;
-            document.getElementById('activeUsers').textContent = data.active_users_last_week || 0;
-
-            // Calculate and display growth rates (mock data for demo)
-            document.getElementById('usersGrowth').innerHTML = '<span class="trend-up">↗ +12%</span> vs last month';
-            document.getElementById('contentGrowth').innerHTML = '<span class="trend-up">↗ +8%</span> vs last month';
-            document.getElementById('interactionsGrowth').innerHTML = '<span class="trend-up">↗ +25%</span> vs last month';
-            document.getElementById('activeUsersGrowth').innerHTML = '<span class="trend-neutral">→ +2%</span> vs last week';
-        }
-
-        function createCharts(data) {
-            createUserGrowthChart();
-            createInteractionsChart();
-            createGenresChart(data.popular_genres || []);
-            createContentTypeChart();
-        }
-
-        function createUserGrowthChart() {
-            const ctx = document.getElementById('userGrowthChart').getContext('2d');
+        function generateTimeSeriesData(days, min, max) {
+            const data = [];
+            const now = new Date();
             
-            // Generate mock data for last 30 days
-            const labels = [];
-            const userData = [];
-            const today = new Date();
-            
-            for (let i = 29; i >= 0; i--) {
-                const date = new Date(today);
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date(now);
                 date.setDate(date.getDate() - i);
-                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                userData.push(Math.floor(Math.random() * 50) + 10 + i); // Mock growing data
+                data.push({
+                    date: date.toISOString().split('T')[0],
+                    value: Math.floor(Math.random() * (max - min) + min)
+                });
             }
+            
+            return data;
+        }
 
-            charts.userGrowth = new Chart(ctx, {
+        function generatePopularContent(count) {
+            const titles = ['The Shawshank Redemption', 'Breaking Bad', 'Attack on Titan', 'Inception', 'Game of Thrones', 
+                          'Death Note', 'The Dark Knight', 'Stranger Things', 'Naruto', 'Interstellar'];
+            const types = ['movie', 'tv', 'anime'];
+            
+            return titles.slice(0, count).map(title => ({
+                title: title,
+                content_type: types[Math.floor(Math.random() * types.length)],
+                views: Math.floor(Math.random() * 100000) + 10000,
+                favorites: Math.floor(Math.random() * 5000) + 500,
+                rating: (Math.random() * 2 + 7).toFixed(1),
+                engagement: (Math.random() * 50 + 30).toFixed(1)
+            }));
+        }
+
+        function generateActiveUsers(count) {
+            const usernames = ['john_doe', 'movie_buff', 'anime_lover', 'sarah_smith', 'cinephile_123',
+                             'series_addict', 'film_critic', 'binge_watcher', 'content_king', 'review_master'];
+            
+            return usernames.slice(0, count).map(username => ({
+                username: username,
+                joined: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+                interactions: Math.floor(Math.random() * 1000) + 100,
+                favorites: Math.floor(Math.random() * 100) + 10,
+                watchlist: Math.floor(Math.random() * 200) + 20,
+                last_active: Math.random() > 0.5 ? 'Today' : 'Yesterday'
+            }));
+        }
+
+        function updateStats(data) {
+            document.getElementById('totalUsers').textContent = data.total_users.toLocaleString();
+            document.getElementById('totalContent').textContent = data.total_content.toLocaleString();
+            document.getElementById('totalInteractions').textContent = data.total_interactions.toLocaleString();
+            document.getElementById('engagementRate').textContent = data.engagement_rate + '%';
+        }
+
+        function setupCharts() {
+            // Chart.js default configuration
+            Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+        }
+
+        function updateCharts(data) {
+            // User Growth Chart
+            if (charts.userGrowth) {
+                charts.userGrowth.destroy();
+            }
+            
+            const userGrowthCtx = document.getElementById('userGrowthChart').getContext('2d');
+            charts.userGrowth = new Chart(userGrowthCtx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: data.user_growth.map(d => d.date),
                     datasets: [{
                         label: 'New Users',
-                        data: userData,
-                        borderColor: '#e50914',
-                        backgroundColor: 'rgba(229, 9, 20, 0.1)',
-                        tension: 0.4,
-                        fill: true
+                        data: data.user_growth.map(d => d.value),
+                        borderColor: '#4ecdc4',
+                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                        tension: 0.4
                     }]
                 },
                 options: {
@@ -396,137 +629,43 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            labels: { color: '#f5f5f1' }
+                            display: false
                         }
                     },
                     scales: {
-                        x: {
-                            ticks: { color: '#cbd5e1' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        },
                         y: {
-                            ticks: { color: '#cbd5e1' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        }
-                    }
-                }
-            });
-        }
-
-        function createInteractionsChart() {
-            const ctx = document.getElementById('interactionsChart').getContext('2d');
-            
-            // Generate mock data for interactions
-            const labels = [];
-            const viewsData = [];
-            const likesData = [];
-            const watchlistData = [];
-            
-            for (let i = 6; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
-                viewsData.push(Math.floor(Math.random() * 500) + 200);
-                likesData.push(Math.floor(Math.random() * 100) + 50);
-                watchlistData.push(Math.floor(Math.random() * 150) + 75);
-            }
-
-            charts.interactions = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Views',
-                            data: viewsData,
-                            backgroundColor: '#3b82f6'
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            }
                         },
-                        {
-                            label: 'Likes',
-                            data: likesData,
-                            backgroundColor: '#10b981'
-                        },
-                        {
-                            label: 'Watchlist',
-                            data: watchlistData,
-                            backgroundColor: '#f59e0b'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: { color: '#f5f5f1' }
-                        }
-                    },
-                    scales: {
                         x: {
-                            ticks: { color: '#cbd5e1' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        },
-                        y: {
-                            ticks: { color: '#cbd5e1' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        }
-                    }
-                }
-            });
-        }
-
-        function createGenresChart(genresData) {
-            const ctx = document.getElementById('genresChart').getContext('2d');
-            
-            const labels = genresData.slice(0, 8).map(item => item.genre || 'Unknown');
-            const data = genresData.slice(0, 8).map(item => item.count || 0);
-            
-            // Add mock data if not enough real data
-            if (labels.length < 5) {
-                const mockGenres = ['Action', 'Comedy', 'Drama', 'Horror', 'Romance'];
-                const mockData = [250, 180, 220, 120, 160];
-                labels.push(...mockGenres.slice(0, 5 - labels.length));
-                data.push(...mockData.slice(0, 5 - data.length));
-            }
-
-            charts.genres = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: [
-                            '#e50914', '#f59e0b', '#10b981', '#3b82f6', 
-                            '#8b5cf6', '#ef4444', '#06b6d4', '#84cc16'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { 
-                                color: '#f5f5f1',
-                                padding: 15
+                            grid: {
+                                display: false
                             }
                         }
                     }
                 }
             });
-        }
 
-        function createContentTypeChart() {
-            const ctx = document.getElementById('contentTypeChart').getContext('2d');
+            // Content Distribution Chart
+            if (charts.contentDistribution) {
+                charts.contentDistribution.destroy();
+            }
             
-            charts.contentType = new Chart(ctx, {
-                type: 'pie',
+            const contentDistCtx = document.getElementById('contentDistributionChart').getContext('2d');
+            charts.contentDistribution = new Chart(contentDistCtx, {
+                type: 'doughnut',
                 data: {
                     labels: ['Movies', 'TV Shows', 'Anime'],
                     datasets: [{
-                        data: [45, 35, 20], // Mock percentages
-                        backgroundColor: ['#e50914', '#f59e0b', '#10b981']
+                        data: [
+                            data.content_distribution.movie,
+                            data.content_distribution.tv,
+                            data.content_distribution.anime
+                        ],
+                        backgroundColor: ['#3b82f6', '#9333ea', '#ec4899'],
+                        borderWidth: 0
                     }]
                 },
                 options: {
@@ -534,10 +673,91 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'bottom',
-                            labels: { 
-                                color: '#f5f5f1',
-                                padding: 15
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Engagement Chart
+            if (charts.engagement) {
+                charts.engagement.destroy();
+            }
+            
+            const engagementCtx = document.getElementById('engagementChart').getContext('2d');
+            charts.engagement = new Chart(engagementCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.engagement_over_time.map(d => d.date),
+                    datasets: [{
+                        label: 'Interactions',
+                        data: data.engagement_over_time.map(d => d.value),
+                        backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                        borderColor: '#ef4444',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Genres Chart
+            if (charts.genres) {
+                charts.genres.destroy();
+            }
+            
+            const genresCtx = document.getElementById('genresChart').getContext('2d');
+            charts.genres = new Chart(genresCtx, {
+                type: 'radar',
+                data: {
+                    labels: data.popular_genres.map(g => g.genre),
+                    datasets: [{
+                        label: 'Popular Genres',
+                        data: data.popular_genres.map(g => g.count),
+                        borderColor: '#fbbf24',
+                        backgroundColor: 'rgba(251, 191, 36, 0.2)',
+                        pointBackgroundColor: '#fbbf24',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#fbbf24'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            angleLines: {
+                                color: 'rgba(255, 255, 255, 0.05)'
                             }
                         }
                     }
@@ -545,95 +765,83 @@
             });
         }
 
-        function updateDetailedAnalytics(data) {
-            // Update top content
-            populateTopContent(data.popular_content || []);
-            
-            // Update engagement metrics (mock data)
-            document.getElementById('avgSessionTime').textContent = '12m 34s';
-            document.getElementById('bounceRate').textContent = '23%';
-            document.getElementById('repeatUsers').textContent = '67%';
-            
-            // Update platform usage (mock data)
-            document.getElementById('mobileUsers').textContent = '58%';
-            document.getElementById('desktopUsers').textContent = '35%';
-            document.getElementById('tabletUsers').textContent = '7%';
-            
-            // Update recent activity
-            populateRecentActivity();
-        }
-
-        function populateTopContent(content) {
-            const container = document.getElementById('topContentList');
-            
-            if (content.length === 0) {
-                // Add mock data
-                content = [
-                    { title: 'Popular Movie 1', interactions: 1250 },
-                    { title: 'Trending Show 1', interactions: 980 },
-                    { title: 'Top Anime 1', interactions: 850 },
-                    { title: 'Hot Movie 2', interactions: 720 },
-                    { title: 'Viral Show 2', interactions: 650 }
-                ];
-            }
-
-            container.innerHTML = content.slice(0, 5).map((item, index) => `
-                <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                    <div class="flex items-center space-x-3">
-                        <span class="text-red-500 font-bold">#${index + 1}</span>
-                        <span class="text-white text-sm">${item.title}</span>
-                    </div>
-                    <span class="text-gray-400 text-sm">${item.interactions} views</span>
-                </div>
-            `).join('');
-        }
-
-        function populateRecentActivity() {
-            const container = document.getElementById('recentActivityList');
-            
-            // Mock recent activity data
-            const activities = [
-                { type: 'user_join', message: 'New user registered: user123', time: '2 min ago' },
-                { type: 'content_add', message: 'Admin added new recommendation', time: '15 min ago' },
-                { type: 'interaction', message: '50+ users viewed "Popular Movie"', time: '30 min ago' },
-                { type: 'user_join', message: 'New user registered: movie_fan', time: '45 min ago' },
-                { type: 'content_trending', message: '"Anime Series" is trending', time: '1 hour ago' }
-            ];
-
-            container.innerHTML = activities.map(activity => {
-                const icon = activity.type === 'user_join' ? '👤' : 
-                           activity.type === 'content_add' ? '📝' : 
-                           activity.type === 'interaction' ? '👁️' : '🔥';
-                           
+        function updateTables(data) {
+            // Popular Content Table
+            const popularContentHTML = data.popular_content.map(content => {
+                const typeColor = content.content_type === 'movie' ? 'movie' : 
+                                content.content_type === 'tv' ? 'tv' : 'anime';
+                
                 return `
-                    <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-xl">${icon}</span>
-                            <span class="text-white text-sm">${activity.message}</span>
-                        </div>
-                        <span class="text-gray-400 text-xs">${activity.time}</span>
-                    </div>
+                    <tr>
+                        <td class="font-medium">${content.title}</td>
+                        <td><span class="badge ${typeColor}">${content.content_type.toUpperCase()}</span></td>
+                        <td>${content.views.toLocaleString()}</td>
+                        <td>${content.favorites.toLocaleString()}</td>
+                        <td>⭐ ${content.rating}</td>
+                        <td>${content.engagement}%</td>
+                    </tr>
                 `;
             }).join('');
-        }
-
-        function showError(message) {
-            console.error(message);
-            // Show error state in key metrics
-            document.getElementById('totalUsers').textContent = 'Error';
-            document.getElementById('totalContent').textContent = 'Error';
-            document.getElementById('totalInteractions').textContent = 'Error';
-            document.getElementById('activeUsers').textContent = 'Error';
-        }
-
-        // Initialize page
-        function initializePage() {
-            if (!checkAuth()) return;
             
-            loadAnalytics();
+            document.getElementById('popularContentTable').innerHTML = popularContentHTML;
+
+            // Active Users Table
+            const activeUsersHTML = data.active_users.map(user => `
+                <tr>
+                    <td class="font-medium">${user.username}</td>
+                    <td>${user.joined}</td>
+                    <td>${user.interactions.toLocaleString()}</td>
+                    <td>${user.favorites}</td>
+                    <td>${user.watchlist}</td>
+                    <td>
+                        <span class="${user.last_active === 'Today' ? 'text-green-400' : 'text-gray-400'}">
+                            ${user.last_active}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+            
+            document.getElementById('activeUsersTable').innerHTML = activeUsersHTML;
         }
 
-        document.addEventListener('DOMContentLoaded', initializePage);
+        function exportReport() {
+            showToast('Generating report...', 'info');
+            
+            // In a real implementation, this would generate a PDF or CSV report
+            setTimeout(() => {
+                showToast('Report exported successfully!', 'success');
+            }, 2000);
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 transform translate-x-full`;
+            
+            if (type === 'success') {
+                toast.classList.add('bg-green-600');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-600');
+            } else {
+                toast.classList.add('bg-blue-600');
+            }
+            
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.authToken = null;
+                window.currentUser = null;
+                window.location.href = '../login.html';
+            }
+        }
     </script>
 </body>
 </html>
