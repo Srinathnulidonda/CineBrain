@@ -303,313 +303,335 @@
         </div>
     </div>
 
-    <script>
-        // Constants
-        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+<script>
+    // Constants
+    const API_BASE = 'https://backend-app-970m.onrender.com/api';
+    
+    // State
+    let selectedLanguages = [];
+    let selectedGenres = [];
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeEventListeners();
+        checkExistingAuth();
+    });
+
+    function initializeEventListeners() {
+        // Form submissions
+        document.getElementById('signInForm').addEventListener('submit', handleSignIn);
         
-        // State
-        let selectedLanguages = [];
-        let selectedGenres = [];
+        // Preference selection
+        document.querySelectorAll('#languagePreferences .preference-pill').forEach(pill => {
+            pill.addEventListener('click', function() {
+                togglePreference(this, 'lang', selectedLanguages);
+            });
+        });
         
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeEventListeners();
-            checkExistingAuth();
-        });
-
-        function initializeEventListeners() {
-            // Form submissions
-            document.getElementById('signInForm').addEventListener('submit', handleSignIn);
-            
-            // Preference selection
-            document.querySelectorAll('#languagePreferences .preference-pill').forEach(pill => {
-                pill.addEventListener('click', function() {
-                    togglePreference(this, 'lang', selectedLanguages);
-                });
+        document.querySelectorAll('#genrePreferences .preference-pill').forEach(pill => {
+            pill.addEventListener('click', function() {
+                togglePreference(this, 'genre', selectedGenres);
             });
-            
-            document.querySelectorAll('#genrePreferences .preference-pill').forEach(pill => {
-                pill.addEventListener('click', function() {
-                    togglePreference(this, 'genre', selectedGenres);
-                });
+        });
+
+        // Input validation
+        document.getElementById('signUpPassword').addEventListener('input', validatePassword);
+        document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
+    }
+
+    function checkExistingAuth() {
+        // Check if user is already logged in
+        const storedUser = localStorage.getItem('currentUser');
+        const storedToken = localStorage.getItem('authToken');
+        
+        if (storedUser && storedToken) {
+            try {
+                const user = JSON.parse(storedUser);
+                // Set global variables
+                window.currentUser = user;
+                window.authToken = storedToken;
+                
+                // Redirect based on user role
+                if (user.is_admin) {
+                    window.location.href = 'admin/dashboard.html';
+                } else {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirectTo = urlParams.get('redirect') || 'dashboard.html';
+                    window.location.href = redirectTo;
+                }
+                return;
+            } catch (error) {
+                // Clear invalid stored data
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('authToken');
+            }
+        }
+    }
+
+    function showSignUp() {
+        document.getElementById('signInForm').classList.add('hidden');
+        document.getElementById('signUpForm').classList.remove('hidden');
+        document.getElementById('preferencesForm').classList.add('hidden');
+        clearMessages();
+    }
+
+    function showSignIn() {
+        document.getElementById('signInForm').classList.remove('hidden');
+        document.getElementById('signUpForm').classList.add('hidden');
+        document.getElementById('preferencesForm').classList.add('hidden');
+        clearMessages();
+    }
+
+    function showPreferences() {
+        // Validate sign up form first
+        const username = document.getElementById('signUpUsername').value.trim();
+        const email = document.getElementById('signUpEmail').value.trim();
+        const password = document.getElementById('signUpPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        if (!username || !email || !password || !confirmPassword) {
+            showMessage('Please fill in all fields', 'error');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            showMessage('Passwords do not match', 'error');
+            return;
+        }
+
+        if (password.length < 6) {
+            showMessage('Password must be at least 6 characters', 'error');
+            return;
+        }
+
+        if (!isValidEmail(email)) {
+            showMessage('Please enter a valid email address', 'error');
+            return;
+        }
+
+        document.getElementById('signUpForm').classList.add('hidden');
+        document.getElementById('preferencesForm').classList.remove('hidden');
+        clearMessages();
+    }
+
+    function togglePreference(element, type, array) {
+        const value = element.dataset[type];
+        const index = array.indexOf(value);
+
+        if (index > -1) {
+            array.splice(index, 1);
+            element.classList.remove('selected');
+        } else {
+            array.push(value);
+            element.classList.add('selected');
+        }
+    }
+
+    async function handleSignIn(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('signInUsername').value.trim();
+        const password = document.getElementById('signInPassword').value;
+
+        if (!username || !password) {
+            showMessage('Please enter both username and password', 'error');
+            return;
+        }
+
+        setSignInLoading(true);
+
+        try {
+            const response = await fetch(`${API_BASE}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
             });
 
-            // Input validation
-            document.getElementById('signUpPassword').addEventListener('input', validatePassword);
-            document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
-        }
+            const data = await response.json();
 
-        function checkExistingAuth() {
-            // Check if user is already logged in (from session data)
-            const urlParams = new URLSearchParams(window.location.search);
-            const redirectTo = urlParams.get('redirect') || 'dashboard.html';
-            
-            // If user is already authenticated, redirect
-            if (window.currentUser) {
-                window.location.href = redirectTo;
-            }
-        }
-
-        function showSignUp() {
-            document.getElementById('signInForm').classList.add('hidden');
-            document.getElementById('signUpForm').classList.remove('hidden');
-            document.getElementById('preferencesForm').classList.add('hidden');
-            clearMessages();
-        }
-
-        function showSignIn() {
-            document.getElementById('signInForm').classList.remove('hidden');
-            document.getElementById('signUpForm').classList.add('hidden');
-            document.getElementById('preferencesForm').classList.add('hidden');
-            clearMessages();
-        }
-
-        function showPreferences() {
-            // Validate sign up form first
-            const username = document.getElementById('signUpUsername').value.trim();
-            const email = document.getElementById('signUpEmail').value.trim();
-            const password = document.getElementById('signUpPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            if (!username || !email || !password || !confirmPassword) {
-                showMessage('Please fill in all fields', 'error');
-                return;
-            }
-
-            if (password !== confirmPassword) {
-                showMessage('Passwords do not match', 'error');
-                return;
-            }
-
-            if (password.length < 6) {
-                showMessage('Password must be at least 6 characters', 'error');
-                return;
-            }
-
-            if (!isValidEmail(email)) {
-                showMessage('Please enter a valid email address', 'error');
-                return;
-            }
-
-            document.getElementById('signUpForm').classList.add('hidden');
-            document.getElementById('preferencesForm').classList.remove('hidden');
-            clearMessages();
-        }
-
-        function togglePreference(element, type, array) {
-            const value = element.dataset[type];
-            const index = array.indexOf(value);
-
-            if (index > -1) {
-                array.splice(index, 1);
-                element.classList.remove('selected');
+            if (response.ok) {
+                showMessage('Sign in successful! Redirecting...', 'success');
+                
+                // Store user data in localStorage AND memory
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
+                localStorage.setItem('authToken', data.token);
+                window.currentUser = data.user;
+                window.authToken = data.token;
+                
+                // Redirect based on user role
+                setTimeout(() => {
+                    if (data.user.is_admin) {
+                        window.location.href = 'admin/dashboard.html';
+                    } else {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const redirectTo = urlParams.get('redirect') || 'dashboard.html';
+                        window.location.href = redirectTo;
+                    }
+                }, 1500);
             } else {
-                array.push(value);
-                element.classList.add('selected');
+                showMessage(data.error || 'Sign in failed', 'error');
             }
+        } catch (error) {
+            console.error('Sign in error:', error);
+            showMessage('Network error. Please try again.', 'error');
+        } finally {
+            setSignInLoading(false);
         }
+    }
 
-        async function handleSignIn(e) {
-            e.preventDefault();
-            
-            const username = document.getElementById('signInUsername').value.trim();
-            const password = document.getElementById('signInPassword').value;
+    async function completeSignUp() {
+        const username = document.getElementById('signUpUsername').value.trim();
+        const email = document.getElementById('signUpEmail').value.trim();
+        const password = document.getElementById('signUpPassword').value;
 
-            if (!username || !password) {
-                showMessage('Please enter both username and password', 'error');
-                return;
-            }
+        setCompleteSignUpLoading(true);
 
-            setSignInLoading(true);
+        try {
+            const response = await fetch(`${API_BASE}/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password,
+                    preferred_languages: selectedLanguages,
+                    preferred_genres: selectedGenres
+                })
+            });
 
-            try {
-                const response = await fetch(`${API_BASE}/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        password: password
-                    })
-                });
+            const data = await response.json();
 
-                const data = await response.json();
-
-                if (response.ok) {
-                    showMessage('Sign in successful! Redirecting...', 'success');
-                    
-                    // Store user data in memory
-                    window.currentUser = data.user;
-                    window.authToken = data.token;
-                    
-                    // Redirect based on user role
-                    setTimeout(() => {
-                        if (data.user.is_admin) {
-                            window.location.href = 'admin/dashboard.html';
-                        } else {
-                            const urlParams = new URLSearchParams(window.location.search);
-                            const redirectTo = urlParams.get('redirect') || 'dashboard.html';
-                            window.location.href = redirectTo;
-                        }
-                    }, 1500);
-                } else {
-                    showMessage(data.error || 'Sign in failed', 'error');
-                }
-            } catch (error) {
-                console.error('Sign in error:', error);
-                showMessage('Network error. Please try again.', 'error');
-            } finally {
-                setSignInLoading(false);
-            }
-        }
-
-        async function completeSignUp() {
-            const username = document.getElementById('signUpUsername').value.trim();
-            const email = document.getElementById('signUpEmail').value.trim();
-            const password = document.getElementById('signUpPassword').value;
-
-            setCompleteSignUpLoading(true);
-
-            try {
-                const response = await fetch(`${API_BASE}/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        email: email,
-                        password: password,
-                        preferred_languages: selectedLanguages,
-                        preferred_genres: selectedGenres
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showMessage('Account created successfully! Redirecting...', 'success');
-                    
-                    // Store user data in memory
-                    window.currentUser = data.user;
-                    window.authToken = data.token;
-                    
-                    // Redirect to dashboard
-                    setTimeout(() => {
-                        window.location.href = 'dashboard.html';
-                    }, 1500);
-                } else {
-                    showMessage(data.error || 'Registration failed', 'error');
-                }
-            } catch (error) {
-                console.error('Registration error:', error);
-                showMessage('Network error. Please try again.', 'error');
-            } finally {
-                setCompleteSignUpLoading(false);
-            }
-        }
-
-        function skipPreferences() {
-            completeSignUp();
-        }
-
-        function setSignInLoading(loading) {
-            const button = document.getElementById('signInButton');
-            const text = document.getElementById('signInButtonText');
-            const spinner = document.getElementById('signInSpinner');
-
-            if (loading) {
-                button.disabled = true;
-                text.textContent = 'Signing In...';
-                spinner.classList.remove('hidden');
+            if (response.ok) {
+                showMessage('Account created successfully! Redirecting...', 'success');
+                
+                // Store user data in localStorage AND memory
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
+                localStorage.setItem('authToken', data.token);
+                window.currentUser = data.user;
+                window.authToken = data.token;
+                
+                // Redirect to dashboard
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
             } else {
-                button.disabled = false;
-                text.textContent = 'Sign In';
-                spinner.classList.add('hidden');
+                showMessage(data.error || 'Registration failed', 'error');
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            showMessage('Network error. Please try again.', 'error');
+        } finally {
+            setCompleteSignUpLoading(false);
+        }
+    }
+
+    function skipPreferences() {
+        completeSignUp();
+    }
+
+    function setSignInLoading(loading) {
+        const button = document.getElementById('signInButton');
+        const text = document.getElementById('signInButtonText');
+        const spinner = document.getElementById('signInSpinner');
+
+        if (loading) {
+            button.disabled = true;
+            text.textContent = 'Signing In...';
+            spinner.classList.remove('hidden');
+        } else {
+            button.disabled = false;
+            text.textContent = 'Sign In';
+            spinner.classList.add('hidden');
+        }
+    }
+
+    function setCompleteSignUpLoading(loading) {
+        const button = document.getElementById('completeSignUpButton');
+        const text = document.getElementById('completeSignUpText');
+        const spinner = document.getElementById('completeSignUpSpinner');
+
+        if (loading) {
+            button.disabled = true;
+            text.textContent = 'Creating Account...';
+            spinner.classList.remove('hidden');
+        } else {
+            button.disabled = false;
+            text.textContent = 'Complete Sign Up';
+            spinner.classList.add('hidden');
+        }
+    }
+
+    function showMessage(message, type) {
+        const container = document.getElementById('messageContainer');
+        const text = document.getElementById('messageText');
+
+        text.textContent = message;
+        container.className = `mb-6 p-4 rounded-lg ${type === 'error' ? 'error-message' : 'success-message'}`;
+        container.classList.remove('hidden');
+
+        // Auto-hide success messages
+        if (type === 'success') {
+            setTimeout(clearMessages, 3000);
+        }
+    }
+
+    function clearMessages() {
+        document.getElementById('messageContainer').classList.add('hidden');
+    }
+
+    function validatePassword() {
+        const password = document.getElementById('signUpPassword').value;
+        const input = document.getElementById('signUpPassword');
+
+        if (password.length > 0 && password.length < 6) {
+            input.style.borderColor = '#ef4444';
+        } else {
+            input.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+        }
+    }
+
+    function validateConfirmPassword() {
+        const password = document.getElementById('signUpPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const input = document.getElementById('confirmPassword');
+
+        if (confirmPassword.length > 0 && password !== confirmPassword) {
+            input.style.borderColor = '#ef4444';
+        } else {
+            input.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+        }
+    }
+
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    // Handle browser back button
+    window.addEventListener('popstate', function() {
+        showSignIn();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
+            const visibleForm = document.querySelector('.form-section:not(.hidden)');
+            if (visibleForm && visibleForm.id === 'signInForm') {
+                handleSignIn(e);
+            } else if (visibleForm && visibleForm.id === 'signUpForm') {
+                showPreferences();
+            } else if (visibleForm && visibleForm.id === 'preferencesForm') {
+                completeSignUp();
             }
         }
-
-        function setCompleteSignUpLoading(loading) {
-            const button = document.getElementById('completeSignUpButton');
-            const text = document.getElementById('completeSignUpText');
-            const spinner = document.getElementById('completeSignUpSpinner');
-
-            if (loading) {
-                button.disabled = true;
-                text.textContent = 'Creating Account...';
-                spinner.classList.remove('hidden');
-            } else {
-                button.disabled = false;
-                text.textContent = 'Complete Sign Up';
-                spinner.classList.add('hidden');
-            }
-        }
-
-        function showMessage(message, type) {
-            const container = document.getElementById('messageContainer');
-            const text = document.getElementById('messageText');
-
-            text.textContent = message;
-            container.className = `mb-6 p-4 rounded-lg ${type === 'error' ? 'error-message' : 'success-message'}`;
-            container.classList.remove('hidden');
-
-            // Auto-hide success messages
-            if (type === 'success') {
-                setTimeout(clearMessages, 3000);
-            }
-        }
-
-        function clearMessages() {
-            document.getElementById('messageContainer').classList.add('hidden');
-        }
-
-        function validatePassword() {
-            const password = document.getElementById('signUpPassword').value;
-            const input = document.getElementById('signUpPassword');
-
-            if (password.length > 0 && password.length < 6) {
-                input.style.borderColor = '#ef4444';
-            } else {
-                input.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            }
-        }
-
-        function validateConfirmPassword() {
-            const password = document.getElementById('signUpPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const input = document.getElementById('confirmPassword');
-
-            if (confirmPassword.length > 0 && password !== confirmPassword) {
-                input.style.borderColor = '#ef4444';
-            } else {
-                input.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            }
-        }
-
-        function isValidEmail(email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(email);
-        }
-
-        // Handle browser back button
-        window.addEventListener('popstate', function() {
-            showSignIn();
-        });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
-                const visibleForm = document.querySelector('.form-section:not(.hidden)');
-                if (visibleForm && visibleForm.id === 'signInForm') {
-                    handleSignIn(e);
-                } else if (visibleForm && visibleForm.id === 'signUpForm') {
-                    showPreferences();
-                } else if (visibleForm && visibleForm.id === 'preferencesForm') {
-                    completeSignUp();
-                }
-            }
-        });
-    </script>
+    });
+</script>
 </body>
 </html>
