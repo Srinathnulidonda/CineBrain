@@ -133,6 +133,14 @@
             padding: 1rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
+        .card-body h6 {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+.card-body small {
+    display: block;
+    margin-bottom: 0.2rem;
+}
 
         .activity-icon {
             width: 40px;
@@ -326,6 +334,7 @@
                 </div>
             </div>
             
+            
             <div class="quick-action-card" onclick="viewAnalytics()">
                 <div class="flex items-center mb-4">
                     <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mr-4">
@@ -363,6 +372,16 @@
                 </div>
             </div>
         </div>
+<div class="card">
+    <div class="card-header">
+        <h4>ML Service Status</h4>
+        <button onclick="checkMLService()" class="btn btn-primary btn-sm">Check Status</button>
+        <button onclick="updateMLModels()" class="btn btn-warning btn-sm">Update Models</button>
+    </div>
+    <div class="card-body">
+        <div id="ml-status-display">Click "Check Status" to test ML service</div>
+    </div>
+</div>
 
         <!-- Recent Activity -->
         <div class="bg-gray-800 bg-opacity-50 rounded-lg">
@@ -424,19 +443,122 @@
             </div>
         </div>
     </main>
-<!-- Add this to your admin dashboard -->
-<div class="card">
-    <div class="card-header">
-        <h4>ML Service Status</h4>
-        <button onclick="checkMLService()" class="btn btn-primary btn-sm">Check Status</button>
-        <button onclick="updateMLModels()" class="btn btn-warning btn-sm">Update Models</button>
-    </div>
-    <div class="card-body">
-        <div id="ml-status-display">Click "Check Status" to test ML service</div>
-    </div>
-</div>
+    <script>
+        // Constants
+        const API_BASE = 'https://backend-app-970m.onrender.com/api';
+        
+        // State
+        let currentUser = window.currentUser;
+        let authToken = window.authToken;
 
-<script>
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAdminAuthentication();
+            initializeEventListeners();
+            loadDashboardData();
+        });
+
+        function checkAdminAuthentication() {
+    // Load auth data from localStorage
+    window.loadAuthData();
+    
+    if (!window.currentUser || !window.authToken || !window.currentUser.is_admin) {
+        window.location.href = '../login.html?redirect=admin/dashboard.html';
+        return;
+    }
+    
+    // Update UI with admin data
+    document.getElementById('adminName').textContent = window.currentUser.username;
+    document.getElementById('adminInitial').textContent = window.currentUser.username.charAt(0).toUpperCase();
+    document.getElementById('welcomeAdminName').textContent = window.currentUser.username;
+}
+Up
+
+        function initializeEventListeners() {
+            // Sidebar toggle
+            document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+            
+            // User menu
+            document.getElementById('userMenuToggle').addEventListener('click', toggleUserMenu);
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            
+            // Close user menu when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#userMenuToggle') && !e.target.closest('#userMenu')) {
+                    document.getElementById('userMenu').classList.add('hidden');
+                }
+            });
+        }
+
+        async function loadDashboardData() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/analytics`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    updateDashboardStats(data);
+                } else {
+                    console.error('Failed to load dashboard data:', data.error);
+                    // Show simulated data instead
+                    showSimulatedData();
+                }
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showSimulatedData();
+            }
+        }
+
+        function updateDashboardStats(data) {
+            document.getElementById('totalUsers').textContent = data.total_users || 0;
+            document.getElementById('totalContent').textContent = data.total_content || 0;
+            document.getElementById('totalInteractions').textContent = data.total_interactions || 0;
+            document.getElementById('activeUsers').textContent = data.active_users_last_week || 0;
+        }
+
+        function showSimulatedData() {
+            // Show simulated data for demonstration
+            document.getElementById('totalUsers').textContent = '1,247';
+            document.getElementById('totalContent').textContent = '3,456';
+            document.getElementById('totalInteractions').textContent = '12,890';
+            document.getElementById('activeUsers').textContent = '834';
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            sidebar.classList.toggle('hidden');
+            mainContent.classList.toggle('full-width');
+        }
+
+        function toggleUserMenu() {
+            document.getElementById('userMenu').classList.toggle('hidden');
+        }
+
+function logout() {
+    // Clear user data
+    window.clearAuthData();
+    
+    // Redirect to login
+    window.location.href = '../login.html';
+}
+
+        function openContentSearch() {
+            window.location.href = 'content-browser.html';
+        }
+
+        function createRecommendation() {
+            window.location.href = 'posts.html';
+        }
+
+        function viewAnalytics() {
+            window.location.href = 'analytics.html';
+        }
 async function checkMLService() {
     const display = document.getElementById('ml-status-display');
     display.innerHTML = '<div class="text-center"><i class="fa fa-spinner fa-spin"></i> Checking ML service...</div>';
@@ -586,135 +708,6 @@ document.addEventListener('DOMContentLoaded', function() {
         checkMLService();
     }
 });
-</script>
-
-<style>
-.card-body h6 {
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-.card-body small {
-    display: block;
-    margin-bottom: 0.2rem;
-}
-</style>
-    <script>
-        // Constants
-        const API_BASE = 'https://backend-app-970m.onrender.com/api';
-        
-        // State
-        let currentUser = window.currentUser;
-        let authToken = window.authToken;
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAdminAuthentication();
-            initializeEventListeners();
-            loadDashboardData();
-        });
-
-        function checkAdminAuthentication() {
-    // Load auth data from localStorage
-    window.loadAuthData();
-    
-    if (!window.currentUser || !window.authToken || !window.currentUser.is_admin) {
-        window.location.href = '../login.html?redirect=admin/dashboard.html';
-        return;
-    }
-    
-    // Update UI with admin data
-    document.getElementById('adminName').textContent = window.currentUser.username;
-    document.getElementById('adminInitial').textContent = window.currentUser.username.charAt(0).toUpperCase();
-    document.getElementById('welcomeAdminName').textContent = window.currentUser.username;
-}
-Up
-
-        function initializeEventListeners() {
-            // Sidebar toggle
-            document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
-            
-            // User menu
-            document.getElementById('userMenuToggle').addEventListener('click', toggleUserMenu);
-            document.getElementById('logoutBtn').addEventListener('click', logout);
-            
-            // Close user menu when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('#userMenuToggle') && !e.target.closest('#userMenu')) {
-                    document.getElementById('userMenu').classList.add('hidden');
-                }
-            });
-        }
-
-        async function loadDashboardData() {
-            try {
-                const response = await fetch(`${API_BASE}/admin/analytics`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    updateDashboardStats(data);
-                } else {
-                    console.error('Failed to load dashboard data:', data.error);
-                    // Show simulated data instead
-                    showSimulatedData();
-                }
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
-                showSimulatedData();
-            }
-        }
-
-        function updateDashboardStats(data) {
-            document.getElementById('totalUsers').textContent = data.total_users || 0;
-            document.getElementById('totalContent').textContent = data.total_content || 0;
-            document.getElementById('totalInteractions').textContent = data.total_interactions || 0;
-            document.getElementById('activeUsers').textContent = data.active_users_last_week || 0;
-        }
-
-        function showSimulatedData() {
-            // Show simulated data for demonstration
-            document.getElementById('totalUsers').textContent = '1,247';
-            document.getElementById('totalContent').textContent = '3,456';
-            document.getElementById('totalInteractions').textContent = '12,890';
-            document.getElementById('activeUsers').textContent = '834';
-        }
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            
-            sidebar.classList.toggle('hidden');
-            mainContent.classList.toggle('full-width');
-        }
-
-        function toggleUserMenu() {
-            document.getElementById('userMenu').classList.toggle('hidden');
-        }
-
-function logout() {
-    // Clear user data
-    window.clearAuthData();
-    
-    // Redirect to login
-    window.location.href = '../login.html';
-}
-
-        function openContentSearch() {
-            window.location.href = 'content-browser.html';
-        }
-
-        function createRecommendation() {
-            window.location.href = 'posts.html';
-        }
-
-        function viewAnalytics() {
-            window.location.href = 'analytics.html';
-        }
-
         // Auto-hide sidebar on mobile when clicking outside
         document.addEventListener('click', function(e) {
             if (window.innerWidth <= 1024) {
