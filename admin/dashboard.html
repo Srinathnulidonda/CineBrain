@@ -424,7 +424,180 @@
             </div>
         </div>
     </main>
+<!-- Add this to your admin dashboard -->
+<div class="card">
+    <div class="card-header">
+        <h4>ML Service Status</h4>
+        <button onclick="checkMLService()" class="btn btn-primary btn-sm">Check Status</button>
+        <button onclick="updateMLModels()" class="btn btn-warning btn-sm">Update Models</button>
+    </div>
+    <div class="card-body">
+        <div id="ml-status-display">Click "Check Status" to test ML service</div>
+    </div>
+</div>
 
+<script>
+async function checkMLService() {
+    const display = document.getElementById('ml-status-display');
+    display.innerHTML = '<div class="text-center"><i class="fa fa-spinner fa-spin"></i> Checking ML service...</div>';
+    
+    try {
+        const response = await fetch('/api/admin/ml-service-check', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        const data = await response.json();
+        displayMLStatus(data);
+    } catch (error) {
+        display.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+    }
+}
+
+async function updateMLModels() {
+    if (!confirm('This will force update ML models. Continue?')) return;
+    
+    try {
+        const response = await fetch('/api/admin/ml-service-update', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ ' + data.message);
+        } else {
+            alert('❌ ' + data.message);
+        }
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+}
+
+function displayMLStatus(data) {
+    const statusColors = {
+        'healthy': 'success',
+        'partial': 'warning', 
+        'unhealthy': 'danger',
+        'error': 'danger'
+    };
+    
+    const statusIcons = {
+        'healthy': '✅',
+        'partial': '⚠️',
+        'unhealthy': '❌',
+        'error': '💥'
+    };
+    
+    let html = `
+        <div class="alert alert-${statusColors[data.status]}">
+            <h5>${statusIcons[data.status]} ML Service Status: ${data.status.toUpperCase()}</h5>
+            <small>Last checked: ${new Date(data.timestamp).toLocaleString()}</small>
+        </div>
+    `;
+    
+    if (data.summary) {
+        html += `
+            <div class="row mb-3">
+                <div class="col-md-4 text-center">
+                    <div class="bg-light p-2 rounded">
+                        <strong>${data.summary.passed}</strong><br>
+                        <small>Passed</small>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="bg-light p-2 rounded">
+                        <strong>${data.summary.failed}</strong><br>
+                        <small>Failed</small>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="bg-light p-2 rounded">
+                        <strong>${data.summary.total_checks}</strong><br>
+                        <small>Total Checks</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Detailed results
+    html += '<div class="row">';
+    
+    if (data.checks) {
+        for (const [checkName, result] of Object.entries(data.checks)) {
+            if (typeof result === 'object' && result.status) {
+                const icon = result.status === 'pass' ? '✅' : '❌';
+                const cardClass = result.status === 'pass' ? 'border-success' : 'border-danger';
+                
+                html += `
+                    <div class="col-md-6 mb-2">
+                        <div class="card ${cardClass}" style="border-width: 2px;">
+                            <div class="card-body p-2">
+                                <h6 class="card-title">${icon} ${checkName.replace('_', ' ').toUpperCase()}</h6>
+                `;
+                
+                if (result.response_time) {
+                    html += `<small>⏱️ ${result.response_time}</small><br>`;
+                }
+                
+                if (result.count !== undefined) {
+                    html += `<small>📊 ${result.count} recommendations</small><br>`;
+                }
+                
+                if (result.strategy) {
+                    html += `<small>🎯 Strategy: ${result.strategy}</small><br>`;
+                }
+                
+                if (result.error) {
+                    html += `<small class="text-danger">❌ ${result.error}</small>`;
+                }
+                
+                if (result.models_initialized !== undefined) {
+                    const modelIcon = result.models_initialized ? '🤖✅' : '🤖❌';
+                    html += `<small>${modelIcon} Models: ${result.models_initialized ? 'Ready' : 'Not Ready'}</small><br>`;
+                }
+                
+                html += '</div></div></div>';
+            }
+        }
+    }
+    
+    html += '</div>';
+    
+    // Quick stats
+    if (data.checks && data.checks.database_integration) {
+        const db = data.checks.database_integration;
+        html += `
+            <div class="alert alert-info mt-3">
+                <strong>📊 Data Summary:</strong>
+                ${db.backend_users} users, ${db.backend_content} content, ${db.backend_interactions} interactions
+                ${db.data_ready ? '✅ Ready for ML' : '⚠️ Needs more data'}
+            </div>
+        `;
+    }
+    
+    document.getElementById('ml-status-display').innerHTML = html;
+}
+
+// Auto-check on page load
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('ml-status-display')) {
+        checkMLService();
+    }
+});
+</script>
+
+<style>
+.card-body h6 {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+.card-body small {
+    display: block;
+    margin-bottom: 0.2rem;
+}
+</style>
     <script>
         // Constants
         const API_BASE = 'https://backend-app-970m.onrender.com/api';
