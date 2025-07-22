@@ -1,350 +1,501 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <script>
-        fetch('/includes/head.html')
-            .then(response => response.text())
-            .then(data => {
-                const head = document.querySelector('head');
-                head.insertAdjacentHTML('beforeend', data);
-            });
-    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results - CineScope</title>
+    <meta name="description" content="Search for movies, TV shows, and anime on CineScope.">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        .search-hero {
+            background: var(--gradient-dark);
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .search-form {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .search-input-large {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            backdrop-filter: blur(10px);
+            transition: var(--transition-smooth);
+        }
+        
+        .search-input-large:focus {
+            border-color: var(--primary-blue);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .search-filters {
+            background: var(--dark-surface);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .results-count {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+        
+        .sort-options {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .search-result-card {
+            background: var(--dark-surface);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            transition: var(--transition-smooth);
+            cursor: pointer;
+        }
+        
+        .search-result-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .result-poster {
+            width: 100%;
+            aspect-ratio: 2/3;
+            object-fit: cover;
+        }
+        
+        .result-info {
+            padding: 1rem;
+        }
+        
+        .result-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+        
+        .result-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .result-overview {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 3rem;
+        }
+        
+        .pagination button {
+            padding: 0.75rem 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
+        
+        .pagination button.active {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+            color: white;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--dark-surface);
+            border-radius: var(--border-radius);
+        }
+        
+        .no-results-icon {
+            font-size: 4rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+        
+        .search-suggestions {
+            margin-top: 2rem;
+        }
+        
+        .suggestion-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        
+        .suggestion-tag {
+            background: var(--dark-surface-2);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: var(--transition-smooth);
+        }
+        
+        .suggestion-tag:hover {
+            background: var(--primary-blue);
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .search-form {
+                flex-direction: column;
+            }
+            
+            .search-filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .results-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .sort-options {
+                justify-content: space-between;
+            }
+            
+            .results-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+            
+            .pagination {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
     <div data-include="header"></div>
 
-    <!-- Main Content -->
-    <main class="container py-8 pt-24">
-        <!-- Search Header -->
-        <section class="search-header mb-8">
-            <div class="max-w-4xl mx-auto text-center">
-                <h1 class="text-4xl font-bold mb-4">
-                    Search <span class="text-gradient">Everything</span>
-                </h1>
-                <p class="text-gray-400 text-lg mb-8">
-                    Discover movies, TV shows, and anime from our vast collection
-                </p>
-                
-                <!-- Search Form -->
-                <div class="search-form-container">
-                    <form class="search-form" onsubmit="performSearch(event)">
-                        <div class="search-input-group">
-                            <input type="text" 
-                                   id="searchInput" 
-                                   class="search-input-large" 
-                                   placeholder="Search for movies, TV shows, anime..."
-                                   autocomplete="off">
-                            <button type="submit" class="search-button">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                        
-                        <!-- Search Filters -->
-                        <div class="search-filters">
-                            <select id="contentTypeFilter" class="filter-select">
-                                <option value="multi">All Content</option>
-                                <option value="movie">Movies</option>
-                                <option value="tv">TV Shows</option>
-                                <option value="anime">Anime</option>
-                            </select>
-                            
-                            <select id="genreFilter" class="filter-select">
-                                <option value="">All Genres</option>
-                                <option value="action">Action</option>
-                                <option value="adventure">Adventure</option>
-                                <option value="comedy">Comedy</option>
-                                <option value="drama">Drama</option>
-                                <option value="horror">Horror</option>
-                                <option value="romance">Romance</option>
-                                <option value="sci-fi">Sci-Fi</option>
-                                <option value="thriller">Thriller</option>
-                            </select>
-                            
-                            <select id="languageFilter" class="filter-select">
-                                <option value="">All Languages</option>
-                                <option value="english">English</option>
-                                <option value="hindi">Hindi</option>
-                                <option value="telugu">Telugu</option>
-                                <option value="tamil">Tamil</option>
-                                <option value="kannada">Kannada</option>
-                                <option value="malayalam">Malayalam</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
+    <main style="padding-top: 80px;">
+        <!-- Search Hero -->
+        <section class="search-hero">
+            <div class="container">
+                <form class="search-form" id="searchForm">
+                    <input type="text" class="search-input-large" id="searchQuery" 
+                           placeholder="Search for movies, TV shows, anime..." required>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </form>
             </div>
         </section>
 
-        <!-- Search Results -->
-        <section class="search-results">
+        <div class="container">
+            <!-- Search Filters -->
+            <div class="search-filters">
+                <div class="filter-group">
+                    <label for="typeFilter">Type:</label>
+                    <select id="typeFilter" class="filter-select">
+                        <option value="multi">All</option>
+                        <option value="movie">Movies</option>
+                        <option value="tv">TV Shows</option>
+                        <option value="anime">Anime</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="genreFilter">Genre:</label>
+                    <select id="genreFilter" class="filter-select">
+                        <option value="">All Genres</option>
+                        <option value="action">Action</option>
+                        <option value="comedy">Comedy</option>
+                        <option value="drama">Drama</option>
+                        <option value="horror">Horror</option>
+                        <option value="romance">Romance</option>
+                        <option value="thriller">Thriller</option>
+                        <option value="sci-fi">Sci-Fi</option>
+                        <option value="fantasy">Fantasy</option>
+                        <option value="animation">Animation</option>
+                        <option value="documentary">Documentary</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="yearFilter">Year:</label>
+                    <select id="yearFilter" class="filter-select">
+                        <option value="">All Years</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                        <option value="2022">2022</option>
+                        <option value="2021">2021</option>
+                        <option value="2020">2020</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-outline" onclick="applyFilters()">Apply Filters</button>
+                <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+            </div>
+
             <!-- Results Header -->
-            <div id="resultsHeader" class="results-header hidden">
-                <div class="flex items-center justify-between mb-6">
-                    <div>
-                        <h2 class="text-2xl font-bold">Search Results</h2>
-                        <p class="text-gray-400" id="resultsCount">0 results found</p>
-                    </div>
-                    <div class="results-controls">
-                        <select id="sortBy" class="filter-select" onchange="sortResults()">
-                            <option value="relevance">Sort by Relevance</option>
-                            <option value="rating">Sort by Rating</option>
-                            <option value="year">Sort by Year</option>
-                            <option value="title">Sort by Title</option>
-                        </select>
-                    </div>
+            <div class="results-header" id="resultsHeader" style="display: none;">
+                <div class="results-count" id="resultsCount">
+                    <!-- Results count will be inserted here -->
+                </div>
+                <div class="sort-options">
+                    <label for="sortBy">Sort by:</label>
+                    <select id="sortBy" class="filter-select">
+                        <option value="relevance">Relevance</option>
+                        <option value="rating">Rating</option>
+                        <option value="year">Year</option>
+                        <option value="title">Title</option>
+                        <option value="popularity">Popularity</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Loading State -->
-            <div id="searchLoading" class="hidden">
-                <div class="loading-large">
-                    <div class="spinner-large"></div>
-                    <p class="mt-4 text-gray-400">Searching...</p>
-                </div>
-            </div>
-
-            <!-- Results Grid -->
-            <div id="searchResultsGrid" class="search-results-grid hidden"></div>
-
-            <!-- No Results -->
-            <div id="noResults" class="no-results hidden">
-                <div class="text-center py-12">
-                    <i class="fas fa-search text-6xl text-gray-500 mb-4"></i>
-                    <h3 class="text-2xl font-bold mb-2">No results found</h3>
-                    <p class="text-gray-400 mb-6">Try adjusting your search terms or filters</p>
-                    <div class="space-y-2">
-                        <p class="text-sm text-gray-500">Suggestions:</p>
-                        <ul class="text-sm text-gray-400 space-y-1">
-                            <li>• Check your spelling</li>
-                            <li>• Try broader search terms</li>
-                            <li>• Remove some filters</li>
-                            <li>• Search for similar content</li>
-                        </ul>
-                    </div>
-                </div>
+            <!-- Search Results -->
+            <div class="results-grid" id="searchResults">
+                <!-- Results will be inserted here -->
             </div>
 
             <!-- Pagination -->
-            <div id="searchPagination" class="pagination-container hidden"></div>
-        </section>
-
-        <!-- Search Suggestions -->
-        <section class="search-suggestions mb-12">
-            <h2 class="section-title mb-6">
-                <i class="fas fa-lightbulb text-yellow-500"></i>
-                Popular Searches
-            </h2>
-            <div class="suggestions-grid">
-                <button class="suggestion-tag" onclick="searchFor('marvel')">Marvel Movies</button>
-                <button class="suggestion-tag" onclick="searchFor('anime')">Popular Anime</button>
-                <button class="suggestion-tag" onclick="searchFor('bollywood')">Bollywood Hits</button>
-                <button class="suggestion-tag" onclick="searchFor('comedy')">Comedy Movies</button>
-                <button class="suggestion-tag" onclick="searchFor('thriller')">Thriller Series</button>
-                <button class="suggestion-tag" onclick="searchFor('horror')">Horror Movies</button>
-                <button class="suggestion-tag" onclick="searchFor('sci-fi')">Sci-Fi Classics</button>
-                <button class="suggestion-tag" onclick="searchFor('romance')">Romance Films</button>
+            <div class="pagination" id="pagination" style="display: none;">
+                <!-- Pagination will be inserted here -->
             </div>
-        </section>
+
+            <!-- No Results -->
+            <div class="no-results" id="noResults" style="display: none;">
+                <div class="no-results-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h2>No results found</h2>
+                <p>Try adjusting your search terms or filters</p>
+                
+                <div class="search-suggestions">
+                    <h3>Popular searches:</h3>
+                    <div class="suggestion-tags">
+                        <a href="#" class="suggestion-tag" onclick="searchSuggestion('Avengers')">Avengers</a>
+                        <a href="#" class="suggestion-tag" onclick="searchSuggestion('Naruto')">Naruto</a>
+                        <a href="#" class="suggestion-tag" onclick="searchSuggestion('Breaking Bad')">Breaking Bad</a>
+                        <a href="#" class="suggestion-tag" onclick="searchSuggestion('Harry Potter')">Harry Potter</a>
+                        <a href="#" class="suggestion-tag" onclick="searchSuggestion('Game of Thrones')">Game of Thrones</a>
+                        <a href="#" class="suggestion-tag" onclick="searchSuggestion('Demon Slayer')">Demon Slayer</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Footer -->
     <div data-include="footer"></div>
 
     <!-- Scripts -->
-    <script src="/js/auth.js"></script>
+    <script src="/js/include.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
 
     <script>
-        class SearchManager {
-            constructor() {
-                this.currentQuery = '';
-                this.currentPage = 1;
-                this.currentResults = [];
-                this.totalPages = 0;
-                this.init();
-            }
+        let currentQuery = '';
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentFilters = {};
+        let searchTimeout;
 
-            init() {
-                // Check URL for search query
-                const urlParams = new URLSearchParams(window.location.search);
-                const query = urlParams.get('q');
-                
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('q');
+            
+            if (query) {
+                document.getElementById('searchQuery').value = query;
+                performSearch(query);
+            }
+            
+            setupSearchForm();
+            setupRealTimeSearch();
+        });
+
+        function setupSearchForm() {
+            const searchForm = document.getElementById('searchForm');
+            const searchInput = document.getElementById('searchQuery');
+            
+            searchForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const query = searchInput.value.trim();
                 if (query) {
-                    document.getElementById('searchInput').value = query;
-                    this.performSearch(query);
+                    currentPage = 1;
+                    performSearch(query);
+                    updateURL(query);
                 }
-
-                // Setup input listeners
-                this.setupSearchInput();
-            }
-
-            setupSearchInput() {
-                const searchInput = document.getElementById('searchInput');
-                let searchTimeout;
-
-                searchInput.addEventListener('input', (e) => {
-                    clearTimeout(searchTimeout);
-                    const query = e.target.value.trim();
-                    
-                    if (query.length >= 2) {
-                        searchTimeout = setTimeout(() => {
-                            this.performSearch(query);
-                        }, 500);
-                    } else if (query.length === 0) {
-                        this.clearResults();
-                    }
-                });
-            }
-
-            async performSearch(query = null, page = 1) {
-                if (!query) {
-                    query = document.getElementById('searchInput').value.trim();
+            });
+            
+            // Handle filter changes
+            ['typeFilter', 'genreFilter', 'yearFilter', 'sortBy'].forEach(filterId => {
+                const filter = document.getElementById(filterId);
+                if (filter) {
+                    filter.addEventListener('change', () => {
+                        if (currentQuery) {
+                            currentPage = 1;
+                            performSearch(currentQuery);
+                        }
+                    });
                 }
+            });
+        }
 
-                if (!query) {
-                    this.clearResults();
-                    return;
-                }
-
-                this.currentQuery = query;
-                this.currentPage = page;
-
-                // Show loading state
-                this.showLoading();
-
-                // Update URL
-                const newUrl = new URL(window.location);
-                newUrl.searchParams.set('q', query);
-                if (page > 1) {
-                    newUrl.searchParams.set('page', page);
+        function setupRealTimeSearch() {
+            const searchInput = document.getElementById('searchQuery');
+            
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                
+                clearTimeout(searchTimeout);
+                
+                if (query.length >= 2) {
+                    searchTimeout = setTimeout(() => {
+                        performSearch(query);
+                        updateURL(query);
+                    }, 500);
                 } else {
-                    newUrl.searchParams.delete('page');
+                    clearResults();
                 }
-                window.history.pushState({}, '', newUrl);
+            });
+        }
 
-                try {
-                    // Get filter values
-                    const contentType = document.getElementById('contentTypeFilter').value;
-                    const genre = document.getElementById('genreFilter').value;
-                    const language = document.getElementById('languageFilter').value;
-
-                    // Perform search
-                    const response = await APIService.searchContent(query, contentType, page);
-                    
-                    if (response && response.results) {
-                        this.currentResults = this.applyFilters(response.results, genre, language);
-                        this.totalPages = response.total_pages;
-                        this.displayResults();
-                    } else {
-                        this.showNoResults();
-                    }
-                } catch (error) {
-                    console.error('Search error:', error);
-                    this.showError();
-                } finally {
-                    this.hideLoading();
-                }
-            }
-
-            applyFilters(results, genre, language) {
-                let filtered = [...results];
-
-                if (genre) {
-                    filtered = filtered.filter(item => 
-                        item.genres && item.genres.some(g => 
-                            g.toLowerCase().includes(genre.toLowerCase())
-                        )
-                    );
-                }
-
-                if (language) {
-                    filtered = filtered.filter(item => 
-                        item.languages && item.languages.some(l => 
-                            l.toLowerCase().includes(language.toLowerCase())
-                        )
-                    );
-                }
-
-                return filtered;
-            }
-
-            displayResults() {
-                const resultsGrid = document.getElementById('searchResultsGrid');
-                const resultsHeader = document.getElementById('resultsHeader');
-                const resultsCount = document.getElementById('resultsCount');
-
-                if (this.currentResults.length === 0) {
-                    this.showNoResults();
-                    return;
-                }
-
-                // Show results header
-                resultsHeader.classList.remove('hidden');
-                resultsCount.textContent = `${this.currentResults.length} results found for "${this.currentQuery}"`;
-
-                // Create results grid
-                const resultsHTML = this.currentResults.map(item => this.createSearchResultCard(item)).join('');
-                resultsGrid.innerHTML = resultsHTML;
-                resultsGrid.classList.remove('hidden');
-
-                // Setup pagination if needed
-                if (this.totalPages > 1) {
-                    this.setupPagination();
-                }
-
-                // Hide other states
-                document.getElementById('noResults').classList.add('hidden');
-            }
-
-            createSearchResultCard(item) {
-                const posterUrl = item.poster_path || '/assets/images/placeholder.jpg';
-                const rating = item.rating ? item.rating.toFixed(1) : 'N/A';
-                const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
-                const genres = Array.isArray(item.genres) ? item.genres.slice(0, 3).join(', ') : '';
-
-                return `
-                    <div class="search-result-card" onclick="window.location.href='/details?id=${item.id}'">
-                        <div class="search-result-image">
-                            <img src="${posterUrl}" alt="${item.title}" loading="lazy">
-                            <div class="search-result-overlay">
-                                <div class="search-result-actions">
-                                    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); ContentManager.addToWatchlist(${item.id})">
-                                        <i class="fas fa-bookmark"></i>
-                                    </button>
-                                    <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); ContentManager.addToFavorites(${item.id})">
-                                        <i class="fas fa-heart"></i>
-                                    </button>
-                                    ${item.youtube_trailer ? `
-                                        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); ContentManager.playTrailer('${item.youtube_trailer}')">
-                                            <i class="fas fa-play"></i>
-                                        </button>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="search-result-info">
-                            <h3 class="search-result-title">${item.title}</h3>
-                            <div class="search-result-meta">
-                                <span class="rating">
-                                    <i class="fas fa-star"></i> ${rating}
-                                </span>
-                                ${year ? `<span class="year">${year}</span>` : ''}
-                                <span class="badge">${item.content_type.toUpperCase()}</span>
-                            </div>
-                            ${genres ? `<div class="search-result-genres">${genres}</div>` : ''}
-                            ${item.overview ? `<p class="search-result-overview">${item.overview.substring(0, 120)}...</p>` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-
-            sortResults() {
+        async function performSearch(query, page = 1) {
+            currentQuery = query;
+            currentPage = page;
+            
+            const resultsContainer = document.getElementById('searchResults');
+            const resultsHeader = document.getElementById('resultsHeader');
+            const pagination = document.getElementById('pagination');
+            const noResults = document.getElementById('noResults');
+            
+            try {
+                // Show loading state
+                showSearchLoading();
+                
+                // Get current filters
+                const type = document.getElementById('typeFilter').value;
+                const genre = document.getElementById('genreFilter').value;
+                const year = document.getElementById('yearFilter').value;
                 const sortBy = document.getElementById('sortBy').value;
                 
-                this.currentResults.sort((a, b) => {
-                    switch (sortBy) {
+                currentFilters = { type, genre, year, sortBy };
+                
+                // Perform search
+                const response = await ApiService.search(query, type === 'multi' ? 'multi' : type, page);
+                
+                if (response.success && response.data.results) {
+                    let results = response.data.results;
+                    
+                    // Apply client-side filters
+                    results = applyClientFilters(results);
+                    
+                    if (results.length > 0) {
+                        displayResults(results, response.data);
+                        resultsHeader.style.display = 'flex';
+                        pagination.style.display = 'flex';
+                        noResults.style.display = 'none';
+                    } else {
+                        showNoResults();
+                    }
+                } else {
+                    showNoResults();
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showSearchError();
+            }
+        }
+
+        function applyClientFilters(results) {
+            let filtered = [...results];
+            
+            // Filter by genre (if set)
+            if (currentFilters.genre) {
+                filtered = filtered.filter(item => 
+                    item.genres && item.genres.some(genre => 
+                        genre.toLowerCase().includes(currentFilters.genre.toLowerCase())
+                    )
+                );
+            }
+            
+            // Filter by year (if set)
+            if (currentFilters.year) {
+                filtered = filtered.filter(item => {
+                    const year = item.release_date ? new Date(item.release_date).getFullYear().toString() : '';
+                    return year === currentFilters.year;
+                });
+            }
+            
+            // Sort results
+            if (currentFilters.sortBy) {
+                filtered.sort((a, b) => {
+                    switch (currentFilters.sortBy) {
                         case 'rating':
                             return (b.rating || 0) - (a.rating || 0);
                         case 'year':
@@ -353,113 +504,180 @@
                             return yearB - yearA;
                         case 'title':
                             return a.title.localeCompare(b.title);
-                        default: // relevance
-                            return 0;
+                        case 'popularity':
+                            return (b.vote_count || 0) - (a.vote_count || 0);
+                        default:
+                            return 0; // relevance (keep original order)
                     }
                 });
-
-                this.displayResults();
             }
+            
+            return filtered;
+        }
 
-            setupPagination() {
-                const paginationContainer = document.getElementById('searchPagination');
-                const pagination = [];
-
-                // Previous button
-                if (this.currentPage > 1) {
-                    pagination.push(`
-                        <button class="pagination-btn" onclick="searchManager.performSearch('${this.currentQuery}', ${this.currentPage - 1})">
-                            <i class="fas fa-chevron-left"></i> Previous
-                        </button>
-                    `);
-                }
-
-                // Page numbers
-                const startPage = Math.max(1, this.currentPage - 2);
-                const endPage = Math.min(this.totalPages, this.currentPage + 2);
-
-                for (let i = startPage; i <= endPage; i++) {
-                    pagination.push(`
-                        <button class="pagination-btn ${i === this.currentPage ? 'active' : ''}" 
-                                onclick="searchManager.performSearch('${this.currentQuery}', ${i})">
-                            ${i}
-                        </button>
-                    `);
-                }
-
-                // Next button
-                if (this.currentPage < this.totalPages) {
-                    pagination.push(`
-                        <button class="pagination-btn" onclick="searchManager.performSearch('${this.currentQuery}', ${this.currentPage + 1})">
-                            Next <i class="fas fa-chevron-right"></i>
-                        </button>
-                    `);
-                }
-
-                paginationContainer.innerHTML = `<div class="pagination">${pagination.join('')}</div>`;
-                paginationContainer.classList.remove('hidden');
-            }
-
-            showLoading() {
-                document.getElementById('searchLoading').classList.remove('hidden');
-                document.getElementById('searchResultsGrid').classList.add('hidden');
-                document.getElementById('noResults').classList.add('hidden');
-                document.getElementById('resultsHeader').classList.add('hidden');
-            }
-
-            hideLoading() {
-                document.getElementById('searchLoading').classList.add('hidden');
-            }
-
-            showNoResults() {
-                document.getElementById('noResults').classList.remove('hidden');
-                document.getElementById('searchResultsGrid').classList.add('hidden');
-                document.getElementById('resultsHeader').classList.add('hidden');
-            }
-
-            showError() {
-                const noResults = document.getElementById('noResults');
-                noResults.innerHTML = `
-                    <div class="text-center py-12">
-                        <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
-                        <h3 class="text-2xl font-bold mb-2">Search Error</h3>
-                        <p class="text-gray-400 mb-6">Something went wrong. Please try again.</p>
-                        <button class="btn btn-primary" onclick="searchManager.performSearch('${this.currentQuery}')">
-                            Try Again
-                        </button>
+        function displayResults(results, data) {
+            const resultsContainer = document.getElementById('searchResults');
+            const resultsCount = document.getElementById('resultsCount');
+            
+            // Update results count
+            resultsCount.textContent = `Found ${results.length} results for "${currentQuery}"`;
+            
+            // Render results
+            resultsContainer.innerHTML = results.map(item => `
+                <div class="search-result-card" onclick="viewDetails(${item.id})">
+                    <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
+                         alt="${item.title}" class="result-poster"
+                         data-src="${item.poster_path || '/assets/images/placeholder.jpg'}">
+                    <div class="result-info">
+                        <h3 class="result-title">${item.title}</h3>
+                        <div class="result-meta">
+                            <span class="content-type">${item.content_type.toUpperCase()}</span>
+                            ${item.rating ? `<span class="rating">⭐ ${item.rating}</span>` : ''}
+                        </div>
+                        <p class="result-overview">${item.overview || 'No description available.'}</p>
                     </div>
+                </div>
+            `).join('');
+            
+            // Update pagination
+            updatePagination(data);
+            
+            // Re-initialize lazy loading
+            initializeLazyLoading();
+        }
+
+        function updatePagination(data) {
+            const pagination = document.getElementById('pagination');
+            totalPages = data.total_pages || 1;
+            
+            let paginationHTML = '';
+            
+            // Previous button
+            paginationHTML += `
+                <button onclick="changePage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+            `;
+            
+            // Page numbers
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                paginationHTML += `<button onclick="changePage(1)">1</button>`;
+                if (startPage > 2) {
+                    paginationHTML += `<button disabled>...</button>`;
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `
+                    <button onclick="changePage(${i})" ${i === currentPage ? 'class="active"' : ''}>
+                        ${i}
+                    </button>
                 `;
-                noResults.classList.remove('hidden');
-                document.getElementById('searchResultsGrid').classList.add('hidden');
-                document.getElementById('resultsHeader').classList.add('hidden');
             }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHTML += `<button disabled>...</button>`;
+                }
+                paginationHTML += `<button onclick="changePage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            // Next button
+            paginationHTML += `
+                <button onclick="changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+            
+            pagination.innerHTML = paginationHTML;
+        }
 
-            clearResults() {
-                document.getElementById('searchResultsGrid').classList.add('hidden');
-                document.getElementById('noResults').classList.add('hidden');
-                document.getElementById('resultsHeader').classList.add('hidden');
-                document.getElementById('searchPagination').classList.add('hidden');
+        function changePage(page) {
+            if (page >= 1 && page <= totalPages && page !== currentPage) {
+                performSearch(currentQuery, page);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }
 
-        // Global functions
-        function performSearch(event) {
-            if (event) {
-                event.preventDefault();
+        function showSearchLoading() {
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = Array(12).fill().map(() => `
+                <div class="search-result-card skeleton">
+                    <div class="skeleton-poster" style="aspect-ratio: 2/3;"></div>
+                    <div class="result-info">
+                        <div class="skeleton-title" style="height: 1.5rem; margin-bottom: 0.5rem;"></div>
+                        <div class="skeleton-meta" style="height: 1rem; margin-bottom: 0.5rem; width: 60%;"></div>
+                        <div class="skeleton-overview" style="height: 3rem;"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showNoResults() {
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('resultsHeader').style.display = 'none';
+            document.getElementById('pagination').style.display = 'none';
+            document.getElementById('noResults').style.display = 'block';
+        }
+
+        function showSearchError() {
+            document.getElementById('searchResults').innerHTML = `
+                <div class="error-message">
+                    Search failed. Please try again.
+                </div>
+            `;
+            document.getElementById('resultsHeader').style.display = 'none';
+            document.getElementById('pagination').style.display = 'none';
+            document.getElementById('noResults').style.display = 'none';
+        }
+
+        function clearResults() {
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('resultsHeader').style.display = 'none';
+            document.getElementById('pagination').style.display = 'none';
+            document.getElementById('noResults').style.display = 'none';
+        }
+
+        function applyFilters() {
+            if (currentQuery) {
+                currentPage = 1;
+                performSearch(currentQuery);
             }
-            searchManager.performSearch();
         }
 
-        function searchFor(query) {
-            document.getElementById('searchInput').value = query;
-            searchManager.performSearch(query);
+        function clearFilters() {
+            document.getElementById('typeFilter').value = 'multi';
+            document.getElementById('genreFilter').value = '';
+            document.getElementById('yearFilter').value = '';
+            document.getElementById('sortBy').value = 'relevance';
+            
+            if (currentQuery) {
+                currentPage = 1;
+                performSearch(currentQuery);
+            }
         }
 
-        // Initialize search manager
-        let searchManager;
-        document.addEventListener('DOMContentLoaded', () => {
-            searchManager = new SearchManager();
-        });
+        function searchSuggestion(query) {
+            document.getElementById('searchQuery').value = query;
+            currentPage = 1;
+            performSearch(query);
+            updateURL(query);
+        }
+
+        function updateURL(query) {
+            const url = new URL(window.location);
+            url.searchParams.set('q', query);
+            window.history.replaceState({}, '', url);
+        }
+
+        // Export functions
+        window.changePage = changePage;
+        window.searchSuggestion = searchSuggestion;
+        window.applyFilters = applyFilters;
+        window.clearFilters = clearFilters;
     </script>
 </body>
 </html>

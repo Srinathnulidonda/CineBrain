@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Critics' Choice - CineScope</title>
+    <meta name="description" content="Critically acclaimed movies, TV shows, and anime handpicked by experts.">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <div data-include="header"></div>
+
+    <main style="padding-top: 80px;">
+        <!-- Page Hero -->
+        <section class="page-hero">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="/">Home</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>Critics' Choice</span>
+                </div>
+                <h1 class="page-title">🏆 Critics' Choice</h1>
+                <p class="page-description">Award-winning and critically acclaimed content</p>
+            </div>
+        </section>
+
+        <div class="container">
+            <!-- Featured Critics Pick -->
+            <div class="featured-pick" id="featuredPick">
+                <!-- Featured content will be loaded here -->
+            </div>
+
+            <!-- Critics Sections -->
+            <section class="content-row">
+                <div class="row-header">
+                    <h2 class="row-title">🎬 Award-Winning Movies</h2>
+                </div>
+                <div class="content-carousel" id="criticsMovies">
+                    <!-- Critics choice movies will be loaded here -->
+                </div>
+            </section>
+
+            <section class="content-row">
+                <div class="row-header">
+                    <h2 class="row-title">📺 Acclaimed TV Shows</h2>
+                </div>
+                <div class="content-carousel" id="criticsTVShows">
+                    <!-- Critics choice TV shows will be loaded here -->
+                </div>
+            </section>
+
+            <section class="content-row">
+                <div class="row-header">
+                    <h2 class="row-title">👑 Admin's Picks</h2>
+                </div>
+                <div class="content-carousel" id="adminPicks">
+                    <!-- Admin recommendations will be loaded here -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <div data-include="footer"></div>
+
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCriticsChoice();
+        });
+
+        async function loadCriticsChoice() {
+            try {
+                // Load critics choice movies
+                const moviesResponse = await ApiService.getCriticsChoice('movie', 15);
+                if (moviesResponse.success) {
+                    renderContentCarousel(document.getElementById('criticsMovies'), moviesResponse.data.recommendations);
+                    
+                    // Set featured pick as first movie
+                    if (moviesResponse.data.recommendations.length > 0) {
+                        renderFeaturedPick(moviesResponse.data.recommendations[0]);
+                    }
+                }
+
+                // Load critics choice TV shows
+                const tvResponse = await ApiService.getCriticsChoice('tv', 15);
+                if (tvResponse.success) {
+                    renderContentCarousel(document.getElementById('criticsTVShows'), tvResponse.data.recommendations);
+                }
+
+                // Load admin picks
+                const adminResponse = await ApiService.getAdminChoice(15);
+                if (adminResponse.success) {
+                    renderContentCarousel(document.getElementById('adminPicks'), adminResponse.data.recommendations);
+                }
+            } catch (error) {
+                console.error('Error loading critics choice:', error);
+            }
+        }
+
+        function renderFeaturedPick(content) {
+            const container = document.getElementById('featuredPick');
+            
+            container.innerHTML = `
+                <div class="featured-content">
+                    <div class="featured-backdrop">
+                        <img src="${content.backdrop_path || content.poster_path}" alt="${content.title}" class="backdrop-image">
+                    </div>
+                    <div class="featured-info">
+                        <div class="featured-badge">🏆 Critics' Choice</div>
+                        <h2 class="featured-title">${content.title}</h2>
+                        <div class="featured-meta">
+                            <span class="content-type">${content.content_type.toUpperCase()}</span>
+                            <span class="rating">⭐ ${content.rating || 'N/A'}</span>
+                            <span class="critics-score">🏆 ${content.critics_score || content.rating || 'N/A'}/10</span>
+                        </div>
+                        <p class="featured-overview">${(content.overview || '').substring(0, 200)}...</p>
+                        <div class="featured-actions">
+                            <button class="btn btn-primary" onclick="viewDetails(${content.id})">
+                                <i class="fas fa-play"></i> View Details
+                            </button>
+                            ${isAuthenticated() ? `
+                                <button class="btn btn-outline" onclick="addToWatchlist(${content.id})">
+                                    <i class="fas fa-bookmark"></i> Add to Watchlist
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+
+    <style>
+        .featured-pick {
+            margin-bottom: 3rem;
+        }
+        
+        .featured-content {
+            position: relative;
+            height: 60vh;
+            min-height: 400px;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+        }
+        
+        .featured-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .backdrop-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.4;
+        }
+        
+        .featured-backdrop::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(transparent 0%, rgba(10, 10, 10, 0.8) 70%, rgba(10, 10, 10, 1) 100%);
+        }
+        
+        .featured-info {
+            position: relative;
+            z-index: 1;
+            padding: 2rem;
+            max-width: 600px;
+        }
+        
+        .featured-badge {
+            background: var(--gradient-blue);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+        
+        .featured-title {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        
+        .featured-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .featured-meta span {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.875rem;
+        }
+        
+        .critics-score {
+            background: var(--gradient-purple) !important;
+            color: white !important;
+        }
+        
+        .featured-overview {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            color: var(--text-secondary);
+        }
+        
+        .featured-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        @media (max-width: 768px) {
+            .featured-content {
+                height: 50vh;
+                align-items: center;
+                text-align: center;
+            }
+            
+            .featured-info {
+                padding: 1rem;
+            }
+            
+            .featured-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+</body>
+</html>

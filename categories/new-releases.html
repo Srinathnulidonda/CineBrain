@@ -1,164 +1,239 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
-    <title>New Releases | CineScope</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Releases - CineScope</title>
+    <meta name="description" content="Latest movies, TV shows, and anime releases on CineScope.">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <!-- Header -->
     <div data-include="header"></div>
-    
-    <main class="container py-8 pt-24">
-        <section class="category-header mb-8">
-            <h1 class="text-4xl font-bold mb-4">
-                <i class="fas fa-clock text-green-500 mr-3"></i>
-                New <span class="text-gradient">Releases</span>
-            </h1>
-            <p class="text-gray-400 text-lg">Fresh content released in the last 60 days</p>
+
+    <main style="padding-top: 80px;">
+        <!-- Page Hero -->
+        <section class="page-hero">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="/">Home</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>New Releases</span>
+                </div>
+                <h1 class="page-title">🆕 New Releases</h1>
+                <p class="page-description">Fresh content added in the last 60 days</p>
+            </div>
         </section>
 
-        <div class="category-filters mb-8">
-            <div class="flex flex-wrap gap-4">
-                <select id="contentType" class="filter-select" onchange="loadNewReleases()">
-                    <option value="movie">Movies</option>
-                    <option value="tv">TV Shows</option>
-                </select>
-                <select id="language" class="filter-select" onchange="loadNewReleases()">
-                    <option value="">All Languages</option>
-                    <option value="english">English</option>
-                    <option value="hindi">Hindi</option>
-                    <option value="telugu">Telugu</option>
-                    <option value="tamil">Tamil</option>
-                    <option value="kannada">Kannada</option>
-                    <option value="malayalam">Malayalam</option>
-                </select>
-                <select id="sortBy" class="filter-select" onchange="loadNewReleases()">
-                    <option value="release_date">Release Date</option>
-                    <option value="rating">Rating</option>
-                    <option value="popularity">Popularity</option>
-                </select>
+        <div class="container">
+            <!-- Release Calendar -->
+            <div class="release-calendar">
+                <div class="calendar-header">
+                    <h2>Release Calendar</h2>
+                    <div class="calendar-controls">
+                        <button class="calendar-btn" data-period="today">Today</button>
+                        <button class="calendar-btn active" data-period="week">This Week</button>
+                        <button class="calendar-btn" data-period="month">This Month</button>
+                    </div>
+                </div>
+                <div class="calendar-content" id="releaseCalendar">
+                    <!-- Calendar will be populated here -->
+                </div>
             </div>
-        </div>
 
-        <div id="newReleasesContent">
-            <div class="loading"><div class="spinner"></div></div>
-        </div>
+            <!-- Content Sections -->
+            <div class="releases-sections">
+                <section class="content-row">
+                    <div class="row-header">
+                        <h2 class="row-title">🎬 New Movies</h2>
+                        <a href="/categories/movies" class="view-all-btn">View All</a>
+                    </div>
+                    <div class="content-carousel" id="newMovies">
+                        <!-- New movies will be loaded here -->
+                    </div>
+                </section>
 
-        <div id="loadMoreContainer" class="text-center mt-8 hidden">
-            <button id="loadMoreBtn" class="btn btn-secondary" onclick="loadMoreContent()">
-                Load More Content
-            </button>
+                <section class="content-row">
+                    <div class="row-header">
+                        <h2 class="row-title">📺 New TV Shows</h2>
+                        <a href="/categories/tv-shows" class="view-all-btn">View All</a>
+                    </div>
+                    <div class="content-carousel" id="newTVShows">
+                        <!-- New TV shows will be loaded here -->
+                    </div>
+                </section>
+
+                <section class="content-row">
+                    <div class="row-header">
+                        <h2 class="row-title">🎌 New Anime</h2>
+                        <a href="/categories/anime" class="view-all-btn">View All</a>
+                    </div>
+                    <div class="content-carousel" id="newAnime">
+                        <!-- New anime will be loaded here -->
+                    </div>
+                </section>
+            </div>
         </div>
     </main>
 
+    <!-- Footer -->
     <div data-include="footer"></div>
 
-    <script src="/js/auth.js"></script>
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
+
     <script>
-        let currentPage = 1;
-        let allContent = [];
+        document.addEventListener('DOMContentLoaded', function() {
+            loadNewReleases();
+            setupCalendarControls();
+        });
 
-        async function loadNewReleases(reset = true) {
-            const container = document.getElementById('newReleasesContent');
-            const contentType = document.getElementById('contentType').value;
-            const language = document.getElementById('language').value;
-            
-            if (reset) {
-                currentPage = 1;
-                allContent = [];
-                container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-            }
-            
-            try {
-                const response = await APIService.getNewReleases(language, contentType, 20);
-                const content = response.recommendations || [];
-                
-                if (reset) {
-                    allContent = content;
-                } else {
-                    allContent = [...allContent, ...content];
-                }
+        async function loadNewReleases() {
+            const sections = [
+                { id: 'newMovies', type: 'movie' },
+                { id: 'newTVShows', type: 'tv' },
+                { id: 'newAnime', type: 'anime' }
+            ];
 
-                sortContent();
-                displayContent();
-            } catch (error) {
-                container.innerHTML = '<p class="text-center text-red-400 py-8">Failed to load new releases</p>';
-            }
-        }
-
-        function sortContent() {
-            const sortBy = document.getElementById('sortBy').value;
-            
-            allContent.sort((a, b) => {
-                switch (sortBy) {
-                    case 'rating':
-                        return (b.rating || 0) - (a.rating || 0);
-                    case 'popularity':
-                        return (b.popularity || 0) - (a.popularity || 0);
-                    case 'release_date':
-                    default:
-                        const dateA = a.release_date ? new Date(a.release_date) : new Date(0);
-                        const dateB = b.release_date ? new Date(b.release_date) : new Date(0);
-                        return dateB - dateA;
-                }
-            });
-        }
-
-        function displayContent() {
-            const container = document.getElementById('newReleasesContent');
-            
-            if (allContent.length > 0) {
-                const contentHTML = allContent.map(item => {
-                    const releaseDate = item.release_date ? new Date(item.release_date).toLocaleDateString() : 'Unknown';
-                    const isNew = item.release_date && new Date(item.release_date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            for (const section of sections) {
+                const container = document.getElementById(section.id);
+                try {
+                    showLoadingSkeleton(container);
                     
-                    return `
-                        <div class="content-card cursor-pointer" onclick="window.location.href='/details?id=${item.id}'">
-                            <div class="content-card-image">
-                                <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" alt="${item.title}" loading="lazy">
-                                ${isNew ? '<div class="absolute top-2 left-2"><span class="badge badge-new">NEW</span></div>' : ''}
-                                <div class="content-card-overlay"></div>
-                                <div class="content-card-actions">
-                                    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); ContentManager.addToWatchlist(${item.id})">
-                                        <i class="fas fa-bookmark"></i>
-                                    </button>
-                                    <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); ContentManager.addToFavorites(${item.id})">
-                                        <i class="fas fa-heart"></i>
-                                    </button>
-                                    ${item.youtube_trailer ? `
-                                        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); ContentManager.playTrailer('${item.youtube_trailer}')">
-                                            <i class="fas fa-play"></i>
-                                        </button>
-                                    ` : ''}
-                                </div>
-                            </div>
-                            <div class="content-card-info">
-                                <div class="content-card-title">${item.title}</div>
-                                <div class="content-card-meta">
-                                    <span class="rating">
-                                        <i class="fas fa-star"></i> ${item.rating ? item.rating.toFixed(1) : 'N/A'}
-                                    </span>
-                                    <span class="badge">${item.content_type.toUpperCase()}</span>
-                                </div>
-                                <div class="text-xs text-gray-400 mt-2">Released: ${releaseDate}</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-                
-                container.innerHTML = `<div class="content-grid">${contentHTML}</div>`;
-            } else {
-                container.innerHTML = '<p class="text-center text-gray-400 py-8">No new releases found</p>';
+                    let response;
+                    if (section.type === 'anime') {
+                        response = await ApiService.getAnimeRecommendations(null, 15);
+                    } else {
+                        response = await ApiService.getNewReleases(null, section.type, 15);
+                    }
+                    
+                    if (response.success && response.data.recommendations) {
+                        renderContentCarousel(container, response.data.recommendations);
+                    } else {
+                        showErrorMessage(container, `No new ${section.type} releases`);
+                    }
+                } catch (error) {
+                    console.error(`Error loading new ${section.type}:`, error);
+                    showErrorMessage(container, 'Failed to load content');
+                }
             }
         }
 
-        async function loadMoreContent() {
-            currentPage++;
-            await loadNewReleases(false);
+        function setupCalendarControls() {
+            const calendarBtns = document.querySelectorAll('.calendar-btn');
+            
+            calendarBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    calendarBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const period = btn.getAttribute('data-period');
+                    loadCalendarData(period);
+                });
+            });
+            
+            // Load initial calendar data
+            loadCalendarData('week');
         }
 
-        document.addEventListener('DOMContentLoaded', loadNewReleases);
+        function loadCalendarData(period) {
+            const calendar = document.getElementById('releaseCalendar');
+            
+            // Mock calendar data
+            const releases = [
+                { title: 'Spider-Man: No Way Home', date: 'Today', type: 'movie' },
+                { title: 'The Witcher S3', date: 'Tomorrow', type: 'tv' },
+                { title: 'Attack on Titan Final', date: 'Friday', type: 'anime' },
+                { title: 'Stranger Things S5', date: 'Next Week', type: 'tv' }
+            ];
+            
+            calendar.innerHTML = releases.map(release => `
+                <div class="calendar-item">
+                    <div class="release-date">${release.date}</div>
+                    <div class="release-info">
+                        <h4>${release.title}</h4>
+                        <span class="release-type">${release.type.toUpperCase()}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
     </script>
+
+    <style>
+        .release-calendar {
+            background: var(--dark-surface);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 3rem;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .calendar-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .calendar-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+        
+        .calendar-btn.active,
+        .calendar-btn:hover {
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
+        
+        .calendar-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .calendar-item {
+            background: var(--dark-surface-2);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--primary-blue);
+        }
+        
+        .release-date {
+            font-size: 0.875rem;
+            color: var(--primary-blue);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .release-type {
+            background: var(--gradient-purple);
+            color: white;
+            padding: 0.125rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+        
+        .releases-sections {
+            margin-top: 2rem;
+        }
+    </style>
 </body>
 </html>

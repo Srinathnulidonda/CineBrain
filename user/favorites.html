@@ -1,355 +1,517 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
-    <title>My Favorites | CineScope</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Favorites - CineScope</title>
+    <meta name="description" content="Your favorite movies, TV shows, and anime on CineScope.">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <!-- Header -->
     <div data-include="header"></div>
-    
-    <main class="container py-8 pt-24">
-        <section class="page-header mb-8">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-4xl font-bold mb-4">
-                        <i class="fas fa-heart text-red-500 mr-3"></i>
-                        My <span class="text-gradient">Favorites</span>
-                    </h1>
-                    <p class="text-gray-400 text-lg">Your most loved movies, shows, and anime</p>
+
+    <main style="padding-top: 80px;">
+        <!-- Page Hero -->
+        <section class="page-hero">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="/">Home</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>Favorites</span>
                 </div>
-                <div class="favorites-stats">
-                    <div class="stat-item">
-                        <span class="stat-number" id="totalFavorites">0</span>
-                        <span class="stat-label">Favorites</span>
-                    </div>
-                </div>
+                <h1 class="page-title">❤️ My Favorites</h1>
+                <p class="page-description" id="favoritesDescription">Your most loved content</p>
             </div>
         </section>
 
-        <div class="favorites-filters mb-8">
-            <div class="flex flex-wrap gap-4">
-                <select id="contentTypeFilter" class="filter-select" onchange="filterFavorites()">
-                    <option value="all">All Content</option>
-                    <option value="movie">Movies</option>
-                    <option value="tv">TV Shows</option>
-                    <option value="anime">Anime</option>
-                </select>
-                <select id="sortBy" class="filter-select" onchange="sortFavorites()">
-                    <option value="added_date">Recently Added</option>
-                    <option value="title">Title A-Z</option>
-                    <option value="rating">Rating</option>
-                    <option value="release_date">Release Date</option>
-                </select>
-                <select id="viewMode" class="filter-select" onchange="changeViewMode()">
-                    <option value="grid">Grid View</option>
-                    <option value="list">List View</option>
-                </select>
+        <div class="container">
+            <!-- Favorites Stats -->
+            <div class="favorites-stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalFavorites">0</div>
+                    <div class="stat-label">Total Favorites</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgRating">0</div>
+                    <div class="stat-label">Avg Rating</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="topGenre">-</div>
+                    <div class="stat-label">Top Genre</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="recentCount">0</div>
+                    <div class="stat-label">This Month</div>
+                </div>
             </div>
-        </div>
 
-        <div id="favoritesContent">
-            <div class="loading"><div class="spinner"></div></div>
-        </div>
+            <!-- Filters and Actions -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label for="typeFilter">Type:</label>
+                    <select id="typeFilter" class="filter-select">
+                        <option value="">All</option>
+                        <option value="movie">Movies</option>
+                        <option value="tv">TV Shows</option>
+                        <option value="anime">Anime</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="genreFilter">Genre:</label>
+                    <select id="genreFilter" class="filter-select">
+                        <option value="">All Genres</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="sortFilter">Sort by:</label>
+                    <select id="sortFilter" class="filter-select">
+                        <option value="recent">Recently Added</option>
+                        <option value="title">Title</option>
+                        <option value="rating">Rating</option>
+                        <option value="year">Year</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
+                <button class="btn btn-outline" onclick="exportFavorites()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
 
-        <div id="emptyFavorites" class="empty-state hidden">
-            <div class="text-center py-20">
-                <i class="fas fa-heart text-6xl text-gray-500 mb-6"></i>
-                <h2 class="text-2xl font-bold mb-4">No favorites yet</h2>
-                <p class="text-gray-400 mb-8">Start marking content as favorite to see them here</p>
-                <a href="/categories/trending" class="btn btn-primary">
-                    <i class="fas fa-plus mr-2"></i>
-                    Discover Content
-                </a>
+            <!-- View Toggle -->
+            <div class="view-toggle">
+                <button class="view-btn active" data-view="grid" onclick="toggleView('grid')">
+                    <i class="fas fa-th"></i> Grid
+                </button>
+                <button class="view-btn" data-view="list" onclick="toggleView('list')">
+                    <i class="fas fa-list"></i> List
+                </button>
+            </div>
+
+            <!-- Favorites Content -->
+            <div class="content-grid" id="favoritesContent">
+                <!-- Content will be loaded here -->
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <h2>No favorites yet</h2>
+                <p>Start adding content to your favorites to see them here</p>
+                <a href="/" class="btn btn-primary">Discover Content</a>
             </div>
         </div>
     </main>
 
+    <!-- Footer -->
     <div data-include="footer"></div>
 
-    <script src="/js/auth.js"></script>
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
+
     <script>
-        let favoritesItems = [];
-        let filteredFavorites = [];
-        let currentViewMode = 'grid';
+        let favoritesData = [];
+        let currentView = 'grid';
 
-        class FavoritesManager {
-            constructor() {
-                this.init();
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!requireAuth()) return;
+            
+            loadFavorites();
+        });
 
-            async init() {
-                if (!AuthManager.requireAuth()) return;
-                await this.loadFavorites();
-            }
-
-            async loadFavorites() {
-                const container = document.getElementById('favoritesContent');
-                const emptyState = document.getElementById('emptyFavorites');
+        async function loadFavorites() {
+            const container = document.getElementById('favoritesContent');
+            const emptyState = document.getElementById('emptyState');
+            
+            try {
+                showLoadingSkeleton(container);
                 
-                try {
-                    const response = await APIService.getFavorites();
-                    favoritesItems = response.favorites || [];
-                    filteredFavorites = [...favoritesItems];
+                const response = await ApiService.getFavorites();
+                
+                if (response.success && response.data.favorites) {
+                    favoritesData = response.data.favorites;
                     
-                    if (favoritesItems.length > 0) {
-                        this.displayFavorites();
-                        container.classList.remove('hidden');
-                        emptyState.classList.add('hidden');
+                    if (favoritesData.length > 0) {
+                        updateFavoritesStats();
+                        populateGenreFilter();
+                        renderFavorites(favoritesData);
+                        container.style.display = currentView === 'grid' ? 'grid' : 'block';
+                        emptyState.style.display = 'none';
                     } else {
-                        container.classList.add('hidden');
-                        emptyState.classList.remove('hidden');
+                        container.style.display = 'none';
+                        emptyState.style.display = 'block';
                     }
-                    
-                    this.updateStats();
-                } catch (error) {
-                    console.error('Error loading favorites:', error);
-                    container.innerHTML = '<p class="text-center text-red-400 py-8">Failed to load favorites</p>';
-                }
-            }
-
-            displayFavorites() {
-                const container = document.getElementById('favoritesContent');
-                
-                if (currentViewMode === 'grid') {
-                    this.displayGridView(container);
                 } else {
-                    this.displayListView(container);
+                    container.style.display = 'none';
+                    emptyState.style.display = 'block';
                 }
-            }
-
-            displayGridView(container) {
-                const favoritesHTML = filteredFavorites.map(item => `
-                    <div class="content-card cursor-pointer" onclick="window.location.href='/details?id=${item.id}'">
-                        <div class="content-card-image">
-                            <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" alt="${item.title}" loading="lazy">
-                            <div class="absolute top-2 right-2">
-                                <button class="favorite-heart active" onclick="event.stopPropagation(); removeFromFavorites(${item.id})">
-                                    <i class="fas fa-heart"></i>
-                                </button>
-                            </div>
-                            <div class="content-card-overlay"></div>
-                            <div class="content-card-actions">
-                                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); ContentManager.addToWatchlist(${item.id})">
-                                    <i class="fas fa-bookmark"></i>
-                                </button>
-                                ${item.youtube_trailer ? `
-                                    <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); ContentManager.playTrailer('${item.youtube_trailer}')">
-                                        <i class="fas fa-play"></i>
-                                    </button>
-                                ` : ''}
-                            </div>
-                        </div>
-                        <div class="content-card-info">
-                            <div class="content-card-title">${item.title}</div>
-                            <div class="content-card-meta">
-                                <span class="rating">
-                                    <i class="fas fa-star"></i> ${item.rating ? item.rating.toFixed(1) : 'N/A'}
-                                </span>
-                                <span class="badge">${item.content_type.toUpperCase()}</span>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-                
-                container.innerHTML = `<div class="content-grid">${favoritesHTML}</div>`;
-            }
-
-            displayListView(container) {
-                const favoritesHTML = filteredFavorites.map(item => `
-                    <div class="favorites-list-item">
-                        <div class="favorites-poster" onclick="window.location.href='/details?id=${item.id}'">
-                            <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" alt="${item.title}">
-                        </div>
-                        <div class="favorites-info">
-                            <h3 class="favorites-title" onclick="window.location.href='/details?id=${item.id}'">${item.title}</h3>
-                            <div class="favorites-meta">
-                                <span class="rating">
-                                    <i class="fas fa-star"></i> ${item.rating ? item.rating.toFixed(1) : 'N/A'}
-                                </span>
-                                <span class="content-type">${item.content_type.toUpperCase()}</span>
-                                ${item.release_date ? `<span class="year">${new Date(item.release_date).getFullYear()}</span>` : ''}
-                            </div>
-                            <p class="favorites-overview">${item.overview ? item.overview.substring(0, 200) + '...' : 'No description available'}</p>
-                        </div>
-                        <div class="favorites-actions">
-                            <button class="btn btn-ghost btn-sm" onclick="removeFromFavorites(${item.id})">
-                                <i class="fas fa-heart-broken mr-2"></i>
-                                Remove
-                            </button>
-                            <button class="btn btn-secondary btn-sm" onclick="ContentManager.addToWatchlist(${item.id})">
-                                <i class="fas fa-bookmark mr-2"></i>
-                                Watchlist
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-                
-                container.innerHTML = `<div class="favorites-list">${favoritesHTML}</div>`;
-            }
-
-            updateStats() {
-                document.getElementById('totalFavorites').textContent = favoritesItems.length;
+            } catch (error) {
+                console.error('Error loading favorites:', error);
+                showErrorMessage(container, 'Failed to load favorites');
             }
         }
 
-        function filterFavorites() {
-            const contentType = document.getElementById('contentTypeFilter').value;
+        function updateFavoritesStats() {
+            const total = favoritesData.length;
+            const ratings = favoritesData.filter(item => item.rating).map(item => item.rating);
+            const avgRating = ratings.length > 0 ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : 0;
             
-            if (contentType === 'all') {
-                filteredFavorites = [...favoritesItems];
-            } else {
-                filteredFavorites = favoritesItems.filter(item => item.content_type === contentType);
-            }
+            // Get top genre
+            const genreCounts = {};
+            favoritesData.forEach(item => {
+                if (item.genres) {
+                    item.genres.forEach(genre => {
+                        genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+                    });
+                }
+            });
+            const topGenre = Object.keys(genreCounts).reduce((a, b) => genreCounts[a] > genreCounts[b] ? a : b, '-');
             
-            if (filteredFavorites.length > 0) {
-                favoritesManager.displayFavorites();
+            // Count recent (last 30 days)
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const recentCount = favoritesData.filter(item => {
+                // This would be based on when it was added to favorites
+                // For demo, we'll use a random subset
+                return Math.random() > 0.7;
+            }).length;
+            
+            document.getElementById('totalFavorites').textContent = total;
+            document.getElementById('avgRating').textContent = avgRating;
+            document.getElementById('topGenre').textContent = topGenre;
+            document.getElementById('recentCount').textContent = recentCount;
+            
+            document.getElementById('favoritesDescription').textContent = 
+                `${total} favorite${total !== 1 ? 's' : ''} in your collection`;
+        }
+
+        function populateGenreFilter() {
+            const genreFilter = document.getElementById('genreFilter');
+            const genres = new Set();
+            
+            favoritesData.forEach(item => {
+                if (item.genres) {
+                    item.genres.forEach(genre => genres.add(genre));
+                }
+            });
+            
+            // Clear existing options except "All Genres"
+            genreFilter.innerHTML = '<option value="">All Genres</option>';
+            
+            // Add genre options
+            Array.from(genres).sort().forEach(genre => {
+                const option = document.createElement('option');
+                option.value = genre.toLowerCase();
+                option.textContent = genre;
+                genreFilter.appendChild(option);
+            });
+        }
+
+        function renderFavorites(data) {
+            const container = document.getElementById('favoritesContent');
+            
+            if (currentView === 'grid') {
+                container.className = 'content-grid';
+                container.innerHTML = data.map(item => createFavoriteCard(item)).join('');
             } else {
-                document.getElementById('favoritesContent').innerHTML = '<p class="text-center text-gray-400 py-8">No favorites found with current filter</p>';
+                container.className = 'favorites-list';
+                container.innerHTML = data.map(item => createFavoriteListItem(item)).join('');
             }
         }
 
-        function sortFavorites() {
-            const sortBy = document.getElementById('sortBy').value;
+        function createFavoriteCard(item) {
+            return `
+                <div class="favorite-card" data-id="${item.id}">
+                    <div class="card-image">
+                        <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
+                             alt="${item.title}" class="content-poster">
+                        <div class="card-overlay">
+                            <button class="action-btn" onclick="viewDetails(${item.id})" title="View Details">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button class="action-btn remove-btn" onclick="removeFromFavorites(${item.id})" title="Remove">
+                                <i class="fas fa-heart-broken"></i>
+                            </button>
+                        </div>
+                        <div class="favorite-badge">❤️</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="content-title">${item.title}</h3>
+                        <div class="content-meta">
+                            <span class="content-type">${item.content_type.toUpperCase()}</span>
+                            ${item.rating ? `<span class="rating">⭐ ${item.rating}</span>` : ''}
+                        </div>
+                        <div class="genres">
+                            ${item.genres ? item.genres.slice(0, 2).map(genre => `<span class="genre-tag">${genre}</span>`).join('') : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createFavoriteListItem(item) {
+            return `
+                <div class="favorite-list-item" data-id="${item.id}">
+                    <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
+                         alt="${item.title}" class="list-poster">
+                    <div class="list-content">
+                        <h3 class="list-title">${item.title}</h3>
+                        <div class="list-meta">
+                            <span class="content-type">${item.content_type.toUpperCase()}</span>
+                            ${item.rating ? `<span class="rating">⭐ ${item.rating}</span>` : ''}
+                            ${item.release_date ? `<span class="year">${new Date(item.release_date).getFullYear()}</span>` : ''}
+                        </div>
+                        <p class="list-overview">${(item.overview || '').substring(0, 200)}${item.overview && item.overview.length > 200 ? '...' : ''}</p>
+                        <div class="list-actions">
+                            <button class="btn btn-primary btn-sm" onclick="viewDetails(${item.id})">
+                                View Details
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="addToWatchlist(${item.id})">
+                                <i class="fas fa-bookmark"></i> Watchlist
+                            </button>
+                            <button class="btn btn-ghost btn-sm remove-btn" onclick="removeFromFavorites(${item.id})">
+                                <i class="fas fa-heart-broken"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function removeFromFavorites(contentId) {
+            if (!confirm('Remove this item from your favorites?')) return;
             
-            filteredFavorites.sort((a, b) => {
-                switch (sortBy) {
+            try {
+                const card = document.querySelector(`[data-id="${contentId}"]`);
+                if (card) {
+                    card.style.opacity = '0.5';
+                    card.style.pointerEvents = 'none';
+                }
+                
+                // Simulate API call
+                setTimeout(() => {
+                    favoritesData = favoritesData.filter(item => item.id !== contentId);
+                    updateFavoritesStats();
+                    populateGenreFilter();
+                    renderFavorites(favoritesData);
+                    showToast('Removed from favorites', 'success');
+                    
+                    if (favoritesData.length === 0) {
+                        document.getElementById('favoritesContent').style.display = 'none';
+                        document.getElementById('emptyState').style.display = 'block';
+                    }
+                }, 500);
+                
+            } catch (error) {
+                console.error('Error removing from favorites:', error);
+                showToast('Failed to remove from favorites', 'error');
+            }
+        }
+
+        function toggleView(view) {
+            currentView = view;
+            
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-view="${view}"]`).classList.add('active');
+            
+            renderFavorites(favoritesData);
+        }
+
+        function applyFilters() {
+            const typeFilter = document.getElementById('typeFilter').value;
+            const genreFilter = document.getElementById('genreFilter').value;
+            const sortFilter = document.getElementById('sortFilter').value;
+            
+            let filtered = [...favoritesData];
+            
+            // Apply type filter
+            if (typeFilter) {
+                filtered = filtered.filter(item => item.content_type === typeFilter);
+            }
+            
+            // Apply genre filter
+            if (genreFilter) {
+                filtered = filtered.filter(item => 
+                    item.genres && item.genres.some(genre => genre.toLowerCase().includes(genreFilter))
+                );
+            }
+            
+            // Apply sorting
+            filtered.sort((a, b) => {
+                switch (sortFilter) {
                     case 'title':
                         return a.title.localeCompare(b.title);
                     case 'rating':
                         return (b.rating || 0) - (a.rating || 0);
-                    case 'release_date':
-                        const dateA = a.release_date ? new Date(a.release_date) : new Date(0);
-                        const dateB = b.release_date ? new Date(b.release_date) : new Date(0);
-                        return dateB - dateA;
-                    default: // added_date
-                        return 0; // Would need timestamp from API
+                    case 'year':
+                        const yearA = a.release_date ? new Date(a.release_date).getFullYear() : 0;
+                        const yearB = b.release_date ? new Date(b.release_date).getFullYear() : 0;
+                        return yearB - yearA;
+                    default: // recent
+                        return 0;
                 }
             });
             
-            favoritesManager.displayFavorites();
+            renderFavorites(filtered);
         }
 
-        function changeViewMode() {
-            currentViewMode = document.getElementById('viewMode').value;
-            favoritesManager.displayFavorites();
+        function exportFavorites() {
+            const data = favoritesData.map(item => ({
+                title: item.title,
+                type: item.content_type,
+                rating: item.rating,
+                genres: item.genres ? item.genres.join(', ') : '',
+                year: item.release_date ? new Date(item.release_date).getFullYear() : ''
+            }));
+            
+            const csv = [
+                'Title,Type,Rating,Genres,Year',
+                ...data.map(item => `"${item.title}","${item.type}","${item.rating}","${item.genres}","${item.year}"`)
+            ].join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'my-favorites.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showToast('Favorites exported successfully!', 'success');
         }
-
-        async function removeFromFavorites(contentId) {
-            if (confirm('Remove this item from your favorites?')) {
-                try {
-                    // In a real app, this would make an API call to remove the item
-                    favoritesItems = favoritesItems.filter(item => item.id !== contentId);
-                    filteredFavorites = filteredFavorites.filter(item => item.id !== contentId);
-                    
-                    if (favoritesItems.length > 0) {
-                        favoritesManager.displayFavorites();
-                        favoritesManager.updateStats();
-                    } else {
-                        document.getElementById('favoritesContent').classList.add('hidden');
-                        document.getElementById('emptyFavorites').classList.remove('hidden');
-                    }
-                    
-                    ContentManager.showToast('Removed from favorites', 'success');
-                } catch (error) {
-                    ContentManager.showToast('Failed to remove from favorites', 'error');
-                }
-            }
-        }
-
-        let favoritesManager;
-        document.addEventListener('DOMContentLoaded', () => {
-            favoritesManager = new FavoritesManager();
-        });
     </script>
 
     <style>
-        .favorite-heart {
-            background: rgba(0, 0, 0, 0.7);
-            border: none;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
+        .favorites-stats {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #ef4444;
-            transition: all 0.3s ease;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
         }
-        .favorite-heart:hover {
-            background: rgba(0, 0, 0, 0.9);
-            transform: scale(1.1);
+        
+        .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            justify-content: flex-end;
         }
+        
+        .view-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+        
+        .view-btn.active,
+        .view-btn:hover {
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
+        
+        .favorite-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            font-size: 1.2rem;
+            z-index: 2;
+        }
+        
         .favorites-list {
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 1rem;
         }
-        .favorites-list-item {
-            display: flex;
-            gap: 20px;
+        
+        .favorite-list-item {
             background: var(--dark-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 20px;
-            transition: all 0.3s ease;
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            display: flex;
+            gap: 1rem;
+            transition: var(--transition-smooth);
         }
-        .favorites-list-item:hover {
-            border-color: rgba(239, 68, 68, 0.3);
+        
+        .favorite-list-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
         }
-        .favorites-poster {
-            flex-shrink: 0;
-            width: 100px;
-            height: 150px;
-            border-radius: 8px;
-            overflow: hidden;
-            cursor: pointer;
-        }
-        .favorites-poster img {
-            width: 100%;
-            height: 100%;
+        
+        .list-poster {
+            width: 80px;
+            height: 120px;
             object-fit: cover;
+            border-radius: 8px;
+            flex-shrink: 0;
         }
-        .favorites-info {
+        
+        .list-content {
             flex: 1;
             min-width: 0;
         }
-        .favorites-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: color 0.3s ease;
+        
+        .list-title {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
         }
-        .favorites-title:hover {
-            color: var(--primary);
-        }
-        .favorites-meta {
+        
+        .list-meta {
             display: flex;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 12px;
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-        .favorites-overview {
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
             color: var(--text-secondary);
-            line-height: 1.6;
+            flex-wrap: wrap;
         }
-        .favorites-actions {
+        
+        .list-overview {
+            color: var(--text-muted);
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+        
+        .list-actions {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: flex-end;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
-        @media (max-width: 640px) {
-            .favorites-list-item {
+        
+        .genre-tag {
+            background: var(--gradient-purple);
+            color: white;
+            padding: 0.125rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-right: 0.25rem;
+        }
+        
+        @media (max-width: 768px) {
+            .favorite-list-item {
                 flex-direction: column;
+                text-align: center;
             }
-            .favorites-actions {
-                flex-direction: row;
-                align-items: center;
+            
+            .list-poster {
+                width: 100px;
+                height: 150px;
+                margin: 0 auto;
+            }
+            
+            .list-actions {
+                justify-content: center;
             }
         }
     </style>

@@ -1,76 +1,138 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
-    <title>Popular Content | CineScope</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Popular Content - CineScope</title>
+    <meta name="description" content="Discover the most popular movies, TV shows, and anime on CineScope.">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <!-- Header -->
     <div data-include="header"></div>
-    
-    <main class="container py-8 pt-24">
-        <section class="category-header mb-8">
-            <h1 class="text-4xl font-bold mb-4">
-                <i class="fas fa-star text-yellow-500 mr-3"></i>
-                Popular <span class="text-gradient">Content</span>
-            </h1>
-            <p class="text-gray-400 text-lg">Most loved content by our community</p>
+
+    <main style="padding-top: 80px;">
+        <!-- Page Hero -->
+        <section class="page-hero">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="/">Home</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>Popular</span>
+                </div>
+                <h1 class="page-title">⭐ Popular Content</h1>
+                <p class="page-description">The most loved content by our community</p>
+            </div>
         </section>
 
-        <div class="category-filters mb-8">
-            <div class="flex flex-wrap gap-4">
-                <select id="contentType" class="filter-select" onchange="loadPopularContent()">
-                    <option value="movie">Movies</option>
-                    <option value="tv">TV Shows</option>
-                </select>
-                <select id="genre" class="filter-select" onchange="loadPopularContent()">
-                    <option value="">All Genres</option>
-                    <option value="action">Action</option>
-                    <option value="comedy">Comedy</option>
-                    <option value="drama">Drama</option>
-                    <option value="horror">Horror</option>
-                    <option value="romance">Romance</option>
-                    <option value="sci-fi">Sci-Fi</option>
-                    <option value="thriller">Thriller</option>
-                </select>
+        <div class="container">
+            <!-- Content Tabs -->
+            <div class="tabs">
+                <ul class="tab-list">
+                    <li><button class="tab-button active" data-type="all">All Content</button></li>
+                    <li><button class="tab-button" data-type="movie">Movies</button></li>
+                    <li><button class="tab-button" data-type="tv">TV Shows</button></li>
+                    <li><button class="tab-button" data-type="anime">Anime</button></li>
+                </ul>
             </div>
-        </div>
 
-        <div id="popularContent">
-            <div class="loading"><div class="spinner"></div></div>
+            <!-- Filters -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label for="timeFrame">Time Frame:</label>
+                    <select id="timeFrame" class="filter-select">
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="year">This Year</option>
+                        <option value="all">All Time</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="region">Region:</label>
+                    <select id="region" class="filter-select">
+                        <option value="">Global</option>
+                        <option value="US">United States</option>
+                        <option value="IN">India</option>
+                        <option value="JP">Japan</option>
+                        <option value="KR">South Korea</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="content-grid" id="popularContent">
+                <!-- Content will be loaded here -->
+            </div>
         </div>
     </main>
 
+    <!-- Footer -->
     <div data-include="footer"></div>
 
-    <script src="/js/auth.js"></script>
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
+
     <script>
+        let currentType = 'all';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupTabSwitching();
+            loadPopularContent();
+        });
+
+        function setupTabSwitching() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const type = button.getAttribute('data-type');
+                    currentType = type;
+                    
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    loadPopularContent();
+                });
+            });
+        }
+
         async function loadPopularContent() {
             const container = document.getElementById('popularContent');
-            const contentType = document.getElementById('contentType').value;
-            const genre = document.getElementById('genre').value;
-            
-            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
             
             try {
+                showLoadingSkeleton(container);
+                
+                // Load popular content based on type
                 let response;
-                if (genre) {
-                    response = await APIService.getGenreRecommendations(genre, contentType, 50);
+                if (currentType === 'all') {
+                    response = await ApiService.getTrending('all', 40);
                 } else {
-                    response = await APIService.getTrending(contentType, 50);
+                    response = await ApiService.getTrending(currentType, 40);
                 }
                 
-                const content = response.recommendations || [];
-                container.innerHTML = content.length > 0 ? 
-                    `<div class="content-grid">${content.map(item => app.createContentCard(item)).join('')}</div>` :
-                    '<p class="text-center text-gray-400 py-8">No popular content found</p>';
+                if (response.success && response.data.recommendations) {
+                    renderContentGrid(container, response.data.recommendations);
+                } else {
+                    showErrorMessage(container, 'Failed to load popular content');
+                }
             } catch (error) {
-                container.innerHTML = '<p class="text-center text-red-400 py-8">Failed to load popular content</p>';
+                console.error('Error loading popular content:', error);
+                showErrorMessage(container, 'Failed to load popular content');
             }
         }
 
-        document.addEventListener('DOMContentLoaded', loadPopularContent);
+        function applyFilters() {
+            loadPopularContent();
+        }
     </script>
 </body>
 </html>

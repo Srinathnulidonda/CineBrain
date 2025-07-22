@@ -1,64 +1,263 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
-    <title>Trending Now | CineScope</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trending Now - CineScope</title>
+    <meta name="description" content="Discover what's trending now on CineScope - the hottest movies, TV shows, and anime.">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <!-- Header -->
     <div data-include="header"></div>
-    
-    <main class="container py-8 pt-24">
-        <section class="category-header mb-8">
-            <h1 class="text-4xl font-bold mb-4">
-                <i class="fas fa-fire text-red-500 mr-3"></i>
-                Trending <span class="text-gradient">Now</span>
-            </h1>
-            <p class="text-gray-400 text-lg">Discover what's hot and popular right now</p>
+
+    <main style="padding-top: 80px;">
+        <!-- Page Hero -->
+        <section class="page-hero">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="/">Home</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>Trending</span>
+                </div>
+                <h1 class="page-title">🔥 Trending Now</h1>
+                <p class="page-description">Discover what's hot and trending across movies, TV shows, and anime</p>
+            </div>
         </section>
 
-        <div class="category-filters mb-8">
-            <div class="flex flex-wrap gap-4">
-                <select id="contentType" class="filter-select" onchange="loadTrendingContent()">
-                    <option value="all">All Content</option>
-                    <option value="movie">Movies</option>
-                    <option value="tv">TV Shows</option>
-                </select>
-                <select id="timeWindow" class="filter-select" onchange="loadTrendingContent()">
-                    <option value="day">Today</option>
-                    <option value="week">This Week</option>
-                </select>
+        <div class="container">
+            <!-- Filters -->
+            <div class="filter-bar" id="categoryFilters">
+                <div class="filter-group">
+                    <label for="timeFilter">Time Period:</label>
+                    <select id="timeFilter" class="filter-select">
+                        <option value="day">Today</option>
+                        <option value="week" selected>This Week</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="typeFilter">Content Type:</label>
+                    <select id="typeFilter" class="filter-select">
+                        <option value="all">All Content</option>
+                        <option value="movie">Movies</option>
+                        <option value="tv">TV Shows</option>
+                        <option value="anime">Anime</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="genreFilter">Genre:</label>
+                    <select id="genreFilter" class="filter-select">
+                        <option value="">All Genres</option>
+                        <option value="action">Action</option>
+                        <option value="comedy">Comedy</option>
+                        <option value="drama">Drama</option>
+                        <option value="horror">Horror</option>
+                        <option value="romance">Romance</option>
+                        <option value="thriller">Thriller</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
             </div>
-        </div>
 
-        <div id="trendingContent">
-            <div class="loading"><div class="spinner"></div></div>
+            <!-- Content Grid -->
+            <div class="content-grid" id="trendingContent" data-infinite="true" data-api-endpoint="/api/recommendations/trending">
+                <!-- Content will be loaded here -->
+            </div>
+
+            <!-- Load More Button -->
+            <div class="text-center" style="margin-top: 3rem;">
+                <button class="btn btn-outline" id="loadMoreBtn" onclick="loadMoreContent()">
+                    <i class="fas fa-plus"></i> Load More
+                </button>
+            </div>
         </div>
     </main>
 
+    <!-- Footer -->
     <div data-include="footer"></div>
 
-    <script src="/js/auth.js"></script>
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
+
     <script>
-        async function loadTrendingContent() {
-            const container = document.getElementById('trendingContent');
-            const contentType = document.getElementById('contentType').value;
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMoreContent = true;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTrendingContent();
+            setupRealTimeUpdates();
+        });
+
+        async function loadTrendingContent(page = 1, append = false) {
+            if (isLoading) return;
             
-            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            isLoading = true;
+            const container = document.getElementById('trendingContent');
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
             
             try {
-                const response = await APIService.getTrending(contentType, 50);
-                const content = response.recommendations || [];
-                container.innerHTML = content.length > 0 ? 
-                    `<div class="content-grid">${content.map(item => app.createContentCard(item)).join('')}</div>` :
-                    '<p class="text-center text-gray-400 py-8">No trending content found</p>';
+                if (!append) {
+                    showLoadingSkeleton(container);
+                }
+                
+                const timeFilter = document.getElementById('timeFilter').value;
+                const typeFilter = document.getElementById('typeFilter').value;
+                
+                const response = await fetch(`https://backend-app-970m.onrender.com/api/recommendations/trending?type=${typeFilter}&time=${timeFilter}&page=${page}&limit=20`);
+                const data = await response.json();
+                
+                if (data.success && data.recommendations) {
+                    const content = data.recommendations;
+                    
+                    if (append) {
+                        // Append new content
+                        content.forEach(item => {
+                            const card = createContentCard(item);
+                            container.appendChild(card);
+                        });
+                    } else {
+                        // Replace content
+                        renderContentGrid(container, content);
+                    }
+                    
+                    // Check if there's more content
+                    hasMoreContent = content.length === 20;
+                    loadMoreBtn.style.display = hasMoreContent ? 'block' : 'none';
+                    
+                    currentPage = page;
+                } else {
+                    if (!append) {
+                        showErrorMessage(container, 'Failed to load trending content');
+                    }
+                }
             } catch (error) {
-                container.innerHTML = '<p class="text-center text-red-400 py-8">Failed to load trending content</p>';
+                console.error('Error loading trending content:', error);
+                if (!append) {
+                    showErrorMessage(container, 'Failed to load trending content');
+                }
+                showToast('Failed to load content', 'error');
+            } finally {
+                isLoading = false;
             }
         }
 
-        document.addEventListener('DOMContentLoaded', loadTrendingContent);
+        function loadMoreContent() {
+            if (hasMoreContent && !isLoading) {
+                loadTrendingContent(currentPage + 1, true);
+            }
+        }
+
+        function applyFilters() {
+            currentPage = 1;
+            hasMoreContent = true;
+            loadTrendingContent();
+        }
+
+        function setupRealTimeUpdates() {
+            // Update trending content every 5 minutes
+            setInterval(() => {
+                if (currentPage === 1) {
+                    loadTrendingContent();
+                    showToast('Content updated!', 'success');
+                }
+            }, 5 * 60 * 1000);
+        }
+
+        // Enhanced content card with trending indicators
+        function createContentCard(content) {
+            const card = document.createElement('div');
+            card.className = 'content-card';
+            
+            const trendingBadge = content.is_trending ? '<div class="trending-badge">🔥 Trending</div>' : '';
+            
+            card.innerHTML = `
+                ${trendingBadge}
+                <img src="${content.poster_path || '/assets/images/placeholder.jpg'}" 
+                     alt="${content.title}" 
+                     class="content-poster"
+                     data-src="${content.poster_path || '/assets/images/placeholder.jpg'}">
+                <div class="content-overlay">
+                    <h3 class="content-title">${content.title}</h3>
+                    <div class="content-meta">
+                        <span class="content-type">${content.content_type}</span>
+                        ${content.rating ? `<span class="content-rating">⭐ ${content.rating}</span>` : ''}
+                        ${content.popularity ? `<span class="popularity">📈 ${Math.round(content.popularity)}</span>` : ''}
+                    </div>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="viewDetails(${content.id})" title="View Details">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        ${isAuthenticated() ? `
+                            <button class="action-btn" onclick="addToWatchlist(${content.id})" title="Add to Watchlist">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="action-btn" onclick="addToFavorites(${content.id})" title="Add to Favorites">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.action-btn')) {
+                    viewDetails(content.id);
+                }
+            });
+            
+            return card;
+        }
+
+        // Override the global function
+        window.createContentCard = createContentCard;
     </script>
+
+    <style>
+        .page-hero {
+            background: var(--gradient-dark);
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .page-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 0.5rem;
+            background: var(--gradient-blue);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .page-description {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+        
+        .trending-badge {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            background: var(--gradient-blue);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            z-index: 2;
+        }
+        
+        .popularity {
+            color: #10b981;
+        }
+    </style>
 </body>
 </html>

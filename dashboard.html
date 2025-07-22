@@ -1,86 +1,721 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Dashboard | CineScope</title>
-    <script>
-        fetch('/includes/head.html')
-            .then(response => response.text())
-            .then(data => {
-                document.querySelector('head').insertAdjacentHTML('beforeend', data);
-            });
-    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CineScope</title>
+    <meta name="description" content="Your personalized movie and TV show dashboard with AI-powered recommendations.">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        .dashboard-hero {
+            background: var(--gradient-dark);
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .welcome-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .welcome-info h1 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .user-stats {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-blue);
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .dashboard-filters {
+            background: var(--dark-surface);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .action-card {
+            background: var(--dark-surface);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            flex: 1;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: var(--transition-smooth);
+            cursor: pointer;
+        }
+        
+        .action-card:hover {
+            border-color: var(--primary-blue);
+            transform: translateY(-2px);
+        }
+        
+        .action-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary-blue);
+        }
+        
+        .continue-watching-card {
+            background: var(--dark-surface);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            display: flex;
+            margin-bottom: 1rem;
+            transition: var(--transition-smooth);
+        }
+        
+        .continue-watching-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .continue-poster {
+            width: 120px;
+            height: 160px;
+            object-fit: cover;
+        }
+        
+        .continue-info {
+            padding: 1rem;
+            flex: 1;
+        }
+        
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.1);
+            height: 4px;
+            border-radius: 2px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: var(--primary-blue);
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .user-stats {
+                gap: 1rem;
+            }
+            
+            .dashboard-filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+            }
+            
+            .continue-watching-card {
+                flex-direction: column;
+            }
+            
+            .continue-poster {
+                width: 100%;
+                height: 200px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div id="header-placeholder"></div>
+    <!-- Header -->
+    <div data-include="header"></div>
 
-    <main class="container mt-5 pt-20">
-        <!-- Welcome Section -->
-        <section class="hero-small">
-            <div class="welcome-banner">
-                <h1 class="welcome-title">Welcome back!</h1>
-                <p class="welcome-subtitle">Continue watching or discover something new</p>
+    <main style="padding-top: 80px;">
+        <!-- Dashboard Hero -->
+        <section class="dashboard-hero">
+            <div class="container">
+                <div class="welcome-section">
+                    <div class="welcome-info">
+                        <h1 id="welcomeMessage">Welcome back!</h1>
+                        <p class="text-secondary">Discover your next favorite movie or show</p>
+                    </div>
+                    <div class="user-stats" id="userStats">
+                        <div class="stat-item">
+                            <div class="stat-number" id="watchlistCount">0</div>
+                            <div class="stat-label">Watchlist</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="favoritesCount">0</div>
+                            <div class="stat-label">Favorites</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="viewedCount">0</div>
+                            <div class="stat-label">Watched</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- Continue Watching -->
-        <section class="section">
-            <div id="continue-watching"></div>
-        </section>
-
-        <!-- Recommended for You -->
-        <section class="section">
-            <div id="personalized-recommendations"></div>
-        </section>
-
-        <!-- Trending Now -->
-        <section class="section">
-            <div id="trending-now"></div>
-        </section>
-
-        <!-- Action Movies -->
-        <section class="section">
-            <div id="action-movies"></div>
-        </section>
-
-        <!-- Quick Actions -->
-        <section class="section">
-            <div class="section-header">
-                <h2 class="section-title">Quick Actions</h2>
-            </div>
-            <div class="quick-actions-grid">
-                <a href="/user/watchlist" class="quick-action-card">
-                    <i class="fas fa-bookmark"></i>
+        <div class="container">
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <div class="action-card" onclick="window.location.href='/user/watchlist'">
+                    <div class="action-icon">
+                        <i class="fas fa-bookmark"></i>
+                    </div>
                     <h3>My Watchlist</h3>
                     <p>View saved content</p>
-                </a>
-                <a href="/user/favorites" class="quick-action-card">
-                    <i class="fas fa-heart"></i>
+                </div>
+                <div class="action-card" onclick="window.location.href='/user/favorites'">
+                    <div class="action-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
                     <h3>Favorites</h3>
-                    <p>Your liked content</p>
-                </a>
-                <a href="/profile" class="quick-action-card">
-                    <i class="fas fa-user"></i>
-                    <h3>Profile</h3>
-                    <p>Manage preferences</p>
-                </a>
-                <a href="/categories/trending" class="quick-action-card">
-                    <i class="fas fa-fire"></i>
-                    <h3>Explore</h3>
-                    <p>Discover trending</p>
-                </a>
+                    <p>Your loved content</p>
+                </div>
+                <div class="action-card" onclick="window.location.href='/profile'">
+                    <div class="action-icon">
+                        <i class="fas fa-user-cog"></i>
+                    </div>
+                    <h3>Preferences</h3>
+                    <p>Customize recommendations</p>
+                </div>
             </div>
-        </section>
+
+            <!-- Dashboard Filters -->
+            <div class="dashboard-filters">
+                <div class="filter-group">
+                    <label for="contentTypeFilter">Type:</label>
+                    <select id="contentTypeFilter" class="filter-select">
+                        <option value="">All</option>
+                        <option value="movie">Movies</option>
+                        <option value="tv">TV Shows</option>
+                        <option value="anime">Anime</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="genreFilter">Genre:</label>
+                    <select id="genreFilter" class="filter-select">
+                        <option value="">All Genres</option>
+                        <option value="action">Action</option>
+                        <option value="comedy">Comedy</option>
+                        <option value="drama">Drama</option>
+                        <option value="horror">Horror</option>
+                        <option value="romance">Romance</option>
+                        <option value="thriller">Thriller</option>
+                        <option value="sci-fi">Sci-Fi</option>
+                        <option value="fantasy">Fantasy</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="languageFilter">Language:</label>
+                    <select id="languageFilter" class="filter-select">
+                        <option value="">All Languages</option>
+                        <option value="english">English</option>
+                        <option value="hindi">Hindi</option>
+                        <option value="telugu">Telugu</option>
+                        <option value="tamil">Tamil</option>
+                        <option value="kannada">Kannada</option>
+                        <option value="malayalam">Malayalam</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+            </div>
+
+            <!-- Continue Watching -->
+            <section class="content-row">
+                <div class="row-header">
+                    <h2 class="row-title">▶️ Continue Watching</h2>
+                </div>
+                <div id="continueWatchingContent">
+                    <!-- Content loaded dynamically -->
+                </div>
+            </section>
+
+            <!-- Recommended For You -->
+            <section class="content-row">
+                <div class="row-header">
+                    <h2 class="row-title">🎯 Recommended For You</h2>
+                    <button class="btn btn-outline" onclick="refreshRecommendations()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="content-carousel" id="personalizedContent">
+                    <!-- Content loaded dynamically -->
+                </div>
+            </section>
+
+            <!-- Based on Your Activity -->
+            <section class="content-row">
+                <div class="row-header">
+                    <h2 class="row-title">📈 Based on Your Activity</h2>
+                </div>
+                <div class="content-carousel" id="activityBasedContent">
+                    <!-- Content loaded dynamically -->
+                </div>
+            </section>
+
+            <!-- Trending Now -->
+            <section class="content-row">
+                <div class="row-header">
+                    <h2 class="row-title">🔥 Trending Now</h2>
+                    <a href="/categories/trending" class="view-all-btn">View All</a>
+                </div>
+                <div class="content-carousel" id="trendingContent">
+                    <!-- Content loaded dynamically -->
+                </div>
+            </section>
+
+            <!-- New in Your Preferred Languages -->
+            <section class="content-row" id="preferredLanguageSection">
+                <div class="row-header">
+                    <h2 class="row-title">🌍 New in Your Languages</h2>
+                </div>
+                <div class="content-carousel" id="preferredLanguageContent">
+                    <!-- Content loaded dynamically -->
+                </div>
+            </section>
+
+            <!-- Genre-based Recommendations -->
+            <section class="content-row" id="genreBasedSection">
+                <div class="row-header">
+                    <h2 class="row-title">🎭 More Like What You Love</h2>
+                </div>
+                <div class="content-carousel" id="genreBasedContent">
+                    <!-- Content loaded dynamically -->
+                </div>
+            </section>
+        </div>
     </main>
 
+    <!-- Footer -->
+    <div data-include="footer"></div>
+
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
+
     <script>
-        // Load header
-        fetch('/includes/header.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('header-placeholder').innerHTML = data;
-                app.setupEventListeners();
+        // Real-time data loading and updates
+        let refreshInterval;
+        let currentFilters = {};
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!requireAuth()) return;
+            
+            initializeDashboard();
+            setupRealTimeUpdates();
+        });
+
+        async function initializeDashboard() {
+            const user = getCurrentUser();
+            
+            // Update welcome message
+            document.getElementById('welcomeMessage').textContent = `Welcome back, ${user.username}!`;
+            
+            // Load all dashboard content
+            await Promise.all([
+                loadUserStats(),
+                loadContinueWatching(),
+                loadPersonalizedRecommendations(),
+                loadActivityBasedContent(),
+                loadTrendingContent(),
+                loadPreferredLanguageContent(),
+                loadGenreBasedContent()
+            ]);
+        }
+
+        async function loadUserStats() {
+            try {
+                const [watchlistResponse, favoritesResponse] = await Promise.all([
+                    ApiService.getWatchlist(),
+                    ApiService.getFavorites()
+                ]);
+
+                const watchlistCount = watchlistResponse.success ? watchlistResponse.data.watchlist.length : 0;
+                const favoritesCount = favoritesResponse.success ? favoritesResponse.data.favorites.length : 0;
+
+                document.getElementById('watchlistCount').textContent = watchlistCount;
+                document.getElementById('favoritesCount').textContent = favoritesCount;
+                document.getElementById('viewedCount').textContent = '0'; // Would be calculated from interactions
+            } catch (error) {
+                console.error('Error loading user stats:', error);
+            }
+        }
+
+        async function loadContinueWatching() {
+            const container = document.getElementById('continueWatchingContent');
+            
+            try {
+                // For demo, we'll show recent activity as "continue watching"
+                const response = await ApiService.getPersonalizedRecommendations(5);
+                
+                if (response.success && response.data.recommendations.length > 0) {
+                    container.innerHTML = response.data.recommendations.slice(0, 3).map(item => `
+                        <div class="continue-watching-card" onclick="viewDetails(${item.id})">
+                            <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
+                                 alt="${item.title}" class="continue-poster">
+                            <div class="continue-info">
+                                <h3>${item.title}</h3>
+                                <p class="text-secondary">${item.content_type} • ${item.rating || 'N/A'}</p>
+                                <p class="text-muted">${(item.overview || '').substring(0, 100)}...</p>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${Math.random() * 70 + 10}%"></div>
+                                </div>
+                                <small class="text-muted">${Math.floor(Math.random() * 80 + 10)}% watched</small>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-secondary">No recently watched content</p>';
+                }
+            } catch (error) {
+                console.error('Error loading continue watching:', error);
+                container.innerHTML = '<p class="text-secondary">Unable to load recent activity</p>';
+            }
+        }
+
+        async function loadPersonalizedRecommendations() {
+            const container = document.getElementById('personalizedContent');
+            
+            try {
+                showLoadingSkeleton(container);
+                
+                const response = await ApiService.getPersonalizedRecommendations(20);
+                
+                if (response.success && response.data.recommendations) {
+                    renderContentCarousel(container, response.data.recommendations);
+                } else {
+                    // Fallback to trending if personalized fails
+                    const fallbackResponse = await ApiService.getTrending('all', 20);
+                    if (fallbackResponse.success) {
+                        renderContentCarousel(container, fallbackResponse.data.recommendations);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading personalized content:', error);
+                showErrorMessage(container, 'Unable to load recommendations');
+            }
+        }
+
+        async function loadActivityBasedContent() {
+            const container = document.getElementById('activityBasedContent');
+            
+            try {
+                showLoadingSkeleton(container);
+                
+                // Get user's recent favorites and find similar content
+                const favoritesResponse = await ApiService.getFavorites();
+                
+                if (favoritesResponse.success && favoritesResponse.data.favorites.length > 0) {
+                    const randomFavorite = favoritesResponse.data.favorites[Math.floor(Math.random() * favoritesResponse.data.favorites.length)];
+                    const similarResponse = await ApiService.getSimilarContent(randomFavorite.id, 15);
+                    
+                    if (similarResponse.success) {
+                        renderContentCarousel(container, similarResponse.data.recommendations);
+                        return;
+                    }
+                }
+                
+                // Fallback to new releases
+                const newReleasesResponse = await ApiService.getNewReleases(null, 'movie', 15);
+                if (newReleasesResponse.success) {
+                    renderContentCarousel(container, newReleasesResponse.data.recommendations);
+                }
+            } catch (error) {
+                console.error('Error loading activity-based content:', error);
+                showErrorMessage(container, 'Unable to load content');
+            }
+        }
+
+        async function loadTrendingContent() {
+            const container = document.getElementById('trendingContent');
+            
+            try {
+                showLoadingSkeleton(container);
+                
+                const response = await ApiService.getTrending('all', 15);
+                
+                if (response.success && response.data.recommendations) {
+                    renderContentCarousel(container, response.data.recommendations);
+                } else {
+                    throw new Error('Failed to load trending content');
+                }
+            } catch (error) {
+                console.error('Error loading trending content:', error);
+                showErrorMessage(container, 'Unable to load trending content');
+            }
+        }
+
+        async function loadPreferredLanguageContent() {
+            const container = document.getElementById('preferredLanguageContent');
+            const user = getCurrentUser();
+            
+            try {
+                showLoadingSkeleton(container);
+                
+                const preferredLanguages = user.preferred_languages || ['english'];
+                const randomLanguage = preferredLanguages[Math.floor(Math.random() * preferredLanguages.length)];
+                
+                const response = await ApiService.getRegionalContent(randomLanguage, 'movie', 15);
+                
+                if (response.success && response.data.recommendations) {
+                    renderContentCarousel(container, response.data.recommendations);
+                    document.querySelector('#preferredLanguageSection .row-title').textContent = 
+                        `🌍 New in ${randomLanguage.charAt(0).toUpperCase() + randomLanguage.slice(1)}`;
+                } else {
+                    document.getElementById('preferredLanguageSection').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading preferred language content:', error);
+                document.getElementById('preferredLanguageSection').style.display = 'none';
+            }
+        }
+
+        async function loadGenreBasedContent() {
+            const container = document.getElementById('genreBasedContent');
+            const user = getCurrentUser();
+            
+            try {
+                showLoadingSkeleton(container);
+                
+                const preferredGenres = user.preferred_genres || ['action'];
+                const randomGenre = preferredGenres[Math.floor(Math.random() * preferredGenres.length)];
+                
+                const response = await ApiService.getGenreRecommendations(randomGenre, 'movie', 15);
+                
+                if (response.success && response.data.recommendations) {
+                    renderContentCarousel(container, response.data.recommendations);
+                    document.querySelector('#genreBasedSection .row-title').textContent = 
+                        `🎭 More ${randomGenre.charAt(0).toUpperCase() + randomGenre.slice(1)} Movies`;
+                } else {
+                    document.getElementById('genreBasedSection').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading genre-based content:', error);
+                document.getElementById('genreBasedSection').style.display = 'none';
+            }
+        }
+
+        function setupRealTimeUpdates() {
+            // Refresh content every 5 minutes
+            refreshInterval = setInterval(() => {
+                loadTrendingContent();
+                loadUserStats();
+            }, 5 * 60 * 1000);
+            
+            // Listen for user interactions and update counts
+            document.addEventListener('userInteraction', (e) => {
+                setTimeout(loadUserStats, 1000);
             });
+        }
+
+        async function refreshRecommendations() {
+            const button = event.target.closest('button');
+            const originalContent = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
+            button.disabled = true;
+            
+            try {
+                await loadPersonalizedRecommendations();
+                showToast('Recommendations refreshed!', 'success');
+            } catch (error) {
+                showToast('Failed to refresh recommendations', 'error');
+            } finally {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+        }
+
+        function applyFilters() {
+            const contentType = document.getElementById('contentTypeFilter').value;
+            const genre = document.getElementById('genreFilter').value;
+            const language = document.getElementById('languageFilter').value;
+            
+            currentFilters = { contentType, genre, language };
+            
+            // Apply filters to content sections
+            applyFiltersToContent();
+        }
+
+        async function applyFiltersToContent() {
+            const { contentType, genre, language } = currentFilters;
+            
+            // Show loading state
+            const containers = ['personalizedContent', 'activityBasedContent', 'trendingContent'];
+            containers.forEach(id => {
+                const container = document.getElementById(id);
+                if (container) showLoadingSkeleton(container);
+            });
+            
+            try {
+                // Apply filters to different sections
+                if (genre) {
+                    const genreResponse = await ApiService.getGenreRecommendations(genre, contentType || 'movie', 15);
+                    if (genreResponse.success) {
+                        renderContentCarousel(document.getElementById('personalizedContent'), genreResponse.data.recommendations);
+                    }
+                }
+                
+                if (language) {
+                    const languageResponse = await ApiService.getRegionalContent(language, contentType || 'movie', 15);
+                    if (languageResponse.success) {
+                        renderContentCarousel(document.getElementById('activityBasedContent'), languageResponse.data.recommendations);
+                    }
+                }
+                
+                // Update trending with type filter
+                const trendingResponse = await ApiService.getTrending(contentType || 'all', 15);
+                if (trendingResponse.success) {
+                    renderContentCarousel(document.getElementById('trendingContent'), trendingResponse.data.recommendations);
+                }
+                
+                showToast('Filters applied successfully!', 'success');
+            } catch (error) {
+                console.error('Error applying filters:', error);
+                showToast('Failed to apply filters', 'error');
+            }
+        }
+
+        // Enhanced content card creation with user actions
+        function createContentCard(content) {
+            const card = document.createElement('div');
+            card.className = 'content-card';
+            card.innerHTML = `
+                <img src="${content.poster_path || '/assets/images/placeholder.jpg'}" 
+                     alt="${content.title}" 
+                     class="content-poster"
+                     data-src="${content.poster_path || '/assets/images/placeholder.jpg'}">
+                <div class="content-overlay">
+                    <h3 class="content-title">${content.title}</h3>
+                    <div class="content-meta">
+                        <span class="content-type">${content.content_type}</span>
+                        ${content.rating ? `<span class="content-rating">⭐ ${content.rating}</span>` : ''}
+                        ${content.recommendation_score ? `<span class="recommendation-score">Match: ${Math.round(content.recommendation_score * 100)}%</span>` : ''}
+                    </div>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="viewDetails(${content.id})" title="View Details">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="action-btn" onclick="toggleWatchlist(${content.id}, this)" title="Add to Watchlist">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="action-btn" onclick="toggleFavorite(${content.id}, this)" title="Add to Favorites">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                        <button class="action-btn" onclick="rateContent(${content.id})" title="Rate">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.action-btn')) {
+                    viewDetails(content.id);
+                }
+            });
+            
+            return card;
+        }
+
+        async function toggleWatchlist(contentId, button) {
+            try {
+                const response = await ApiService.recordInteraction(contentId, 'watchlist');
+                if (response.success) {
+                    button.classList.toggle('active');
+                    button.innerHTML = button.classList.contains('active') ? 
+                        '<i class="fas fa-check"></i>' : '<i class="fas fa-plus"></i>';
+                    showToast(button.classList.contains('active') ? 'Added to watchlist' : 'Removed from watchlist', 'success');
+                    
+                    // Dispatch event for stats update
+                    document.dispatchEvent(new CustomEvent('userInteraction'));
+                }
+            } catch (error) {
+                handleApiError(error, 'Failed to update watchlist');
+            }
+        }
+
+        async function toggleFavorite(contentId, button) {
+            try {
+                const response = await ApiService.recordInteraction(contentId, 'favorite');
+                if (response.success) {
+                    button.classList.toggle('active');
+                    button.innerHTML = button.classList.contains('active') ? 
+                        '<i class="fas fa-heart" style="color: red;"></i>' : '<i class="fas fa-heart"></i>';
+                    showToast(button.classList.contains('active') ? 'Added to favorites' : 'Removed from favorites', 'success');
+                    
+                    // Dispatch event for stats update
+                    document.dispatchEvent(new CustomEvent('userInteraction'));
+                }
+            } catch (error) {
+                handleApiError(error, 'Failed to update favorites');
+            }
+        }
+
+        function rateContent(contentId) {
+            const rating = prompt('Rate this content (1-10):');
+            if (rating && !isNaN(rating) && rating >= 1 && rating <= 10) {
+                ApiService.recordInteraction(contentId, 'rating', parseFloat(rating))
+                    .then(response => {
+                        if (response.success) {
+                            showToast('Rating saved!', 'success');
+                        }
+                    })
+                    .catch(error => handleApiError(error, 'Failed to save rating'));
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+
+        // Override global functions with enhanced versions
+        window.createContentCard = createContentCard;
+        window.toggleWatchlist = toggleWatchlist;
+        window.toggleFavorite = toggleFavorite;
+        window.rateContent = rateContent;
     </script>
 </body>
 </html>

@@ -1,264 +1,485 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <script>
-        fetch('/includes/head.html')
-            .then(response => response.text())
-            .then(data => {
-                const head = document.querySelector('head');
-                head.insertAdjacentHTML('beforeend', data);
-            });
-    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - CineScope</title>
+    <meta name="description" content="Manage your CineScope profile and preferences for better recommendations.">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        .profile-header {
+            background: var(--gradient-dark);
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: var(--gradient-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .profile-details h1 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .profile-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-blue);
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .profile-tabs {
+            margin-bottom: 2rem;
+        }
+        
+        .profile-section {
+            background: var(--dark-surface);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--primary-blue);
+            padding-bottom: 0.5rem;
+        }
+        
+        .preferences-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .preference-group {
+            background: var(--dark-surface-2);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+        }
+        
+        .preference-group h4 {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        
+        .checkbox-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .activity-timeline {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition-smooth);
+        }
+        
+        .activity-item:hover {
+            background: var(--dark-surface-2);
+        }
+        
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .activity-content {
+            flex: 1;
+        }
+        
+        .activity-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .activity-meta {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        
+        .recommendation-card {
+            background: var(--dark-surface-2);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            transition: var(--transition-smooth);
+            cursor: pointer;
+        }
+        
+        .recommendation-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .recommendation-poster {
+            width: 100%;
+            aspect-ratio: 2/3;
+            object-fit: cover;
+        }
+        
+        .recommendation-info {
+            padding: 0.75rem;
+        }
+        
+        .recommendation-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .recommendation-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .privacy-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .privacy-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--dark-surface-2);
+            border-radius: var(--border-radius);
+        }
+        
+        .privacy-info h4 {
+            margin-bottom: 0.25rem;
+        }
+        
+        .privacy-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+            background: #333;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+        
+        .toggle-switch.active {
+            background: var(--primary-blue);
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 21px;
+            height: 21px;
+            background: white;
+            border-radius: 50%;
+            transition: var(--transition-smooth);
+        }
+        
+        .toggle-switch.active::after {
+            transform: translateX(25px);
+        }
+        
+        @media (max-width: 768px) {
+            .profile-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .profile-stats {
+                justify-content: center;
+            }
+            
+            .preferences-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .profile-section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
     <div data-include="header"></div>
 
-    <!-- Main Content -->
-    <main class="container py-8 pt-24">
-        <div class="max-w-4xl mx-auto">
-            <!-- Profile Header -->
-            <section class="profile-header mb-8">
-                <div class="flex items-center space-x-6 mb-6">
-                    <div class="profile-avatar">
-                        <i class="fas fa-user-circle text-6xl text-primary-500"></i>
+    <main style="padding-top: 80px;">
+        <!-- Profile Header -->
+        <section class="profile-header">
+            <div class="container">
+                <div class="profile-info">
+                    <div class="profile-avatar" id="profileAvatar">
+                        <!-- Avatar initials will be inserted here -->
                     </div>
-                    <div>
-                        <h1 class="text-3xl font-bold" id="profileUsername">Username</h1>
-                        <p class="text-gray-400" id="profileEmail">email@example.com</p>
-                        <p class="text-sm text-gray-500">Member since <span id="memberSince">2024</span></p>
+                    <div class="profile-details">
+                        <h1 id="profileName">Loading...</h1>
+                        <p class="text-secondary" id="profileEmail">Loading...</p>
+                        <div class="profile-stats" id="profileStats">
+                            <div class="stat-item">
+                                <div class="stat-number" id="watchlistCount">0</div>
+                                <div class="stat-label">Watchlist</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="favoritesCount">0</div>
+                                <div class="stat-label">Favorites</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="ratingsCount">0</div>
+                                <div class="stat-label">Ratings</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </section>
+            </div>
+        </section>
 
+        <div class="container">
             <!-- Profile Tabs -->
-            <div class="profile-tabs mb-8">
-                <div class="flex space-x-1 bg-gray-800 rounded-lg p-1">
-                    <button class="profile-tab active" data-tab="preferences">
-                        <i class="fas fa-cog mr-2"></i>
-                        Preferences
-                    </button>
-                    <button class="profile-tab" data-tab="activity">
-                        <i class="fas fa-chart-line mr-2"></i>
-                        Activity
-                    </button>
-                    <button class="profile-tab" data-tab="settings">
-                        <i class="fas fa-user-cog mr-2"></i>
-                        Settings
-                    </button>
+            <div class="profile-tabs">
+                <div class="tabs">
+                    <ul class="tab-list">
+                        <li><button class="tab-button active" data-tab="preferences">Preferences</button></li>
+                        <li><button class="tab-button" data-tab="activity">Activity</button></li>
+                        <li><button class="tab-button" data-tab="recommendations">Recommendations</button></li>
+                        <li><button class="tab-button" data-tab="privacy">Privacy</button></li>
+                        <li><button class="tab-button" data-tab="account">Account</button></li>
+                    </ul>
                 </div>
             </div>
 
             <!-- Preferences Tab -->
-            <div id="preferencesTab" class="profile-tab-content">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Language Preferences -->
-                    <div class="preference-section">
-                        <h3 class="section-title mb-4">
-                            <i class="fas fa-globe text-blue-500"></i>
-                            Language Preferences
-                        </h3>
-                        <div class="preference-grid" id="languagePreferences">
-                            <label class="preference-item">
-                                <input type="checkbox" value="english" class="preference-checkbox">
-                                <span class="preference-label">English</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="hindi" class="preference-checkbox">
-                                <span class="preference-label">Hindi</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="telugu" class="preference-checkbox">
-                                <span class="preference-label">Telugu</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="tamil" class="preference-checkbox">
-                                <span class="preference-label">Tamil</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="kannada" class="preference-checkbox">
-                                <span class="preference-label">Kannada</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="malayalam" class="preference-checkbox">
-                                <span class="preference-label">Malayalam</span>
-                            </label>
-                        </div>
-                    </div>
+            <div class="tab-content active" id="preferences-tab">
+                <div class="profile-section">
+                    <h2 class="section-title">Content Preferences</h2>
+                    <form id="preferencesForm">
+                        <div class="preferences-grid">
+                            <div class="preference-group">
+                                <h4>Preferred Languages</h4>
+                                <div class="checkbox-list" id="languagePreferences">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="lang-english" name="languages" value="english">
+                                        <label for="lang-english">English</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="lang-hindi" name="languages" value="hindi">
+                                        <label for="lang-hindi">Hindi</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="lang-telugu" name="languages" value="telugu">
+                                        <label for="lang-telugu">Telugu</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="lang-tamil" name="languages" value="tamil">
+                                        <label for="lang-tamil">Tamil</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="lang-kannada" name="languages" value="kannada">
+                                        <label for="lang-kannada">Kannada</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="lang-malayalam" name="languages" value="malayalam">
+                                        <label for="lang-malayalam">Malayalam</label>
+                                    </div>
+                                </div>
+                            </div>
 
-                    <!-- Genre Preferences -->
-                    <div class="preference-section">
-                        <h3 class="section-title mb-4">
-                            <i class="fas fa-film text-purple-500"></i>
-                            Genre Preferences
-                        </h3>
-                        <div class="preference-grid" id="genrePreferences">
-                            <label class="preference-item">
-                                <input type="checkbox" value="action" class="preference-checkbox">
-                                <span class="preference-label">Action</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="adventure" class="preference-checkbox">
-                                <span class="preference-label">Adventure</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="comedy" class="preference-checkbox">
-                                <span class="preference-label">Comedy</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="drama" class="preference-checkbox">
-                                <span class="preference-label">Drama</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="horror" class="preference-checkbox">
-                                <span class="preference-label">Horror</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="romance" class="preference-checkbox">
-                                <span class="preference-label">Romance</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="sci-fi" class="preference-checkbox">
-                                <span class="preference-label">Sci-Fi</span>
-                            </label>
-                            <label class="preference-item">
-                                <input type="checkbox" value="thriller" class="preference-checkbox">
-                                <span class="preference-label">Thriller</span>
-                            </label>
+                            <div class="preference-group">
+                                <h4>Favorite Genres</h4>
+                                <div class="checkbox-list" id="genrePreferences">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="genre-action" name="genres" value="action">
+                                        <label for="genre-action">Action</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="genre-comedy" name="genres" value="comedy">
+                                        <label for="genre-comedy">Comedy</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="genre-drama" name="genres" value="drama">
+                                        <label for="genre-drama">Drama</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="genre-horror" name="genres" value="horror">
+                                        <label for="genre-horror">Horror</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="genre-romance" name="genres" value="romance">
+                                        <label for="genre-romance">Romance</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="genre-thriller" name="genres" value="thriller">
+                                        <label for="genre-thriller">Thriller</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="genre-sci-fi" name="genres" value="sci-fi">
+                                        <label for="genre-sci-fi">Sci-Fi</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="genre-fantasy" name="genres" value="fantasy">
+                                        <label for="genre-fantasy">Fantasy</label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="mt-8">
-                    <button class="btn btn-primary" onclick="updatePreferences()">
-                        <i class="fas fa-save mr-2"></i>
-                        Save Preferences
-                    </button>
+                        <button type="submit" class="btn btn-primary">Save Preferences</button>
+                    </form>
                 </div>
             </div>
 
             <!-- Activity Tab -->
-            <div id="activityTab" class="profile-tab-content hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-eye"></i>
-                        </div>
-                        <div class="stat-number" id="totalViews">0</div>
-                        <div class="stat-label">Total Views</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-bookmark"></i>
-                        </div>
-                        <div class="stat-number" id="totalWatchlist">0</div>
-                        <div class="stat-label">Watchlist Items</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-heart"></i>
-                        </div>
-                        <div class="stat-number" id="totalFavorites">0</div>
-                        <div class="stat-label">Favorites</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-star"></i>
-                        </div>
-                        <div class="stat-number" id="totalRatings">0</div>
-                        <div class="stat-label">Ratings Given</div>
-                    </div>
-                </div>
-
-                <!-- Recent Activity -->
-                <div class="activity-section">
-                    <h3 class="section-title mb-4">
-                        <i class="fas fa-history text-green-500"></i>
-                        Recent Activity
-                    </h3>
-                    <div id="recentActivity" class="activity-list">
-                        <div class="loading"><div class="spinner"></div></div>
+            <div class="tab-content" id="activity-tab">
+                <div class="profile-section">
+                    <h2 class="section-title">Recent Activity</h2>
+                    <div class="activity-timeline" id="activityTimeline">
+                        <!-- Activity items will be loaded here -->
                     </div>
                 </div>
             </div>
 
-            <!-- Settings Tab -->
-            <div id="settingsTab" class="profile-tab-content hidden">
-                <div class="max-w-2xl">
-                    <!-- Account Settings -->
-                    <div class="settings-section">
-                        <h3 class="section-title mb-4">
-                            <i class="fas fa-user text-blue-500"></i>
-                            Account Settings
-                        </h3>
-                        <form class="space-y-4">
-                            <div class="form-group">
-                                <label class="form-label">Username</label>
-                                <input type="text" id="settingsUsername" class="form-input" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Email</label>
-                                <input type="email" id="settingsEmail" class="form-input" readonly>
-                            </div>
-                        </form>
+            <!-- Recommendations Tab -->
+            <div class="tab-content" id="recommendations-tab">
+                <div class="profile-section">
+                    <h2 class="section-title">Your Personalized Recommendations</h2>
+                    <div class="recommendations-grid" id="personalizedRecommendations">
+                        <!-- Recommendations will be loaded here -->
                     </div>
+                </div>
+            </div>
 
-                    <!-- Privacy Settings -->
-                    <div class="settings-section mt-8">
-                        <h3 class="section-title mb-4">
-                            <i class="fas fa-shield-alt text-green-500"></i>
-                            Privacy Settings
-                        </h3>
-                        <div class="space-y-4">
-                            <div class="setting-item">
-                                <div class="setting-info">
-                                    <h4 class="setting-title">Data Collection</h4>
-                                    <p class="setting-description">Allow collection of viewing data for better recommendations</p>
-                                </div>
-                                <label class="toggle">
-                                    <input type="checkbox" id="dataCollection" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
+            <!-- Privacy Tab -->
+            <div class="tab-content" id="privacy-tab">
+                <div class="profile-section">
+                    <h2 class="section-title">Privacy Settings</h2>
+                    <div class="privacy-settings">
+                        <div class="privacy-item">
+                            <div class="privacy-info">
+                                <h4>Public Profile</h4>
+                                <p class="privacy-description">Allow others to see your watchlist and favorites</p>
                             </div>
-                            <div class="setting-item">
-                                <div class="setting-info">
-                                    <h4 class="setting-title">Anonymous Mode</h4>
-                                    <p class="setting-description">Browse without saving activity history</p>
-                                </div>
-                                <label class="toggle">
-                                    <input type="checkbox" id="anonymousMode">
-                                    <span class="toggle-slider"></span>
-                                </label>
+                            <div class="toggle-switch" onclick="togglePrivacySetting(this, 'public_profile')"></div>
+                        </div>
+                        <div class="privacy-item">
+                            <div class="privacy-info">
+                                <h4>Activity Tracking</h4>
+                                <p class="privacy-description">Track your viewing activity to improve recommendations</p>
                             </div>
+                            <div class="toggle-switch active" onclick="togglePrivacySetting(this, 'activity_tracking')"></div>
+                        </div>
+                        <div class="privacy-item">
+                            <div class="privacy-info">
+                                <h4>Email Notifications</h4>
+                                <p class="privacy-description">Receive email updates about new releases and recommendations</p>
+                            </div>
+                            <div class="toggle-switch" onclick="togglePrivacySetting(this, 'email_notifications')"></div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Danger Zone -->
-                    <div class="settings-section mt-8">
-                        <h3 class="section-title mb-4 text-red-400">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Danger Zone
-                        </h3>
-                        <div class="danger-zone">
-                            <div class="danger-item">
-                                <div>
-                                    <h4 class="font-semibold text-red-400">Clear All Data</h4>
-                                    <p class="text-sm text-gray-400">Remove all your viewing history and preferences</p>
-                                </div>
-                                <button class="btn btn-ghost btn-sm text-red-400 border-red-400" onclick="clearAllData()">
-                                    Clear Data
-                                </button>
-                            </div>
-                            <div class="danger-item">
-                                <div>
-                                    <h4 class="font-semibold text-red-400">Delete Account</h4>
-                                    <p class="text-sm text-gray-400">Permanently delete your account and all data</p>
-                                </div>
-                                <button class="btn btn-ghost btn-sm text-red-400 border-red-400" onclick="deleteAccount()">
-                                    Delete Account
-                                </button>
-                            </div>
+            <!-- Account Tab -->
+            <div class="tab-content" id="account-tab">
+                <div class="profile-section">
+                    <h2 class="section-title">Account Settings</h2>
+                    <form id="accountForm">
+                        <div class="form-group">
+                            <label for="currentPassword" class="form-label">Current Password</label>
+                            <input type="password" id="currentPassword" name="currentPassword" class="form-input">
                         </div>
+                        <div class="form-group">
+                            <label for="newPassword" class="form-label">New Password</label>
+                            <input type="password" id="newPassword" name="newPassword" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmNewPassword" class="form-label">Confirm New Password</label>
+                            <input type="password" id="confirmNewPassword" name="confirmNewPassword" class="form-input">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Password</button>
+                    </form>
+                    
+                    <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="color: #ef4444; margin-bottom: 1rem;">Danger Zone</h3>
+                        <p class="text-secondary" style="margin-bottom: 1rem;">
+                            Deleting your account will permanently remove all your data, including watchlists, favorites, and ratings.
+                        </p>
+                        <button class="btn" style="background: #ef4444; color: white;" onclick="confirmDeleteAccount()">
+                            Delete Account
+                        </button>
                     </div>
                 </div>
             </div>
@@ -269,210 +490,265 @@
     <div data-include="footer"></div>
 
     <!-- Scripts -->
-    <script src="/js/auth.js"></script>
+    <script src="/js/include.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
 
     <script>
-        class ProfileManager {
-            constructor() {
-                this.init();
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!requireAuth()) return;
+            
+            initializeProfile();
+            setupTabSwitching();
+            setupForms();
+        });
+
+        function initializeProfile() {
+            const user = getCurrentUser();
+            
+            // Update profile info
+            document.getElementById('profileName').textContent = user.username;
+            document.getElementById('profileEmail').textContent = user.email;
+            document.getElementById('profileAvatar').textContent = user.username.charAt(0).toUpperCase();
+            
+            // Load user stats
+            loadUserStats();
+            
+            // Load preferences
+            loadUserPreferences();
+            
+            // Load activity
+            loadUserActivity();
+            
+            // Load recommendations
+            loadPersonalizedRecommendations();
+        }
+
+        async function loadUserStats() {
+            try {
+                const [watchlistResponse, favoritesResponse] = await Promise.all([
+                    ApiService.getWatchlist(),
+                    ApiService.getFavorites()
+                ]);
+
+                const watchlistCount = watchlistResponse.success ? watchlistResponse.data.watchlist.length : 0;
+                const favoritesCount = favoritesResponse.success ? favoritesResponse.data.favorites.length : 0;
+
+                document.getElementById('watchlistCount').textContent = watchlistCount;
+                document.getElementById('favoritesCount').textContent = favoritesCount;
+                document.getElementById('ratingsCount').textContent = '0'; // Would come from interactions
+            } catch (error) {
+                console.error('Error loading user stats:', error);
             }
+        }
 
-            init() {
-                if (!AuthManager.requireAuth()) return;
+        function loadUserPreferences() {
+            const user = getCurrentUser();
+            
+            // Load language preferences
+            const languages = user.preferred_languages || [];
+            languages.forEach(lang => {
+                const checkbox = document.getElementById(`lang-${lang}`);
+                if (checkbox) checkbox.checked = true;
+            });
+            
+            // Load genre preferences
+            const genres = user.preferred_genres || [];
+            genres.forEach(genre => {
+                const checkbox = document.getElementById(`genre-${genre}`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
 
-                this.loadUserProfile();
-                this.setupTabSwitching();
-                this.loadUserActivity();
-            }
-
-            loadUserProfile() {
-                const user = AuthManager.currentUser;
-                if (!user) return;
-
-                // Basic info
-                document.getElementById('profileUsername').textContent = user.username;
-                document.getElementById('profileEmail').textContent = user.email;
-                
-                // Member since
-                if (user.created_at) {
-                    const memberSince = new Date(user.created_at).getFullYear();
-                    document.getElementById('memberSince').textContent = memberSince;
-                }
-
-                // Load preferences
-                this.loadPreferences(user);
-                
-                // Load settings
-                this.loadSettings(user);
-            }
-
-            loadPreferences(user) {
-                // Language preferences
-                if (user.preferred_languages) {
-                    user.preferred_languages.forEach(lang => {
-                        const checkbox = document.querySelector(`#languagePreferences input[value="${lang}"]`);
-                        if (checkbox) checkbox.checked = true;
-                    });
-                }
-
-                // Genre preferences
-                if (user.preferred_genres) {
-                    user.preferred_genres.forEach(genre => {
-                        const checkbox = document.querySelector(`#genrePreferences input[value="${genre}"]`);
-                        if (checkbox) checkbox.checked = true;
-                    });
-                }
-            }
-
-            loadSettings(user) {
-                document.getElementById('settingsUsername').value = user.username;
-                document.getElementById('settingsEmail').value = user.email;
-            }
-
-            setupTabSwitching() {
-                document.querySelectorAll('.profile-tab').forEach(tab => {
-                    tab.addEventListener('click', (e) => {
-                        const tabName = e.target.dataset.tab;
-                        this.switchTab(tabName);
-                    });
-                });
-            }
-
-            switchTab(tabName) {
-                // Update tab buttons
-                document.querySelectorAll('.profile-tab').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
-                // Update tab content
-                document.querySelectorAll('.profile-tab-content').forEach(content => {
-                    content.classList.add('hidden');
-                });
-                document.getElementById(`${tabName}Tab`).classList.remove('hidden');
-
-                // Load tab-specific content
-                if (tabName === 'activity') {
-                    this.loadActivityTab();
-                }
-            }
-
-            async loadUserActivity() {
-                try {
-                    const [watchlist, favorites] = await Promise.all([
-                        APIService.getWatchlist(),
-                        APIService.getFavorites()
-                    ]);
-
-                    document.getElementById('totalWatchlist').textContent = watchlist.watchlist?.length || 0;
-                    document.getElementById('totalFavorites').textContent = favorites.favorites?.length || 0;
-                } catch (error) {
-                    console.error('Error loading user activity:', error);
-                }
-            }
-
-            async loadActivityTab() {
-                // This would typically load from a user activity API endpoint
-                const recentActivity = document.getElementById('recentActivity');
-                
-                // Simulate recent activity (in a real app, this would come from an API)
+        async function loadUserActivity() {
+            const container = document.getElementById('activityTimeline');
+            
+            try {
+                // For demo, create mock activity data
                 const activities = [
-                    { type: 'view', title: 'The Matrix', time: '2 hours ago' },
-                    { type: 'favorite', title: 'Inception', time: '1 day ago' },
-                    { type: 'watchlist', title: 'Interstellar', time: '2 days ago' },
-                    { type: 'rating', title: 'The Dark Knight', time: '3 days ago', rating: 5 }
+                    { type: 'view', title: 'Watched Avengers: Endgame', time: '2 hours ago', icon: 'play' },
+                    { type: 'favorite', title: 'Added Inception to favorites', time: '1 day ago', icon: 'heart' },
+                    { type: 'watchlist', title: 'Added Breaking Bad to watchlist', time: '2 days ago', icon: 'bookmark' },
+                    { type: 'rating', title: 'Rated The Dark Knight 9/10', time: '3 days ago', icon: 'star' },
+                    { type: 'view', title: 'Watched Naruto Episode 1', time: '1 week ago', icon: 'play' }
                 ];
 
-                const activityHTML = activities.map(activity => `
+                container.innerHTML = activities.map(activity => `
                     <div class="activity-item">
                         <div class="activity-icon">
-                            <i class="fas fa-${this.getActivityIcon(activity.type)}"></i>
+                            <i class="fas fa-${activity.icon}"></i>
                         </div>
                         <div class="activity-content">
-                            <div class="activity-text">
-                                ${this.getActivityText(activity)}
-                            </div>
-                            <div class="activity-time">${activity.time}</div>
+                            <div class="activity-title">${activity.title}</div>
+                            <div class="activity-meta">${activity.time}</div>
                         </div>
                     </div>
                 `).join('');
-
-                recentActivity.innerHTML = activityHTML;
+            } catch (error) {
+                console.error('Error loading activity:', error);
+                container.innerHTML = '<p class="text-secondary">Unable to load activity</p>';
             }
+        }
 
-            getActivityIcon(type) {
-                const icons = {
-                    view: 'eye',
-                    favorite: 'heart',
-                    watchlist: 'bookmark',
-                    rating: 'star'
-                };
-                return icons[type] || 'circle';
-            }
-
-            getActivityText(activity) {
-                switch (activity.type) {
-                    case 'view':
-                        return `Watched <strong>${activity.title}</strong>`;
-                    case 'favorite':
-                        return `Added <strong>${activity.title}</strong> to favorites`;
-                    case 'watchlist':
-                        return `Added <strong>${activity.title}</strong> to watchlist`;
-                    case 'rating':
-                        return `Rated <strong>${activity.title}</strong> ${activity.rating} stars`;
-                    default:
-                        return `Activity on <strong>${activity.title}</strong>`;
+        async function loadPersonalizedRecommendations() {
+            const container = document.getElementById('personalizedRecommendations');
+            
+            try {
+                showLoadingSkeleton(container);
+                
+                const response = await ApiService.getPersonalizedRecommendations(12);
+                
+                if (response.success && response.data.recommendations) {
+                    container.innerHTML = response.data.recommendations.map(item => `
+                        <div class="recommendation-card" onclick="viewDetails(${item.id})">
+                            <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
+                                 alt="${item.title}" class="recommendation-poster">
+                            <div class="recommendation-info">
+                                <div class="recommendation-title">${item.title}</div>
+                                <div class="recommendation-meta">${item.content_type} • ${item.rating || 'N/A'}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-secondary">No recommendations available</p>';
                 }
+            } catch (error) {
+                console.error('Error loading recommendations:', error);
+                container.innerHTML = '<p class="text-secondary">Unable to load recommendations</p>';
             }
+        }
+
+        function setupTabSwitching() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabName = button.getAttribute('data-tab');
+                    
+                    // Remove active class from all buttons and contents
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Add active class to clicked button and corresponding content
+                    button.classList.add('active');
+                    document.getElementById(`${tabName}-tab`).classList.add('active');
+                });
+            });
+        }
+
+        function setupForms() {
+            // Preferences form
+            const preferencesForm = document.getElementById('preferencesForm');
+            preferencesForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await updatePreferences();
+            });
+            
+            // Account form
+            const accountForm = document.getElementById('accountForm');
+            accountForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await updatePassword();
+            });
         }
 
         async function updatePreferences() {
+            const formData = new FormData(document.getElementById('preferencesForm'));
+            const languages = Array.from(formData.getAll('languages'));
+            const genres = Array.from(formData.getAll('genres'));
+            
             try {
-                const languages = Array.from(document.querySelectorAll('#languagePreferences input:checked'))
-                    .map(cb => cb.value);
+                // Update local user data
+                const user = getCurrentUser();
+                user.preferred_languages = languages;
+                user.preferred_genres = genres;
                 
-                const genres = Array.from(document.querySelectorAll('#genrePreferences input:checked'))
-                    .map(cb => cb.value);
-
-                // In a real app, this would be an API call to update user preferences
-                console.log('Updating preferences:', { languages, genres });
+                Auth.updateUserProfile(user);
                 
-                // Update current user object
-                if (AuthManager.currentUser) {
-                    AuthManager.currentUser.preferred_languages = languages;
-                    AuthManager.currentUser.preferred_genres = genres;
-                }
-
-                ContentManager.showToast('Preferences updated successfully', 'success');
+                showToast('Preferences updated successfully!', 'success');
             } catch (error) {
                 console.error('Error updating preferences:', error);
-                ContentManager.showToast('Failed to update preferences', 'error');
+                showToast('Failed to update preferences', 'error');
             }
         }
 
-        function clearAllData() {
-            if (confirm('Are you sure you want to clear all your data? This action cannot be undone.')) {
-                // In a real app, this would call an API to clear user data
-                ContentManager.showToast('All data cleared successfully', 'success');
+        async function updatePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmNewPassword').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showToast('Please fill in all fields', 'warning');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showToast('New passwords do not match', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showToast('Password must be at least 6 characters long', 'error');
+                return;
+            }
+            
+            try {
+                // This would typically make an API call to update password
+                showToast('Password updated successfully!', 'success');
+                
+                // Clear form
+                document.getElementById('accountForm').reset();
+            } catch (error) {
+                console.error('Error updating password:', error);
+                showToast('Failed to update password', 'error');
             }
         }
 
-        function deleteAccount() {
-            const confirmation = prompt('Type "DELETE" to confirm account deletion:');
-            if (confirmation === 'DELETE') {
-                if (confirm('This will permanently delete your account. Are you absolutely sure?')) {
-                    // In a real app, this would call an API to delete the account
-                    alert('Account deletion would be processed here');
+        function togglePrivacySetting(toggle, setting) {
+            toggle.classList.toggle('active');
+            
+            // Here you would typically save the setting to the backend
+            const isEnabled = toggle.classList.contains('active');
+            console.log(`Privacy setting ${setting} is now ${isEnabled ? 'enabled' : 'disabled'}`);
+            
+            showToast(`Privacy setting updated`, 'success');
+        }
+
+        function confirmDeleteAccount() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                if (confirm('This will permanently delete all your data. Are you absolutely sure?')) {
+                    deleteAccount();
                 }
             }
         }
 
-        // Initialize profile page
-        document.addEventListener('DOMContentLoaded', () => {
-            new ProfileManager();
-        });
+        async function deleteAccount() {
+            try {
+                // This would make an API call to delete the account
+                showToast('Account deletion initiated. You will be logged out.', 'warning');
+                
+                setTimeout(() => {
+                    Auth.logout();
+                }, 2000);
+            } catch (error) {
+                console.error('Error deleting account:', error);
+                showToast('Failed to delete account', 'error');
+            }
+        }
+
+        function showLoadingSkeleton(container) {
+            container.innerHTML = Array(12).fill().map(() => `
+                <div class="recommendation-card skeleton">
+                    <div style="aspect-ratio: 2/3; background: var(--dark-surface-2);"></div>
+                    <div class="recommendation-info">
+                        <div style="height: 1rem; background: var(--dark-surface-2); margin-bottom: 0.5rem;"></div>
+                        <div style="height: 0.75rem; background: var(--dark-surface-2); width: 60%;"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
     </script>
 </body>
 </html>

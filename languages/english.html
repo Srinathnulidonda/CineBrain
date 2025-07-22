@@ -1,94 +1,167 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
-    <title>English Content | CineScope</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Movies & Shows - CineScope</title>
+    <meta name="description" content="Discover the best English movies and TV shows on CineScope.">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <!-- Header -->
     <div data-include="header"></div>
-    
-    <main class="container py-8 pt-24">
-        <section class="category-header mb-8">
-            <h1 class="text-4xl font-bold mb-4">
-                <span class="language-flag mr-3">🇺🇸</span>
-                <span class="text-gradient">English</span> Content
-            </h1>
-            <p class="text-gray-400 text-lg">Hollywood movies, TV shows, and international English content</p>
+
+    <main style="padding-top: 80px;">
+        <!-- Page Hero -->
+        <section class="page-hero">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="/">Home</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <a href="/languages">Languages</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>English</span>
+                </div>
+                <h1 class="page-title">🇺🇸 English Content</h1>
+                <p class="page-description">Hollywood blockbusters and international productions</p>
+            </div>
         </section>
 
-        <div class="language-filters mb-8">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <select id="contentType" class="filter-select" onchange="loadEnglishContent()">
-                    <option value="movie">Movies</option>
-                    <option value="tv">TV Shows</option>
-                </select>
-                <select id="genre" class="filter-select" onchange="loadEnglishContent()">
-                    <option value="">All Genres</option>
-                    <option value="action">Action</option>
-                    <option value="comedy">Comedy</option>
-                    <option value="drama">Drama</option>
-                    <option value="horror">Horror</option>
-                    <option value="romance">Romance</option>
-                    <option value="sci-fi">Sci-Fi</option>
-                    <option value="thriller">Thriller</option>
-                </select>
-                <select id="decade" class="filter-select" onchange="loadEnglishContent()">
-                    <option value="">All Years</option>
-                    <option value="2020s">2020s</option>
-                    <option value="2010s">2010s</option>
-                    <option value="2000s">2000s</option>
-                    <option value="1990s">1990s</option>
-                    <option value="1980s">1980s & Earlier</option>
-                </select>
-                <select id="sortBy" class="filter-select" onchange="loadEnglishContent()">
-                    <option value="popularity">Popularity</option>
-                    <option value="rating">Rating</option>
-                    <option value="release_date">Release Date</option>
-                    <option value="title">Title A-Z</option>
-                </select>
+        <div class="container">
+            <!-- Quick Links -->
+            <div class="quick-links">
+                <a href="/languages/english" class="quick-link active">English</a>
+                <a href="/languages/hindi" class="quick-link">Hindi</a>
+                <a href="/languages/telugu" class="quick-link">Telugu</a>
+                <a href="/languages/tamil" class="quick-link">Tamil</a>
+                <a href="/languages/kannada" class="quick-link">Kannada</a>
+                <a href="/languages/malayalam" class="quick-link">Malayalam</a>
             </div>
-        </div>
 
-        <div id="englishContent">
-            <div class="loading"><div class="spinner"></div></div>
+            <!-- Content Tabs -->
+            <div class="tabs">
+                <ul class="tab-list">
+                    <li><button class="tab-button active" data-type="movie">Movies</button></li>
+                    <li><button class="tab-button" data-type="tv">TV Shows</button></li>
+                    <li><button class="tab-button" data-type="trending">Trending</button></li>
+                    <li><button class="tab-button" data-type="new">New Releases</button></li>
+                </ul>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="content-grid" id="englishContent">
+                <!-- Content will be loaded here -->
+            </div>
         </div>
     </main>
 
+    <!-- Footer -->
     <div data-include="footer"></div>
 
-    <script src="/js/auth.js"></script>
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
+
     <script>
-        async function loadEnglishContent() {
-            const container = document.getElementById('englishContent');
-            const contentType = document.getElementById('contentType').value;
-            const genre = document.getElementById('genre').value;
+        let currentType = 'movie';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupTabSwitching();
+            loadEnglishContent('movie');
+        });
+
+        function setupTabSwitching() {
+            const tabButtons = document.querySelectorAll('.tab-button');
             
-            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-            
-            try {
-                let response;
-                if (genre) {
-                    response = await APIService.getGenreRecommendations(genre, contentType, 50);
-                } else {
-                    response = await APIService.getRegionalContent('english', contentType, 50);
-                }
-                
-                const content = response.recommendations || [];
-                
-                if (content.length > 0) {
-                    const contentHTML = content.map(item => app.createContentCard(item)).join('');
-                    container.innerHTML = `<div class="content-grid">${contentHTML}</div>`;
-                } else {
-                    container.innerHTML = '<p class="text-center text-gray-400 py-8">No English content found</p>';
-                }
-            } catch (error) {
-                container.innerHTML = '<p class="text-center text-red-400 py-8">Failed to load English content</p>';
-            }
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const type = button.getAttribute('data-type');
+                    currentType = type;
+                    
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    loadEnglishContent(type);
+                });
+            });
         }
 
-        document.addEventListener('DOMContentLoaded', loadEnglishContent);
+        async function loadEnglishContent(type) {
+            const container = document.getElementById('englishContent');
+            
+            try {
+                showLoadingSkeleton(container);
+                
+                let response;
+                switch (type) {
+                    case 'movie':
+                        response = await ApiService.getRegionalContent('english', 'movie', 40);
+                        break;
+                    case 'tv':
+                        response = await ApiService.getRegionalContent('english', 'tv', 40);
+                        break;
+                    case 'trending':
+                        response = await ApiService.getTrending('all', 40);
+                        break;
+                    case 'new':
+                        response = await ApiService.getNewReleases('english', 'movie', 40);
+                        break;
+                }
+                
+                if (response && response.success && response.data.recommendations) {
+                    let content = response.data.recommendations;
+                    
+                    // Filter for English content if not specifically regional call
+                    if (type === 'trending') {
+                        content = content.filter(item => 
+                            !item.languages || item.languages.includes('english') || item.languages.includes('en')
+                        );
+                    }
+                    
+                    renderContentGrid(container, content);
+                } else {
+                    showErrorMessage(container, 'No English content found');
+                }
+            } catch (error) {
+                console.error('Error loading English content:', error);
+                showErrorMessage(container, 'Failed to load content');
+            }
+        }
     </script>
+
+    <style>
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+        
+        .quick-link {
+            padding: 0.75rem 1.5rem;
+            background: var(--dark-surface);
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 25px;
+            white-space: nowrap;
+            transition: var(--transition-smooth);
+            border: 2px solid transparent;
+        }
+        
+        .quick-link:hover,
+        .quick-link.active {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+    </style>
 </body>
 </html>

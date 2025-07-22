@@ -1,417 +1,627 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
-    <title>Admin Dashboard | CineScope</title>
-</head>
-<body>
-    <div data-include="header"></div>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - CineScope</title>
+    <meta name="description" content="Admin dashboard for CineScope management.">
     
-    <main class="container py-8 pt-24">
-        <section class="admin-header mb-8">
-            <h1 class="text-4xl font-bold mb-4">
-                <i class="fas fa-shield-alt text-secondary-500 mr-3"></i>
-                Admin <span class="text-gradient">Dashboard</span>
-            </h1>
-            <p class="text-gray-400 text-lg">Manage content, users, and platform analytics</p>
-        </section>
-
-        <!-- Quick Stats -->
-        <section class="admin-stats mb-12">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div class="stat-card">
-                    <div class="stat-icon bg-blue-500">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-number" id="totalUsers">0</div>
-                    <div class="stat-label">Total Users</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon bg-purple-500">
-                        <i class="fas fa-film"></i>
-                    </div>
-                    <div class="stat-number" id="totalContent">0</div>
-                    <div class="stat-label">Content Items</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon bg-green-500">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="stat-number" id="totalInteractions">0</div>
-                    <div class="stat-label">Interactions</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon bg-orange-500">
-                        <i class="fas fa-user-clock"></i>
-                    </div>
-                    <div class="stat-number" id="activeUsers">0</div>
-                    <div class="stat-label">Active Users</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Quick Actions -->
-        <section class="quick-actions mb-12">
-            <h2 class="section-title mb-6">Quick Actions</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <a href="/admin/content-browser" class="admin-action-card">
-                    <i class="fas fa-search text-blue-500"></i>
-                    <h3>Browse & Add Content</h3>
-                    <p>Search and add movies, shows, and anime from external sources</p>
-                </a>
-                <a href="/admin/posts" class="admin-action-card">
-                    <i class="fas fa-bullhorn text-green-500"></i>
-                    <h3>Create Recommendation</h3>
-                    <p>Recommend content to users and share on Telegram</p>
-                </a>
-                <a href="/admin/analytics" class="admin-action-card">
-                    <i class="fas fa-chart-bar text-purple-500"></i>
-                    <h3>View Analytics</h3>
-                    <p>Analyze user behavior and content performance</p>
-                </a>
-            </div>
-        </section>
-
-        <!-- Recent Activity -->
-        <section class="recent-activity mb-12">
-            <h2 class="section-title mb-6">Recent Activity</h2>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Recent Recommendations -->
-                <div class="activity-section">
-                    <h3 class="text-lg font-semibold mb-4">Recent Recommendations</h3>
-                    <div id="recentRecommendations" class="activity-list">
-                        <div class="loading"><div class="spinner"></div></div>
-                    </div>
-                </div>
-
-                <!-- Popular Content -->
-                <div class="activity-section">
-                    <h3 class="text-lg font-semibold mb-4">Popular Content</h3>
-                    <div id="popularContent" class="activity-list">
-                        <div class="loading"><div class="spinner"></div></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ML Service Status -->
-        <section class="ml-service-status mb-12">
-            <h2 class="section-title mb-6">ML Service Status</h2>
-            <div class="ml-status-card">
-                <div class="ml-status-header">
-                    <h3>Recommendation Engine</h3>
-                    <button class="btn btn-secondary btn-sm" onclick="checkMLService()">
-                        <i class="fas fa-sync-alt mr-2"></i>
-                        Check Status
-                    </button>
-                </div>
-                <div id="mlServiceStatus" class="ml-status-content">
-                    <div class="loading"><div class="spinner"></div></div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <div data-include="footer"></div>
-
-    <script src="/js/auth.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/main.js"></script>
-    <script>
-        class AdminDashboard {
-            constructor() {
-                this.init();
-            }
-
-            async init() {
-                if (!AuthManager.requireAdmin()) return;
-
-                await this.loadDashboardData();
-                await this.loadRecentActivity();
-                await this.checkMLService();
-            }
-
-            async loadDashboardData() {
-                try {
-                    const analytics = await APIService.getAnalytics();
-                    
-                    document.getElementById('totalUsers').textContent = analytics.total_users || 0;
-                    document.getElementById('totalContent').textContent = analytics.total_content || 0;
-                    document.getElementById('totalInteractions').textContent = analytics.total_interactions || 0;
-                    document.getElementById('activeUsers').textContent = analytics.active_users_last_week || 0;
-                } catch (error) {
-                    console.error('Error loading analytics:', error);
-                }
-            }
-
-            async loadRecentActivity() {
-                try {
-                    const [recommendations, analytics] = await Promise.all([
-                        APIService.getAdminRecommendations(1, 5),
-                        APIService.getAnalytics()
-                    ]);
-
-                    // Recent Recommendations
-                    const recentRecsContainer = document.getElementById('recentRecommendations');
-                    if (recommendations.recommendations && recommendations.recommendations.length > 0) {
-                        const recsHTML = recommendations.recommendations.map(rec => `
-                            <div class="activity-item">
-                                <div class="activity-content">
-                                    <div class="activity-title">${rec.content.title}</div>
-                                    <div class="activity-meta">
-                                        by ${rec.admin_name} • ${new Date(rec.created_at).toLocaleDateString()}
-                                    </div>
-                                    <div class="activity-description">${rec.description.substring(0, 100)}...</div>
-                                </div>
-                            </div>
-                        `).join('');
-                        recentRecsContainer.innerHTML = recsHTML;
-                    } else {
-                        recentRecsContainer.innerHTML = '<p class="text-gray-400">No recent recommendations</p>';
-                    }
-
-                    // Popular Content
-                    const popularContainer = document.getElementById('popularContent');
-                    if (analytics.popular_content && analytics.popular_content.length > 0) {
-                        const popularHTML = analytics.popular_content.map(item => `
-                            <div class="activity-item">
-                                <div class="activity-content">
-                                    <div class="activity-title">${item.title}</div>
-                                    <div class="activity-meta">${item.interactions} interactions</div>
-                                </div>
-                            </div>
-                        `).join('');
-                        popularContainer.innerHTML = popularHTML;
-                    } else {
-                        popularContainer.innerHTML = '<p class="text-gray-400">No popular content data</p>';
-                    }
-                } catch (error) {
-                    console.error('Error loading recent activity:', error);
-                    document.getElementById('recentRecommendations').innerHTML = '<p class="text-red-400">Failed to load</p>';
-                    document.getElementById('popularContent').innerHTML = '<p class="text-red-400">Failed to load</p>';
-                }
-            }
-
-            async checkMLService() {
-                const statusContainer = document.getElementById('mlServiceStatus');
-                statusContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-
-                try {
-                    const response = await fetch(`${APIService.baseURL}/api/admin/ml-service-check`, {
-                        headers: AuthManager.getAuthHeaders()
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        this.displayMLStatus(data);
-                    } else {
-                        throw new Error('ML service check failed');
-                    }
-                } catch (error) {
-                    console.error('ML service check error:', error);
-                    statusContainer.innerHTML = `
-                        <div class="ml-status-item status-error">
-                            <i class="fas fa-times-circle"></i>
-                            <span>Failed to check ML service status</span>
-                        </div>
-                    `;
-                }
-            }
-
-            displayMLStatus(data) {
-                const statusContainer = document.getElementById('mlServiceStatus');
-                const statusClass = data.status === 'healthy' ? 'status-healthy' : 
-                                  data.status === 'partial' ? 'status-warning' : 'status-error';
-
-                let statusHTML = `
-                    <div class="ml-status-item ${statusClass}">
-                        <i class="fas fa-${data.status === 'healthy' ? 'check-circle' : data.status === 'partial' ? 'exclamation-triangle' : 'times-circle'}"></i>
-                        <span>Status: ${data.status.toUpperCase()}</span>
-                    </div>
-                `;
-
-                if (data.checks) {
-                    statusHTML += '<div class="ml-status-details">';
-                    
-                    Object.entries(data.checks).forEach(([check, result]) => {
-                        if (typeof result === 'object' && result.status) {
-                            const checkClass = result.status === 'pass' ? 'status-healthy' : 'status-error';
-                            statusHTML += `
-                                <div class="ml-check-item ${checkClass}">
-                                    <span class="check-name">${check.replace('_', ' ')}</span>
-                                    <span class="check-status">${result.status}</span>
-                                    ${result.response_time ? `<span class="check-time">${result.response_time}</span>` : ''}
-                                </div>
-                            `;
-                        }
-                    });
-                    
-                    statusHTML += '</div>';
-                }
-
-                if (data.quick_actions && data.quick_actions.force_update_available) {
-                    statusHTML += `
-                        <div class="ml-actions">
-                            <button class="btn btn-primary btn-sm" onclick="forceMLUpdate()">
-                                <i class="fas fa-sync-alt mr-2"></i>
-                                Force Update
-                            </button>
-                        </div>
-                    `;
-                }
-
-                statusContainer.innerHTML = statusHTML;
-            }
-        }
-
-        async function forceMLUpdate() {
-            try {
-                const response = await fetch(`${APIService.baseURL}/api/admin/ml-service-update`, {
-                    method: 'POST',
-                    headers: AuthManager.getAuthHeaders()
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    ContentManager.showToast('ML service update initiated', 'success');
-                } else {
-                    ContentManager.showToast(data.message || 'Update failed', 'error');
-                }
-            } catch (error) {
-                ContentManager.showToast('Failed to update ML service', 'error');
-            }
-        }
-
-        let adminDashboard;
-        document.addEventListener('DOMContentLoaded', () => {
-            adminDashboard = new AdminDashboard();
-        });
-    </script>
-
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <style>
-        .admin-action-card {
-            display: block;
+        .admin-header {
+            background: var(--gradient-dark);
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--primary-blue);
+        }
+        
+        .admin-title {
+            background: var(--gradient-blue);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .stat-card {
             background: var(--dark-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 24px;
-            text-decoration: none;
-            color: var(--text-primary);
-            transition: all 0.3s ease;
-            text-align: center;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--primary-blue);
+            transition: var(--transition-smooth);
         }
-        .admin-action-card:hover {
-            border-color: var(--primary);
-            background: var(--dark-hover);
-            transform: translateY(-2px);
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
         }
-        .admin-action-card i {
-            font-size: 2rem;
-            margin-bottom: 16px;
-        }
-        .admin-action-card h3 {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .admin-action-card p {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-        .activity-section {
-            background: var(--dark-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 24px;
-        }
-        .activity-list {
+        
+        .stat-header {
             display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .activity-item {
-            padding: 16px;
-            background: var(--dark-bg);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-        .activity-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-        .activity-meta {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-        .activity-description {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        .ml-status-card {
-            background: var(--dark-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 24px;
-        }
-        .ml-status-header {
-            display: flex;
-            justify-content: between;
             align-items: center;
-            margin-bottom: 20px;
+            justify-content: space-between;
+            margin-bottom: 1rem;
         }
-        .ml-status-header h3 {
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--gradient-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .stat-change {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .stat-change.positive {
+            color: #10b981;
+        }
+        
+        .stat-change.negative {
+            color: #ef4444;
+        }
+        
+        .dashboard-sections {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .section-card {
+            background: var(--dark-surface);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .section-title {
             font-size: 1.25rem;
             font-weight: 600;
+            color: var(--text-primary);
         }
-        .ml-status-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 12px;
+        
+        .ml-status {
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
         }
-        .status-healthy {
-            background: rgba(34, 197, 94, 0.1);
-            color: #22c55e;
-            border: 1px solid rgba(34, 197, 94, 0.2);
+        
+        .ml-status.healthy {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid #10b981;
         }
-        .status-warning {
-            background: rgba(251, 191, 36, 0.1);
-            color: #fbbf24;
-            border: 1px solid rgba(251, 191, 36, 0.2);
-        }
-        .status-error {
+        
+        .ml-status.unhealthy {
             background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
         }
-        .ml-status-details {
-            margin-top: 16px;
+        
+        .ml-status.partial {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid #f59e0b;
         }
-        .ml-check-item {
+        
+        .status-indicator {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            font-size: 14px;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
         }
-        .check-name {
-            text-transform: capitalize;
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
         }
-        .check-time {
-            font-size: 12px;
-            opacity: 0.8;
+        
+        .status-dot.green {
+            background: #10b981;
         }
-        .ml-actions {
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border-color);
+        
+        .status-dot.red {
+            background: #ef4444;
+        }
+        
+        .status-dot.yellow {
+            background: #f59e0b;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+        
+        .action-card {
+            background: var(--dark-surface);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            border: 2px solid transparent;
+        }
+        
+        .action-card:hover {
+            border-color: var(--primary-blue);
+            transform: translateY(-2px);
+        }
+        
+        .action-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-blue);
+        }
+        
+        .recent-activity {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--gradient-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .activity-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .activity-text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .chart-container {
+            height: 200px;
+            background: var(--dark-surface-2);
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            margin-top: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-sections {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
         }
     </style>
+</head>
+<body>
+    <!-- Header -->
+    <div data-include="header"></div>
+
+    <main style="padding-top: 80px;">
+        <!-- Admin Header -->
+        <section class="admin-header">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="/">Home</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>Admin Dashboard</span>
+                </div>
+                <h1 class="admin-title">⚡ Admin Dashboard</h1>
+                <p class="text-secondary">Manage and monitor CineScope platform</p>
+            </div>
+        </section>
+
+        <div class="container">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-change positive" id="usersChange">+12%</div>
+                    </div>
+                    <div class="stat-value" id="totalUsers">0</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-film"></i>
+                        </div>
+                        <div class="stat-change positive" id="contentChange">+8%</div>
+                    </div>
+                    <div class="stat-value" id="totalContent">0</div>
+                    <div class="stat-label">Content Items</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-mouse-pointer"></i>
+                        </div>
+                        <div class="stat-change positive" id="interactionsChange">+25%</div>
+                    </div>
+                    <div class="stat-value" id="totalInteractions">0</div>
+                    <div class="stat-label">User Interactions</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-change positive" id="activeChange">+15%</div>
+                    </div>
+                    <div class="stat-value" id="activeUsers">0</div>
+                    <div class="stat-label">Active This Week</div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <div class="action-card" onclick="window.location.href='/admin/content-browser'">
+                    <div class="action-icon">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    <h3>Add Content</h3>
+                    <p>Browse and add new content</p>
+                </div>
+
+                <div class="action-card" onclick="window.location.href='/admin/posts'">
+                    <div class="action-icon">
+                        <i class="fas fa-bullhorn"></i>
+                    </div>
+                    <h3>Create Post</h3>
+                    <p>Admin recommendations</p>
+                </div>
+
+                <div class="action-card" onclick="window.location.href='/admin/analytics'">
+                    <div class="action-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3>Analytics</h3>
+                    <p>Detailed insights</p>
+                </div>
+
+                <div class="action-card" onclick="refreshMLService()">
+                    <div class="action-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <h3>Refresh ML</h3>
+                    <p>Update recommendations</p>
+                </div>
+            </div>
+
+            <!-- Dashboard Sections -->
+            <div class="dashboard-sections">
+                <!-- Main Section -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2 class="section-title">System Health</h2>
+                        <button class="btn btn-outline btn-sm" onclick="checkSystemHealth()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+
+                    <!-- ML Service Status -->
+                    <div class="ml-status" id="mlServiceStatus">
+                        <div class="status-indicator">
+                            <div class="status-dot" id="mlStatusDot"></div>
+                            <strong id="mlStatusText">Checking ML Service...</strong>
+                        </div>
+                        <div id="mlStatusDetails"></div>
+                    </div>
+
+                    <!-- Performance Metrics -->
+                    <div class="chart-container">
+                        <p>Performance charts would be rendered here</p>
+                        <small>(Integration with Chart.js or similar)</small>
+                    </div>
+                </div>
+
+                <!-- Sidebar Section -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2 class="section-title">Recent Activity</h2>
+                    </div>
+                    
+                    <div class="recent-activity" id="recentActivity">
+                        <!-- Activity items will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Popular Content -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">Popular Content</h2>
+                    <a href="/admin/analytics" class="btn btn-outline btn-sm">View All</a>
+                </div>
+                
+                <div class="content-carousel" id="popularContent">
+                    <!-- Popular content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <div data-include="footer"></div>
+
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!requireAdmin()) return;
+            
+            loadDashboardData();
+            setupRealTimeUpdates();
+        });
+
+        async function loadDashboardData() {
+            try {
+                const [analyticsResponse, mlStatusResponse] = await Promise.all([
+                    ApiService.getAnalytics(),
+                    checkMLServiceStatus()
+                ]);
+
+                if (analyticsResponse.success) {
+                    updateStatsDisplay(analyticsResponse.data);
+                    renderPopularContent(analyticsResponse.data.popular_content || []);
+                }
+
+                loadRecentActivity();
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showToast('Failed to load dashboard data', 'error');
+            }
+        }
+
+        function updateStatsDisplay(data) {
+            document.getElementById('totalUsers').textContent = data.total_users || 0;
+            document.getElementById('totalContent').textContent = data.total_content || 0;
+            document.getElementById('totalInteractions').textContent = data.total_interactions || 0;
+            document.getElementById('activeUsers').textContent = data.active_users_last_week || 0;
+        }
+
+        async function checkMLServiceStatus() {
+            try {
+                const response = await ApiService.checkMLService();
+                
+                if (response.success) {
+                    updateMLServiceDisplay(response.data);
+                    return response.data;
+                } else {
+                    updateMLServiceDisplay({ status: 'error', message: 'Failed to check ML service' });
+                }
+            } catch (error) {
+                console.error('Error checking ML service:', error);
+                updateMLServiceDisplay({ status: 'error', message: 'Connection failed' });
+            }
+        }
+
+        function updateMLServiceDisplay(data) {
+            const statusElement = document.getElementById('mlServiceStatus');
+            const dotElement = document.getElementById('mlStatusDot');
+            const textElement = document.getElementById('mlStatusText');
+            const detailsElement = document.getElementById('mlStatusDetails');
+            
+            // Remove existing status classes
+            statusElement.className = 'ml-status';
+            
+            switch (data.status) {
+                case 'healthy':
+                    statusElement.classList.add('healthy');
+                    dotElement.className = 'status-dot green';
+                    textElement.textContent = 'ML Service: Healthy';
+                    break;
+                case 'partial':
+                    statusElement.classList.add('partial');
+                    dotElement.className = 'status-dot yellow';
+                    textElement.textContent = 'ML Service: Partial';
+                    break;
+                case 'unhealthy':
+                case 'error':
+                    statusElement.classList.add('unhealthy');
+                    dotElement.className = 'status-dot red';
+                    textElement.textContent = 'ML Service: Offline';
+                    break;
+                default:
+                    dotElement.className = 'status-dot yellow';
+                    textElement.textContent = 'ML Service: Unknown';
+            }
+            
+            if (data.checks) {
+                const checksHtml = Object.entries(data.checks).map(([check, result]) => {
+                    const status = result.status === 'pass' ? '✅' : '❌';
+                    return `<div style="font-size: 0.875rem; margin: 0.25rem 0;">${status} ${check}: ${result.status}</div>`;
+                }).join('');
+                
+                detailsElement.innerHTML = checksHtml;
+            } else if (data.message) {
+                detailsElement.innerHTML = `<div style="font-size: 0.875rem; color: var(--text-muted);">${data.message}</div>`;
+            }
+        }
+
+        function loadRecentActivity() {
+            const activities = [
+                { user: 'JD', action: 'New user registered', time: '2 minutes ago' },
+                { user: 'AS', action: 'Added Inception to watchlist', time: '5 minutes ago' },
+                { user: 'MK', action: 'Rated Avengers: 9/10', time: '8 minutes ago' },
+                { user: 'SP', action: 'Admin added new content', time: '15 minutes ago' },
+                { user: 'RG', action: 'Created recommendation post', time: '22 minutes ago' },
+                { user: 'NN', action: 'Updated user preferences', time: '28 minutes ago' },
+                { user: 'VK', action: 'Searched for "Batman"', time: '35 minutes ago' },
+                { user: 'LP', action: 'Added Naruto to favorites', time: '42 minutes ago' }
+            ];
+
+            const container = document.getElementById('recentActivity');
+            container.innerHTML = activities.map(activity => `
+                <div class="activity-item">
+                    <div class="activity-avatar">${activity.user}</div>
+                    <div class="activity-content">
+                        <div class="activity-text">${activity.action}</div>
+                        <div class="activity-time">${activity.time}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderPopularContent(content) {
+            const container = document.getElementById('popularContent');
+            
+            if (content.length > 0) {
+                container.innerHTML = content.map(item => `
+                    <div class="content-card" onclick="viewDetails(${item.id})">
+                        <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
+                             alt="${item.title}" class="content-poster">
+                        <div class="content-overlay">
+                            <h3 class="content-title">${item.title}</h3>
+                            <div class="content-meta">
+                                <span class="interactions">${item.interactions || 0} interactions</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p class="text-secondary">No popular content data available</p>';
+            }
+        }
+
+        async function refreshMLService() {
+            const button = event.target.closest('.action-card');
+            const originalContent = button.innerHTML;
+            
+            button.innerHTML = `
+                <div class="action-icon">
+                    <i class="fas fa-sync-alt fa-spin"></i>
+                </div>
+                <h3>Updating...</h3>
+                <p>Please wait</p>
+            `;
+            
+            try {
+                const response = await ApiService.updateMLService();
+                
+                if (response.success) {
+                    showToast('ML service update initiated', 'success');
+                    setTimeout(() => {
+                        checkMLServiceStatus();
+                    }, 3000);
+                } else {
+                    throw new Error(response.message || 'Update failed');
+                }
+            } catch (error) {
+                console.error('Error updating ML service:', error);
+                showToast('Failed to update ML service', 'error');
+            } finally {
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                }, 2000);
+            }
+        }
+
+        function checkSystemHealth() {
+            checkMLServiceStatus();
+            loadDashboardData();
+            showToast('System health refreshed', 'success');
+        }
+
+        function setupRealTimeUpdates() {
+            // Update dashboard every 30 seconds
+            setInterval(() => {
+                loadRecentActivity();
+                checkMLServiceStatus();
+            }, 30000);
+
+            // Update stats every 5 minutes
+            setInterval(() => {
+                loadDashboardData();
+            }, 5 * 60 * 1000);
+        }
+
+        // Export functions
+        window.refreshMLService = refreshMLService;
+        window.checkSystemHealth = checkSystemHealth;
+    </script>
 </body>
 </html>

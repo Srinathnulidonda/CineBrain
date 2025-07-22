@@ -1,517 +1,528 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
-    <title>Content Browser | Admin | CineScope</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Browser - Admin - CineScope</title>
+    <meta name="description" content="Browse and manage content in CineScope admin panel.">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <!-- Header -->
     <div data-include="header"></div>
-    
-    <main class="container py-8 pt-24">
-        <section class="admin-header mb-8">
-            <h1 class="text-4xl font-bold mb-4">
-                <i class="fas fa-search text-blue-500 mr-3"></i>
-                Content <span class="text-gradient">Browser</span>
-            </h1>
-            <p class="text-gray-400 text-lg">Search and add content from external sources</p>
+
+    <main style="padding-top: 80px;">
+        <!-- Admin Header -->
+        <section class="admin-header">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="/">Home</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <a href="/admin/dashboard">Admin</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>Content Browser</span>
+                </div>
+                <h1 class="admin-title">🎬 Content Browser</h1>
+                <p class="text-secondary">Search and add content from external sources</p>
+            </div>
         </section>
 
-        <!-- Search Form -->
-        <section class="search-section mb-8">
-            <div class="admin-search-form">
-                <div class="search-controls">
-                    <div class="form-group">
-                        <label class="form-label">Search Query</label>
-                        <input type="text" id="searchQuery" class="form-input" placeholder="Enter movie, TV show, or anime title">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Source</label>
-                        <select id="searchSource" class="form-select">
+        <div class="container">
+            <!-- Search Form -->
+            <div class="search-section">
+                <form id="contentSearchForm" class="search-form-admin">
+                    <div class="search-input-group">
+                        <input type="text" id="searchQuery" name="query" class="search-input-large" 
+                               placeholder="Search for movies, TV shows, or anime..." required>
+                        <select id="sourceSelect" name="source" class="source-select">
                             <option value="tmdb">TMDB (Movies & TV)</option>
-                            <option value="anime">MyAnimeList (Anime)</option>
+                            <option value="anime">Jikan (Anime)</option>
                         </select>
-                    </div>
-                    <div class="form-group">
-                        <button class="btn btn-primary" onclick="searchExternalContent()">
-                            <i class="fas fa-search mr-2"></i>
-                            Search
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Search
                         </button>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Search Results -->
-        <section class="results-section">
-            <div id="searchResults" class="hidden">
-                <div class="results-header">
-                    <h2 class="text-2xl font-bold mb-4">Search Results</h2>
-                    <div class="results-meta">
-                        <span id="resultsCount">0 results found</span>
-                    </div>
-                </div>
-                <div id="resultsGrid" class="admin-results"></div>
+                </form>
             </div>
 
-            <div id="searchLoading" class="hidden">
-                <div class="loading-large">
-                    <div class="spinner-large"></div>
-                    <p class="mt-4 text-gray-400">Searching external sources...</p>
+            <!-- Search Results -->
+            <div class="results-section">
+                <div class="results-header" id="resultsHeader" style="display: none;">
+                    <h2 class="section-title">Search Results</h2>
+                    <div class="results-count" id="resultsCount"></div>
+                </div>
+                
+                <div class="results-grid" id="searchResults">
+                    <!-- Results will be displayed here -->
                 </div>
             </div>
 
-            <div id="noResults" class="hidden">
-                <div class="no-results">
-                    <i class="fas fa-search text-4xl text-gray-500 mb-4"></i>
-                    <h3 class="text-xl font-bold mb-2">No results found</h3>
-                    <p class="text-gray-400">Try different search terms or check another source</p>
-                </div>
-            </div>
-
-            <div id="emptyState" class="empty-search-state">
-                <div class="text-center py-20">
-                    <i class="fas fa-film text-6xl text-gray-500 mb-6"></i>
-                    <h2 class="text-2xl font-bold mb-4">Content Browser</h2>
-                    <p class="text-gray-400 mb-8">Search for movies, TV shows, and anime to add to the platform</p>
-                    <div class="feature-list">
-                        <div class="feature-item">
-                            <i class="fas fa-database text-blue-500"></i>
-                            <span>Access TMDB Database</span>
-                        </div>
-                        <div class="feature-item">
-                            <i class="fas fa-tv text-purple-500"></i>
-                            <span>Browse MyAnimeList</span>
-                        </div>
-                        <div class="feature-item">
-                            <i class="fas fa-plus text-green-500"></i>
-                            <span>Add to Platform</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Content Preview Modal -->
-        <div id="contentModal" class="modal hidden">
-            <div class="modal-overlay" onclick="closeContentModal()"></div>
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 id="modalTitle">Content Preview</h3>
-                    <button class="modal-close" onclick="closeContentModal()">
-                        <i class="fas fa-times"></i>
+            <!-- Existing Content -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">Recently Added Content</h2>
+                    <button class="btn btn-outline" onclick="loadExistingContent()">
+                        <i class="fas fa-sync-alt"></i> Refresh
                     </button>
                 </div>
-                <div class="modal-body">
-                    <div id="modalContentDetails">
-                        <!-- Content details will be loaded here -->
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-ghost" onclick="closeContentModal()">Cancel</button>
-                    <button id="addContentBtn" class="btn btn-primary" onclick="addSelectedContent()">
-                        <i class="fas fa-plus mr-2"></i>
-                        Add to Platform
-                    </button>
+                
+                <div class="content-carousel" id="existingContent">
+                    <!-- Existing content will be loaded here -->
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- Content Details Modal -->
+    <div id="contentModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <div id="contentDetails">
+                <!-- Content details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
     <div data-include="footer"></div>
 
-    <script src="/js/auth.js"></script>
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
+
     <script>
-        let currentSearchResults = [];
-        let selectedContent = null;
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!requireAdmin()) return;
+            
+            setupSearchForm();
+            loadExistingContent();
+        });
 
-        class ContentBrowser {
-            constructor() {
-                this.init();
-            }
-
-            init() {
-                if (!AuthManager.requireAdmin()) return;
-                this.setupEventListeners();
-            }
-
-            setupEventListeners() {
-                // Enter key to search
-                document.getElementById('searchQuery').addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        searchExternalContent();
-                    }
-                });
-            }
+        function setupSearchForm() {
+            const searchForm = document.getElementById('contentSearchForm');
+            
+            searchForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(searchForm);
+                const query = formData.get('query');
+                const source = formData.get('source');
+                
+                if (query.trim()) {
+                    await searchExternalContent(query, source);
+                }
+            });
         }
 
-        async function searchExternalContent() {
-            const query = document.getElementById('searchQuery').value.trim();
-            const source = document.getElementById('searchSource').value;
-
-            if (!query) {
-                ContentManager.showToast('Please enter a search query', 'error');
-                return;
-            }
-
-            showLoading();
-
+        async function searchExternalContent(query, source) {
+            const resultsContainer = document.getElementById('searchResults');
+            const resultsHeader = document.getElementById('resultsHeader');
+            const resultsCount = document.getElementById('resultsCount');
+            
             try {
-                const response = await APIService.adminSearch(query, source);
-                currentSearchResults = response.results || [];
-
-                if (currentSearchResults.length > 0) {
-                    displaySearchResults();
+                // Show loading state
+                showSearchLoading();
+                resultsHeader.style.display = 'flex';
+                
+                const response = await ApiService.adminSearch(query, source);
+                
+                if (response.success && response.data.results) {
+                    const results = response.data.results;
+                    resultsCount.textContent = `Found ${results.length} results`;
+                    renderSearchResults(results, source);
                 } else {
-                    showNoResults();
+                    throw new Error('No results found');
                 }
             } catch (error) {
                 console.error('Search error:', error);
-                showError();
+                showSearchError();
             }
         }
 
-        function showLoading() {
-            document.getElementById('emptyState').classList.add('hidden');
-            document.getElementById('searchResults').classList.add('hidden');
-            document.getElementById('noResults').classList.add('hidden');
-            document.getElementById('searchLoading').classList.remove('hidden');
-        }
-
-        function displaySearchResults() {
-            document.getElementById('searchLoading').classList.add('hidden');
-            document.getElementById('noResults').classList.add('hidden');
-            document.getElementById('emptyState').classList.add('hidden');
-
+        function showSearchLoading() {
             const resultsContainer = document.getElementById('searchResults');
-            const resultsGrid = document.getElementById('resultsGrid');
-            const resultsCount = document.getElementById('resultsCount');
-
-            resultsCount.textContent = `${currentSearchResults.length} results found`;
-            
-            const resultsHTML = currentSearchResults.map(item => createSearchResultCard(item)).join('');
-            resultsGrid.innerHTML = resultsHTML;
-            
-            resultsContainer.classList.remove('hidden');
+            resultsContainer.innerHTML = Array(8).fill().map(() => `
+                <div class="external-content-card skeleton">
+                    <div class="skeleton-poster"></div>
+                    <div class="content-info">
+                        <div class="skeleton-title"></div>
+                        <div class="skeleton-meta"></div>
+                        <div class="skeleton-overview"></div>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        function createSearchResultCard(item) {
-            const posterUrl = item.poster_path || '/assets/images/placeholder.jpg';
-            const rating = item.rating || 'N/A';
-            const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
-            
-            return `
-                <div class="admin-card">
-                    <div class="admin-card-image">
-                        <img src="${posterUrl}" alt="${item.title}" loading="lazy" onerror="this.src='/assets/images/placeholder.jpg'">
-                    </div>
-                    <div class="admin-card-content">
-                        <div class="admin-card-title">${item.title}</div>
-                        <div class="admin-card-meta">
-                            <span class="rating">⭐ ${rating}</span>
-                            <span class="content-type">${item.content_type?.toUpperCase() || (item.source === 'anime' ? 'ANIME' : 'MOVIE')}</span>
-                            ${year ? `<span class="year">${year}</span>` : ''}
-                        </div>
-                        <div class="admin-card-overview">${item.overview ? item.overview.substring(0, 100) + '...' : 'No description available'}</div>
-                        <div class="admin-card-actions">
-                            <button class="btn btn-ghost btn-sm" onclick="previewContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                                <i class="fas fa-eye mr-2"></i>
-                                Preview
-                            </button>
-                            <button class="btn btn-primary btn-sm" onclick="quickAddContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                                <i class="fas fa-plus mr-2"></i>
-                                Add
-                            </button>
-                        </div>
-                    </div>
+        function showSearchError() {
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Search Failed</h3>
+                    <p>Unable to search external sources. Please try again.</p>
                 </div>
             `;
         }
 
-        function showNoResults() {
-            document.getElementById('searchLoading').classList.add('hidden');
-            document.getElementById('searchResults').classList.add('hidden');
-            document.getElementById('emptyState').classList.add('hidden');
-            document.getElementById('noResults').classList.remove('hidden');
-        }
-
-        function showError() {
-            document.getElementById('searchLoading').classList.add('hidden');
-            const noResults = document.getElementById('noResults');
-            noResults.innerHTML = `
-                <div class="no-results">
-                    <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-                    <h3 class="text-xl font-bold mb-2">Search Error</h3>
-                    <p class="text-gray-400">Failed to search external sources. Please try again.</p>
-                </div>
-            `;
-            noResults.classList.remove('hidden');
-        }
-
-        function previewContent(item) {
-            selectedContent = item;
-            const modal = document.getElementById('contentModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalDetails = document.getElementById('modalContentDetails');
-
-            modalTitle.textContent = item.title;
+        function renderSearchResults(results, source) {
+            const resultsContainer = document.getElementById('searchResults');
             
-            const detailsHTML = `
-                <div class="content-preview">
-                    <div class="preview-poster">
-                        <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" alt="${item.title}" onerror="this.src='/assets/images/placeholder.jpg'">
+            resultsContainer.innerHTML = results.map(item => `
+                <div class="external-content-card" data-source="${source}">
+                    <div class="card-image">
+                        <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
+                             alt="${item.title}" class="content-poster">
+                        <div class="source-badge">${source.toUpperCase()}</div>
                     </div>
-                    <div class="preview-details">
-                        <h4>${item.title}</h4>
-                        ${item.original_title && item.original_title !== item.title ? `<p class="original-title">${item.original_title}</p>` : ''}
-                        <div class="preview-meta">
-                            <span class="rating">⭐ ${item.rating || 'N/A'}</span>
-                            <span class="content-type">${item.content_type?.toUpperCase() || (item.source === 'anime' ? 'ANIME' : 'MOVIE')}</span>
+                    <div class="content-info">
+                        <h3 class="content-title">${item.title}</h3>
+                        <div class="content-meta">
+                            <span class="content-type">${item.content_type || 'movie'}</span>
+                            ${item.rating ? `<span class="rating">⭐ ${item.rating}</span>` : ''}
                             ${item.release_date ? `<span class="year">${new Date(item.release_date).getFullYear()}</span>` : ''}
                         </div>
-                        <div class="preview-overview">
-                            <h5>Overview</h5>
-                            <p>${item.overview || 'No description available'}</p>
+                        <p class="content-overview">${(item.overview || '').substring(0, 120)}${item.overview && item.overview.length > 120 ? '...' : ''}</p>
+                        <div class="content-actions">
+                            <button class="btn btn-primary btn-sm" onclick="viewExternalContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-eye"></i> Preview
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="saveExternalContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-plus"></i> Add to Database
+                            </button>
                         </div>
-                        ${item.genres ? `
-                            <div class="preview-genres">
-                                <h5>Genres</h5>
-                                <div class="genre-tags">
-                                    ${item.genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
-                                </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function viewExternalContent(contentData) {
+            const modal = document.getElementById('contentModal');
+            const detailsContainer = document.getElementById('contentDetails');
+            
+            detailsContainer.innerHTML = `
+                <div class="content-preview">
+                    <div class="preview-header">
+                        <img src="${contentData.poster_path || '/assets/images/placeholder.jpg'}" 
+                             alt="${contentData.title}" class="preview-poster">
+                        <div class="preview-info">
+                            <h2>${contentData.title}</h2>
+                            ${contentData.original_title && contentData.original_title !== contentData.title ? 
+                                `<p class="original-title">${contentData.original_title}</p>` : ''}
+                            <div class="preview-meta">
+                                <span class="content-type">${contentData.content_type || 'movie'}</span>
+                                ${contentData.rating ? `<span class="rating">⭐ ${contentData.rating}</span>` : ''}
+                                ${contentData.release_date ? `<span class="year">${new Date(contentData.release_date).getFullYear()}</span>` : ''}
                             </div>
-                        ` : ''}
+                            <div class="preview-actions">
+                                <button class="btn btn-primary" onclick="saveExternalContent(${JSON.stringify(contentData).replace(/"/g, '&quot;')})">
+                                    <i class="fas fa-plus"></i> Add to Database
+                                </button>
+                                <button class="btn btn-outline" onclick="closeModal(document.getElementById('contentModal'))">
+                                    <i class="fas fa-times"></i> Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="preview-overview">
+                        <h3>Overview</h3>
+                        <p>${contentData.overview || 'No overview available.'}</p>
                     </div>
                 </div>
             `;
-
-            modalDetails.innerHTML = detailsHTML;
-            modal.classList.remove('hidden');
+            
+            openModal('contentModal');
         }
 
-        function closeContentModal() {
-            document.getElementById('contentModal').classList.add('hidden');
-            selectedContent = null;
-        }
-
-        async function quickAddContent(item) {
+        async function saveExternalContent(contentData) {
             try {
-                const loadingBtn = event.target;
-                const originalText = loadingBtn.innerHTML;
-                loadingBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding...';
-                loadingBtn.disabled = true;
-
-                const response = await APIService.saveExternalContent(item);
+                const button = event.target;
+                const originalContent = button.innerHTML;
                 
-                if (response) {
-                    ContentManager.showToast('Content added successfully', 'success');
-                    loadingBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Added';
-                    loadingBtn.classList.remove('btn-primary');
-                    loadingBtn.classList.add('btn-ghost');
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                button.disabled = true;
+                
+                const response = await ApiService.saveExternalContent(contentData);
+                
+                if (response.success) {
+                    showToast('Content saved successfully!', 'success');
+                    button.innerHTML = '<i class="fas fa-check"></i> Saved';
+                    
+                    // Refresh existing content
+                    setTimeout(() => {
+                        loadExistingContent();
+                    }, 1000);
                 } else {
-                    throw new Error('Failed to add content');
+                    throw new Error(response.error || 'Failed to save content');
                 }
             } catch (error) {
-                console.error('Add content error:', error);
-                ContentManager.showToast('Failed to add content', 'error');
+                console.error('Error saving content:', error);
+                showToast(error.message || 'Failed to save content', 'error');
                 
                 // Reset button
-                event.target.innerHTML = '<i class="fas fa-plus mr-2"></i>Add';
-                event.target.disabled = false;
+                const button = event.target;
+                button.innerHTML = '<i class="fas fa-plus"></i> Add to Database';
+                button.disabled = false;
             }
         }
 
-        async function addSelectedContent() {
-            if (!selectedContent) return;
-
+        async function loadExistingContent() {
+            const container = document.getElementById('existingContent');
+            
             try {
-                const response = await APIService.saveExternalContent(selectedContent);
+                showLoadingSkeleton(container);
                 
-                if (response) {
-                    ContentManager.showToast('Content added successfully', 'success');
-                    closeContentModal();
+                // Load recent content from the database
+                const response = await ApiService.getTrending('all', 12);
+                
+                if (response.success && response.data.recommendations) {
+                    container.innerHTML = response.data.recommendations.map(item => `
+                        <div class="content-card" onclick="viewDetails(${item.id})">
+                            <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
+                                 alt="${item.title}" class="content-poster">
+                            <div class="content-overlay">
+                                <h3 class="content-title">${item.title}</h3>
+                                <div class="content-meta">
+                                    <span class="content-type">${item.content_type}</span>
+                                    ${item.rating ? `<span class="rating">⭐ ${item.rating}</span>` : ''}
+                                </div>
+                                <div class="content-actions">
+                                    <button class="action-btn" onclick="event.stopPropagation(); viewDetails(${item.id})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="action-btn" onclick="event.stopPropagation(); createRecommendationPost(${item.id})" title="Create Post">
+                                        <i class="fas fa-bullhorn"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
                 } else {
-                    throw new Error('Failed to add content');
+                    container.innerHTML = '<p class="text-secondary">No content available</p>';
                 }
             } catch (error) {
-                console.error('Add content error:', error);
-                ContentManager.showToast('Failed to add content', 'error');
+                console.error('Error loading existing content:', error);
+                container.innerHTML = '<p class="text-secondary">Failed to load content</p>';
             }
         }
 
-        // Initialize content browser
-        document.addEventListener('DOMContentLoaded', () => {
-            new ContentBrowser();
-        });
+        function createRecommendationPost(contentId) {
+            window.location.href = `/admin/posts?content_id=${contentId}`;
+        }
+
+        // Export functions
+        window.viewExternalContent = viewExternalContent;
+        window.saveExternalContent = saveExternalContent;
+        window.loadExistingContent = loadExistingContent;
+        window.createRecommendationPost = createRecommendationPost;
     </script>
 
     <style>
-        .loading-large {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 60px 20px;
-        }
-        .spinner-large {
-            width: 60px;
-            height: 60px;
-            border: 4px solid var(--border-color);
-            border-top: 4px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        .no-results {
-            text-align: center;
-            padding: 60px 20px;
-        }
-        .feature-list {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin-top: 20px;
-        }
-        .feature-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-        .feature-item i {
-            font-size: 24px;
-        }
-        .feature-item span {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .modal-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-        }
-        .modal-content {
-            position: relative;
+        .search-section {
             background: var(--dark-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            max-width: 600px;
-            width: 100%;
-            max-height: 80vh;
-            overflow: auto;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 3rem;
         }
-        .modal-header {
+        
+        .search-form-admin {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .search-input-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .search-input-large {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--border-radius);
+            background: var(--dark-surface-2);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+        
+        .source-select {
+            min-width: 180px;
+            padding: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--border-radius);
+            background: var(--dark-surface-2);
+            color: var(--text-primary);
+        }
+        
+        .results-section {
+            margin-bottom: 3rem;
+        }
+        
+        .results-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
         }
-        .modal-header h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
         }
-        .modal-close {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 18px;
-            cursor: pointer;
+        
+        .external-content-card {
+            background: var(--dark-surface);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            transition: var(--transition-smooth);
+            border: 2px solid transparent;
         }
-        .modal-body {
-            padding: 20px;
+        
+        .external-content-card:hover {
+            border-color: var(--primary-blue);
+            transform: translateY(-4px);
         }
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            padding: 20px;
-            border-top: 1px solid var(--border-color);
+        
+        .card-image {
+            position: relative;
         }
-        .content-preview {
-            display: flex;
-            gap: 20px;
-        }
-        .preview-poster {
-            flex-shrink: 0;
-            width: 150px;
-        }
-        .preview-poster img {
+        
+        .content-poster {
             width: 100%;
-            border-radius: 8px;
+            height: 200px;
+            object-fit: cover;
         }
-        .preview-details {
+        
+        .source-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--gradient-blue);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .content-info {
+            padding: 1.5rem;
+        }
+        
+        .content-title {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+        
+        .content-meta {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+        
+        .content-overview {
+            color: var(--text-muted);
+            line-height: 1.4;
+            margin-bottom: 1.5rem;
+        }
+        
+        .content-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .content-preview {
+            max-width: 600px;
+        }
+        
+        .preview-header {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .preview-poster {
+            width: 150px;
+            height: 225px;
+            object-fit: cover;
+            border-radius: var(--border-radius);
+            flex-shrink: 0;
+        }
+        
+        .preview-info {
             flex: 1;
         }
-        .preview-details h4 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .original-title {
-            color: var(--text-muted);
-            font-style: italic;
-            margin-bottom: 12px;
-        }
+        
         .preview-meta {
             display: flex;
-            gap: 16px;
-            margin-bottom: 16px;
-            font-size: 14px;
-        }
-        .preview-overview h5,
-        .preview-genres h5 {
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--primary);
-        }
-        .preview-overview {
-            margin-bottom: 16px;
-        }
-        .preview-overview p {
+            gap: 1rem;
+            margin: 1rem 0;
+            font-size: 0.875rem;
             color: var(--text-secondary);
-            line-height: 1.6;
         }
-        .genre-tags {
+        
+        .preview-actions {
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
+            gap: 1rem;
+            margin-top: 1.5rem;
         }
-        .genre-tag {
-            padding: 4px 8px;
-            background: var(--dark-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            font-size: 12px;
+        
+        .preview-overview {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 1.5rem;
+        }
+        
+        .error-message {
+            text-align: center;
+            padding: 3rem;
+            background: var(--dark-surface);
+            border-radius: var(--border-radius);
             color: var(--text-secondary);
         }
-        @media (max-width: 640px) {
-            .content-preview {
+        
+        .error-message i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #ef4444;
+        }
+        
+        @media (max-width: 768px) {
+            .search-input-group {
                 flex-direction: column;
             }
-            .preview-poster {
+            
+            .source-select {
                 width: 100%;
-                max-width: 200px;
-                margin: 0 auto;
             }
-            .feature-list {
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .preview-header {
                 flex-direction: column;
-                gap: 20px;
+                text-align: center;
+            }
+            
+            .preview-poster {
+                margin: 0 auto;
             }
         }
     </style>

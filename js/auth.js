@@ -1,144 +1,169 @@
-// Authentication Manager
+// Authentication Management
 class AuthManager {
-    static currentUser = null;
-    static token = null;
-
-    static async checkAuthState() {
-        // Check if user is already authenticated (in memory only)
-        if (this.token && this.currentUser) {
-            document.dispatchEvent(new CustomEvent('authStateChanged', { 
-                detail: this.currentUser 
-            }));
-            return this.currentUser;
-        }
-        return null;
+    constructor() {
+        this.user = null;
+        this.loadUser();
+        this.setupAuthCheck();
     }
 
-    static async login(username, password) {
-        try {
-            const response = await fetch(`${APIService.baseURL}/api/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, password })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                this.token = data.token;
-                this.currentUser = data.user;
-                
-                // Dispatch auth state change event
-                document.dispatchEvent(new CustomEvent('authStateChanged', { 
-                    detail: this.currentUser 
-                }));
-
-                return { success: true, user: data.user };
-            } else {
-                return { success: false, error: data.error };
+    loadUser() {
+        const userData = sessionStorage.getItem('userData') || localStorage.getItem('userData');
+        if (userData) {
+            try {
+                this.user = JSON.parse(userData);
+            } catch (e) {
+                console.error('Failed to parse user data:', e);
+                this.clearAuth();
             }
-        } catch (error) {
-            console.error('Login error:', error);
-            return { success: false, error: 'Login failed. Please try again.' };
         }
     }
 
-    static async register(userData) {
-        try {
-            const response = await fetch(`${APIService.baseURL}/api/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(userData)
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                this.token = data.token;
-                this.currentUser = data.user;
-                
-                // Dispatch auth state change event
-                document.dispatchEvent(new CustomEvent('authStateChanged', { 
-                    detail: this.currentUser 
-                }));
-
-                return { success: true, user: data.user };
-            } else {
-                return { success: false, error: data.error };
-            }
-        } catch (error) {
-            console.error('Registration error:', error);
-            return { success: false, error: 'Registration failed. Please try again.' };
-        }
-    }
-
-    static logout() {
-        this.token = null;
-        this.currentUser = null;
+    saveUser(user, remember = false) {
+        this.user = user;
+        const userStr = JSON.stringify(user);
         
-        // Dispatch auth state change event
-        document.dispatchEvent(new CustomEvent('authStateChanged', { 
-            detail: null 
-        }));
+        if (remember) {
+            localStorage.setItem('userData', userStr);
+        } else {
+            sessionStorage.setItem('userData', userStr);
+        }
+    }
 
-        // Redirect to home page
+    clearAuth() {
+        this.user = null;
+        sessionStorage.removeItem('userData');
+        localStorage.removeItem('userData');
+        API.clearToken();
+    }
+
+    isAuthenticated() {
+        return this.user !== null && API.token !== null;
+    }
+
+    isAdmin() {
+        return this.user && this.user.is_admin === true;
+    }
+
+    getUser() {
+        return this.user;
+    }
+
+    async login(credentials, remember = false) {
+        try {
+            const response = await ApiService.login(credentials);
+            
+            if (response.success) {
+                const { token, user } = response.data;
+                
+                API.saveToken(token, remember);
+                this.saveUser(user, remember);
+                
+                // Redirect based on user role
+                if (user.is_admin) {
+                    window.location.href = '/admin/dashboard';
+                } else {
+                    window.location.href = '/dashboard';
+                }
+                
+                return { success: true };
+            } else {
+                return { success: false, error: response.error };
+            }
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    async register(userData, remember = false) {
+        try {
+            const response = await ApiService.register(userData);
+            
+            if (response.success) {
+                const { token, user } = response.data;
+                
+                API.saveToken(token, remember);
+                this.saveUser(user, remember);
+                
+                window.location.href = '/dashboard';
+                return { success: true };
+            } else {
+                return { success: false, error: response.error };
+            }
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    logout() {
+        this.clearAuth();
         window.location.href = '/';
     }
 
-    static isAuthenticated() {
-        return this.token !== null && this.currentUser !== null;
-    }
-
-    static isAdmin() {
-        return this.isAuthenticated() && this.currentUser?.is_admin === true;
-    }
-
-    static getAuthHeaders() {
-        if (this.token) {
-            return {
-                'Authorization': `Bearer ${this.token}`,
-                'Content-Type': 'application/json'
-            };
-        }
-        return {
-            'Content-Type': 'application/json'
-        };
-    }
-
-    static requireAuth() {
+    requireAuth() {
         if (!this.isAuthenticated()) {
-            this.showLoginPrompt();
-            return false;
-        }
-        return true;
-    }
-
-    static requireAdmin() {
-        if (!this.isAdmin()) {
-            window.location.href = '/';
-            return false;
-        }
-        return true;
-    }
-
-    static showLoginPrompt() {
-        if (confirm('You need to login to perform this action. Would you like to login now?')) {
             window.location.href = '/login';
+            return false;
         }
+        return true;
     }
 
-    static redirectBasedOnRole(user) {
-        if (user.is_admin) {
-            window.location.href = '/admin/dashboard';
-        } else {
+    requireAdmin() {
+        if (!this.requireAuth()) return false;
+        
+        if (!this.isAdmin()) {
+            showToast('Admin access required', 'error');
             window.location.href = '/dashboard';
+            return false;
+        }
+        return true;
+    }
+
+    setupAuthCheck() {
+        // Check authentication status periodically
+        setInterval(() => {
+            if (this.isAuthenticated() && !API.token) {
+                this.clearAuth();
+                window.location.href = '/login';
+            }
+        }, 60000); // Check every minute
+    }
+
+    updateUserProfile(userData) {
+        if (this.user) {
+            this.user = { ...this.user, ...userData };
+            const remember = localStorage.getItem('userData') !== null;
+            this.saveUser(this.user, remember);
         }
     }
 }
 
-// Export for global access
-window.AuthManager = AuthManager;
+// Initialize auth manager
+const Auth = new AuthManager();
+
+// Utility functions
+window.requireAuth = function() {
+    return Auth.requireAuth();
+};
+
+window.requireAdmin = function() {
+    return Auth.requireAdmin();
+};
+
+window.isAuthenticated = function() {
+    return Auth.isAuthenticated();
+};
+
+window.isAdmin = function() {
+    return Auth.isAdmin();
+};
+
+window.getCurrentUser = function() {
+    return Auth.getUser();
+};
+
+window.logout = function() {
+    Auth.logout();
+};
+
+// Export Auth manager
+window.Auth = Auth;
