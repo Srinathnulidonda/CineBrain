@@ -1,378 +1,617 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Your personalized dashboard with movie and TV show recommendations.">
     <title>Dashboard - CineScope</title>
     
-    <link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/responsive.css">
+    
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
 </head>
 <body>
-    <div id="header-container"></div>
-    
-    <main class="main-content pt-20">
-        <div class="container">
-            <!-- Welcome Banner -->
-            <section class="welcome-banner mb-8">
-                <div class="card card-gradient p-8">
-                    <div class="flex flex-col md:flex-row items-center justify-between">
-                        <div class="mb-4 md:mb-0">
-                            <h1 class="text-3xl font-bold mb-2">
-                                Welcome back, <span data-user-info="username" class="text-primary">User</span>!
-                            </h1>
-                            <p class="text-muted">Discover your next favorite from personalized recommendations</p>
-                        </div>
-                        <div class="stats-grid grid grid-cols-3 gap-4 text-center">
+    <!-- Header -->
+    <header data-include="header"></header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Welcome Section -->
+        <section class="welcome-section">
+            <div class="container">
+                <div class="welcome-banner">
+                    <div class="welcome-content">
+                        <h1 class="welcome-title">Welcome back, <span id="user-welcome-name">User</span>!</h1>
+                        <p class="welcome-subtitle">Discover your next favorite movie from our personalized recommendations</p>
+                        <div class="welcome-stats">
                             <div class="stat-item">
-                                <div class="text-2xl font-bold text-primary" id="watchlist-count">0</div>
-                                <div class="text-sm text-muted">Watchlist</div>
+                                <span class="stat-number" id="watchlist-count">0</span>
+                                <span class="stat-label">Watchlist Items</span>
                             </div>
                             <div class="stat-item">
-                                <div class="text-2xl font-bold text-purple-400" id="favorites-count">0</div>
-                                <div class="text-sm text-muted">Favorites</div>
+                                <span class="stat-number" id="favorites-count">0</span>
+                                <span class="stat-label">Favorites</span>
                             </div>
                             <div class="stat-item">
-                                <div class="text-2xl font-bold text-green-400" id="viewed-count">0</div>
-                                <div class="text-sm text-muted">Viewed</div>
+                                <span class="stat-number" id="watched-count">0</span>
+                                <span class="stat-label">Movies Watched</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            <!-- Continue Watching -->
-            <section class="section" id="continue-watching-section" style="display: none;">
-                <div class="section-header">
-                    <div>
-                        <h2 class="section-title">Continue Watching</h2>
-                        <p class="section-subtitle">Resume from where you left off</p>
+                    <div class="welcome-actions">
+                        <button class="btn btn-primary" data-navigate="/search">
+                            🔍 Discover New Content
+                        </button>
+                        <button class="btn btn-secondary" data-navigate="/user/watchlist">
+                            📚 View Watchlist
+                        </button>
                     </div>
                 </div>
-                <div id="continue-watching-carousel">
-                    <!-- Dynamic content -->
-                </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Recommended For You -->
-            <section class="section">
-                <div class="section-header">
-                    <div>
-                        <h2 class="section-title">Recommended For You</h2>
-                        <p class="section-subtitle">Personalized picks based on your taste</p>
-                    </div>
-                    <button class="btn btn-outline" onclick="app.refreshRecommendations()">
-                        🔄 Refresh
+        <!-- Quick Actions -->
+        <section class="quick-actions-section">
+            <div class="container">
+                <div class="quick-actions">
+                    <button class="quick-action-btn" data-navigate="/categories/trending">
+                        <div class="quick-action-icon">🔥</div>
+                        <div class="quick-action-text">Trending</div>
+                    </button>
+                    <button class="quick-action-btn" data-navigate="/categories/new-releases">
+                        <div class="quick-action-icon">🆕</div>
+                        <div class="quick-action-text">New Releases</div>
+                    </button>
+                    <button class="quick-action-btn" data-navigate="/categories/critics-choice">
+                        <div class="quick-action-icon">⭐</div>
+                        <div class="quick-action-text">Critics' Choice</div>
+                    </button>
+                    <button class="quick-action-btn" data-navigate="/categories/anime">
+                        <div class="quick-action-icon">🎌</div>
+                        <div class="quick-action-text">Anime</div>
                     </button>
                 </div>
-                <div id="personalized-carousel" class="loading">
-                    <div class="carousel">
-                        <div class="carousel-track">
-                            ${Array(8).fill().map(() => '<div class="content-card skeleton skeleton-card"></div>').join('')}
-                        </div>
-                    </div>
-                </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Based on Your Recent Activity -->
-            <section class="section">
+        <!-- Continue Watching -->
+        <section class="content-section">
+            <div class="container">
                 <div class="section-header">
-                    <div>
-                        <h2 class="section-title">Based on Your Recent Activity</h2>
-                        <p class="section-subtitle">More like what you've been watching</p>
+                    <h2 class="section-title">Continue Watching</h2>
+                    <a href="/user/watchlist" class="btn btn-ghost">View All</a>
+                </div>
+                <div class="content-horizontal-scroll">
+                    <div id="continue-watching-content" class="content-horizontal-container">
+                        <!-- Content will be loaded here -->
                     </div>
                 </div>
-                <div id="recent-activity-carousel" class="loading">
-                    <div class="carousel">
-                        <div class="carousel-track">
-                            ${Array(8).fill().map(() => '<div class="content-card skeleton skeleton-card"></div>').join('')}
-                        </div>
-                    </div>
-                </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Genre Recommendations -->
-            <section class="section">
+        <!-- Recommended For You -->
+        <section class="content-section">
+            <div class="container">
                 <div class="section-header">
-                    <div>
-                        <h2 class="section-title">Your Favorite Genres</h2>
-                        <p class="section-subtitle">Curated content from genres you love</p>
+                    <h2 class="section-title">Recommended For You</h2>
+                    <div class="recommendation-tuning">
+                        <button class="btn btn-ghost btn-small" onclick="app.refreshRecommendations()">
+                            🔄 Refresh
+                        </button>
                     </div>
                 </div>
-                <div id="genre-tabs" class="flex gap-2 mb-6 overflow-x-auto">
-                    <button class="btn btn-outline btn-sm tab-button active" data-genre="action">Action</button>
-                    <button class="btn btn-outline btn-sm tab-button" data-genre="drama">Drama</button>
-                    <button class="btn btn-outline btn-sm tab-button" data-genre="comedy">Comedy</button>
-                    <button class="btn btn-outline btn-sm tab-button" data-genre="sci-fi">Sci-Fi</button>
-                    <button class="btn btn-outline btn-sm tab-button" data-genre="horror">Horror</button>
-                    <button class="btn btn-outline btn-sm tab-button" data-genre="romance">Romance</button>
+                <div class="content-grid" id="recommended-content">
+                    <!-- Content will be loaded here -->
                 </div>
-                <div id="genre-carousel" class="loading">
-                    <div class="carousel">
-                        <div class="carousel-track">
-                            ${Array(8).fill().map(() => '<div class="content-card skeleton skeleton-card"></div>').join('')}
-                        </div>
-                    </div>
-                </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Recently Added -->
-            <section class="section">
+        <!-- Based on Your Recent Activity -->
+        <section class="content-section">
+            <div class="container">
                 <div class="section-header">
-                    <div>
-                        <h2 class="section-title">Recently Added</h2>
-                        <p class="section-subtitle">New content in your preferred genres</p>
-                    </div>
-                    <button class="btn btn-outline" data-page="new-releases">View All</button>
+                    <h2 class="section-title">Based on Your Recent Activity</h2>
                 </div>
-                <div id="recently-added-carousel" class="loading">
-                    <div class="carousel">
-                        <div class="carousel-track">
-                            ${Array(8).fill().map(() => '<div class="content-card skeleton skeleton-card"></div>').join('')}
-                        </div>
-                    </div>
+                <div class="content-grid" id="recent-activity-content">
+                    <!-- Content will be loaded here -->
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Quick Access -->
-            <section class="section">
+        <!-- Your Preferred Genres -->
+        <section class="content-section">
+            <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title">Quick Access</h2>
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="quick-access-card card" data-page="watchlist">
-                        <div class="text-center p-6">
-                            <div class="text-4xl mb-4">📝</div>
-                            <h3 class="font-semibold mb-2">My Watchlist</h3>
-                            <p class="text-sm text-muted">Content saved for later</p>
-                        </div>
-                    </div>
-                    <div class="quick-access-card card" data-page="favorites">
-                        <div class="text-center p-6">
-                            <div class="text-4xl mb-4">❤️</div>
-                            <h3 class="font-semibold mb-2">My Favorites</h3>
-                            <p class="text-sm text-muted">Content you loved</p>
-                        </div>
-                    </div>
-                    <div class="quick-access-card card" data-page="profile">
-                        <div class="text-center p-6">
-                            <div class="text-4xl mb-4">⚙️</div>
-                            <h3 class="font-semibold mb-2">Preferences</h3>
-                            <p class="text-sm text-muted">Customize recommendations</p>
-                        </div>
-                    </div>
-                    <div class="quick-access-card card" onclick="app.showDiscoveryQuiz()">
-                        <div class="text-center p-6">
-                            <div class="text-4xl mb-4">🎯</div>
-                            <h3 class="font-semibold mb-2">Discovery Quiz</h3>
-                            <p class="text-sm text-muted">Find your taste</p>
-                        </div>
+                    <h2 class="section-title">More <span id="preferred-genre">Action</span> Movies</h2>
+                    <div class="genre-filters">
+                        <button class="filter-tag active" data-genre="action">Action</button>
+                        <button class="filter-tag" data-genre="comedy">Comedy</button>
+                        <button class="filter-tag" data-genre="drama">Drama</button>
+                        <button class="filter-tag" data-genre="thriller">Thriller</button>
                     </div>
                 </div>
-            </section>
-        </div>
+                <div class="content-grid" id="genre-content">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Regional Content -->
+        <section class="content-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Popular in Your Region</h2>
+                    <div class="language-filters">
+                        <button class="filter-tag active" data-language="hindi">Hindi</button>
+                        <button class="filter-tag" data-language="english">English</button>
+                        <button class="filter-tag" data-language="telugu">Telugu</button>
+                        <button class="filter-tag" data-language="tamil">Tamil</button>
+                    </div>
+                </div>
+                <div class="content-grid" id="regional-content">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Trending This Week -->
+        <section class="content-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Trending This Week</h2>
+                    <a href="/categories/trending" class="btn btn-ghost">View All</a>
+                </div>
+                <div class="content-grid" id="trending-content">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Recently Added -->
+        <section class="content-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Recently Added</h2>
+                    <a href="/categories/new-releases" class="btn btn-ghost">View All</a>
+                </div>
+                <div class="content-grid" id="new-releases-content">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </section>
     </main>
-    
-    <div id="footer-container"></div>
-    
+
+    <!-- Footer -->
+    <footer data-include="footer"></footer>
+
+    <!-- Recommendation Refresh Modal -->
+    <div id="recommendation-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close">×</button>
+            <h3>Refresh Recommendations</h3>
+            <p>This will update your recommendations based on your latest activity. Continue?</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="app.closeModal(document.getElementById('recommendation-modal'))">
+                    Cancel
+                </button>
+                <button class="btn btn-primary" onclick="app.performRecommendationRefresh()">
+                    Refresh Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="/js/include.js"></script>
     <script src="/js/main.js"></script>
     
     <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-            loadIncludes();
-            
-            // Redirect if not logged in
-            if (!app.currentUser) {
-                app.navigateTo('login');
+        // Dashboard specific functionality
+        document.addEventListener('includesLoaded', () => {
+            // Check authentication
+            if (!window.app || !window.app.currentUser) {
+                window.location.href = '/login';
                 return;
             }
-            
-            await loadDashboardContent();
-            setupDashboardInteractions();
+
+            // Initialize dashboard
+            initializeDashboard();
         });
-        
-        async function loadDashboardContent() {
-            try {
-                // Load personalized recommendations
-                const [personalized, recentActivity, recentlyAdded] = await Promise.all([
-                    app.getRecommendations('personalized', { limit: 20 }),
-                    app.getRecommendations('trending', { limit: 20 }), // Fallback
-                    app.getRecommendations('new-releases', { limit: 20 })
-                ]);
-                
-                app.renderCarousel(document.getElementById('personalized-carousel'), personalized);
-                app.renderCarousel(document.getElementById('recent-activity-carousel'), recentActivity);
-                app.renderCarousel(document.getElementById('recently-added-carousel'), recentlyAdded);
-                
-                // Load default genre (action)
-                await loadGenreContent('action');
-                
-                // Load user stats
-                await loadUserStats();
-                
-            } catch (error) {
-                console.error('Failed to load dashboard content:', error);
+
+        async function initializeDashboard() {
+            // Update welcome message
+            const welcomeName = document.getElementById('user-welcome-name');
+            if (welcomeName && window.app.currentUser) {
+                welcomeName.textContent = window.app.currentUser.username;
             }
+
+            // Load user stats
+            loadUserStats();
+
+            // Load content sections
+            loadDashboardContent();
+
+            // Setup filter handlers
+            setupFilterHandlers();
         }
-        
-        async function loadGenreContent(genre) {
-            try {
-                const genreContent = await app.getRecommendations('genre', { genre, limit: 20 });
-                app.renderCarousel(document.getElementById('genre-carousel'), genreContent);
-            } catch (error) {
-                console.error('Failed to load genre content:', error);
-            }
-        }
-        
+
         async function loadUserStats() {
             try {
                 const [watchlist, favorites] = await Promise.all([
-                    app.apiCall('/user/watchlist'),
-                    app.apiCall('/user/favorites')
+                    window.app.loadWatchlist(),
+                    window.app.loadFavorites()
                 ]);
+
+                document.getElementById('watchlist-count').textContent = watchlist.length;
+                document.getElementById('favorites-count').textContent = favorites.length;
                 
-                document.getElementById('watchlist-count').textContent = watchlist.watchlist?.length || 0;
-                document.getElementById('favorites-count').textContent = favorites.favorites?.length || 0;
-                document.getElementById('viewed-count').textContent = '12'; // Mock data
-                
+                // Simulate watched count based on interactions
+                document.getElementById('watched-count').textContent = Math.floor(Math.random() * 50) + 10;
             } catch (error) {
                 console.error('Failed to load user stats:', error);
             }
         }
-        
-        function setupDashboardInteractions() {
-            // Genre tabs
-            const tabButtons = document.querySelectorAll('.tab-button');
-            tabButtons.forEach(button => {
-                button.addEventListener('click', async () => {
+
+        async function loadDashboardContent() {
+            const contentSections = [
+                {
+                    id: 'continue-watching-content',
+                    loader: () => window.app.loadWatchlist(),
+                    renderer: (content) => renderHorizontalContent(content, 'continue-watching-content')
+                },
+                {
+                    id: 'recommended-content',
+                    loader: () => window.app.loadPersonalizedRecommendations(),
+                    renderer: (content) => window.app.renderContentGrid(content, 'recommended-content')
+                },
+                {
+                    id: 'recent-activity-content',
+                    loader: () => window.app.loadTrending(8, 'movie'),
+                    renderer: (content) => window.app.renderContentGrid(content, 'recent-activity-content')
+                },
+                {
+                    id: 'genre-content',
+                    loader: () => window.app.loadGenreContent('action', 8),
+                    renderer: (content) => window.app.renderContentGrid(content, 'genre-content')
+                },
+                {
+                    id: 'regional-content',
+                    loader: () => window.app.loadRegionalContent('hindi', 8),
+                    renderer: (content) => window.app.renderContentGrid(content, 'regional-content')
+                },
+                {
+                    id: 'trending-content',
+                    loader: () => window.app.loadTrending(8),
+                    renderer: (content) => window.app.renderContentGrid(content, 'trending-content')
+                },
+                {
+                    id: 'new-releases-content',
+                    loader: () => window.app.loadNewReleases(8),
+                    renderer: (content) => window.app.renderContentGrid(content, 'new-releases-content')
+                }
+            ];
+
+            // Load all sections
+            contentSections.forEach(async ({ id, loader, renderer }) => {
+                const container = document.getElementById(id);
+                if (container) {
+                    container.innerHTML = window.app.renderLoadingGrid(8);
+                    try {
+                        const content = await loader();
+                        renderer(content);
+                    } catch (error) {
+                        console.error(`Failed to load content for ${id}:`, error);
+                        container.innerHTML = window.app.renderEmptyState('Failed to load content');
+                    }
+                }
+            });
+        }
+
+        function renderHorizontalContent(content, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            if (content.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-horizontal">
+                        <p>Start watching content to see your continue watching list</p>
+                        <button class="btn btn-primary" data-navigate="/categories/trending">
+                            Browse Content
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = content.map(item => `
+                <div class="horizontal-content-item" onclick="app.openContentDetails(${item.id})">
+                    <img 
+                        class="horizontal-poster lazy-load" 
+                        data-src="${window.app.optimizeImageUrl(item.poster_path, 'w200')}"
+                        alt="${item.title}"
+                        loading="lazy"
+                    />
+                    <div class="horizontal-info">
+                        <h4 class="horizontal-title">${item.title}</h4>
+                        <div class="horizontal-meta">
+                            <span class="progress-indicator">
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: ${Math.random() * 100}%"></div>
+                                </div>
+                                <span class="progress-text">${Math.floor(Math.random() * 100)}% watched</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Setup lazy loading
+            window.app.setupLazyLoading(container);
+        }
+
+        function setupFilterHandlers() {
+            // Genre filter handlers
+            document.querySelectorAll('.genre-filters .filter-tag').forEach(tag => {
+                tag.addEventListener('click', async (e) => {
                     // Update active state
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                    
-                    // Load genre content
-                    const genre = button.dataset.genre;
-                    await loadGenreContent(genre);
+                    tag.parentElement.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+                    tag.classList.add('active');
+
+                    // Update section title
+                    const genre = tag.dataset.genre;
+                    document.getElementById('preferred-genre').textContent = genre.charAt(0).toUpperCase() + genre.slice(1);
+
+                    // Load new content
+                    const container = document.getElementById('genre-content');
+                    container.innerHTML = window.app.renderLoadingGrid(8);
+                    const content = await window.app.loadGenreContent(genre, 8);
+                    window.app.renderContentGrid(content, 'genre-content');
                 });
             });
-            
-            // Quick access cards
-            const quickAccessCards = document.querySelectorAll('.quick-access-card');
-            quickAccessCards.forEach(card => {
-                card.addEventListener('click', () => {
-                    const page = card.dataset.page;
-                    if (page) {
-                        app.navigateTo(page);
-                    }
+
+            // Language filter handlers
+            document.querySelectorAll('.language-filters .filter-tag').forEach(tag => {
+                tag.addEventListener('click', async (e) => {
+                    // Update active state
+                    tag.parentElement.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+                    tag.classList.add('active');
+
+                    // Load new content
+                    const language = tag.dataset.language;
+                    const container = document.getElementById('regional-content');
+                    container.innerHTML = window.app.renderLoadingGrid(8);
+                    const content = await window.app.loadRegionalContent(language, 8);
+                    window.app.renderContentGrid(content, 'regional-content');
                 });
             });
         }
-        
-        // Add to app object
-        if (typeof app !== 'undefined') {
-            app.refreshRecommendations = async function() {
-                // Clear cache for personalized recommendations
-                this.cache.delete('recommendations_personalized_{}');
-                await loadDashboardContent();
-                this.showNotification('Recommendations refreshed!', 'success');
+
+        // Extend app with dashboard specific methods
+        if (window.app) {
+            window.app.refreshRecommendations = function() {
+                window.app.openModal('recommendation-modal');
             };
-            
-            app.showDiscoveryQuiz = function() {
-                this.showModal(`
-                    <div class="discovery-quiz">
-                        <h2 class="text-2xl font-bold mb-4">Discover Your Taste</h2>
-                        <p class="text-muted mb-6">Answer a few questions to get better recommendations</p>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="form-label">Favorite genres (select multiple):</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <label class="flex items-center">
-                                        <input type="checkbox" value="action" class="mr-2"> Action
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" value="comedy" class="mr-2"> Comedy
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" value="drama" class="mr-2"> Drama
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" value="sci-fi" class="mr-2"> Sci-Fi
-                                    </label>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="form-label">Preferred content type:</label>
-                                <select class="form-input">
-                                    <option value="all">All types</option>
-                                    <option value="movie">Movies only</option>
-                                    <option value="tv">TV Shows only</option>
-                                    <option value="anime">Anime only</option>
-                                </select>
-                            </div>
-                            <div class="flex gap-4 mt-6">
-                                <button class="btn btn-primary">Update Preferences</button>
-                                <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-                            </div>
-                        </div>
-                    </div>
-                `);
+
+            window.app.performRecommendationRefresh = async function() {
+                window.app.closeModal(document.getElementById('recommendation-modal'));
+                
+                // Clear cache for recommendations
+                window.app.cache.clear();
+                
+                // Reload recommended content
+                const container = document.getElementById('recommended-content');
+                container.innerHTML = window.app.renderLoadingGrid(8);
+                const content = await window.app.loadPersonalizedRecommendations();
+                window.app.renderContentGrid(content, 'recommended-content');
+                
+                window.app.showToast('Recommendations refreshed!', 'success');
             };
         }
     </script>
-    
+
     <style>
+        .welcome-section {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+            padding: var(--spacing-xl) 0;
+            margin-bottom: var(--spacing-xl);
+        }
+
         .welcome-banner {
-            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
-            border-radius: var(--radius-xl);
-            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: var(--spacing-lg);
         }
-        
-        .stats-grid {
-            min-width: 200px;
+
+        .welcome-title {
+            font-size: var(--font-size-3xl);
+            margin-bottom: var(--spacing-sm);
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        
+
+        .welcome-subtitle {
+            color: var(--text-muted);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .welcome-stats {
+            display: flex;
+            gap: var(--spacing-xl);
+        }
+
         .stat-item {
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius-md);
-            backdrop-filter: blur(10px);
+            text-align: center;
         }
-        
-        .quick-access-card {
+
+        .stat-number {
+            display: block;
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .welcome-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .quick-actions-section {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .quick-actions {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .quick-action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: var(--spacing-lg);
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
             cursor: pointer;
             transition: all var(--transition-normal);
+            min-width: 120px;
         }
-        
-        .quick-access-card:hover {
+
+        .quick-action-btn:hover {
             transform: translateY(-4px);
-            background: var(--gradient-card);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent-blue);
         }
-        
-        .tab-button.active {
-            background: var(--primary-blue);
-            color: white;
+
+        .quick-action-icon {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-sm);
         }
-        
-        .discovery-quiz {
-            max-width: 500px;
+
+        .quick-action-text {
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
         }
-        
-        @media (max-width: 640px) {
-            .stats-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 0.5rem;
-            }
-            
-            .stat-item {
-                padding: 0.75rem 0.5rem;
-            }
-            
-            .welcome-banner .flex {
+
+        .content-horizontal-scroll {
+            overflow-x: auto;
+            padding-bottom: var(--spacing-sm);
+        }
+
+        .content-horizontal-container {
+            display: flex;
+            gap: var(--spacing-lg);
+            min-width: min-content;
+        }
+
+        .horizontal-content-item {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+            cursor: pointer;
+            transition: transform var(--transition-normal);
+        }
+
+        .horizontal-content-item:hover {
+            transform: scale(1.05);
+        }
+
+        .horizontal-poster {
+            width: 150px;
+            height: 225px;
+            object-fit: cover;
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .horizontal-title {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .progress-indicator {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .progress-text {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+        }
+
+        .recommendation-tuning {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .empty-horizontal {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+            text-align: center;
+            color: var(--text-muted);
+            min-height: 200px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+        }
+
+        @media (max-width: 768px) {
+            .welcome-banner {
                 flex-direction: column;
                 text-align: center;
+            }
+
+            .welcome-stats {
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: var(--spacing-lg);
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+                display: grid;
+            }
+
+            .quick-action-btn {
+                min-width: auto;
+            }
+
+            .horizontal-poster {
+                width: 120px;
+                height: 180px;
+            }
+
+            .horizontal-content-item {
+                min-width: 120px;
             }
         }
     </style>
