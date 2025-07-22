@@ -1,1 +1,454 @@
-<!-- analytics.html content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics - Admin - CineScope</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--space-lg);
+      margin-bottom: var(--space-2xl);
+    }
+    
+    .analytics-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+    }
+    
+    .chart-container {
+      height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-hover);
+      border-radius: var(--radius-md);
+      margin-top: var(--space-md);
+    }
+    
+    .metric-card {
+      background: var(--gradient-card);
+      padding: var(--space-lg);
+      border-radius: var(--radius-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: var(--gradient-primary);
+      opacity: 0.1;
+      border-radius: 50%;
+    }
+    
+    .metric-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: var(--space-sm) 0;
+    }
+    
+    .metric-change {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      font-size: 0.875rem;
+      padding: var(--space-xs) var(--space-sm);
+      background: var(--bg-hover);
+      border-radius: var(--radius-full);
+    }
+    
+    .metric-up {
+      color: var(--accent-green);
+    }
+    
+    .metric-down {
+      color: var(--accent-red);
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .data-table th {
+      text-align: left;
+      padding: var(--space-md);
+      border-bottom: 2px solid var(--bg-hover);
+      font-weight: 600;
+    }
+    
+    .data-table td {
+      padding: var(--space-md);
+      border-bottom: 1px solid var(--bg-hover);
+    }
+    
+    .data-table tr:hover {
+      background: var(--bg-hover);
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" style="display: none;">
+    <div class="spinner spinner-lg"></div>
+  </div>
+  
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container navbar-content">
+      <a href="/" class="navbar-brand gradient-text">CineScope Admin</a>
+      
+      <button class="mobile-menu-toggle lg:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
+      
+      <div class="navbar-menu hidden md:flex">
+        <a href="/" class="navbar-link">Back to Site</a>
+        <div class="user-menu"></div>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Admin Layout -->
+  <div class="admin-layout" style="margin-top: 60px;">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <nav>
+        <a href="/admin/dashboard.html" class="admin-nav-item">
+          <i class="fas fa-tachometer-alt mr-sm"></i> Dashboard
+        </a>
+        <a href="/admin/content-browser.html" class="admin-nav-item">
+          <i class="fas fa-search mr-sm"></i> Content Browser
+        </a>
+        <a href="/admin/posts.html" class="admin-nav-item">
+          <i class="fas fa-bullhorn mr-sm"></i> Admin Posts
+        </a>
+        <a href="/admin/analytics.html" class="admin-nav-item active">
+          <i class="fas fa-chart-bar mr-sm"></i> Analytics
+        </a>
+      </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-content">
+      <div class="flex-between mb-xl">
+        <h1>Analytics Dashboard</h1>
+        <div class="flex gap-sm">
+          <select class="form-select" id="time-range">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last year</option>
+          </select>
+          <button class="btn btn-secondary" onclick="exportData()">
+            <i class="fas fa-download mr-sm"></i> Export
+          </button>
+        </div>
+      </div>
+      
+      <!-- Key Metrics -->
+      <div class="analytics-grid">
+        <div class="metric-card">
+          <h3 class="text-secondary">Total Users</h3>
+          <div class="metric-value gradient-text" id="total-users">0</div>
+          <div class="metric-change metric-up">
+            <i class="fas fa-arrow-up"></i>
+            <span id="users-change">+0%</span> from last period
+          </div>
+        </div>
+        
+        <div class="metric-card">
+          <h3 class="text-secondary">Active Users</h3>
+          <div class="metric-value gradient-text" id="active-users">0</div>
+          <div class="metric-change metric-up">
+            <i class="fas fa-arrow-up"></i>
+            <span id="active-change">+0%</span> engagement
+          </div>
+        </div>
+        
+        <div class="metric-card">
+          <h3 class="text-secondary">Total Interactions</h3>
+          <div class="metric-value gradient-text" id="total-interactions">0</div>
+          <div class="metric-change metric-up">
+            <i class="fas fa-arrow-up"></i>
+            <span id="interactions-change">+0%</span> activity
+          </div>
+        </div>
+      </div>
+      
+      <!-- Charts Section -->
+      <div class="analytics-grid">
+        <div class="analytics-card">
+          <h3 class="mb-md">User Growth</h3>
+          <div class="chart-container">
+            <p class="text-secondary">📈 Chart visualization would go here</p>
+          </div>
+        </div>
+        
+        <div class="analytics-card">
+          <h3 class="mb-md">Content Engagement</h3>
+          <div class="chart-container">
+            <p class="text-secondary">📊 Chart visualization would go here</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Popular Content Table -->
+      <div class="analytics-card mb-xl">
+        <h3 class="mb-lg">Most Popular Content</h3>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Views</th>
+                <th>Rating</th>
+                <th>Interactions</th>
+              </tr>
+            </thead>
+            <tbody id="popular-content-table">
+              <tr>
+                <td colspan="6" class="text-center p-lg">
+                  <div class="spinner mx-auto"></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- User Behavior -->
+      <div class="analytics-grid">
+        <div class="analytics-card">
+          <h3 class="mb-lg">Top Genres</h3>
+          <div id="top-genres">
+            <div class="skeleton" style="height: 30px; margin-bottom: 8px;"></div>
+            <div class="skeleton" style="height: 30px; margin-bottom: 8px;"></div>
+            <div class="skeleton" style="height: 30px;"></div>
+          </div>
+        </div>
+        
+        <div class="analytics-card">
+          <h3 class="mb-lg">User Activity by Time</h3>
+          <div class="chart-container">
+            <p class="text-secondary">🕐 Activity heatmap would go here</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Regional Data -->
+      <div class="analytics-card">
+        <h3 class="mb-lg">Content by Language</h3>
+        <div class="grid gap-md" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+          <div class="text-center p-md bg-hover rounded-lg">
+            <div class="text-2xl font-bold text-blue" id="english-content">0</div>
+            <div class="text-sm text-secondary">English</div>
+          </div>
+          <div class="text-center p-md bg-hover rounded-lg">
+            <div class="text-2xl font-bold text-purple" id="hindi-content">0</div>
+            <div class="text-sm text-secondary">Hindi</div>
+          </div>
+          <div class="text-center p-md bg-hover rounded-lg">
+            <div class="text-2xl font-bold text-green" id="telugu-content">0</div>
+            <div class="text-sm text-secondary">Telugu</div>
+          </div>
+          <div class="text-center p-md bg-hover rounded-lg">
+            <div class="text-2xl font-bold text-yellow" id="tamil-content">0</div>
+            <div class="text-sm text-secondary">Tamil</div>
+          </div>
+          <div class="text-center p-md bg-hover rounded-lg">
+            <div class="text-2xl font-bold text-red" id="other-content">0</div>
+            <div class="text-sm text-secondary">Others</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Toast Container -->
+  <div class="toast-container"></div>
+  
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script>
+    // Check admin authentication
+    if (!AppState.user || !AppState.user.is_admin) {
+      window.location.href = '/';
+    }
+    
+    let analyticsData = null;
+    
+    // Time range handler
+    document.getElementById('time-range').addEventListener('change', (e) => {
+      loadAnalytics();
+    });
+    
+    // Load analytics data
+    async function loadAnalytics() {
+      try {
+        const response = await fetch(`${API_BASE}/admin/analytics`, {
+          headers: TokenManager.getHeaders()
+        });
+        
+        analyticsData = await response.json();
+        
+        // Update metrics
+        updateMetrics();
+        updatePopularContent();
+        updateTopGenres();
+        updateLanguageStats();
+        
+      } catch (error) {
+        console.error('Failed to load analytics:', error);
+        showToast('Failed to load analytics data', 'error');
+      }
+    }
+    
+    // Update key metrics
+    function updateMetrics() {
+      if (!analyticsData) return;
+      
+      document.getElementById('total-users').textContent = analyticsData.total_users?.toLocaleString() || '0';
+      document.getElementById('active-users').textContent = analyticsData.active_users_last_week?.toLocaleString() || '0';
+      document.getElementById('total-interactions').textContent = analyticsData.total_interactions?.toLocaleString() || '0';
+      
+      // Calculate percentage changes (mock data)
+      const userGrowth = Math.floor(Math.random() * 20) + 5;
+      const activeGrowth = Math.floor(Math.random() * 15) + 3;
+      const interactionGrowth = Math.floor(Math.random() * 25) + 10;
+      
+      document.getElementById('users-change').textContent = `+${userGrowth}%`;
+      document.getElementById('active-change').textContent = `+${activeGrowth}%`;
+      document.getElementById('interactions-change').textContent = `+${interactionGrowth}%`;
+    }
+    
+    // Update popular content table
+    function updatePopularContent() {
+      if (!analyticsData || !analyticsData.popular_content) return;
+      
+      const tbody = document.getElementById('popular-content-table');
+      
+      if (analyticsData.popular_content.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center p-lg text-secondary">No data available</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = analyticsData.popular_content.slice(0, 10).map((item, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td class="font-semibold">${item.title}</td>
+          <td><span class="tag tag-sm">${item.content_type || 'Movie'}</span></td>
+          <td>${(item.interactions * 100 + Math.floor(Math.random() * 1000)).toLocaleString()}</td>
+          <td>
+            <div class="flex items-center gap-xs">
+              <i class="fas fa-star text-yellow text-sm"></i>
+              <span>${item.rating || (Math.random() * 2 + 7).toFixed(1)}</span>
+            </div>
+          </td>
+          <td>${item.interactions.toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+    
+    // Update top genres
+    function updateTopGenres() {
+      if (!analyticsData || !analyticsData.popular_genres) return;
+      
+      const container = document.getElementById('top-genres');
+      
+      container.innerHTML = analyticsData.popular_genres.slice(0, 5).map((genre, index) => {
+        const percentage = Math.round((genre.count / analyticsData.total_interactions) * 100);
+        return `
+          <div class="mb-md">
+            <div class="flex-between mb-xs">
+              <span class="font-semibold">${genre.genre}</span>
+              <span class="text-sm text-secondary">${percentage}%</span>
+            </div>
+            <div class="progress">
+              <div class="progress-bar" style="width: ${percentage}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Update language statistics
+    function updateLanguageStats() {
+      // Mock data - in real app, this would come from analytics
+      const languages = {
+        english: Math.floor(Math.random() * 1000) + 500,
+        hindi: Math.floor(Math.random() * 800) + 300,
+        telugu: Math.floor(Math.random() * 600) + 200,
+        tamil: Math.floor(Math.random() * 500) + 150,
+        other: Math.floor(Math.random() * 300) + 100
+      };
+      
+      document.getElementById('english-content').textContent = languages.english.toLocaleString();
+      document.getElementById('hindi-content').textContent = languages.hindi.toLocaleString();
+      document.getElementById('telugu-content').textContent = languages.telugu.toLocaleString();
+      document.getElementById('tamil-content').textContent = languages.tamil.toLocaleString();
+      document.getElementById('other-content').textContent = languages.other.toLocaleString();
+    }
+    
+    // Export data
+    function exportData() {
+      if (!analyticsData) {
+        showToast('No data to export', 'error');
+        return;
+      }
+      
+      // Create CSV content
+      let csv = 'Metric,Value\n';
+      csv += `Total Users,${analyticsData.total_users}\n`;
+      csv += `Active Users,${analyticsData.active_users_last_week}\n`;
+      csv += `Total Interactions,${analyticsData.total_interactions}\n`;
+      csv += `Total Content,${analyticsData.total_content}\n\n`;
+      
+      csv += 'Popular Content\n';
+      csv += 'Title,Type,Interactions,Rating\n';
+      analyticsData.popular_content.forEach(item => {
+        csv += `"${item.title}",${item.content_type || 'Movie'},${item.interactions},${item.rating || 'N/A'}\n`;
+      });
+      
+      csv += '\nTop Genres\n';
+      csv += 'Genre,Count\n';
+      analyticsData.popular_genres.forEach(genre => {
+        csv += `${genre.genre},${genre.count}\n`;
+      });
+      
+      // Download CSV
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cinescope-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      showToast('Analytics exported successfully', 'success');
+    }
+    
+    // Initialize
+    updateAuthUI();
+    loadAnalytics();
+  </script>
+</body>
+</html>

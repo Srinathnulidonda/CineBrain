@@ -1,1 +1,278 @@
-<!-- favorites.html content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Favorites - CineScope</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    .favorites-header {
+      background: linear-gradient(135deg, var(--accent-red) 0%, var(--primary-purple) 100%);
+      padding: var(--space-xl) 0;
+      margin-bottom: var(--space-xl);
+    }
+    
+    .favorites-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-lg);
+    }
+    
+    @media (max-width: 768px) {
+      .favorites-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: var(--space-md);
+      }
+    }
+    
+    .favorite-item {
+      position: relative;
+      transition: transform var(--transition-base);
+    }
+    
+    .favorite-item:hover {
+      transform: scale(1.02);
+    }
+    
+    .favorite-badge {
+      position: absolute;
+      top: var(--space-sm);
+      left: var(--space-sm);
+      background: var(--accent-red);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" style="display: none;">
+    <div class="spinner spinner-lg"></div>
+  </div>
+  
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container navbar-content">
+      <a href="/" class="navbar-brand gradient-text">CineScope</a>
+      
+      <button class="mobile-menu-toggle md:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
+      
+      <div class="navbar-menu hidden md:flex">
+        <a href="/" class="navbar-link">Home</a>
+        <a href="/dashboard.html" class="navbar-link">Dashboard</a>
+        <a href="/user/watchlist.html" class="navbar-link">Watchlist</a>
+        <a href="/user/favorites.html" class="navbar-link active">Favorites</a>
+        
+        <div class="search-container">
+          <input type="text" class="search-input" placeholder="Search...">
+          <i class="fas fa-search search-icon"></i>
+          <div class="search-suggestions" style="display: none;"></div>
+        </div>
+        
+        <div class="user-menu"></div>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Favorites Header -->
+  <div class="favorites-header" style="margin-top: 60px;">
+    <div class="container">
+      <h1 class="text-white mb-sm">
+        <i class="fas fa-heart mr-sm"></i> My Favorites
+      </h1>
+      <p class="text-white opacity-80">Your handpicked collection of beloved content</p>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Stats Bar -->
+    <div class="card p-lg mb-xl">
+      <div class="flex-between flex-wrap gap-md">
+        <div>
+          <span class="text-secondary">Total Favorites:</span>
+          <span class="font-bold text-xl ml-sm" id="favorites-count">0</span>
+        </div>
+        
+        <div class="filter-container">
+          <select class="form-select filter-select" id="filter-type">
+            <option value="all">All Types</option>
+            <option value="movie">Movies</option>
+            <option value="tv">TV Shows</option>
+            <option value="anime">Anime</option>
+          </select>
+          
+          <select class="form-select filter-select" id="sort-by">
+            <option value="added">Recently Added</option>
+            <option value="title">Title</option>
+            <option value="rating">Rating</option>
+            <option value="year">Year</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Favorites Grid -->
+    <div id="favorites-content">
+      <div class="favorites-grid">
+        <div class="skeleton" style="height: 300px;"></div>
+        <div class="skeleton" style="height: 300px;"></div>
+        <div class="skeleton" style="height: 300px;"></div>
+        <div class="skeleton" style="height: 300px;"></div>
+      </div>
+    </div>
+    
+    <!-- Share Collection -->
+    <div class="text-center mt-2xl">
+      <button class="btn btn-secondary" onclick="shareCollection()">
+        <i class="fas fa-share mr-sm"></i> Share My Collection
+      </button>
+    </div>
+  </main>
+  
+  <!-- Toast Container -->
+  <div class="toast-container"></div>
+  
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script>
+    let favoritesData = [];
+    let filteredData = [];
+    
+    // Check authentication
+    if (!AppState.user) {
+      window.location.href = '/login.html';
+    }
+    
+    // Load favorites
+    async function loadFavorites() {
+      try {
+        const data = await ApiService.getFavorites();
+        favoritesData = data.favorites || [];
+        filteredData = [...favoritesData];
+        document.getElementById('favorites-count').textContent = favoritesData.length;
+        renderFavorites();
+      } catch (error) {
+        console.error('Failed to load favorites:', error);
+        showToast('Failed to load favorites', 'error');
+      }
+    }
+    
+    // Render favorites
+    function renderFavorites() {
+      const container = document.getElementById('favorites-content');
+      
+      if (filteredData.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">
+              <i class="fas fa-heart"></i>
+            </div>
+            <h3 class="empty-state-title">No favorites yet</h3>
+            <p class="empty-state-description">Start adding movies and shows you love</p>
+            <a href="/" class="btn btn-primary mt-lg">Discover Content</a>
+          </div>
+        `;
+        return;
+      }
+      
+      const grid = document.createElement('div');
+      grid.className = 'favorites-grid';
+      
+      filteredData.forEach(content => {
+        const item = document.createElement('div');
+        item.className = 'favorite-item';
+        
+        const card = createContentCard(content);
+        
+        // Add favorite badge
+        const badge = document.createElement('div');
+        badge.className = 'favorite-badge';
+        badge.innerHTML = '<i class="fas fa-heart"></i>';
+        
+        item.appendChild(badge);
+        item.appendChild(card);
+        grid.appendChild(item);
+      });
+      
+      container.innerHTML = '';
+      container.appendChild(grid);
+    }
+    
+    // Filter handlers
+    document.getElementById('filter-type').addEventListener('change', (e) => {
+      const type = e.target.value;
+      if (type === 'all') {
+        filteredData = [...favoritesData];
+      } else {
+        filteredData = favoritesData.filter(item => item.content_type === type);
+      }
+      renderFavorites();
+    });
+    
+    document.getElementById('sort-by').addEventListener('change', (e) => {
+      const sortBy = e.target.value;
+      
+      switch (sortBy) {
+        case 'title':
+          filteredData.sort((a, b) => a.title.localeCompare(b.title));
+          break;
+        case 'rating':
+          filteredData.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          break;
+        case 'year':
+          filteredData.sort((a, b) => {
+            const yearA = a.release_date ? new Date(a.release_date).getFullYear() : 0;
+            const yearB = b.release_date ? new Date(b.release_date).getFullYear() : 0;
+            return yearB - yearA;
+          });
+          break;
+        case 'added':
+        default:
+          filteredData = [...favoritesData];
+      }
+      
+      renderFavorites();
+    });
+    
+    // Share collection
+    function shareCollection() {
+      const shareUrl = `${window.location.origin}/shared/favorites/${AppState.user.username}`;
+      const shareText = `Check out my favorite movies and shows on CineScope!`;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: 'My CineScope Favorites',
+          text: shareText,
+          url: shareUrl
+        });
+      } else {
+        // Fallback to copying link
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          showToast('Collection link copied to clipboard!', 'success');
+        });
+      }
+    }
+    
+    // Initialize
+    updateAuthUI();
+    loadFavorites();
+  </script>
+</body>
+</html>

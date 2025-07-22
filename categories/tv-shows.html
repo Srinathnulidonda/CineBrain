@@ -1,1 +1,324 @@
-<!-- tv-shows.html content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Shows - CineScope</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    .network-logos {
+      display: flex;
+      gap: var(--space-lg);
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: var(--space-2xl);
+    }
+    
+    .network-logo {
+      width: 100px;
+      height: 50px;
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      padding: var(--space-sm);
+    }
+    
+    .network-logo:hover {
+      transform: scale(1.05);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .episode-tracker {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-xl);
+    }
+    
+    .show-status {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-xs) var(--space-sm);
+      background: var(--bg-hover);
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+    }
+    
+    .status-ongoing {
+      background: var(--accent-green);
+      color: white;
+    }
+    
+    .status-ended {
+      background: var(--accent-red);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container navbar-content">
+      <a href="/" class="navbar-brand gradient-text">CineScope</a>
+      
+      <button class="mobile-menu-toggle md:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
+      
+      <div class="navbar-menu hidden md:flex">
+        <a href="/" class="navbar-link">Home</a>
+        <a href="/categories/movies.html" class="navbar-link">Movies</a>
+        <a href="/categories/tv-shows.html" class="navbar-link active">TV Shows</a>
+        <a href="/categories/anime.html" class="navbar-link">Anime</a>
+        
+        <div class="search-container">
+          <input type="text" class="search-input" placeholder="Search TV shows...">
+          <i class="fas fa-search search-icon"></i>
+          <div class="search-suggestions" style="display: none;"></div>
+        </div>
+        
+        <div class="auth-buttons flex gap-sm">
+          <a href="/login.html" class="btn btn-ghost btn-sm">Login</a>
+          <a href="/login.html#register" class="btn btn-primary btn-sm">Sign Up</a>
+        </div>
+        
+        <div class="user-menu" style="display: none;"></div>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Page Header -->
+  <header class="bg-gradient-primary p-xl mb-xl" style="margin-top: 60px;">
+    <div class="container">
+      <h1 class="text-white mb-sm">
+        <i class="fas fa-tv mr-sm"></i> TV Shows
+      </h1>
+      <p class="text-white opacity-80">Binge-worthy series from around the globe</p>
+    </div>
+  </header>
+  
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Episode Tracker (for logged-in users) -->
+    <div class="episode-tracker" id="episode-tracker" style="display: none;">
+      <h3 class="mb-md">Continue Watching</h3>
+      <div class="grid gap-md" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <div class="flex gap-md">
+          <div class="skeleton" style="width: 60px; height: 90px;"></div>
+          <div class="flex-1">
+            <div class="skeleton" style="height: 20px; width: 70%; margin-bottom: 8px;"></div>
+            <div class="skeleton" style="height: 16px; width: 50%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Browse by Network -->
+    <section class="mb-2xl">
+      <h2 class="mb-lg text-center">Popular Networks</h2>
+      <div class="network-logos">
+        <div class="network-logo" onclick="filterByNetwork('netflix')">
+          <span class="text-red font-bold">NETFLIX</span>
+        </div>
+        <div class="network-logo" onclick="filterByNetwork('hbo')">
+          <span class="font-bold">HBO</span>
+        </div>
+        <div class="network-logo" onclick="filterByNetwork('disney')">
+          <span class="text-blue font-bold">Disney+</span>
+        </div>
+        <div class="network-logo" onclick="filterByNetwork('amazon')">
+          <span class="font-bold">Prime</span>
+        </div>
+        <div class="network-logo" onclick="filterByNetwork('apple')">
+          <span class="font-bold">Apple TV+</span>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Categories -->
+    <section class="mb-2xl">
+      <div class="tabs mb-lg">
+        <div class="tab active" onclick="loadCategory('trending')">Trending</div>
+        <div class="tab" onclick="loadCategory('new')">New Episodes</div>
+        <div class="tab" onclick="loadCategory('completed')">Completed Series</div>
+        <div class="tab" onclick="loadCategory('mini-series')">Mini Series</div>
+        <div class="tab" onclick="loadCategory('reality')">Reality TV</div>
+      </div>
+      
+      <div id="category-shows" class="carousel-container">
+        <!-- Shows will be loaded here -->
+      </div>
+    </section>
+    
+    <!-- All TV Shows -->
+    <section>
+      <div class="flex-between mb-lg">
+        <h2>All TV Shows</h2>
+        <div class="filter-container">
+          <select class="form-select filter-select" id="genre-filter">
+            <option value="">All Genres</option>
+            <option value="drama">Drama</option>
+            <option value="comedy">Comedy</option>
+            <option value="thriller">Thriller</option>
+            <option value="documentary">Documentary</option>
+            <option value="reality">Reality</option>
+          </select>
+          
+          <select class="form-select filter-select" id="sort-filter">
+            <option value="popularity">Most Popular</option>
+            <option value="rating">Highest Rated</option>
+            <option value="newest">Newest First</option>
+          </select>
+        </div>
+      </div>
+      
+      <div id="category-content">
+        <div class="grid">
+          <div class="skeleton" style="height: 300px;"></div>
+          <div class="skeleton" style="height: 300px;"></div>
+          <div class="skeleton" style="height: 300px;"></div>
+          <div class="skeleton" style="height: 300px;"></div>
+          <div class="skeleton" style="height: 300px;"></div>
+          <div class="skeleton" style="height: 300px;"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <!-- Toast Container -->
+  <div class="toast-container"></div>
+  
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script>
+    let currentCategory = 'trending';
+    let allShows = [];
+    
+    // Check if user is logged in and show episode tracker
+    if (AppState.user) {
+      document.getElementById('episode-tracker').style.display = 'block';
+    }
+    
+    // Load category
+    function loadCategory(category) {
+      currentCategory = category;
+      
+      // Update active tab
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      // Load shows for category
+      loadCategoryShows();
+    }
+    
+    // Load shows for current category
+    async function loadCategoryShows() {
+      const container = document.getElementById('category-shows');
+      container.innerHTML = '<div class="spinner mx-auto"></div>';
+      
+      try {
+        // For demo, we'll use trending as placeholder
+        const data = await ApiService.getTrending('tv', 10);
+        
+        container.innerHTML = '';
+        if (data.recommendations) {
+          data.recommendations.forEach(show => {
+            const item = document.createElement('div');
+            item.className = 'carousel-item';
+            
+            // Add status badge to show cards
+            const card = createContentCard(show);
+            const statusBadge = document.createElement('div');
+            statusBadge.className = `show-status ${Math.random() > 0.5 ? 'status-ongoing' : 'status-ended'}`;
+            statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> ${Math.random() > 0.5 ? 'Ongoing' : 'Ended'}`;
+            
+            card.querySelector('.card-content').appendChild(statusBadge);
+            item.appendChild(card);
+            container.appendChild(item);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load category shows:', error);
+      }
+    }
+    
+    // Filter by network
+    async function filterByNetwork(network) {
+      showToast(`Loading ${network.toUpperCase()} shows...`, 'info');
+      
+      // In a real app, this would filter by network
+      loadTVShows();
+    }
+    
+    // Load all TV shows
+    async function loadTVShows() {
+      try {
+        const data = await ApiService.getTrending('tv', 20);
+        allShows = data.recommendations || [];
+        
+        const container = document.getElementById('category-content');
+        renderContentGrid(container, allShows);
+        
+      } catch (error) {
+        console.error('Failed to load TV shows:', error);
+      }
+    }
+    
+    // Filter handlers
+    document.getElementById('genre-filter').addEventListener('change', async (e) => {
+      if (e.target.value) {
+        try {
+          const data = await ApiService.getGenreRecommendations(e.target.value, 'tv', 20);
+          allShows = data.recommendations || [];
+          renderContentGrid(document.getElementById('category-content'), allShows);
+        } catch (error) {
+          console.error('Failed to filter by genre:', error);
+        }
+      } else {
+        loadTVShows();
+      }
+    });
+    
+    document.getElementById('sort-filter').addEventListener('change', (e) => {
+      const sorted = [...allShows];
+      
+      switch (e.target.value) {
+        case 'rating':
+          sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          break;
+        case 'newest':
+          sorted.sort((a, b) => {
+            const dateA = a.release_date ? new Date(a.release_date) : new Date(0);
+            const dateB = b.release_date ? new Date(b.release_date) : new Date(0);
+            return dateB - dateA;
+          });
+          break;
+        case 'popularity':
+        default:
+          // Already sorted by popularity
+          break;
+      }
+      
+      renderContentGrid(document.getElementById('category-content'), sorted);
+    });
+    
+    // Initialize
+    updateAuthUI();
+    loadCategoryShows();
+    loadTVShows();
+  </script>
+</body>
+</html>

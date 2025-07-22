@@ -226,6 +226,23 @@ function showToast(message, type = 'info') {
   }, 3000);
 }
 
+// Navigation Functions with clean URLs
+function navigateToDetails(contentId) {
+  window.location.href = `/details?id=${contentId}`;
+}
+
+function navigateToCategory(category) {
+  window.location.href = `/categories/${category}`;
+}
+
+function navigateToLanguage(language) {
+  window.location.href = `/languages/${language}`;
+}
+
+function navigateToSearch(query) {
+  window.location.href = `/search?q=${encodeURIComponent(query)}`;
+}
+
 // Content Card Component
 function createContentCard(content) {
   const card = document.createElement('div');
@@ -339,19 +356,6 @@ function scrollCarousel(carouselId, direction) {
   });
 }
 
-// Navigation Functions
-function navigateToDetails(contentId) {
-  window.location.href = `/details.html?id=${contentId}`;
-}
-
-function navigateToCategory(category) {
-  window.location.href = `/categories/${category}.html`;
-}
-
-function navigateToLanguage(language) {
-  window.location.href = `/languages/${language}.html`;
-}
-
 // Authentication UI
 function updateAuthUI() {
   const authButtons = document.querySelector('.auth-buttons');
@@ -369,10 +373,10 @@ function updateAuthUI() {
           <span>${AppState.user.username}</span>
         </button>
         <div class="dropdown-menu">
-          <a href="/profile.html" class="dropdown-item">Profile</a>
-          <a href="/user/watchlist.html" class="dropdown-item">Watchlist</a>
-          <a href="/user/favorites.html" class="dropdown-item">Favorites</a>
-          ${AppState.user.is_admin ? '<a href="/admin/dashboard.html" class="dropdown-item">Admin Dashboard</a>' : ''}
+          <a href="/profile" class="dropdown-item">Profile</a>
+          <a href="/user/watchlist" class="dropdown-item">Watchlist</a>
+          <a href="/user/favorites" class="dropdown-item">Favorites</a>
+          ${AppState.user.is_admin ? '<a href="/admin/dashboard" class="dropdown-item">Admin Dashboard</a>' : ''}
           <hr class="dropdown-divider">
           <button onclick="logout()" class="dropdown-item">Logout</button>
         </div>
@@ -392,7 +396,7 @@ function logout() {
   updateAuthUI();
   showToast('Logged out successfully', 'success');
   
-  // Redirect to home if on protected page
+  // Redirect to home if on protected page (clean URLs)
   if (window.location.pathname.includes('/user/') || window.location.pathname.includes('/admin/')) {
     window.location.href = '/';
   }
@@ -486,6 +490,26 @@ function clearSearchSuggestions() {
   if (suggestionsContainer) {
     suggestionsContainer.style.display = 'none';
   }
+}
+
+// Setup search forms
+function setupSearchForm() {
+  const searchInputs = document.querySelectorAll('.search-input');
+  
+  searchInputs.forEach(input => {
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const query = e.target.value.trim();
+        if (query) {
+          navigateToSearch(query);
+        }
+      }
+    });
+    
+    input.addEventListener('input', (e) => {
+      handleSearch(e.target.value);
+    });
+  });
 }
 
 // Mobile Menu Toggle
@@ -611,58 +635,7 @@ function createHeroSection(content) {
   return section;
 }
 
-// Initialize app on page load
-document.addEventListener('DOMContentLoaded', () => {
-  // Update auth UI
-  updateAuthUI();
-  
-  // Setup global event listeners
-  const searchInput = document.querySelector('.search-input');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => handleSearch(e.target.value));
-  }
-  
-  // Mobile menu
-  const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-  if (mobileMenuToggle) {
-    mobileMenuToggle.addEventListener('click', toggleMobileMenu);
-  }
-  
-  const mobileMenuOverlay = document.querySelector('.mobile-menu-overlay');
-  if (mobileMenuOverlay) {
-    mobileMenuOverlay.addEventListener('click', toggleMobileMenu);
-  }
-  
-  // Close search suggestions on click outside
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.search-container')) {
-      clearSearchSuggestions();
-    }
-  });
-  
-  // Route-specific initialization
-  const currentPath = window.location.pathname;
-  
-  if (currentPath === '/' || currentPath === '/index.html') {
-    initHomepage();
-  } else if (currentPath === '/details.html') {
-    initDetailsPage();
-  } else if (currentPath === '/login.html') {
-    initLoginPage();
-  } else if (currentPath.includes('/categories/')) {
-    initCategoryPage();
-  } else if (currentPath.includes('/languages/')) {
-    initLanguagePage();
-  } else if (currentPath === '/user/watchlist.html') {
-    initWatchlistPage();
-  } else if (currentPath === '/user/favorites.html') {
-    initFavoritesPage();
-  } else if (currentPath === '/admin/dashboard.html') {
-    initAdminDashboard();
-  }
-});
-
-// Additional page initializers
+// Page-specific initializers
 async function initDetailsPage() {
   const urlParams = new URLSearchParams(window.location.search);
   const contentId = urlParams.get('id');
@@ -755,9 +728,8 @@ function renderDetailsPage(content) {
   setupLazyLoading();
 }
 
-// Category Page
 async function initCategoryPage() {
-  const category = window.location.pathname.split('/').pop().replace('.html', '');
+  const category = window.location.pathname.split('/').pop();
   const container = document.getElementById('category-content');
   
   if (!container) return;
@@ -793,9 +765,8 @@ async function initCategoryPage() {
   }
 }
 
-// Language Page
 async function initLanguagePage() {
-  const language = window.location.pathname.split('/').pop().replace('.html', '');
+  const language = window.location.pathname.split('/').pop();
   const container = document.getElementById('language-content');
   
   if (!container) return;
@@ -808,10 +779,9 @@ async function initLanguagePage() {
   }
 }
 
-// Protected Pages
 async function initWatchlistPage() {
   if (!AppState.user) {
-    window.location.href = '/login.html';
+    window.location.href = '/login';
     return;
   }
   
@@ -828,7 +798,7 @@ async function initWatchlistPage() {
 
 async function initFavoritesPage() {
   if (!AppState.user) {
-    window.location.href = '/login.html';
+    window.location.href = '/login';
     return;
   }
   
@@ -843,14 +813,83 @@ async function initFavoritesPage() {
   }
 }
 
+async function initLoginPage() {
+  // Login page specific initialization is handled in the login.html script
+}
+
+async function initAdminDashboard() {
+  if (!AppState.user || !AppState.user.is_admin) {
+    window.location.href = '/';
+    return;
+  }
+  
+  // Admin dashboard specific initialization is handled in the admin pages
+}
+
+// Initialize app on page load
+document.addEventListener('DOMContentLoaded', () => {
+  // Update auth UI
+  updateAuthUI();
+  
+  // Setup search forms
+  setupSearchForm();
+  
+  // Setup global event listeners
+  const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+  if (mobileMenuToggle) {
+    mobileMenuToggle.addEventListener('click', toggleMobileMenu);
+  }
+  
+  const mobileMenuOverlay = document.querySelector('.mobile-menu-overlay');
+  if (mobileMenuOverlay) {
+    mobileMenuOverlay.addEventListener('click', toggleMobileMenu);
+  }
+  
+  // Close search suggestions on click outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-container')) {
+      clearSearchSuggestions();
+    }
+  });
+  
+  // Route-specific initialization based on clean URLs
+  const currentPath = window.location.pathname;
+  
+  if (currentPath === '/' || currentPath === '/index') {
+    initHomepage();
+  } else if (currentPath === '/details') {
+    initDetailsPage();
+  } else if (currentPath === '/login') {
+    initLoginPage();
+  } else if (currentPath.includes('/categories/')) {
+    initCategoryPage();
+  } else if (currentPath.includes('/languages/')) {
+    initLanguagePage();
+  } else if (currentPath === '/user/watchlist') {
+    initWatchlistPage();
+  } else if (currentPath === '/user/favorites') {
+    initFavoritesPage();
+  } else if (currentPath === '/admin/dashboard') {
+    initAdminDashboard();
+  }
+});
+
 // Export for use in other scripts
 window.ApiService = ApiService;
 window.AppState = AppState;
 window.showToast = showToast;
 window.navigateToDetails = navigateToDetails;
+window.navigateToCategory = navigateToCategory;
+window.navigateToLanguage = navigateToLanguage;
+window.navigateToSearch = navigateToSearch;
 window.addToWatchlist = addToWatchlist;
 window.addToFavorites = addToFavorites;
 window.playTrailer = playTrailer;
 window.scrollCarousel = scrollCarousel;
 window.handleSearch = handleSearch;
 window.toggleMobileMenu = toggleMobileMenu;
+window.logout = logout;
+window.updateAuthUI = updateAuthUI;
+window.createContentCard = createContentCard;
+window.renderContentGrid = renderContentGrid;
+window.setupLazyLoading = setupLazyLoading;

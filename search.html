@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Results - CineScope</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    .search-header {
+      background: var(--bg-secondary);
+      padding: var(--space-xl) 0;
+      margin-bottom: var(--space-xl);
+      border-bottom: 1px solid var(--bg-hover);
+    }
+    
+    .search-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-lg);
+      flex-wrap: wrap;
+      gap: var(--space-md);
+    }
+    
+    .search-filters {
+      display: flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-xl);
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    
+    .filter-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    .search-result-item {
+      display: grid;
+      grid-template-columns: 150px 1fr auto;
+      gap: var(--space-lg);
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+      transition: all var(--transition-base);
+      cursor: pointer;
+    }
+    
+    .search-result-item:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .result-poster {
+      width: 150px;
+      height: 225px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--bg-hover);
+    }
+    
+    .result-poster img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .result-info h3 {
+      margin-bottom: var(--space-sm);
+      font-size: 1.25rem;
+    }
+    
+    .result-meta {
+      display: flex;
+      gap: var(--space-md);
+      margin-bottom: var(--space-sm);
+      flex-wrap: wrap;
+    }
+    
+    .result-description {
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: var(--space-md);
+    }
+    
+    .result-genres {
+      display: flex;
+      gap: var(--space-xs);
+      flex-wrap: wrap;
+    }
+    
+    @media (max-width: 768px) {
+      .search-result-item {
+        grid-template-columns: 100px 1fr;
+        gap: var(--space-md);
+      }
+      
+      .result-poster {
+        width: 100px;
+        height: 150px;
+      }
+      
+      .result-actions {
+        grid-column: 1 / -1;
+        margin-top: var(--space-md);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container navbar-content">
+      <a href="/" class="navbar-brand gradient-text">CineScope</a>
+      
+      <button class="mobile-menu-toggle md:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
+      
+      <div class="navbar-menu hidden md:flex">
+        <a href="/" class="navbar-link">Home</a>
+        <a href="/categories/movies.html" class="navbar-link">Movies</a>
+        <a href="/categories/tv-shows.html" class="navbar-link">TV Shows</a>
+        <a href="/categories/anime.html" class="navbar-link">Anime</a>
+        
+        <div class="search-container">
+          <input type="text" class="search-input" placeholder="Search..." id="main-search">
+          <i class="fas fa-search search-icon"></i>
+          <div class="search-suggestions" style="display: none;"></div>
+        </div>
+        
+        <div class="auth-buttons flex gap-sm">
+          <a href="/login.html" class="btn btn-ghost btn-sm">Login</a>
+          <a href="/login.html#register" class="btn btn-primary btn-sm">Sign Up</a>
+        </div>
+        
+        <div class="user-menu" style="display: none;"></div>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Search Header -->
+  <div class="search-header" style="margin-top: 60px;">
+    <div class="container">
+      <h1 id="search-title">Search Results</h1>
+      <p class="text-secondary" id="search-subtitle">Find your next favorite movie or show</p>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Search Stats & Filters -->
+    <div class="search-stats">
+      <div>
+        <span class="text-secondary">Results for:</span>
+        <strong id="search-query">"..."</strong>
+        <span class="text-secondary ml-md" id="results-count">0 results</span>
+      </div>
+      
+      <button class="btn btn-ghost btn-sm" onclick="toggleFilters()">
+        <i class="fas fa-filter mr-sm"></i> Filters
+      </button>
+    </div>
+    
+    <!-- Advanced Filters -->
+    <div class="search-filters" id="search-filters" style="display: none;">
+      <div class="filter-group">
+        <span class="filter-label">Type</span>
+        <select class="form-select" id="type-filter">
+          <option value="">All Types</option>
+          <option value="movie">Movies</option>
+          <option value="tv">TV Shows</option>
+          <option value="anime">Anime</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <span class="filter-label">Genre</span>
+        <select class="form-select" id="genre-filter">
+          <option value="">All Genres</option>
+          <option value="action">Action</option>
+          <option value="comedy">Comedy</option>
+          <option value="drama">Drama</option>
+          <option value="horror">Horror</option>
+          <option value="romance">Romance</option>
+          <option value="sci-fi">Sci-Fi</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <span class="filter-label">Year</span>
+        <select class="form-select" id="year-filter">
+          <option value="">Any Year</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+          <option value="2022">2022</option>
+          <option value="2021">2021</option>
+          <option value="2020">2020</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <span class="filter-label">Sort By</span>
+        <select class="form-select" id="sort-filter">
+          <option value="relevance">Relevance</option>
+          <option value="rating">Rating</option>
+          <option value="year">Year</option>
+          <option value="title">Title</option>
+        </select>
+      </div>
+    </div>
+    
+    <!-- Search Results -->
+    <div id="search-results">
+      <div class="text-center p-2xl">
+        <div class="spinner spinner-lg mx-auto mb-lg"></div>
+        <p class="text-secondary">Searching...</p>
+      </div>
+    </div>
+    
+    <!-- Load More -->
+    <div class="text-center mt-xl" id="load-more-container" style="display: none;">
+      <button class="btn btn-secondary" onclick="loadMoreResults()">
+        <i class="fas fa-plus mr-sm"></i> Load More Results
+      </button>
+    </div>
+  </main>
+  
+  <!-- Toast Container -->
+  <div class="toast-container"></div>
+  
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script>
+    let currentQuery = '';
+    let currentPage = 1;
+    let currentFilters = {
+      type: '',
+      genre: '',
+      year: '',
+      sort: 'relevance'
+    };
+    let allResults = [];
+    let isLoading = false;
+    
+    // Get query from URL parameters
+    function getSearchQuery() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('q') || '';
+    }
+    
+    // Toggle filters
+    function toggleFilters() {
+      const filters = document.getElementById('search-filters');
+      const isVisible = filters.style.display !== 'none';
+      filters.style.display = isVisible ? 'none' : 'flex';
+    }
+    
+    // Perform search
+    async function performSearch(page = 1) {
+      if (isLoading) return;
+      
+      isLoading = true;
+      const resultsContainer = document.getElementById('search-results');
+      
+      if (page === 1) {
+        resultsContainer.innerHTML = '<div class="text-center p-2xl"><div class="spinner spinner-lg mx-auto mb-lg"></div><p class="text-secondary">Searching...</p></div>';
+        allResults = [];
+      }
+      
+      try {
+        const response = await ApiService.search(currentQuery, currentFilters.type || 'multi', page);
+        
+        if (page === 1) {
+          allResults = response.results || [];
+        } else {
+          allResults = [...allResults, ...(response.results || [])];
+        }
+        
+        renderResults();
+        updateResultsCount(response.total_results || 0);
+        
+        // Show load more if there are more pages
+        const loadMoreContainer = document.getElementById('load-more-container');
+        loadMoreContainer.style.display = 
+          response.total_pages && page < response.total_pages ? 'block' : 'none';
+        
+      } catch (error) {
+        console.error('Search error:', error);
+        resultsContainer.innerHTML = `
+          <div class="text-center p-2xl text-secondary">
+            <i class="fas fa-exclamation-triangle text-4xl mb-md"></i>
+            <h3>Search failed</h3>
+            <p>Please try again later</p>
+          </div>
+        `;
+      } finally {
+        isLoading = false;
+      }
+    }
+    
+    // Render search results
+    function renderResults() {
+      const container = document.getElementById('search-results');
+      
+      if (allResults.length === 0) {
+        container.innerHTML = `
+          <div class="text-center p-2xl">
+            <i class="fas fa-search text-4xl mb-md text-muted"></i>
+            <h3 class="text-secondary">No results found</h3>
+            <p class="text-muted">Try different keywords or adjust your filters</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Apply client-side filters and sorting
+      let filteredResults = [...allResults];
+      
+      // Filter by genre (client-side approximation)
+      if (currentFilters.genre) {
+        filteredResults = filteredResults.filter(item => 
+          item.genres && item.genres.some(genre => 
+            genre.toLowerCase().includes(currentFilters.genre.toLowerCase())
+          )
+        );
+      }
+      
+      // Sort results
+      switch (currentFilters.sort) {
+        case 'rating':
+          filteredResults.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          break;
+        case 'year':
+          filteredResults.sort((a, b) => {
+            const yearA = a.release_date ? new Date(a.release_date).getFullYear() : 0;
+            const yearB = b.release_date ? new Date(b.release_date).getFullYear() : 0;
+            return yearB - yearA;
+          });
+          break;
+        case 'title':
+          filteredResults.sort((a, b) => a.title.localeCompare(b.title));
+          break;
+        case 'relevance':
+        default:
+          // Keep original order
+          break;
+      }
+      
+      container.innerHTML = filteredResults.map(item => `
+        <div class="search-result-item" onclick="navigateToDetails(${item.id})">
+          <div class="result-poster">
+            ${item.poster_path ? `<img src="${item.poster_path}" alt="${item.title}">` : '<div class="flex-center h-full text-muted"><i class="fas fa-film text-2xl"></i></div>'}
+          </div>
+          
+          <div class="result-info">
+            <h3>${item.title}</h3>
+            
+            <div class="result-meta">
+              <span class="tag tag-sm">${item.content_type}</span>
+              ${item.release_date ? `<span class="text-secondary">${new Date(item.release_date).getFullYear()}</span>` : ''}
+              ${item.rating ? `
+                <div class="flex items-center gap-xs">
+                  <i class="fas fa-star text-yellow text-sm"></i>
+                  <span>${item.rating.toFixed(1)}</span>
+                </div>
+              ` : ''}
+            </div>
+            
+            <p class="result-description">
+              ${item.overview ? (item.overview.length > 200 ? item.overview.substring(0, 200) + '...' : item.overview) : 'No description available.'}
+            </p>
+            
+            ${item.genres && item.genres.length > 0 ? `
+              <div class="result-genres">
+                ${item.genres.slice(0, 3).map(genre => `<span class="tag tag-xs">${genre}</span>`).join('')}
+              </div>
+            ` : ''}
+          </div>
+          
+          <div class="result-actions">
+            <div class="flex-col gap-sm">
+              <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); navigateToDetails(${item.id})">
+                <i class="fas fa-play mr-xs"></i> View
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); addToWatchlist(${item.id})">
+                <i class="fas fa-plus mr-xs"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Update results count
+    function updateResultsCount(count) {
+      document.getElementById('results-count').textContent = `${count.toLocaleString()} results`;
+    }
+    
+    // Load more results
+    function loadMoreResults() {
+      currentPage++;
+      performSearch(currentPage);
+    }
+    
+    // Filter change handlers
+    document.getElementById('type-filter').addEventListener('change', (e) => {
+      currentFilters.type = e.target.value;
+      currentPage = 1;
+      performSearch();
+    });
+    
+    document.getElementById('genre-filter').addEventListener('change', (e) => {
+      currentFilters.genre = e.target.value;
+      renderResults(); // Client-side filter
+    });
+    
+    document.getElementById('year-filter').addEventListener('change', (e) => {
+      currentFilters.year = e.target.value;
+      renderResults(); // Client-side filter
+    });
+    
+    document.getElementById('sort-filter').addEventListener('change', (e) => {
+      currentFilters.sort = e.target.value;
+      renderResults(); // Client-side sort
+    });
+    
+    // Main search input handler
+    document.getElementById('main-search').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const query = e.target.value.trim();
+        if (query) {
+          window.location.href = `/search.html?q=${encodeURIComponent(query)}`;
+        }
+      }
+    });
+    
+    // Initialize search
+    function initializeSearch() {
+      currentQuery = getSearchQuery();
+      
+      if (!currentQuery) {
+        window.location.href = '/';
+        return;
+      }
+      
+      // Update UI
+      document.getElementById('search-query').textContent = `"${currentQuery}"`;
+      document.getElementById('search-title').textContent = `Search Results for "${currentQuery}"`;
+      document.getElementById('main-search').value = currentQuery;
+      
+      // Perform search
+      performSearch();
+    }
+    
+    // Initialize
+    updateAuthUI();
+    initializeSearch();
+  </script>
+</body>
+</html>
