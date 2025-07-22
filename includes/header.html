@@ -1,122 +1,78 @@
-<nav class="navbar">
-    <div class="container">
-        <div class="navbar-container">
-            <a href="/" class="navbar-brand">CineScope</a>
+<header class="header">
+    <nav class="navbar container-fluid">
+        <div class="d-flex align-items-center justify-content-between w-100">
+            <a href="/" class="navbar-brand">
+                <i class="fas fa-film"></i>
+                CineScope
+            </a>
             
-            <div class="navbar-menu">
-                <ul class="navbar-nav">
-                    <li><a href="/" class="navbar-link">Home</a></li>
-                    <li class="dropdown">
-                        <button class="dropdown-toggle navbar-link">Categories</button>
-                        <div class="dropdown-menu">
-                            <a href="/categories/trending" class="dropdown-item">Trending</a>
-                            <a href="/categories/popular" class="dropdown-item">Popular</a>
-                            <a href="/categories/new-releases" class="dropdown-item">New Releases</a>
-                            <a href="/categories/critics-choice" class="dropdown-item">Critics' Choice</a>
-                            <a href="/categories/movies" class="dropdown-item">Movies</a>
-                            <a href="/categories/tv-shows" class="dropdown-item">TV Shows</a>
-                            <a href="/categories/anime" class="dropdown-item">Anime</a>
-                        </div>
-                    </li>
-                    <li class="dropdown">
-                        <button class="dropdown-toggle navbar-link">Languages</button>
-                        <div class="dropdown-menu">
-                            <a href="/languages/english" class="dropdown-item">English</a>
-                            <a href="/languages/hindi" class="dropdown-item">Hindi</a>
-                            <a href="/languages/telugu" class="dropdown-item">Telugu</a>
-                            <a href="/languages/tamil" class="dropdown-item">Tamil</a>
-                            <a href="/languages/kannada" class="dropdown-item">Kannada</a>
-                            <a href="/languages/malayalam" class="dropdown-item">Malayalam</a>
-                        </div>
-                    </li>
-                </ul>
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" 
+                       class="search-input" 
+                       placeholder="Search movies, TV shows, anime..."
+                       oninput="handleSearch(this.value)">
+                <div class="search-suggestions"></div>
             </div>
-
-            <div class="navbar-actions">
-                <div class="search-container">
-                    <input type="text" id="header-search" class="search-input" placeholder="Search...">
-                    <button class="search-btn">🔍</button>
-                </div>
-
-                <!-- User Menu (shown when logged in) -->
-                <div id="user-menu" class="dropdown" style="display: none;">
-                    <button class="dropdown-toggle btn btn-ghost">
-                        <span id="user-name">User</span>
-                    </button>
+            
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" class="nav-link dropdown-toggle">Categories</a>
                     <div class="dropdown-menu">
-                        <a href="/dashboard" class="dropdown-item">Dashboard</a>
-                        <a href="/user/watchlist" class="dropdown-item">Watchlist</a>
-                        <a href="/user/favorites" class="dropdown-item">Favorites</a>
-                        <a href="/profile" class="dropdown-item">Profile</a>
-                        <div class="dropdown-divider"></div>
-                        <button class="dropdown-item" onclick="app.logout()">Logout</button>
+                        <a href="/categories/trending">Trending</a>
+                        <a href="/categories/popular">Popular</a>
+                        <a href="/categories/new-releases">New Releases</a>
+                        <a href="/categories/critic-choices">Critics' Choice</a>
+                        <a href="/categories/movies">Movies</a>
+                        <a href="/categories/tv-shows">TV Shows</a>
+                        <a href="/categories/anime">Anime</a>
                     </div>
-                </div>
-
-                <!-- Login Button (shown when not logged in) -->
-                <a href="/login" id="login-btn" class="btn btn-primary">Login</a>
-
-                <!-- Mobile Menu Toggle -->
-                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">☰</button>
-            </div>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="nav-link dropdown-toggle">Languages</a>
+                    <div class="dropdown-menu">
+                        <a href="/languages/english">English</a>
+                        <a href="/languages/hindi">Hindi</a>
+                        <a href="/languages/telugu">Telugu</a>
+                        <a href="/languages/tamil">Tamil</a>
+                        <a href="/languages/kannada">Kannada</a>
+                        <a href="/languages/malayalam">Malayalam</a>
+                    </div>
+                </li>
+                <li id="userMenu"></li>
+            </ul>
         </div>
-    </div>
-</nav>
+    </nav>
+</header>
 
 <script>
-function toggleMobileMenu() {
-    const navbar = document.querySelector('.navbar');
-    navbar.classList.toggle('mobile-open');
-}
+    // Update user menu based on auth state
+    const userMenu = document.getElementById('userMenu');
+    const user = AppState.user;
+    
+    if (user) {
+        userMenu.innerHTML = `
+            <div class="dropdown">
+                <a href="#" class="nav-link dropdown-toggle">
+                    <i class="fas fa-user-circle"></i> ${user.username}
+                </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/profile">Profile</a>
+                    <a href="/user/watchlist">My Watchlist</a>
+                    <a href="/user/favorites">Favorites</a>
+                    ${user.is_admin ? '<a href="/admin/dashboard">Admin Panel</a>' : ''}
+                    <div class="dropdown-divider"></div>
+                    <a href="#" onclick="handleLogout()">Logout</a>
+                </div>
+            </div>
+        `;
+    } else {
+        userMenu.innerHTML = `
+            <a href="/login" class="btn btn-primary btn-sm">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </a>
+        `;
+    }
 </script>
-
-<style>
-.dropdown-divider {
-    height: 1px;
-    background: var(--border-color);
-    margin: var(--spacing-sm) 0;
-}
-
-.mobile-menu-toggle {
-    display: none;
-    background: none;
-    border: none;
-    color: var(--text-primary);
-    font-size: 1.5rem;
-    cursor: pointer;
-}
-
-@media (max-width: 768px) {
-    .navbar-menu {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: var(--bg-secondary);
-        transform: translateY(-100%);
-        opacity: 0;
-        visibility: hidden;
-        transition: all var(--transition-normal);
-        border-top: 1px solid var(--border-color);
-    }
-
-    .navbar.mobile-open .navbar-menu {
-        transform: translateY(0);
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .navbar-nav {
-        flex-direction: column;
-        padding: var(--spacing-lg);
-    }
-
-    .mobile-menu-toggle {
-        display: block;
-    }
-
-    .search-container {
-        display: none;
-    }
-}
-</style>

@@ -1,1008 +1,590 @@
-// Main Application JavaScript
-class MovieApp {
-    constructor() {
-        this.API_BASE = 'https://backend-app-970m.onrender.com/api';
-        this.currentUser = null;
-        this.authToken = null;
-        this.currentPage = 1;
-        this.loadingStates = new Set();
-        this.cache = new Map();
-        this.intersectionObserver = null;
+// Global Configuration
+const CONFIG = {
+    API_BASE: 'https://backend-app-970m.onrender.com/api',
+    TMDB_IMAGE_BASE: 'https://image.tmdb.org/t/p',
+    DEFAULT_POSTER: '/assets/images/no-poster.jpg',
+    ITEMS_PER_PAGE: 20,
+    CAROUSEL_SCROLL_AMOUNT: 3,
+    DEBOUNCE_DELAY: 300,
+    CACHE_DURATION: 5 * 60 * 1000 // 5 minutes
+};
+
+// State Management
+const AppState = {
+    user: null,
+    token: null,
+    searchQuery: '',
+    currentPage: 'home',
+    cache: new Map(),
+    isLoading: false,
+    selectedLanguage: 'hindi',
+    watchlist: [],
+    favorites: []
+};
+
+// Cache Management
+class CacheManager {
+    static set(key, data, duration = CONFIG.CACHE_DURATION) {
+        const expiry = Date.now() + duration;
+        AppState.cache.set(key, { data, expiry });
+    }
+
+    static get(key) {
+        const cached = AppState.cache.get(key);
+        if (!cached) return null;
         
-        this.init();
-    }
-
-    async init() {
-        console.log('Initializing Movie App...');
+        if (Date.now() > cached.expiry) {
+            AppState.cache.delete(key);
+            return null;
+        }
         
-        // Initialize components
-        this.setupEventListeners();
-        this.setupIntersectionObserver();
-        this.setupNavbar();
-        this.checkAuthStatus();
-        this.loadCurrentPage();
-        
-        // Initialize UI components
-        this.initializeTooltips();
-        this.initializeModals();
-        this.initializeTabs();
-        this.initializeDropdowns();
-        
-        console.log('Movie App initialized successfully');
+        return cached.data;
     }
 
-    // Authentication Methods
-    checkAuthStatus() {
-        const token = this.getStoredToken();
-        if (token) {
-            this.authToken = token;
-            this.fetchUserProfile();
-        }
-        this.updateAuthUI();
+    static clear() {
+        AppState.cache.clear();
     }
+}
 
-    getStoredToken() {
-        // Using JavaScript variables only (no localStorage)
-        return this.authToken;
-    }
-
-    async login(credentials) {
-        try {
-            this.setLoadingState('login', true);
-            
-            const response = await this.apiCall('/login', {
-                method: 'POST',
-                body: JSON.stringify(credentials)
-            });
-
-            if (response.token) {
-                this.authToken = response.token;
-                this.currentUser = response.user;
-                this.updateAuthUI();
-                this.showToast('Login successful!', 'success');
-                
-                // Redirect based on user type
-                if (this.currentUser.is_admin) {
-                    this.navigate('/admin/dashboard');
-                } else {
-                    this.navigate('/dashboard');
-                }
-                
-                return { success: true };
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            this.showToast(error.message || 'Login failed', 'error');
-            return { success: false, error: error.message };
-        } finally {
-            this.setLoadingState('login', false);
-        }
-    }
-
-    async register(userData) {
-        try {
-            this.setLoadingState('register', true);
-            
-            const response = await this.apiCall('/register', {
-                method: 'POST',
-                body: JSON.stringify(userData)
-            });
-
-            if (response.token) {
-                this.authToken = response.token;
-                this.currentUser = response.user;
-                this.updateAuthUI();
-                this.showToast('Registration successful!', 'success');
-                this.navigate('/dashboard');
-                return { success: true };
-            }
-        } catch (error) {
-            console.error('Registration error:', error);
-            this.showToast(error.message || 'Registration failed', 'error');
-            return { success: false, error: error.message };
-        } finally {
-            this.setLoadingState('register', false);
-        }
-    }
-
-    logout() {
-        this.authToken = null;
-        this.currentUser = null;
-        this.updateAuthUI();
-        this.showToast('Logged out successfully', 'success');
-        this.navigate('/');
-    }
-
-    async fetchUserProfile() {
-        try {
-            const response = await this.apiCall('/user/profile');
-            this.currentUser = response.user;
-            this.updateAuthUI();
-        } catch (error) {
-            console.error('Failed to fetch user profile:', error);
-            this.logout();
-        }
-    }
-
-    // API Methods
-    async apiCall(endpoint, options = {}) {
-        const url = `${this.API_BASE}${endpoint}`;
-        const config = {
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            },
-            ...options
+// API Service
+class APIService {
+    static async request(endpoint, options = {}) {
+        const url = `${CONFIG.API_BASE}${endpoint}`;
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
         };
 
-        if (this.authToken) {
-            config.headers.Authorization = `Bearer ${this.authToken}`;
+        if (AppState.token) {
+            headers['Authorization'] = `Bearer ${AppState.token}`;
         }
 
         try {
-            const response = await fetch(url, config);
-            const data = await response.json();
+            showLoader();
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
 
             if (!response.ok) {
-                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                if (response.status === 401) {
+                    handleLogout();
+                    throw new Error('Unauthorized');
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
+            const data = await response.json();
             return data;
         } catch (error) {
-            if (error.message.includes('401') || error.message.includes('Invalid token')) {
-                this.logout();
-            }
+            console.error('API Error:', error);
+            showNotification('error', 'Something went wrong. Please try again.');
             throw error;
+        } finally {
+            hideLoader();
         }
     }
 
-    // Content Loading Methods
-    async loadTrending(limit = 20, contentType = 'all') {
-        const cacheKey = `trending_${contentType}_${limit}`;
+    static async get(endpoint, useCache = true) {
+        if (useCache) {
+            const cached = CacheManager.get(endpoint);
+            if (cached) return cached;
+        }
+
+        const data = await this.request(endpoint);
+        if (useCache) {
+            CacheManager.set(endpoint, data);
+        }
+        return data;
+    }
+
+    static async post(endpoint, body) {
+        return this.request(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+    }
+
+    static async put(endpoint, body) {
+        return this.request(endpoint, {
+            method: 'PUT',
+            body: JSON.stringify(body)
+        });
+    }
+
+    static async delete(endpoint) {
+        return this.request(endpoint, {
+            method: 'DELETE'
+        });
+    }
+}
+
+// Authentication
+async function login(username, password) {
+    try {
+        const response = await APIService.post('/login', { username, password });
         
-        if (this.cache.has(cacheKey)) {
-            return this.cache.get(cacheKey);
-        }
-
-        try {
-            this.setLoadingState('trending', true);
-            const response = await this.apiCall(`/recommendations/trending?type=${contentType}&limit=${limit}`);
+        if (response.token) {
+            AppState.token = response.token;
+            AppState.user = response.user;
             
-            this.cache.set(cacheKey, response.recommendations);
-            return response.recommendations;
-        } catch (error) {
-            console.error('Failed to load trending content:', error);
-            this.showToast('Failed to load trending content', 'error');
-            return [];
-        } finally {
-            this.setLoadingState('trending', false);
+            // Store in sessionStorage for persistence
+            sessionStorage.setItem('token', response.token);
+            sessionStorage.setItem('user', JSON.stringify(response.user));
+            
+            showNotification('success', `Welcome back, ${response.user.username}!`);
+            
+            // Redirect based on user role
+            if (response.user.is_admin) {
+                window.location.href = '/admin/dashboard';
+            } else {
+                window.location.href = '/dashboard';
+            }
         }
+    } catch (error) {
+        showNotification('error', 'Invalid credentials. Please try again.');
     }
+}
 
-    async loadNewReleases(limit = 20, language = null, contentType = 'movie') {
-        const cacheKey = `new_releases_${contentType}_${language}_${limit}`;
+async function register(userData) {
+    try {
+        const response = await APIService.post('/register', userData);
         
-        if (this.cache.has(cacheKey)) {
-            return this.cache.get(cacheKey);
-        }
-
-        try {
-            this.setLoadingState('new-releases', true);
-            let url = `/recommendations/new-releases?type=${contentType}&limit=${limit}`;
-            if (language) url += `&language=${language}`;
+        if (response.token) {
+            AppState.token = response.token;
+            AppState.user = response.user;
             
-            const response = await this.apiCall(url);
+            sessionStorage.setItem('token', response.token);
+            sessionStorage.setItem('user', JSON.stringify(response.user));
             
-            this.cache.set(cacheKey, response.recommendations);
-            return response.recommendations;
-        } catch (error) {
-            console.error('Failed to load new releases:', error);
-            this.showToast('Failed to load new releases', 'error');
-            return [];
-        } finally {
-            this.setLoadingState('new-releases', false);
+            showNotification('success', 'Registration successful! Welcome to CineScope!');
+            window.location.href = '/dashboard';
         }
+    } catch (error) {
+        showNotification('error', 'Registration failed. Please try again.');
     }
+}
 
-    async loadCriticsChoice(limit = 20, contentType = 'movie') {
-        const cacheKey = `critics_choice_${contentType}_${limit}`;
+function handleLogout() {
+    AppState.token = null;
+    AppState.user = null;
+    sessionStorage.clear();
+    window.location.href = '/';
+}
+
+// Content Loading Functions
+async function loadHomepageContent() {
+    try {
+        // Load all sections in parallel
+        await Promise.all([
+            loadTrending(),
+            loadNewReleases(),
+            loadCriticsChoice(),
+            loadRegionalContent('hindi'),
+            loadAnime(),
+            loadHeroSlider()
+        ]);
+    } catch (error) {
+        console.error('Error loading homepage:', error);
+    }
+}
+
+async function loadTrending() {
+    try {
+        const data = await APIService.get('/recommendations/trending?limit=20');
+        renderCarousel('trendingTrack', data.recommendations);
+    } catch (error) {
+        console.error('Error loading trending:', error);
+    }
+}
+
+async function loadNewReleases() {
+    try {
+        const data = await APIService.get('/recommendations/new-releases?limit=20');
+        renderCarousel('newReleasesTrack', data.recommendations);
+    } catch (error) {
+        console.error('Error loading new releases:', error);
+    }
+}
+
+async function loadCriticsChoice() {
+    try {
+        const data = await APIService.get('/recommendations/critics-choice?limit=20');
+        renderCarousel('criticsChoiceTrack', data.recommendations);
+    } catch (error) {
+        console.error('Error loading critics choice:', error);
+    }
+}
+
+async function loadRegionalContent(language) {
+    try {
+        AppState.selectedLanguage = language;
+        const data = await APIService.get(`/recommendations/regional/${language}?limit=20`);
+        renderCarousel('regionalTrack', data.recommendations);
         
-        if (this.cache.has(cacheKey)) {
-            return this.cache.get(cacheKey);
-        }
-
-        try {
-            this.setLoadingState('critics-choice', true);
-            const response = await this.apiCall(`/recommendations/critics-choice?type=${contentType}&limit=${limit}`);
-            
-            this.cache.set(cacheKey, response.recommendations);
-            return response.recommendations;
-        } catch (error) {
-            console.error('Failed to load critics choice:', error);
-            this.showToast('Failed to load critics choice', 'error');
-            return [];
-        } finally {
-            this.setLoadingState('critics-choice', false);
-        }
+        // Update active tab
+        document.querySelectorAll('.regional-tab').forEach(tab => {
+            tab.classList.remove('active');
+            if (tab.textContent.toLowerCase() === language) {
+                tab.classList.add('active');
+            }
+        });
+    } catch (error) {
+        console.error('Error loading regional content:', error);
     }
+}
 
-    async loadGenreContent(genre, limit = 20, contentType = 'movie') {
-        const cacheKey = `genre_${genre}_${contentType}_${limit}`;
+async function loadAnime() {
+    try {
+        const data = await APIService.get('/recommendations/anime?limit=20');
+        renderCarousel('animeTrack', data.recommendations);
+    } catch (error) {
+        console.error('Error loading anime:', error);
+    }
+}
+
+async function loadHeroSlider() {
+    try {
+        const data = await APIService.get('/recommendations/trending?limit=5');
+        const heroSlider = document.getElementById('heroSlider');
         
-        if (this.cache.has(cacheKey)) {
-            return this.cache.get(cacheKey);
-        }
-
-        try {
-            this.setLoadingState(`genre-${genre}`, true);
-            const response = await this.apiCall(`/recommendations/genre/${genre}?type=${contentType}&limit=${limit}`);
-            
-            this.cache.set(cacheKey, response.recommendations);
-            return response.recommendations;
-        } catch (error) {
-            console.error(`Failed to load ${genre} content:`, error);
-            this.showToast(`Failed to load ${genre} content`, 'error');
-            return [];
-        } finally {
-            this.setLoadingState(`genre-${genre}`, false);
-        }
-    }
-
-    async loadRegionalContent(language, limit = 20, contentType = 'movie') {
-        const cacheKey = `regional_${language}_${contentType}_${limit}`;
-        
-        if (this.cache.has(cacheKey)) {
-            return this.cache.get(cacheKey);
-        }
-
-        try {
-            this.setLoadingState(`regional-${language}`, true);
-            const response = await this.apiCall(`/recommendations/regional/${language}?type=${contentType}&limit=${limit}`);
-            
-            this.cache.set(cacheKey, response.recommendations);
-            return response.recommendations;
-        } catch (error) {
-            console.error(`Failed to load ${language} content:`, error);
-            this.showToast(`Failed to load ${language} content`, 'error');
-            return [];
-        } finally {
-            this.setLoadingState(`regional-${language}`, false);
-        }
-    }
-
-    async loadAnimeContent(limit = 20, genre = null) {
-        const cacheKey = `anime_${genre || 'all'}_${limit}`;
-        
-        if (this.cache.has(cacheKey)) {
-            return this.cache.get(cacheKey);
-        }
-
-        try {
-            this.setLoadingState('anime', true);
-            let url = `/recommendations/anime?limit=${limit}`;
-            if (genre) url += `&genre=${genre}`;
-            
-            const response = await this.apiCall(url);
-            
-            this.cache.set(cacheKey, response.recommendations);
-            return response.recommendations;
-        } catch (error) {
-            console.error('Failed to load anime content:', error);
-            this.showToast('Failed to load anime content', 'error');
-            return [];
-        } finally {
-            this.setLoadingState('anime', false);
-        }
-    }
-
-    async loadPersonalizedRecommendations() {
-        if (!this.authToken) {
-            return this.loadAnonymousRecommendations();
-        }
-
-        try {
-            this.setLoadingState('personalized', true);
-            const response = await this.apiCall('/recommendations/personalized');
-            return response.recommendations;
-        } catch (error) {
-            console.error('Failed to load personalized recommendations:', error);
-            return this.loadAnonymousRecommendations();
-        } finally {
-            this.setLoadingState('personalized', false);
-        }
-    }
-
-    async loadAnonymousRecommendations() {
-        try {
-            this.setLoadingState('anonymous', true);
-            const response = await this.apiCall('/recommendations/anonymous');
-            return response.recommendations;
-        } catch (error) {
-            console.error('Failed to load anonymous recommendations:', error);
-            return [];
-        } finally {
-            this.setLoadingState('anonymous', false);
-        }
-    }
-
-    async searchContent(query, page = 1, type = 'multi') {
-        try {
-            this.setLoadingState('search', true);
-            const response = await this.apiCall(`/search?query=${encodeURIComponent(query)}&page=${page}&type=${type}`);
-            return response;
-        } catch (error) {
-            console.error('Search failed:', error);
-            this.showToast('Search failed', 'error');
-            return { results: [], total_results: 0 };
-        } finally {
-            this.setLoadingState('search', false);
-        }
-    }
-
-    async loadContentDetails(contentId) {
-        const cacheKey = `content_${contentId}`;
-        
-        if (this.cache.has(cacheKey)) {
-            return this.cache.get(cacheKey);
-        }
-
-        try {
-            this.setLoadingState('content-details', true);
-            const response = await this.apiCall(`/content/${contentId}`);
-            
-            this.cache.set(cacheKey, response);
-            return response;
-        } catch (error) {
-            console.error('Failed to load content details:', error);
-            this.showToast('Failed to load content details', 'error');
-            return null;
-        } finally {
-            this.setLoadingState('content-details', false);
-        }
-    }
-
-    // User Interaction Methods
-    async recordInteraction(contentId, interactionType, rating = null) {
-        if (!this.authToken) return;
-
-        try {
-            await this.apiCall('/interactions', {
-                method: 'POST',
-                body: JSON.stringify({
-                    content_id: contentId,
-                    interaction_type: interactionType,
-                    rating: rating
-                })
-            });
-        } catch (error) {
-            console.error('Failed to record interaction:', error);
-        }
-    }
-
-    async loadWatchlist() {
-        if (!this.authToken) return [];
-
-        try {
-            this.setLoadingState('watchlist', true);
-            const response = await this.apiCall('/user/watchlist');
-            return response.watchlist;
-        } catch (error) {
-            console.error('Failed to load watchlist:', error);
-            return [];
-        } finally {
-            this.setLoadingState('watchlist', false);
-        }
-    }
-
-    async loadFavorites() {
-        if (!this.authToken) return [];
-
-        try {
-            this.setLoadingState('favorites', true);
-            const response = await this.apiCall('/user/favorites');
-            return response.favorites;
-        } catch (error) {
-            console.error('Failed to load favorites:', error);
-            return [];
-        } finally {
-            this.setLoadingState('favorites', false);
-        }
-    }
-
-    // UI Rendering Methods
-    renderContentGrid(contents, containerId, options = {}) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-
-        const { layout = 'grid', showEmpty = true } = options;
-
-        if (contents.length === 0 && showEmpty) {
-            container.innerHTML = this.renderEmptyState('No content found');
-            return;
-        }
-
-        if (layout === 'grid') {
-            container.innerHTML = contents.map(content => this.renderContentCard(content)).join('');
-        } else if (layout === 'list') {
-            container.innerHTML = contents.map(content => this.renderContentListItem(content)).join('');
-        }
-
-        // Setup lazy loading for images
-        this.setupLazyLoading(container);
-    }
-
-    renderContentCard(content) {
-        const poster = this.optimizeImageUrl(content.poster_path, 'w300');
-        const rating = content.rating ? parseFloat(content.rating).toFixed(1) : 'N/A';
-        const genres = content.genres ? content.genres.slice(0, 2).join(', ') : '';
-        
-        return `
-            <div class="content-card" onclick="app.openContentDetails(${content.id})" data-content-id="${content.id}">
-                <img 
-                    class="content-card-image lazy-load" 
-                    data-src="${poster}"
-                    alt="${content.title}"
-                    loading="lazy"
-                />
-                <div class="content-card-overlay">
-                    <h3 class="content-card-title">${content.title}</h3>
-                    <div class="content-card-info">
-                        <span class="content-card-rating">⭐ ${rating}</span>
-                        <span class="content-card-type">${content.content_type.toUpperCase()}</span>
+        heroSlider.innerHTML = data.recommendations.map((item, index) => `
+            <div class="hero-slide ${index === 0 ? 'active' : ''}" data-slide="${index}">
+                <img src="${getImageUrl(item.backdrop_path || item.poster_path, 'original')}" 
+                     alt="${item.title}" class="hero-backdrop">
+                <div class="hero-content">
+                    <h1 class="hero-title">${item.title}</h1>
+                    <div class="hero-meta">
+                        <span class="hero-rating">
+                            <i class="fas fa-star"></i> ${item.rating ? item.rating.toFixed(1) : 'N/A'}
+                        </span>
+                        <span>${item.content_type}</span>
+                        <span>${item.genres ? item.genres.slice(0, 3).join(' • ') : ''}</span>
                     </div>
-                    ${genres ? `<div class="genre-tags">${genres.split(', ').map(genre => `<span class="genre-tag">${genre}</span>`).join('')}</div>` : ''}
-                    <div class="action-buttons">
-                        <button class="action-btn" onclick="event.stopPropagation(); app.toggleWatchlist(${content.id})" title="Add to Watchlist">
-                            📚
+                    <p class="hero-description">${item.overview || ''}</p>
+                    <div class="hero-buttons">
+                        <button class="btn btn-primary" onclick="viewDetails(${item.id})">
+                            <i class="fas fa-play"></i> Watch Now
                         </button>
-                        <button class="action-btn" onclick="event.stopPropagation(); app.toggleFavorite(${content.id})" title="Add to Favorites">
-                            ❤️
+                        <button class="btn btn-secondary" onclick="viewDetails(${item.id})">
+                            <i class="fas fa-info-circle"></i> More Info
                         </button>
-                        ${content.youtube_trailer ? `<button class="action-btn" onclick="event.stopPropagation(); app.playTrailer('${content.youtube_trailer}')" title="Play Trailer">▶️</button>` : ''}
                     </div>
                 </div>
             </div>
-        `;
-    }
-
-    renderContentListItem(content) {
-        const poster = this.optimizeImageUrl(content.poster_path, 'w92');
-        const rating = content.rating ? parseFloat(content.rating).toFixed(1) : 'N/A';
+        `).join('');
         
-        return `
-            <div class="content-list-item" onclick="app.openContentDetails(${content.id})">
-                <img class="poster lazy-load" data-src="${poster}" alt="${content.title}" loading="lazy" />
-                <div class="info">
-                    <div class="title">${content.title}</div>
-                    <div class="meta">
-                        <span>⭐ ${rating}</span>
-                        <span>${content.content_type.toUpperCase()}</span>
-                        ${content.release_date ? `<span>${new Date(content.release_date).getFullYear()}</span>` : ''}
-                    </div>
+        // Start auto-slide
+        if (data.recommendations.length > 1) {
+            startHeroSlider();
+        }
+    } catch (error) {
+        console.error('Error loading hero slider:', error);
+    }
+}
+
+// Hero Slider Functions
+let heroSliderInterval;
+let currentSlide = 0;
+
+function startHeroSlider() {
+    heroSliderInterval = setInterval(() => {
+        const slides = document.querySelectorAll('.hero-slide');
+        if (slides.length <= 1) return;
+        
+        slides[currentSlide].classList.remove('active');
+        currentSlide = (currentSlide + 1) % slides.length;
+        slides[currentSlide].classList.add('active');
+    }, 5000);
+}
+
+// Content Rendering
+function renderCarousel(trackId, items) {
+    const track = document.getElementById(trackId);
+    
+    if (!items || items.length === 0) {
+        track.innerHTML = '<p class="text-gray-500">No content available</p>';
+        return;
+    }
+    
+    track.innerHTML = items.map(item => createContentCard(item)).join('');
+    
+    // Add lazy loading for images
+    lazyLoadImages(track);
+}
+
+function createContentCard(item) {
+    const posterUrl = getImageUrl(item.poster_path, 'w300');
+    const rating = item.rating ? item.rating.toFixed(1) : 'N/A';
+    
+    return `
+        <div class="content-card" onclick="viewDetails(${item.id})">
+            <div class="card-poster">
+                <img data-src="${posterUrl}" 
+                     src="${CONFIG.DEFAULT_POSTER}" 
+                     alt="${item.title}"
+                     class="lazy-image">
+                ${item.is_new_release ? '<span class="card-badge">New</span>' : ''}
+                ${item.is_trending ? '<span class="card-badge">Trending</span>' : ''}
+                ${item.is_critics_choice ? '<span class="card-badge">Critics Choice</span>' : ''}
+            </div>
+            <div class="card-overlay">
+                <h3 class="card-title">${item.title}</h3>
+                <div class="card-meta">
+                    <span class="card-rating">
+                        <i class="fas fa-star"></i> ${rating}
+                    </span>
+                    <span>${item.content_type}</span>
+                </div>
+                <div class="card-actions">
+                    <button class="card-action-btn" onclick="toggleWatchlist(${item.id}, event)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button class="card-action-btn" onclick="playTrailer('${item.youtube_trailer}', event)">
+                        <i class="fas fa-play"></i>
+                    </button>
                 </div>
             </div>
-        `;
-    }
+        </div>
+    `;
+}
 
-    renderEmptyState(message, actionButton = null) {
-        return `
-            <div class="empty-state">
-                <div class="empty-state-icon">🎬</div>
-                <h3 class="empty-state-title">No Content Found</h3>
-                <p class="empty-state-description">${message}</p>
-                ${actionButton ? actionButton : ''}
-            </div>
-        `;
+// Carousel Navigation
+function scrollCarousel(carouselId, direction) {
+    const track = document.getElementById(carouselId).querySelector('.carousel-track');
+    const cardWidth = 220; // card width + gap
+    const scrollAmount = cardWidth * CONFIG.CAROUSEL_SCROLL_AMOUNT;
+    
+    if (direction === 'prev') {
+        track.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    } else {
+        track.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
+}
 
-    renderLoadingGrid(count = 12) {
-        return Array(count).fill(0).map(() => `
-            <div class="content-card skeleton">
-                <div class="content-card-image skeleton"></div>
+// Search Functionality
+let searchDebounceTimeout;
+
+async function handleSearch(query) {
+    clearTimeout(searchDebounceTimeout);
+    
+    if (!query || query.trim().length < 2) {
+        hideSuggestions();
+        return;
+    }
+    
+    searchDebounceTimeout = setTimeout(async () => {
+        try {
+            const data = await APIService.get(`/search?query=${encodeURIComponent(query)}&type=multi`);
+            showSuggestions(data.results);
+        } catch (error) {
+            console.error('Search error:', error);
+        }
+    }, CONFIG.DEBOUNCE_DELAY);
+}
+
+function showSuggestions(results) {
+    const suggestionsContainer = document.querySelector('.search-suggestions');
+    
+    if (!results || results.length === 0) {
+        suggestionsContainer.innerHTML = '<div class="suggestion-item">No results found</div>';
+    } else {
+        suggestionsContainer.innerHTML = results.slice(0, 5).map(item => `
+            <div class="suggestion-item" onclick="viewDetails(${item.id})">
+                <img src="${getImageUrl(item.poster_path, 'w92')}" 
+                     alt="${item.title}" 
+                     class="suggestion-poster">
+                <div>
+                    <div class="font-semibold">${item.title}</div>
+                    <div class="text-sm text-gray-500">${item.content_type} • ${item.rating || 'N/A'}</div>
+                </div>
             </div>
         `).join('');
     }
+    
+    suggestionsContainer.classList.add('active');
+}
 
-    // Navigation and Routing
-    navigate(path) {
-        // Simple client-side routing
-        const currentPath = window.location.pathname;
-        
-        if (currentPath !== path) {
-            window.history.pushState(null, '', path);
-            this.loadCurrentPage();
-        }
+function hideSuggestions() {
+    const suggestionsContainer = document.querySelector('.search-suggestions');
+    suggestionsContainer.classList.remove('active');
+}
+
+// Navigation Functions
+function viewDetails(contentId) {
+    // Store content ID for details page
+    sessionStorage.setItem('selectedContentId', contentId);
+    window.location.href = `/details?id=${contentId}`;
+}
+
+function toggleWatchlist(contentId, event) {
+    event.stopPropagation();
+    
+    if (!AppState.user) {
+        showNotification('info', 'Please login to add to watchlist');
+        window.location.href = '/login';
+        return;
     }
+    
+    // Add to watchlist logic
+    addToWatchlist(contentId);
+}
 
-    loadCurrentPage() {
-        const path = window.location.pathname;
-        const page = this.getPageFromPath(path);
-        
-        // Update active navigation
-        this.updateActiveNavigation(path);
-        
-        // Load page content based on path
-        switch (page) {
-            case 'home':
-                this.loadHomePage();
-                break;
-            case 'login':
-                this.loadLoginPage();
-                break;
-            case 'dashboard':
-                this.loadDashboardPage();
-                break;
-            case 'details':
-                this.loadDetailsPage();
-                break;
-            case 'trending':
-                this.loadTrendingPage();
-                break;
-            case 'popular':
-                this.loadPopularPage();
-                break;
-            case 'new-releases':
-                this.loadNewReleasesPage();
-                break;
-            case 'critics-choice':
-                this.loadCriticsChoicePage();
-                break;
-            case 'movies':
-                this.loadMoviesPage();
-                break;
-            case 'tv-shows':
-                this.loadTVShowsPage();
-                break;
-            case 'anime':
-                this.loadAnimePage();
-                break;
-            case 'watchlist':
-                this.loadWatchlistPage();
-                break;
-            case 'favorites':
-                this.loadFavoritesPage();
-                break;
-            case 'profile':
-                this.loadProfilePage();
-                break;
-            default:
-                this.loadHomePage();
-        }
-    }
-
-    getPageFromPath(path) {
-        const pathSegments = path.split('/').filter(segment => segment !== '');
-        
-        if (pathSegments.length === 0) return 'home';
-        if (pathSegments[0] === 'categories') return pathSegments[1] || 'trending';
-        if (pathSegments[0] === 'languages') return pathSegments[1] || 'english';
-        if (pathSegments[0] === 'user') return pathSegments[1] || 'dashboard';
-        if (pathSegments[0] === 'admin') return 'admin-' + (pathSegments[1] || 'dashboard');
-        
-        return pathSegments[0];
-    }
-
-    // Page Loading Methods
-    async loadHomePage() {
-        if (!this.currentUser) {
-            // Load anonymous recommendations
-            this.loadAnonymousHomePage();
-        } else {
-            // Load personalized dashboard
-            this.loadDashboardPage();
-        }
-    }
-
-    async loadAnonymousHomePage() {
-        const contentAreas = [
-            { id: 'trending-content', loader: () => this.loadTrending(12) },
-            { id: 'popular-content', loader: () => this.loadTrending(12, 'movie') },
-            { id: 'new-releases-content', loader: () => this.loadNewReleases(12) },
-            { id: 'critics-choice-content', loader: () => this.loadCriticsChoice(12) }
-        ];
-
-        // Load content in parallel
-        contentAreas.forEach(async ({ id, loader }) => {
-            const container = document.getElementById(id);
-            if (container) {
-                container.innerHTML = this.renderLoadingGrid(12);
-                const content = await loader();
-                this.renderContentGrid(content, id);
-            }
-        });
-    }
-
-    async loadDashboardPage() {
-        if (!this.currentUser) {
-            this.navigate('/login');
-            return;
-        }
-
-        const contentAreas = [
-            { id: 'recommended-content', loader: () => this.loadPersonalizedRecommendations() },
-            { id: 'continue-watching-content', loader: () => this.loadWatchlist() },
-            { id: 'trending-content', loader: () => this.loadTrending(8) },
-            { id: 'new-releases-content', loader: () => this.loadNewReleases(8) }
-        ];
-
-        contentAreas.forEach(async ({ id, loader }) => {
-            const container = document.getElementById(id);
-            if (container) {
-                container.innerHTML = this.renderLoadingGrid(8);
-                const content = await loader();
-                this.renderContentGrid(content, id);
-            }
-        });
-    }
-
-    // Utility Methods
-    optimizeImageUrl(imagePath, size = 'w500') {
-        if (!imagePath) return '/assets/images/placeholder-poster.jpg';
-        if (imagePath.startsWith('http')) return imagePath;
-        return `https://image.tmdb.org/t/p/${size}${imagePath}`;
-    }
-
-    setLoadingState(key, isLoading) {
-        if (isLoading) {
-            this.loadingStates.add(key);
-        } else {
-            this.loadingStates.delete(key);
-        }
-        
-        // Update global loading indicator
-        const hasLoading = this.loadingStates.size > 0;
-        document.body.classList.toggle('loading', hasLoading);
-    }
-
-    showToast(message, type = 'info', duration = 3000) {
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <div class="toast-content">
-                <span class="toast-message">${message}</span>
-                <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-        `;
-        
-        document.body.appendChild(toast);
-        
-        // Trigger show animation
-        setTimeout(() => toast.classList.add('show'), 100);
-        
-        // Auto-remove toast
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, duration);
-    }
-
-    // Event Listeners
-    setupEventListeners() {
-        // Search functionality
-        const searchInput = document.getElementById('search-input');
-        const searchBtn = document.getElementById('search-btn');
-        
-        if (searchInput) {
-            let searchTimeout;
-            searchInput.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    if (e.target.value.trim()) {
-                        this.performSearch(e.target.value.trim());
-                    }
-                }, 300);
-            });
-            
-            searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    this.performSearch(e.target.value.trim());
-                }
-            });
-        }
-        
-        if (searchBtn) {
-            searchBtn.addEventListener('click', () => {
-                if (searchInput && searchInput.value.trim()) {
-                    this.performSearch(searchInput.value.trim());
-                }
-            });
-        }
-
-        // Handle browser back/forward
-        window.addEventListener('popstate', () => {
-            this.loadCurrentPage();
-        });
-
-        // Handle clicks on navigation links
-        document.addEventListener('click', (e) => {
-            const link = e.target.closest('[data-navigate]');
-            if (link) {
-                e.preventDefault();
-                this.navigate(link.dataset.navigate);
-            }
-        });
-
-        // Handle form submissions
-        document.addEventListener('submit', (e) => {
-            if (e.target.id === 'login-form') {
-                e.preventDefault();
-                this.handleLoginForm(e.target);
-            } else if (e.target.id === 'register-form') {
-                e.preventDefault();
-                this.handleRegisterForm(e.target);
-            }
-        });
-    }
-
-    setupIntersectionObserver() {
-        this.intersectionObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    if (img.dataset.src) {
-                        img.src = img.dataset.src;
-                        img.classList.remove('lazy-load');
-                        this.intersectionObserver.unobserve(img);
-                    }
-                }
-            });
-        }, {
-            rootMargin: '50px'
-        });
-    }
-
-    setupLazyLoading(container) {
-        const lazyImages = container.querySelectorAll('.lazy-load');
-        lazyImages.forEach(img => {
-            this.intersectionObserver.observe(img);
-        });
-    }
-
-    setupNavbar() {
-        const navbar = document.querySelector('.navbar');
-        if (!navbar) return;
-
-        let lastScrollY = window.scrollY;
-
-        window.addEventListener('scroll', () => {
-            const scrollY = window.scrollY;
-            
-            // Add scrolled class for styling
-            navbar.classList.toggle('scrolled', scrollY > 50);
-            
-            // Hide/show navbar on scroll
-            if (scrollY > lastScrollY && scrollY > 100) {
-                navbar.style.transform = 'translateY(-100%)';
-            } else {
-                navbar.style.transform = 'translateY(0)';
-            }
-            
-            lastScrollY = scrollY;
-        });
-    }
-
-    updateAuthUI() {
-        const loginButton = document.getElementById('login-btn');
-        const userMenu = document.getElementById('user-menu');
-        const userName = document.getElementById('user-name');
-
-        if (this.currentUser) {
-            if (loginButton) loginButton.style.display = 'none';
-            if (userMenu) userMenu.style.display = 'block';
-            if (userName) userName.textContent = this.currentUser.username;
-        } else {
-            if (loginButton) loginButton.style.display = 'block';
-            if (userMenu) userMenu.style.display = 'none';
-        }
-    }
-
-    updateActiveNavigation(currentPath) {
-        document.querySelectorAll('.navbar-link').forEach(link => {
-            link.classList.remove('active');
-            if (link.getAttribute('href') === currentPath) {
-                link.classList.add('active');
-            }
-        });
-    }
-
-    // Initialize UI Components
-    initializeTooltips() {
-        // Add tooltip functionality if needed
-    }
-
-    initializeModals() {
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) {
-                this.closeModal(e.target);
-            }
-            if (e.target.classList.contains('modal-close')) {
-                this.closeModal(e.target.closest('.modal'));
-            }
-        });
-    }
-
-    initializeTabs() {
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('tab-btn')) {
-                this.activateTab(e.target);
-            }
-        });
-    }
-
-    initializeDropdowns() {
-        document.addEventListener('click', (e) => {
-            const dropdown = e.target.closest('.dropdown');
-            if (dropdown && e.target.classList.contains('dropdown-toggle')) {
-                e.stopPropagation();
-                this.toggleDropdown(dropdown);
-            } else {
-                // Close all dropdowns
-                document.querySelectorAll('.dropdown.open').forEach(d => {
-                    d.classList.remove('open');
-                });
-            }
-        });
-    }
-
-    // Modal Methods
-    openModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-    }
-
-    closeModal(modal) {
-        if (modal) {
-            modal.classList.remove('show');
-            document.body.style.overflow = '';
-        }
-    }
-
-    // Tab Methods
-    activateTab(tabBtn) {
-        const tabContainer = tabBtn.closest('.tabs');
-        if (!tabContainer) return;
-
-        const targetTab = tabBtn.dataset.tab;
-        
-        // Update tab buttons
-        tabContainer.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        tabBtn.classList.add('active');
-
-        // Update tab content
-        tabContainer.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
+async function addToWatchlist(contentId) {
+    try {
+        await APIService.post('/interactions', {
+            content_id: contentId,
+            interaction_type: 'watchlist'
         });
         
-        const targetContent = tabContainer.querySelector(`[data-tab-content="${targetTab}"]`);
-        if (targetContent) {
-            targetContent.classList.add('active');
-        }
-    }
-
-    // Dropdown Methods
-    toggleDropdown(dropdown) {
-        dropdown.classList.toggle('open');
-    }
-
-    // Content Interaction Methods
-    async openContentDetails(contentId) {
-        const urlParams = new URLSearchParams(window.location.search);
-        urlParams.set('id', contentId);
+        showNotification('success', 'Added to watchlist');
         
-        const newUrl = `/details?${urlParams.toString()}`;
-        this.navigate(newUrl);
-    }
-
-    async toggleWatchlist(contentId) {
-        if (!this.authToken) {
-            this.showToast('Please login to add to watchlist', 'warning');
-            return;
-        }
-
-        try {
-            await this.recordInteraction(contentId, 'watchlist');
-            this.showToast('Added to watchlist', 'success');
-        } catch (error) {
-            this.showToast('Failed to update watchlist', 'error');
-        }
-    }
-
-    async toggleFavorite(contentId) {
-        if (!this.authToken) {
-            this.showToast('Please login to add to favorites', 'warning');
-            return;
-        }
-
-        try {
-            await this.recordInteraction(contentId, 'favorite');
-            this.showToast('Added to favorites', 'success');
-        } catch (error) {
-            this.showToast('Failed to update favorites', 'error');
-        }
-    }
-
-    playTrailer(youtubeUrl) {
-        // Extract video ID from YouTube URL
-        const videoId = youtubeUrl.includes('watch?v=') 
-            ? youtubeUrl.split('watch?v=')[1].split('&')[0]
-            : youtubeUrl.split('/').pop();
-
-        // Open YouTube in new tab/window
-        window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
-    }
-
-    // Form Handlers
-    async handleLoginForm(form) {
-        const formData = new FormData(form);
-        const credentials = {
-            username: formData.get('username'),
-            password: formData.get('password')
-        };
-
-        const result = await this.login(credentials);
-        if (result.success) {
-            form.reset();
-        }
-    }
-
-    async handleRegisterForm(form) {
-        const formData = new FormData(form);
-        const userData = {
-            username: formData.get('username'),
-            email: formData.get('email'),
-            password: formData.get('password'),
-            preferred_languages: formData.getAll('languages'),
-            preferred_genres: formData.getAll('genres')
-        };
-
-        const result = await this.register(userData);
-        if (result.success) {
-            form.reset();
-        }
-    }
-
-    // Search Methods
-    async performSearch(query) {
-        if (!query.trim()) return;
-
-        // Navigate to search results or update current page
-        const currentPath = window.location.pathname;
-        if (currentPath === '/search') {
-            this.updateSearchResults(query);
-        } else {
-            this.navigate(`/search?q=${encodeURIComponent(query)}`);
-        }
-    }
-
-    async updateSearchResults(query) {
-        const resultsContainer = document.getElementById('search-results');
-        if (!resultsContainer) return;
-
-        resultsContainer.innerHTML = this.renderLoadingGrid(12);
-        
-        const results = await this.searchContent(query);
-        this.renderContentGrid(results.results, 'search-results');
-        
-        // Update search stats
-        const statsElement = document.getElementById('search-stats');
-        if (statsElement) {
-            statsElement.textContent = `Found ${results.total_results} results for "${query}"`;
-        }
+        // Update UI
+        const button = event.target.closest('.card-action-btn');
+        button.innerHTML = '<i class="fas fa-check"></i>';
+    } catch (error) {
+        console.error('Error adding to watchlist:', error);
     }
 }
 
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.app = new MovieApp();
-});
-
-// Export for module use
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = MovieApp;
+function playTrailer(trailerUrl, event) {
+    event.stopPropagation();
+    
+    if (!trailerUrl) {
+        showNotification('info', 'Trailer not available');
+        return;
+    }
+    
+    // Open trailer in modal or new tab
+    window.open(trailerUrl, '_blank');
 }
+
+// Utility Functions
+function getImageUrl(path, size = 'w500') {
+    if (!path) return CONFIG.DEFAULT_POSTER;
+    if (path.startsWith('http')) return path;
+    return `${CONFIG.TMDB_IMAGE_BASE}/${size}${path}`;
+}
+
+function showLoader() {
+    AppState.isLoading = true;
+    // Show your loader UI
+}
+
+function hideLoader() {
+    AppState.isLoading = false;
+    // Hide your loader UI
+}
+
+function showNotification(type, message) {
+    // Create and show notification
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Lazy Loading
+function lazyLoadImages(container) {
+    const images = container.querySelectorAll('.lazy-image');
+    
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.classList.remove('lazy-image');
+                observer.unobserve(img);
+            }
+        });
+    });
+    
+    images.forEach(img => imageObserver.observe(img));
+}
+
+// Header Scroll Effect
+function handleHeaderScroll() {
+    const header = document.querySelector('header');
+    if (window.scrollY > 50) {
+        header.classList.add('scrolled');
+    } else {
+        header.classList.remove('scrolled');
+    }
+}
+
+// Initialize App
+async function initializeApp() {
+    // Check for saved auth
+    const savedToken = sessionStorage.getItem('token');
+    const savedUser = sessionStorage.getItem('user');
+    
+    if (savedToken && savedUser) {
+        AppState.token = savedToken;
+        AppState.user = JSON.parse(savedUser);
+    }
+    
+    // Load header and footer
+    await loadIncludes();
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Hide preloader
+    setTimeout(() => {
+        const preloader = document.getElementById('preloader');
+        preloader.classList.add('fade-out');
+        setTimeout(() => preloader.remove(), 500);
+    }, 1000);
+}
+
+// Event Listeners
+function setupEventListeners() {
+    // Header scroll
+    window.addEventListener('scroll', handleHeaderScroll);
+    
+    // Search input
+    const searchInput = document.querySelector('.search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => handleSearch(e.target.value));
+        searchInput.addEventListener('focus', () => {
+            if (searchInput.value.length >= 2) {
+                document.querySelector('.search-suggestions').classList.add('active');
+            }
+        });
+    }
+    
+    // Click outside to close search suggestions
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container')) {
+            hideSuggestions();
+        }
+    });
+    
+    // Prevent card action bubbling
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.card-action-btn')) {
+            e.stopPropagation();
+        }
+    });
+}
+
+// Export functions for global use
+window.scrollCarousel = scrollCarousel;
+window.viewDetails = viewDetails;
+window.toggleWatchlist = toggleWatchlist;
+window.playTrailer = playTrailer;
+window.loadRegionalContent = loadRegionalContent;
+window.handleSearch = handleSearch;
