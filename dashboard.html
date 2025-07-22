@@ -184,135 +184,149 @@
   <div class="toast-container"></div>
   
   <!-- Scripts -->
-  <script src="/js/main.js"></script>
-  <script>
-    // Check authentication
-    if (!AppState.user) {
-      window.location.href = '/login.html';
-    }
-    
-    // Initialize dashboard
-    async function initDashboard() {
-      // Update username
-      document.getElementById('username').textContent = AppState.user.username;
-      
-      // Load user stats (mock data for now)
-      updateStats();
-      
-      // Load personalized recommendations
-      try {
-        const recommendations = await ApiService.getPersonalizedRecommendations();
-        const container = document.getElementById('personalized-recommendations');
-        renderContentGrid(container, recommendations.recommendations);
+ <!-- Update the script section in dashboard.html -->
+<script src="/js/main.js"></script>
+<script>
+    // Wait for auth state to be restored
+    async function initializeDashboard() {
+        // Give time for main.js to restore auth state
+        await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Load genre-based recommendations
-        loadGenreRecommendations();
+        // Check authentication
+        if (!AppState.user) {
+            console.log('No user found, redirecting to login');
+            window.location.href = '/login';
+            return;
+        }
         
-        // Load preference options
-        loadPreferences();
+        // Update username
+        document.getElementById('username').textContent = AppState.user.username;
         
-      } catch (error) {
-        console.error('Dashboard initialization error:', error);
-      }
+        // Load user stats (mock data for now)
+        updateStats();
+        
+        // Load personalized recommendations
+        try {
+            const recommendations = await ApiService.getPersonalizedRecommendations();
+            const container = document.getElementById('personalized-recommendations');
+            renderContentGrid(container, recommendations.recommendations);
+            
+            // Load genre-based recommendations
+            loadGenreRecommendations();
+            
+            // Load preference options
+            loadPreferences();
+            
+        } catch (error) {
+            console.error('Dashboard initialization error:', error);
+        }
     }
     
     function updateStats() {
-      // These would normally come from the API
-      document.getElementById('watchlist-count').textContent = AppState.watchlist.length || '12';
-      document.getElementById('favorites-count').textContent = AppState.favorites.length || '8';
-      document.getElementById('watch-time').textContent = '24h';
-      document.getElementById('ratings-count').textContent = '15';
+        // These would normally come from the API
+        document.getElementById('watchlist-count').textContent = AppState.watchlist.length || '12';
+        document.getElementById('favorites-count').textContent = AppState.favorites.length || '8';
+        document.getElementById('watch-time').textContent = '24h';
+        document.getElementById('ratings-count').textContent = '15';
     }
     
     async function loadGenreRecommendations() {
-      const genres = AppState.user.preferred_genres || ['action', 'drama'];
-      const tabsContainer = document.getElementById('genre-tabs');
-      const contentContainer = document.getElementById('genre-content');
-      
-      // Create tabs
-      tabsContainer.innerHTML = genres.map((genre, index) => `
-        <div class="tab ${index === 0 ? 'active' : ''}" onclick="loadGenreContent('${genre}', this)">
-          ${genre.charAt(0).toUpperCase() + genre.slice(1)}
-        </div>
-      `).join('');
-      
-      // Load first genre
-      if (genres.length > 0) {
-        loadGenreContent(genres[0]);
-      }
+        const genres = AppState.user.preferred_genres || ['action', 'drama'];
+        const tabsContainer = document.getElementById('genre-tabs');
+        const contentContainer = document.getElementById('genre-content');
+        
+        // Create tabs
+        tabsContainer.innerHTML = genres.map((genre, index) => `
+            <div class="tab ${index === 0 ? 'active' : ''}" onclick="loadGenreContent('${genre}', this)">
+                ${genre.charAt(0).toUpperCase() + genre.slice(1)}
+            </div>
+        `).join('');
+        
+        // Load first genre
+        if (genres.length > 0) {
+            loadGenreContent(genres[0]);
+        }
     }
     
     async function loadGenreContent(genre, tabElement) {
-      // Update active tab
-      if (tabElement) {
-        document.querySelectorAll('#genre-tabs .tab').forEach(tab => tab.classList.remove('active'));
-        tabElement.classList.add('active');
-      }
-      
-      const contentContainer = document.getElementById('genre-content');
-      contentContainer.innerHTML = '<div class="spinner mx-auto"></div>';
-      
-      try {
-        const data = await ApiService.getGenreRecommendations(genre);
-        renderContentGrid(contentContainer, data.recommendations);
-      } catch (error) {
-        contentContainer.innerHTML = '<p class="text-center text-secondary">Failed to load recommendations</p>';
-      }
+        // Update active tab
+        if (tabElement) {
+            document.querySelectorAll('#genre-tabs .tab').forEach(tab => tab.classList.remove('active'));
+            tabElement.classList.add('active');
+        }
+        
+        const contentContainer = document.getElementById('genre-content');
+        contentContainer.innerHTML = '<div class="spinner mx-auto"></div>';
+        
+        try {
+            const data = await ApiService.getGenreRecommendations(genre);
+            renderContentGrid(contentContainer, data.recommendations);
+        } catch (error) {
+            contentContainer.innerHTML = '<p class="text-center text-secondary">Failed to load recommendations</p>';
+        }
     }
     
     function loadPreferences() {
-      const languages = ['english', 'hindi', 'telugu', 'tamil', 'kannada', 'malayalam'];
-      const genres = ['action', 'adventure', 'comedy', 'drama', 'horror', 'romance', 'sci-fi', 'thriller'];
-      
-      const userLanguages = AppState.user.preferred_languages || [];
-      const userGenres = AppState.user.preferred_genres || [];
-      
-      // Language preferences
-      document.getElementById('language-preferences').innerHTML = languages.map(lang => `
-        <label class="tag ${userLanguages.includes(lang) ? 'tag-primary' : ''}" style="cursor: pointer;">
-          <input type="checkbox" name="language" value="${lang}" ${userLanguages.includes(lang) ? 'checked' : ''} style="display: none;">
-          ${lang.charAt(0).toUpperCase() + lang.slice(1)}
-        </label>
-      `).join('');
-      
-      // Genre preferences
-      document.getElementById('genre-preferences').innerHTML = genres.map(genre => `
-        <label class="tag ${userGenres.includes(genre) ? 'tag-primary' : ''}" style="cursor: pointer;">
-          <input type="checkbox" name="genre" value="${genre}" ${userGenres.includes(genre) ? 'checked' : ''} style="display: none;">
-          ${genre.charAt(0).toUpperCase() + genre.slice(1)}
-        </label>
-      `).join('');
-      
-      // Add click handlers
-      document.querySelectorAll('.tag input').forEach(input => {
-        input.addEventListener('change', (e) => {
-          const label = e.target.parentElement;
-          if (e.target.checked) {
-            label.classList.add('tag-primary');
-          } else {
-            label.classList.remove('tag-primary');
-          }
+        const languages = ['english', 'hindi', 'telugu', 'tamil', 'kannada', 'malayalam'];
+        const genres = ['action', 'adventure', 'comedy', 'drama', 'horror', 'romance', 'sci-fi', 'thriller'];
+        
+        const userLanguages = AppState.user.preferred_languages || [];
+        const userGenres = AppState.user.preferred_genres || [];
+        
+        // Language preferences
+        document.getElementById('language-preferences').innerHTML = languages.map(lang => `
+            <label class="tag ${userLanguages.includes(lang) ? 'tag-primary' : ''}" style="cursor: pointer;">
+                <input type="checkbox" name="language" value="${lang}" ${userLanguages.includes(lang) ? 'checked' : ''} style="display: none;">
+                ${lang.charAt(0).toUpperCase() + lang.slice(1)}
+            </label>
+        `).join('');
+        
+        // Genre preferences
+        document.getElementById('genre-preferences').innerHTML = genres.map(genre => `
+            <label class="tag ${userGenres.includes(genre) ? 'tag-primary' : ''}" style="cursor: pointer;">
+                <input type="checkbox" name="genre" value="${genre}" ${userGenres.includes(genre) ? 'checked' : ''} style="display: none;">
+                ${genre.charAt(0).toUpperCase() + genre.slice(1)}
+            </label>
+        `).join('');
+        
+        // Add click handlers
+        document.querySelectorAll('.tag input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const label = e.target.parentElement;
+                if (e.target.checked) {
+                    label.classList.add('tag-primary');
+                } else {
+                    label.classList.remove('tag-primary');
+                }
+            });
         });
-      });
     }
     
     async function savePreferences() {
-      const languages = Array.from(document.querySelectorAll('input[name="language"]:checked')).map(cb => cb.value);
-      const genres = Array.from(document.querySelectorAll('input[name="genre"]:checked')).map(cb => cb.value);
-      
-      // Update local state
-      AppState.user.preferred_languages = languages;
-      AppState.user.preferred_genres = genres;
-      
-      // TODO: Send to API
-      showToast('Preferences saved successfully!', 'success');
-      
-      // Reload genre recommendations
-      loadGenreRecommendations();
+        const languages = Array.from(document.querySelectorAll('input[name="language"]:checked')).map(cb => cb.value);
+        const genres = Array.from(document.querySelectorAll('input[name="genre"]:checked')).map(cb => cb.value);
+        
+        // Update local state
+        AppState.user.preferred_languages = languages;
+        AppState.user.preferred_genres = genres;
+        
+        // TODO: Send to API
+        showToast('Preferences saved successfully!', 'success');
+        
+        // Reload genre recommendations
+        loadGenreRecommendations();
     }
     
-    // Initialize on load
-    initDashboard();
-  </script>
+    // Make functions available globally
+    window.loadGenreContent = loadGenreContent;
+    window.savePreferences = savePreferences;
+    
+    // Initialize dashboard after DOM is loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+    } else {
+        initializeDashboard();
+    }
+</script>
 </body>
 </html>
