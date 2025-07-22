@@ -1,686 +1,1272 @@
-// Page-specific initialization functions
-
-function initializeHomePage() {
-    loadHomeContent();
-    setupHeroCarousel();
-}
-
-async function loadHomeContent() {
-    const sections = [
-        { id: 'trending-content', api: () => ApiService.getTrending('all', 20) },
-        { id: 'new-releases-content', api: () => ApiService.getNewReleases(null, 'movie', 20) },
-        { id: 'critics-choice-content', api: () => ApiService.getCriticsChoice('movie', 20) },
-        { id: 'admin-choice-content', api: () => ApiService.getAdminChoice(20) },
-        { id: 'anime-content', api: () => ApiService.getAnimeRecommendations(null, 20) }
-    ];
-
-    sections.forEach(async section => {
-        const container = document.getElementById(section.id);
-        if (container) {
-            try {
-                showLoadingSkeleton(container);
-                const response = await section.api();
-                if (response.success && response.data.recommendations) {
-                    renderContentCarousel(container, response.data.recommendations);
-                } else {
-                    showErrorMessage(container, 'Failed to load content');
-                }
-            } catch (error) {
-                console.error(`Error loading ${section.id}:`, error);
-                showErrorMessage(container, 'Failed to load content');
-            }
-        }
-    });
-
-    // Load anonymous recommendations if not authenticated
-    if (!isAuthenticated()) {
-        const anonymousContainer = document.getElementById('recommended-content');
-        if (anonymousContainer) {
-            try {
-                const response = await ApiService.getAnonymousRecommendations(20);
-                if (response.success && response.data.recommendations) {
-                    renderContentCarousel(anonymousContainer, response.data.recommendations);
-                }
-            } catch (error) {
-                console.error('Error loading anonymous recommendations:', error);
-            }
-        }
-    }
-}
-
-function setupHeroCarousel() {
-    const heroContainer = document.querySelector('.hero-carousel');
-    if (!heroContainer) return;
-
-    let currentSlide = 0;
-    const slides = heroContainer.querySelectorAll('.hero-slide');
-    const totalSlides = slides.length;
-
-    if (totalSlides <= 1) return;
-
-    function showSlide(index) {
-        slides.forEach((slide, i) => {
-            slide.classList.toggle('active', i === index);
-        });
+// Netflix-Inspired Movie Platform - Main JavaScript
+class MoviePlatform {
+    constructor() {
+        this.API_BASE = 'https://backend-app-970m.onrender.com/api';
+        this.currentUser = null;
+        this.authToken = null;
+        this.searchTimeout = null;
+        this.loadingStates = new Set();
+        this.cache = new Map();
+        this.currentPage = 'home';
+        this.init();
     }
 
-    function nextSlide() {
-        currentSlide = (currentSlide + 1) % totalSlides;
-        showSlide(currentSlide);
+    // Initialize the application
+    init() {
+        this.setupEventListeners();
+        this.checkAuthStatus();
+        this.setupIntersectionObserver();
+        this.setupServiceWorker();
+        this.preloadCriticalContent();
     }
 
-    // Auto-advance slides
-    setInterval(nextSlide, 5000);
-
-    // Navigation buttons
-    const prevBtn = heroContainer.querySelector('.hero-prev');
-    const nextBtn = heroContainer.querySelector('.hero-next');
-
-    if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
-            currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
-            showSlide(currentSlide);
-        });
-    }
-
-    if (nextBtn) {
-        nextBtn.addEventListener('click', nextSlide);
-    }
-}
-
-function initializeLoginPage() {
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    const toggleBtns = document.querySelectorAll('.toggle-form');
-
-    // Handle form toggle
-    toggleBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const target = btn.getAttribute('data-target');
-            
-            if (target === 'register') {
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-            } else {
-                registerForm.style.display = 'none';
-                loginForm.style.display = 'block';
-            }
-        });
-    });
-
-    // Handle login form
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(loginForm);
-            const credentials = {
-                username: formData.get('username'),
-                password: formData.get('password')
-            };
-            
-            const remember = formData.get('remember') === 'on';
-            
-            const submitBtn = loginForm.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            
-            try {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="loading"></span> Signing in...';
-                
-                const result = await Auth.login(credentials, remember);
-                
-                if (!result.success) {
-                    showToast(result.error || 'Login failed', 'error');
-                }
-            } catch (error) {
-                showToast('Login failed. Please try again.', 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
-            }
-        });
-    }
-
-    // Handle register form
-    if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(registerForm);
-            const password = formData.get('password');
-            const confirmPassword = formData.get('confirmPassword');
-            
-            if (password !== confirmPassword) {
-                showToast('Passwords do not match', 'error');
-                return;
-            }
-            
-            const userData = {
-                username: formData.get('username'),
-                email: formData.get('email'),
-                password: password,
-                preferred_languages: Array.from(formData.getAll('languages')),
-                preferred_genres: Array.from(formData.getAll('genres'))
-            };
-            
-            const remember = formData.get('remember') === 'on';
-            
-            const submitBtn = registerForm.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            
-            try {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="loading"></span> Creating account...';
-                
-                const result = await Auth.register(userData, remember);
-                
-                if (!result.success) {
-                    showToast(result.error || 'Registration failed', 'error');
-                }
-            } catch (error) {
-                showToast('Registration failed. Please try again.', 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
-            }
-        });
-    }
-}
-
-function initializeDashboard() {
-    if (!requireAuth()) return;
-    
-    loadPersonalizedContent();
-    setupDashboardFilters();
-}
-
-async function loadPersonalizedContent() {
-    const sections = [
-        { id: 'continue-watching', api: () => loadContinueWatching() },
-        { id: 'recommended-for-you', api: () => ApiService.getPersonalizedRecommendations(20) },
-        { id: 'trending-now', api: () => ApiService.getTrending('all', 15) },
-        { id: 'new-releases', api: () => ApiService.getNewReleases(null, 'movie', 15) }
-    ];
-
-    sections.forEach(async section => {
-        const container = document.getElementById(section.id);
-        if (container) {
-            try {
-                showLoadingSkeleton(container);
-                const response = await section.api();
-                if (response.success && response.data) {
-                    const content = response.data.recommendations || response.data;
-                    renderContentCarousel(container, content);
-                }
-            } catch (error) {
-                console.error(`Error loading ${section.id}:`, error);
-                showErrorMessage(container, 'Failed to load content');
-            }
-        }
-    });
-}
-
-async function loadContinueWatching() {
-    // This would typically load from user's viewing history
-    // For now, return recent interactions
-    try {
-        const response = await ApiService.getPersonalizedRecommendations(10);
-        return response;
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-}
-
-function setupDashboardFilters() {
-    const genreFilter = document.getElementById('genreFilter');
-    const typeFilter = document.getElementById('typeFilter');
-    const languageFilter = document.getElementById('languageFilter');
-
-    if (genreFilter) {
-        genreFilter.addEventListener('change', filterDashboardContent);
-    }
-    if (typeFilter) {
-        typeFilter.addEventListener('change', filterDashboardContent);
-    }
-    if (languageFilter) {
-        languageFilter.addEventListener('change', filterDashboardContent);
-    }
-}
-
-function filterDashboardContent() {
-    const genre = document.getElementById('genreFilter')?.value;
-    const type = document.getElementById('typeFilter')?.value;
-    const language = document.getElementById('languageFilter')?.value;
-
-    // Apply filters to content sections
-    // This would involve re-querying the API with filters
-    // Implementation depends on specific requirements
-}
-
-function initializeDetailsPage() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const contentId = urlParams.get('id');
-    
-    if (contentId) {
-        loadContentDetails(contentId);
-    } else {
-        showToast('Content not found', 'error');
-        window.location.href = '/';
-    }
-}
-
-async function loadContentDetails(contentId) {
-    try {
-        showDetailsSkeleton();
-        
-        const response = await ApiService.getContentDetails(contentId);
-        
-        if (response.success && response.data) {
-            renderContentDetails(response.data);
-            
-            // Record view interaction
-            if (isAuthenticated()) {
-                ApiService.recordInteraction(contentId, 'view');
-            }
+    // Authentication Methods
+    async checkAuthStatus() {
+        // Since we're not using localStorage, check if user data exists in memory
+        if (this.currentUser && this.authToken) {
+            this.showAuthenticatedState();
         } else {
-            throw new Error('Content not found');
+            this.showUnauthenticatedState();
         }
-    } catch (error) {
-        console.error('Error loading content details:', error);
-        showErrorMessage(document.querySelector('.details-container'), 'Failed to load content details');
     }
-}
 
-function renderContentDetails(content) {
-    const container = document.querySelector('.details-container');
-    if (!container) return;
+    async login(username, password) {
+        try {
+            this.setLoadingState('login', true);
+            
+            const response = await this.apiCall('/login', 'POST', {
+                username,
+                password
+            });
 
-    const trailerEmbed = content.youtube_trailer ? 
-        `<iframe src="https://www.youtube.com/embed/${content.youtube_trailer.split('v=')[1]}" 
-                 frameborder="0" allowfullscreen class="trailer-video"></iframe>` : '';
+            if (response.token) {
+                this.authToken = response.token;
+                this.currentUser = response.user;
+                this.showAuthenticatedState();
+                this.showNotification('Login successful!', 'success');
+                this.navigateTo('dashboard');
+                return true;
+            }
+        } catch (error) {
+            this.showNotification(error.message || 'Login failed', 'error');
+            return false;
+        } finally {
+            this.setLoadingState('login', false);
+        }
+    }
 
-    container.innerHTML = `
-        <div class="details-hero">
-            <div class="details-backdrop">
-                <img src="${content.backdrop_path || content.poster_path}" alt="${content.title}" class="backdrop-image">
+    async register(userData) {
+        try {
+            this.setLoadingState('register', true);
+            
+            const response = await this.apiCall('/register', 'POST', userData);
+
+            if (response.token) {
+                this.authToken = response.token;
+                this.currentUser = response.user;
+                this.showAuthenticatedState();
+                this.showNotification('Registration successful!', 'success');
+                this.navigateTo('dashboard');
+                return true;
+            }
+        } catch (error) {
+            this.showNotification(error.message || 'Registration failed', 'error');
+            return false;
+        } finally {
+            this.setLoadingState('register', false);
+        }
+    }
+
+    logout() {
+        this.authToken = null;
+        this.currentUser = null;
+        this.cache.clear();
+        this.showUnauthenticatedState();
+        this.navigateTo('home');
+        this.showNotification('Logged out successfully', 'info');
+    }
+
+    // API Methods
+    async apiCall(endpoint, method = 'GET', data = null, useAuth = true) {
+        const url = `${this.API_BASE}${endpoint}`;
+        const options = {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        };
+
+        if (useAuth && this.authToken) {
+            options.headers['Authorization'] = `Bearer ${this.authToken}`;
+        }
+
+        if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+            options.body = JSON.stringify(data);
+        }
+
+        try {
+            const response = await fetch(url, options);
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || `HTTP error! status: ${response.status}`);
+            }
+
+            return result;
+        } catch (error) {
+            console.error('API call failed:', error);
+            throw error;
+        }
+    }
+
+    // Content Methods
+    async searchContent(query, type = 'multi', page = 1) {
+        if (!query.trim()) return [];
+
+        const cacheKey = `search_${query}_${type}_${page}`;
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey);
+        }
+
+        try {
+            const response = await this.apiCall(
+                `/search?query=${encodeURIComponent(query)}&type=${type}&page=${page}`,
+                'GET',
+                null,
+                false
+            );
+
+            this.cache.set(cacheKey, response.results);
+            return response.results || [];
+        } catch (error) {
+            console.error('Search failed:', error);
+            return [];
+        }
+    }
+
+    async getContentDetails(contentId) {
+        const cacheKey = `content_${contentId}`;
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey);
+        }
+
+        try {
+            const response = await this.apiCall(`/content/${contentId}`, 'GET', null, false);
+            this.cache.set(cacheKey, response);
+            return response;
+        } catch (error) {
+            console.error('Failed to get content details:', error);
+            throw error;
+        }
+    }
+
+    async getRecommendations(type, options = {}) {
+        const cacheKey = `recommendations_${type}_${JSON.stringify(options)}`;
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey);
+        }
+
+        try {
+            let endpoint = `/recommendations/${type}`;
+            const params = new URLSearchParams();
+
+            Object.entries(options).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value);
+                }
+            });
+
+            if (params.toString()) {
+                endpoint += `?${params.toString()}`;
+            }
+
+            const response = await this.apiCall(endpoint, 'GET', null, type === 'personalized');
+            const recommendations = response.recommendations || [];
+            
+            this.cache.set(cacheKey, recommendations);
+            return recommendations;
+        } catch (error) {
+            console.error('Failed to get recommendations:', error);
+            return [];
+        }
+    }
+
+    async recordInteraction(contentId, interactionType, rating = null) {
+        if (!this.currentUser) return;
+
+        try {
+            await this.apiCall('/interactions', 'POST', {
+                content_id: contentId,
+                interaction_type: interactionType,
+                rating
+            });
+        } catch (error) {
+            console.error('Failed to record interaction:', error);
+        }
+    }
+
+    // UI Methods
+    showAuthenticatedState() {
+        const authElements = document.querySelectorAll('[data-auth="true"]');
+        const noAuthElements = document.querySelectorAll('[data-auth="false"]');
+        
+        authElements.forEach(el => el.classList.remove('hidden'));
+        noAuthElements.forEach(el => el.classList.add('hidden'));
+
+        // Update user info
+        const userElements = document.querySelectorAll('[data-user-info]');
+        userElements.forEach(el => {
+            const info = el.dataset.userInfo;
+            if (this.currentUser && this.currentUser[info]) {
+                el.textContent = this.currentUser[info];
+            }
+        });
+    }
+
+    showUnauthenticatedState() {
+        const authElements = document.querySelectorAll('[data-auth="true"]');
+        const noAuthElements = document.querySelectorAll('[data-auth="false"]');
+        
+        authElements.forEach(el => el.classList.add('hidden'));
+        noAuthElements.forEach(el => el.classList.remove('hidden'));
+    }
+
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <span>${message}</span>
+                <button class="notification-close">&times;</button>
             </div>
-            <div class="details-content">
-                <div class="details-poster">
-                    <img src="${content.poster_path}" alt="${content.title}" class="poster-image">
-                </div>
-                <div class="details-info">
-                    <h1 class="details-title">${content.title}</h1>
-                    ${content.original_title !== content.title ? `<p class="original-title">${content.original_title}</p>` : ''}
-                    
-                    <div class="details-meta">
-                        <span class="content-type">${content.content_type.toUpperCase()}</span>
-                        ${content.rating ? `<span class="rating">⭐ ${content.rating}/10</span>` : ''}
-                        ${content.release_date ? `<span class="release-date">${new Date(content.release_date).getFullYear()}</span>` : ''}
-                        ${content.runtime ? `<span class="runtime">${content.runtime} min</span>` : ''}
-                    </div>
+        `;
 
-                    <div class="genres">
-                        ${content.genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
-                    </div>
-
-                    <p class="overview">${content.overview}</p>
-
-                    <div class="action-buttons">
-                        ${content.youtube_trailer ? `<button class="btn btn-primary" onclick="playTrailer('${content.youtube_trailer}')">
-                            <i class="icon-play"></i> Watch Trailer
-                        </button>` : ''}
-                        ${isAuthenticated() ? `
-                            <button class="btn btn-outline" onclick="addToWatchlist(${content.id})">
-                                <i class="icon-plus"></i> Watchlist
-                            </button>
-                            <button class="btn btn-outline" onclick="addToFavorites(${content.id})">
-                                <i class="icon-heart"></i> Favorite
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="details-sections">
-            ${content.cast && content.cast.length > 0 ? `
-                <section class="cast-section">
-                    <h2>Cast</h2>
-                    <div class="cast-grid">
-                        ${content.cast.slice(0, 10).map(actor => `
-                            <div class="cast-member">
-                                <img src="${actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : '/assets/images/person-placeholder.jpg'}" 
-                                     alt="${actor.name}" class="cast-photo">
-                                <h4 class="cast-name">${actor.name}</h4>
-                                <p class="cast-character">${actor.character || ''}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                </section>
-            ` : ''}
-
-            ${content.similar_content && content.similar_content.length > 0 ? `
-                <section class="similar-section">
-                    <h2>Similar Content</h2>
-                    <div class="content-carousel" id="similar-content">
-                        ${content.similar_content.map(item => createContentCard(item).outerHTML).join('')}
-                    </div>
-                </section>
-            ` : ''}
-        </div>
-
-        ${trailerEmbed ? `
-            <div id="trailerModal" class="modal">
-                <div class="modal-content trailer-modal">
-                    <button class="modal-close">&times;</button>
-                    <div class="trailer-container">
-                        ${trailerEmbed}
-                    </div>
-                </div>
-            </div>
-        ` : ''}
-    `;
-
-    // Re-initialize components
-    initializeModals();
-    initializeLazyLoading();
-}
-
-function playTrailer(trailerUrl) {
-    openModal('trailerModal');
-}
-
-function initializeAdminPage() {
-    if (!requireAdmin()) return;
-
-    const path = window.location.pathname;
-    
-    if (path.includes('/admin/dashboard')) {
-        loadAdminDashboard();
-    } else if (path.includes('/admin/content-browser')) {
-        initializeContentBrowser();
-    } else if (path.includes('/admin/analytics')) {
-        loadAnalytics();
-    }
-}
-
-async function loadAdminDashboard() {
-    try {
-        const [analyticsResponse, mlServiceResponse] = await Promise.all([
-            ApiService.getAnalytics(),
-            ApiService.checkMLService()
-        ]);
-
-        if (analyticsResponse.success) {
-            renderAnalyticsSummary(analyticsResponse.data);
+        // Add notification styles if not already present
+        if (!document.querySelector('#notification-styles')) {
+            const styles = document.createElement('style');
+            styles.id = 'notification-styles';
+            styles.textContent = `
+                .notification {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1000;
+                    max-width: 400px;
+                    padding: 1rem;
+                    border-radius: var(--radius-md);
+                    box-shadow: var(--shadow-lg);
+                    animation: slideInRight 0.3s ease;
+                }
+                .notification-success { background: #10b981; color: white; }
+                .notification-error { background: #ef4444; color: white; }
+                .notification-warning { background: #f59e0b; color: white; }
+                .notification-info { background: var(--primary-blue); color: white; }
+                .notification-content {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 1rem;
+                }
+                .notification-close {
+                    background: none;
+                    border: none;
+                    color: currentColor;
+                    font-size: 1.25rem;
+                    cursor: pointer;
+                    padding: 0;
+                    opacity: 0.8;
+                }
+                .notification-close:hover { opacity: 1; }
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(styles);
         }
 
-        if (mlServiceResponse.success) {
-            renderMLServiceStatus(mlServiceResponse.data);
-        }
-    } catch (error) {
-        console.error('Error loading admin dashboard:', error);
-    }
-}
+        document.body.appendChild(notification);
 
-function initializeContentBrowser() {
-    const searchForm = document.getElementById('contentSearchForm');
-    const sourceSelect = document.getElementById('sourceSelect');
-    
-    if (searchForm) {
-        searchForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(searchForm);
-            const query = formData.get('query');
-            const source = formData.get('source');
-            
-            if (query) {
-                await searchExternalContent(query, source);
-            }
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
+
+        // Manual close
+        notification.querySelector('.notification-close').addEventListener('click', () => {
+            notification.remove();
         });
     }
-}
 
-async function searchExternalContent(query, source) {
-    const resultsContainer = document.getElementById('searchResults');
-    
-    try {
-        showLoadingSkeleton(resultsContainer);
-        
-        const response = await ApiService.adminSearch(query, source);
-        
-        if (response.success && response.data.results) {
-            renderExternalSearchResults(resultsContainer, response.data.results);
-        } else {
-            showErrorMessage(resultsContainer, 'No results found');
-        }
-    } catch (error) {
-        console.error('Search error:', error);
-        showErrorMessage(resultsContainer, 'Search failed');
-    }
-}
-
-function renderExternalSearchResults(container, results) {
-    container.innerHTML = results.map(item => `
-        <div class="external-content-card">
-            <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" alt="${item.title}">
-            <div class="content-info">
-                <h3>${item.title}</h3>
-                <p class="content-meta">${item.content_type} • ${item.release_date || 'N/A'}</p>
-                <p class="content-overview">${(item.overview || '').substring(0, 150)}...</p>
-                <div class="content-actions">
-                    <button class="btn btn-primary" onclick="saveExternalContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                        Save to Database
-                    </button>
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
-
-async function saveExternalContent(contentData) {
-    try {
-        const response = await ApiService.saveExternalContent(contentData);
-        
-        if (response.success) {
-            showToast('Content saved successfully', 'success');
-        } else {
-            throw new Error(response.error);
-        }
-    } catch (error) {
-        handleApiError(error, 'Failed to save content');
-    }
-}
-
-function initializeCategoryPage() {
-    const pathParts = window.location.pathname.split('/');
-    const category = pathParts[pathParts.length - 1];
-    
-    loadCategoryContent(category);
-    setupCategoryFilters();
-}
-
-async function loadCategoryContent(category) {
-    const container = document.getElementById('categoryContent');
-    if (!container) return;
-
-    try {
-        showLoadingSkeleton(container);
-        
-        let response;
-        switch (category) {
-            case 'trending':
-                response = await ApiService.getTrending('all', 40);
-                break;
-            case 'popular':
-                response = await ApiService.getTrending('week', 40);
-                break;
-            case 'new-releases':
-                response = await ApiService.getNewReleases(null, 'movie', 40);
-                break;
-            case 'critic-choices':
-                response = await ApiService.getCriticsChoice('movie', 40);
-                break;
-            case 'movies':
-                response = await ApiService.getTrending('movie', 40);
-                break;
-            case 'tv-shows':
-                response = await ApiService.getTrending('tv', 40);
-                break;
-            case 'anime':
-                response = await ApiService.getAnimeRecommendations(null, 40);
-                break;
-            default:
-                throw new Error('Unknown category');
-        }
-
-        if (response.success && response.data.recommendations) {
-            renderContentGrid(container, response.data.recommendations);
-        } else {
-            throw new Error('Failed to load content');
-        }
-    } catch (error) {
-        console.error('Error loading category content:', error);
-        showErrorMessage(container, 'Failed to load content');
-    }
-}
-
-function initializeLanguagePage() {
-    const pathParts = window.location.pathname.split('/');
-    const language = pathParts[pathParts.length - 1];
-    
-    loadLanguageContent(language);
-}
-
-async function loadLanguageContent(language) {
-    const container = document.getElementById('languageContent');
-    if (!container) return;
-
-    try {
-        showLoadingSkeleton(container);
-        
-        const response = await ApiService.getRegionalContent(language, 'movie', 40);
-        
-        if (response.success && response.data.recommendations) {
-            renderContentGrid(container, response.data.recommendations);
-        } else {
-            throw new Error('Failed to load content');
-        }
-    } catch (error) {
-        console.error('Error loading language content:', error);
-        showErrorMessage(container, 'Failed to load content');
-    }
-}
-
-function initializeUserPage() {
-    if (!requireAuth()) return;
-
-    const path = window.location.pathname;
-    
-    if (path.includes('/user/watchlist')) {
-        loadWatchlist();
-    } else if (path.includes('/user/favorites')) {
-        loadFavorites();
-    }
-}
-
-async function loadWatchlist() {
-    const container = document.getElementById('watchlistContent');
-    if (!container) return;
-
-    try {
-        showLoadingSkeleton(container);
-        
-        const response = await ApiService.getWatchlist();
-        
-        if (response.success && response.data.watchlist) {
-            renderContentGrid(container, response.data.watchlist);
-        } else {
-            container.innerHTML = '<div class="empty-state">Your watchlist is empty</div>';
-        }
-    } catch (error) {
-        console.error('Error loading watchlist:', error);
-        showErrorMessage(container, 'Failed to load watchlist');
-    }
-}
-
-async function loadFavorites() {
-    const container = document.getElementById('favoritesContent');
-    if (!container) return;
-
-    try {
-        showLoadingSkeleton(container);
-        
-        const response = await ApiService.getFavorites();
-        
-        if (response.success && response.data.favorites) {
-            renderContentGrid(container, response.data.favorites);
-        } else {
-            container.innerHTML = '<div class="empty-state">No favorites yet</div>';
-        }
-    } catch (error) {
-        console.error('Error loading favorites:', error);
-        showErrorMessage(container, 'Failed to load favorites');
-    }
-}
-
-// Utility functions for rendering
-function renderContentCarousel(container, content) {
-    container.innerHTML = content.map(item => createContentCard(item).outerHTML).join('');
-    initializeLazyLoading();
-}
-
-function renderContentGrid(container, content) {
-    container.className = 'content-grid';
-    container.innerHTML = content.map(item => createContentCard(item).outerHTML).join('');
-    initializeLazyLoading();
-}
-
-function showLoadingSkeleton(container) {
-    container.innerHTML = Array(8).fill().map(() => `
-        <div class="content-card skeleton">
-            <div class="skeleton-poster"></div>
-        </div>
-    `).join('');
-}
-
-function showDetailsSkeleton() {
-    const container = document.querySelector('.details-container');
-    if (container) {
-        container.innerHTML = `
-            <div class="details-skeleton">
-                <div class="skeleton-backdrop"></div>
-                <div class="skeleton-content">
-                    <div class="skeleton-poster"></div>
-                    <div class="skeleton-info">
-                        <div class="skeleton-title"></div>
-                        <div class="skeleton-meta"></div>
-                        <div class="skeleton-overview"></div>
-                    </div>
+    showModal(content, options = {}) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal">
+                <button class="modal-close">&times;</button>
+                <div class="modal-content">
+                    ${content}
                 </div>
             </div>
         `;
+
+        document.body.appendChild(modal);
+
+        // Close handlers
+        const closeModal = () => modal.remove();
+        modal.querySelector('.modal-close').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // Escape key
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+
+        return modal;
     }
-}
 
-function showErrorMessage(container, message) {
-    container.innerHTML = `<div class="error-message">${message}</div>`;
-}
+    setLoadingState(component, loading) {
+        if (loading) {
+            this.loadingStates.add(component);
+        } else {
+            this.loadingStates.delete(component);
+        }
 
-function setupCategoryFilters() {
-    const filterForm = document.getElementById('categoryFilters');
-    if (filterForm) {
-        filterForm.addEventListener('change', () => {
-            // Re-load content with new filters
-            const category = window.location.pathname.split('/').pop();
-            loadCategoryContent(category);
+        // Update UI loading indicators
+        const loadingElement = document.querySelector(`[data-loading="${component}"]`);
+        if (loadingElement) {
+            loadingElement.classList.toggle('loading', loading);
+        }
+    }
+
+    // Content Rendering Methods
+    renderContentGrid(container, contents, options = {}) {
+        if (!container) return;
+
+        const {
+            showSkeletons = false,
+            skeletonCount = 12,
+            emptyMessage = 'No content found',
+            onContentClick = null
+        } = options;
+
+        if (showSkeletons) {
+            container.innerHTML = Array(skeletonCount).fill().map(() => `
+                <div class="content-card skeleton skeleton-card"></div>
+            `).join('');
+            return;
+        }
+
+        if (!contents || contents.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state text-center">
+                    <p class="text-muted">${emptyMessage}</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = contents.map(content => `
+            <div class="content-card" data-content-id="${content.id}">
+                <img 
+                    class="content-card-image" 
+                    src="${content.poster_path || '/assets/images/placeholder.jpg'}"
+                    alt="${content.title}"
+                    loading="lazy"
+                    onerror="this.src='/assets/images/placeholder.jpg'"
+                >
+                <div class="content-card-content">
+                    <h3 class="content-card-title">${content.title}</h3>
+                    <div class="content-card-meta">
+                        ${content.rating ? `
+                            <span class="content-card-rating">
+                                ⭐ ${content.rating.toFixed(1)}
+                            </span>
+                        ` : ''}
+                        <span class="badge badge-primary">${content.content_type}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Add click handlers
+        container.querySelectorAll('.content-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const contentId = card.dataset.contentId;
+                if (onContentClick) {
+                    onContentClick(contentId);
+                } else {
+                    this.showContentDetails(contentId);
+                }
+            });
+        });
+    }
+
+    renderCarousel(container, contents, options = {}) {
+        if (!container || !contents || contents.length === 0) return;
+
+        const {
+            showControls = true,
+            autoPlay = false,
+            autoPlayDelay = 5000
+        } = options;
+
+        container.innerHTML = `
+            <div class="carousel">
+                ${showControls ? '<button class="carousel-controls carousel-prev">‹</button>' : ''}
+                <div class="carousel-track">
+                    ${contents.map(content => `
+                        <div class="content-card" data-content-id="${content.id}">
+                            <img 
+                                class="content-card-image" 
+                                src="${content.poster_path || '/assets/images/placeholder.jpg'}"
+                                alt="${content.title}"
+                                loading="lazy"
+                            >
+                            <div class="content-card-content">
+                                <h3 class="content-card-title">${content.title}</h3>
+                                <div class="content-card-meta">
+                                    ${content.rating ? `<span class="content-card-rating">⭐ ${content.rating.toFixed(1)}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                ${showControls ? '<button class="carousel-controls carousel-next">›</button>' : ''}
+            </div>
+        `;
+
+        this.initializeCarousel(container.querySelector('.carousel'), { autoPlay, autoPlayDelay });
+    }
+
+    initializeCarousel(carousel, options = {}) {
+        if (!carousel) return;
+
+        const track = carousel.querySelector('.carousel-track');
+        const prevBtn = carousel.querySelector('.carousel-prev');
+        const nextBtn = carousel.querySelector('.carousel-next');
+        const cards = track.querySelectorAll('.content-card');
+        
+        if (!track || cards.length === 0) return;
+
+        let currentIndex = 0;
+        const cardWidth = cards[0].offsetWidth + 16; // 16px gap
+        const visibleCards = Math.floor(carousel.offsetWidth / cardWidth);
+        const maxIndex = Math.max(0, cards.length - visibleCards);
+
+        const updateCarousel = () => {
+            const translateX = -currentIndex * cardWidth;
+            track.style.transform = `translateX(${translateX}px)`;
+            
+            if (prevBtn) prevBtn.disabled = currentIndex === 0;
+            if (nextBtn) nextBtn.disabled = currentIndex >= maxIndex;
+        };
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    updateCarousel();
+                }
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                if (currentIndex < maxIndex) {
+                    currentIndex++;
+                    updateCarousel();
+                }
+            });
+        }
+
+        // Touch/swipe support
+        let startX = 0;
+        let isDragging = false;
+
+        track.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            isDragging = true;
+        });
+
+        track.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+        });
+
+        track.addEventListener('touchend', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+
+            const endX = e.changedTouches[0].clientX;
+            const diff = startX - endX;
+
+            if (Math.abs(diff) > 50) {
+                if (diff > 0 && currentIndex < maxIndex) {
+                    currentIndex++;
+                } else if (diff < 0 && currentIndex > 0) {
+                    currentIndex--;
+                }
+                updateCarousel();
+            }
+        });
+
+        // Auto play
+        if (options.autoPlay) {
+            setInterval(() => {
+                if (currentIndex >= maxIndex) {
+                    currentIndex = 0;
+                } else {
+                    currentIndex++;
+                }
+                updateCarousel();
+            }, options.autoPlayDelay || 5000);
+        }
+
+        // Add click handlers for content cards
+        cards.forEach(card => {
+            card.addEventListener('click', () => {
+                const contentId = card.dataset.contentId;
+                this.showContentDetails(contentId);
+            });
+        });
+
+        updateCarousel();
+    }
+
+    async showContentDetails(contentId) {
+        try {
+            this.setLoadingState('content-details', true);
+            
+            const content = await this.getContentDetails(contentId);
+            
+            // Record view interaction
+            this.recordInteraction(contentId, 'view');
+
+            const modalContent = `
+                <div class="content-details">
+                    <div class="content-details-header">
+                        <div class="content-details-poster">
+                            <img src="${content.poster_path || '/assets/images/placeholder.jpg'}" alt="${content.title}">
+                        </div>
+                        <div class="content-details-info">
+                            <h1 class="content-details-title">${content.title}</h1>
+                            ${content.original_title && content.original_title !== content.title ? 
+                                `<p class="content-details-original">${content.original_title}</p>` : ''
+                            }
+                            <div class="content-details-meta">
+                                <span class="badge badge-primary">${content.content_type}</span>
+                                ${content.rating ? `<span class="content-details-rating">⭐ ${content.rating.toFixed(1)}</span>` : ''}
+                                ${content.release_date ? `<span>${new Date(content.release_date).getFullYear()}</span>` : ''}
+                                ${content.runtime ? `<span>${content.runtime} min</span>` : ''}
+                            </div>
+                            <div class="content-details-genres">
+                                ${(content.genres || []).map(genre => `<span class="badge">${genre}</span>`).join('')}
+                            </div>
+                            <div class="content-details-actions">
+                                ${this.currentUser ? `
+                                    <button class="btn btn-primary" onclick="app.addToWatchlist(${content.id})">
+                                        Add to Watchlist
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="app.addToFavorites(${content.id})">
+                                        ❤️ Favorite
+                                    </button>
+                                ` : `
+                                    <button class="btn btn-primary" onclick="app.navigateTo('login')">
+                                        Login to Add to Watchlist
+                                    </button>
+                                `}
+                                ${content.youtube_trailer ? `
+                                    <button class="btn btn-outline" onclick="app.playTrailer('${content.youtube_trailer}')">
+                                        ▶️ Trailer
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-details-body">
+                        ${content.overview ? `
+                            <div class="content-details-section">
+                                <h3>Synopsis</h3>
+                                <p>${content.overview}</p>
+                            </div>
+                        ` : ''}
+                        ${content.cast && content.cast.length > 0 ? `
+                            <div class="content-details-section">
+                                <h3>Cast</h3>
+                                <div class="cast-grid">
+                                    ${content.cast.slice(0, 6).map(actor => `
+                                        <div class="cast-member">
+                                            <img src="${actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : '/assets/images/avatar-placeholder.jpg'}" alt="${actor.name}">
+                                            <div class="cast-info">
+                                                <div class="cast-name">${actor.name}</div>
+                                                <div class="cast-character">${actor.character || actor.known_for_department}</div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${content.similar_content && content.similar_content.length > 0 ? `
+                            <div class="content-details-section">
+                                <h3>Similar Content</h3>
+                                <div class="similar-content-grid">
+                                    ${content.similar_content.slice(0, 6).map(similar => `
+                                        <div class="content-card" onclick="app.showContentDetails(${similar.id})">
+                                            <img src="${similar.poster_path || '/assets/images/placeholder.jpg'}" alt="${similar.title}">
+                                            <div class="content-card-content">
+                                                <h4 class="content-card-title">${similar.title}</h4>
+                                                ${similar.rating ? `<span class="content-card-rating">⭐ ${similar.rating.toFixed(1)}</span>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            // Add styles for content details if not present
+            if (!document.querySelector('#content-details-styles')) {
+                const styles = document.createElement('style');
+                styles.id = 'content-details-styles';
+                styles.textContent = `
+                    .content-details-header {
+                        display: flex;
+                        gap: 2rem;
+                        margin-bottom: 2rem;
+                    }
+                    .content-details-poster img {
+                        width: 200px;
+                        height: 300px;
+                        object-fit: cover;
+                        border-radius: var(--radius-lg);
+                    }
+                    .content-details-info {
+                        flex: 1;
+                    }
+                    .content-details-title {
+                        font-size: 2rem;
+                        margin-bottom: 0.5rem;
+                    }
+                    .content-details-original {
+                        color: var(--text-muted);
+                        margin-bottom: 1rem;
+                    }
+                    .content-details-meta {
+                        display: flex;
+                        gap: 1rem;
+                        margin-bottom: 1rem;
+                        flex-wrap: wrap;
+                        align-items: center;
+                    }
+                    .content-details-rating {
+                        color: var(--primary-blue-light);
+                        font-weight: 600;
+                    }
+                    .content-details-genres {
+                        display: flex;
+                        gap: 0.5rem;
+                        margin-bottom: 1.5rem;
+                        flex-wrap: wrap;
+                    }
+                    .content-details-actions {
+                        display: flex;
+                        gap: 1rem;
+                        flex-wrap: wrap;
+                    }
+                    .content-details-section {
+                        margin-bottom: 2rem;
+                    }
+                    .content-details-section h3 {
+                        margin-bottom: 1rem;
+                        color: var(--text-primary);
+                    }
+                    .cast-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                        gap: 1rem;
+                    }
+                    .cast-member {
+                        text-align: center;
+                    }
+                    .cast-member img {
+                        width: 100%;
+                        height: 150px;
+                        object-fit: cover;
+                        border-radius: var(--radius-md);
+                        margin-bottom: 0.5rem;
+                    }
+                    .cast-name {
+                        font-weight: 600;
+                        font-size: 0.9rem;
+                    }
+                    .cast-character {
+                        font-size: 0.8rem;
+                        color: var(--text-muted);
+                    }
+                    .similar-content-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                        gap: 1rem;
+                    }
+                    @media (max-width: 640px) {
+                        .content-details-header {
+                            flex-direction: column;
+                            text-align: center;
+                        }
+                        .content-details-poster img {
+                            width: 150px;
+                            height: 225px;
+                            margin: 0 auto;
+                        }
+                        .content-details-actions {
+                            justify-content: center;
+                        }
+                    }
+                `;
+                document.head.appendChild(styles);
+            }
+
+            this.showModal(modalContent, { size: 'large' });
+
+        } catch (error) {
+            this.showNotification('Failed to load content details', 'error');
+        } finally {
+            this.setLoadingState('content-details', false);
+        }
+    }
+
+    playTrailer(youtubeUrl) {
+        if (youtubeUrl) {
+            window.open(youtubeUrl, '_blank');
+        }
+    }
+
+    async addToWatchlist(contentId) {
+        if (!this.currentUser) {
+            this.showNotification('Please login to add to watchlist', 'warning');
+            return;
+        }
+
+        try {
+            await this.recordInteraction(contentId, 'watchlist');
+            this.showNotification('Added to watchlist!', 'success');
+        } catch (error) {
+            this.showNotification('Failed to add to watchlist', 'error');
+        }
+    }
+
+    async addToFavorites(contentId) {
+        if (!this.currentUser) {
+            this.showNotification('Please login to add to favorites', 'warning');
+            return;
+        }
+
+        try {
+            await this.recordInteraction(contentId, 'favorite');
+            this.showNotification('Added to favorites!', 'success');
+        } catch (error) {
+            this.showNotification('Failed to add to favorites', 'error');
+        }
+    }
+
+    // Navigation
+    navigateTo(page, params = {}) {
+        // Update URL without page reload
+        const url = new URL(window.location);
+        url.pathname = page === 'home' ? '/' : `/${page}`;
+        
+        Object.entries(params).forEach(([key, value]) => {
+            url.searchParams.set(key, value);
+        });
+
+        window.history.pushState({ page, params }, '', url);
+        this.currentPage = page;
+        this.loadPage(page, params);
+    }
+
+    async loadPage(page, params = {}) {
+        const container = document.getElementById('main-content');
+        if (!container) return;
+
+        // Update active navigation
+        document.querySelectorAll('.navbar-nav a').forEach(link => {
+            link.classList.remove('active');
+        });
+        const activeLink = document.querySelector(`[data-page="${page}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+        }
+
+        // Load page content
+        try {
+            switch (page) {
+                case 'home':
+                case 'dashboard':
+                    await this.loadHomePage();
+                    break;
+                case 'search':
+                    await this.loadSearchPage(params.query);
+                    break;
+                case 'trending':
+                    await this.loadCategoryPage('trending', 'Trending Now');
+                    break;
+                case 'popular':
+                    await this.loadCategoryPage('popular', 'Popular');
+                    break;
+                case 'new-releases':
+                    await this.loadCategoryPage('new-releases', 'New Releases');
+                    break;
+                case 'critics-choice':
+                    await this.loadCategoryPage('critics-choice', 'Critics Choice');
+                    break;
+                case 'movies':
+                    await this.loadCategoryPage('genre', 'Movies', { type: 'movie' });
+                    break;
+                case 'tv-shows':
+                    await this.loadCategoryPage('genre', 'TV Shows', { type: 'tv' });
+                    break;
+                case 'anime':
+                    await this.loadCategoryPage('anime', 'Anime');
+                    break;
+                case 'watchlist':
+                    await this.loadWatchlistPage();
+                    break;
+                case 'favorites':
+                    await this.loadFavoritesPage();
+                    break;
+                default:
+                    container.innerHTML = '<h1>Page Not Found</h1>';
+            }
+        } catch (error) {
+            console.error('Failed to load page:', error);
+            container.innerHTML = '<h1>Error loading page</h1>';
+        }
+    }
+
+    async loadHomePage() {
+        const container = document.getElementById('main-content');
+        
+        // Show loading state
+        container.innerHTML = `
+            <section class="hero-section">
+                <div class="hero" style="background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('/assets/images/hero-bg.jpg')">
+                    <div class="container">
+                        <div class="hero-content">
+                            <h1 class="hero-title">Discover Your Next Favorite</h1>
+                            <p class="hero-description">
+                                Explore millions of movies, TV shows, and anime with personalized recommendations
+                                powered by advanced AI technology.
+                            </p>
+                            <div class="hero-actions">
+                                ${this.currentUser ? `
+                                    <button class="btn btn-primary btn-lg" onclick="app.navigateTo('dashboard')">
+                                        Go to Dashboard
+                                    </button>
+                                ` : `
+                                    <button class="btn btn-primary btn-lg" onclick="app.navigateTo('login')">
+                                        Get Started
+                                    </button>
+                                `}
+                                <button class="btn btn-outline btn-lg" onclick="app.navigateTo('trending')">
+                                    Explore Trending
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="container">
+                <section class="section">
+                    <div class="section-header">
+                        <div>
+                            <h2 class="section-title">Trending Now</h2>
+                            <p class="section-subtitle">What everyone's watching</p>
+                        </div>
+                        <button class="btn btn-outline" onclick="app.navigateTo('trending')">View All</button>
+                    </div>
+                    <div id="trending-carousel" class="loading">
+                        <div class="carousel">
+                            <div class="carousel-track">
+                                ${Array(8).fill().map(() => '<div class="content-card skeleton skeleton-card"></div>').join('')}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <div class="section-header">
+                        <div>
+                            <h2 class="section-title">New Releases</h2>
+                            <p class="section-subtitle">Fresh content just added</p>
+                        </div>
+                        <button class="btn btn-outline" onclick="app.navigateTo('new-releases')">View All</button>
+                    </div>
+                    <div id="new-releases-carousel" class="loading">
+                        <div class="carousel">
+                            <div class="carousel-track">
+                                ${Array(8).fill().map(() => '<div class="content-card skeleton skeleton-card"></div>').join('')}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <div class="section-header">
+                        <div>
+                            <h2 class="section-title">Critics' Choice</h2>
+                            <p class="section-subtitle">Highly rated by critics</p>
+                        </div>
+                        <button class="btn btn-outline" onclick="app.navigateTo('critics-choice')">View All</button>
+                    </div>
+                    <div id="critics-choice-carousel" class="loading">
+                        <div class="carousel">
+                            <div class="carousel-track">
+                                ${Array(8).fill().map(() => '<div class="content-card skeleton skeleton-card"></div>').join('')}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                ${this.currentUser ? `
+                    <section class="section">
+                        <div class="section-header">
+                            <div>
+                                <h2 class="section-title">Recommended for You</h2>
+                                <p class="section-subtitle">Based on your preferences</p>
+                            </div>
+                        </div>
+                        <div id="personalized-carousel" class="loading">
+                            <div class="carousel">
+                                <div class="carousel-track">
+                                    ${Array(8).fill().map(() => '<div class="content-card skeleton skeleton-card"></div>').join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                ` : ''}
+            </div>
+        `;
+
+        // Load content for carousels
+        try {
+            const [trending, newReleases, criticsChoice, personalized] = await Promise.all([
+                this.getRecommendations('trending', { limit: 20 }),
+                this.getRecommendations('new-releases', { limit: 20 }),
+                this.getRecommendations('critics-choice', { limit: 20 }),
+                this.currentUser ? this.getRecommendations('personalized', { limit: 20 }) : Promise.resolve([])
+            ]);
+
+            this.renderCarousel(document.getElementById('trending-carousel'), trending);
+            this.renderCarousel(document.getElementById('new-releases-carousel'), newReleases);
+            this.renderCarousel(document.getElementById('critics-choice-carousel'), criticsChoice);
+            
+            if (this.currentUser && personalized.length > 0) {
+                this.renderCarousel(document.getElementById('personalized-carousel'), personalized);
+            }
+        } catch (error) {
+            console.error('Failed to load home page content:', error);
+        }
+    }
+
+    async loadCategoryPage(category, title, options = {}) {
+        const container = document.getElementById('main-content');
+        
+        container.innerHTML = `
+            <div class="container">
+                <section class="section">
+                    <div class="section-header">
+                        <div>
+                            <h1 class="section-title">${title}</h1>
+                            <p class="section-subtitle">Discover amazing content</p>
+                        </div>
+                    </div>
+                    <div id="category-grid" class="grid grid-auto">
+                        ${Array(24).fill().map(() => '<div class="content-card skeleton skeleton-card"></div>').join('')}
+                    </div>
+                    <div class="text-center mt-8">
+                        <button id="load-more-btn" class="btn btn-outline" style="display: none;">
+                            Load More
+                        </button>
+                    </div>
+                </section>
+            </div>
+        `;
+
+        try {
+            const content = await this.getRecommendations(category, { limit: 24, ...options });
+            this.renderContentGrid(document.getElementById('category-grid'), content, {
+                emptyMessage: `No ${title.toLowerCase()} found`
+            });
+
+            // Show load more button if there are results
+            if (content.length > 0) {
+                document.getElementById('load-more-btn').style.display = 'block';
+            }
+        } catch (error) {
+            console.error(`Failed to load ${category} content:`, error);
+            document.getElementById('category-grid').innerHTML = `
+                <div class="empty-state text-center">
+                    <p class="text-muted">Failed to load content. Please try again.</p>
+                </div>
+            `;
+        }
+    }
+
+    // Event Listeners Setup
+    setupEventListeners() {
+        // Mobile menu toggle
+        const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+        const navbarNav = document.querySelector('.navbar-nav');
+        
+        if (mobileMenuToggle && navbarNav) {
+            mobileMenuToggle.addEventListener('click', () => {
+                navbarNav.classList.toggle('active');
+            });
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.navbar') && navbarNav) {
+                navbarNav.classList.remove('active');
+            }
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    this.performSearch(e.target.value);
+                }, 300);
+            });
+
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    this.navigateTo('search', { query: e.target.value });
+                }
+            });
+        }
+
+        // Handle browser back/forward
+        window.addEventListener('popstate', (e) => {
+            const state = e.state || {};
+            this.loadPage(state.page || 'home', state.params || {});
+        });
+
+        // Navbar scroll effect
+        let lastScrollY = window.scrollY;
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('.navbar');
+            if (!navbar) return;
+
+            if (window.scrollY > 100) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+
+            // Hide/show navbar on scroll
+            if (window.scrollY > lastScrollY && window.scrollY > 200) {
+                navbar.style.transform = 'translateY(-100%)';
+            } else {
+                navbar.style.transform = 'translateY(0)';
+            }
+            lastScrollY = window.scrollY;
+        });
+
+        // Login form handling
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(loginForm);
+                const success = await this.login(
+                    formData.get('username'),
+                    formData.get('password')
+                );
+                if (success) {
+                    loginForm.reset();
+                }
+            });
+        }
+
+        // Register form handling
+        const registerForm = document.getElementById('register-form');
+        if (registerForm) {
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(registerForm);
+                
+                const userData = {
+                    username: formData.get('username'),
+                    email: formData.get('email'),
+                    password: formData.get('password'),
+                    preferred_languages: Array.from(formData.getAll('languages')),
+                    preferred_genres: Array.from(formData.getAll('genres'))
+                };
+
+                const success = await this.register(userData);
+                if (success) {
+                    registerForm.reset();
+                }
+            });
+        }
+
+        // Logout handling
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('[data-action="logout"]')) {
+                e.preventDefault();
+                this.logout();
+            }
+        });
+
+        // Navigation handling
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('[data-page]')) {
+                e.preventDefault();
+                const page = e.target.dataset.page;
+                this.navigateTo(page);
+            }
+        });
+    }
+
+    async performSearch(query) {
+        if (!query.trim()) {
+            this.hideSearchResults();
+            return;
+        }
+
+        try {
+            const results = await this.searchContent(query);
+            this.showSearchResults(results);
+        } catch (error) {
+            console.error('Search failed:', error);
+        }
+    }
+
+    showSearchResults(results) {
+        let resultsContainer = document.getElementById('search-results');
+        
+        if (!resultsContainer) {
+            resultsContainer = document.createElement('div');
+            resultsContainer.id = 'search-results';
+            resultsContainer.className = 'search-results';
+            document.querySelector('.search-container').appendChild(resultsContainer);
+        }
+
+        if (results.length === 0) {
+            resultsContainer.innerHTML = '<div class="search-result-item">No results found</div>';
+            return;
+        }
+
+        resultsContainer.innerHTML = results.slice(0, 8).map(result => `
+            <div class="search-result-item" data-content-id="${result.id}">
+                <img 
+                    class="search-result-image" 
+                    src="${result.poster_path || '/assets/images/placeholder.jpg'}"
+                    alt="${result.title}"
+                    onerror="this.src='/assets/images/placeholder.jpg'"
+                >
+                <div class="search-result-content">
+                    <div class="search-result-title">${result.title}</div>
+                    <div class="search-result-meta">
+                        ${result.content_type} • ${result.rating ? `⭐ ${result.rating.toFixed(1)}` : 'No rating'}
+                        ${result.release_date ? ` • ${new Date(result.release_date).getFullYear()}` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Add click handlers
+        resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const contentId = item.dataset.contentId;
+                this.showContentDetails(contentId);
+                this.hideSearchResults();
+            });
+        });
+    }
+
+    hideSearchResults() {
+        const resultsContainer = document.getElementById('search-results');
+        if (resultsContainer) {
+            resultsContainer.remove();
+        }
+    }
+
+    // Progressive Loading & Performance
+    setupIntersectionObserver() {
+        const imageObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        imageObserver.unobserve(img);
+                    }
+                }
+            });
+        });
+
+        // Observe all images with data-src
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('img[data-src]').forEach(img => {
+                imageObserver.observe(img);
+            });
+        });
+    }
+
+    setupServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('SW registered:', registration);
+                })
+                .catch(error => {
+                    console.log('SW registration failed:', error);
+                });
+        }
+    }
+
+    preloadCriticalContent() {
+        // Preload trending content
+        this.getRecommendations('trending', { limit: 20 });
+        
+        // Preload fonts
+        const fontLinks = [
+            'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap'
+        ];
+        
+        fontLinks.forEach(href => {
+            const link = document.createElement('link');
+            link.rel = 'preload';
+            link.as = 'style';
+            link.href = href;
+            document.head.appendChild(link);
         });
     }
 }
 
-// Export additional functions
-window.playTrailer = playTrailer;
-window.saveExternalContent = saveExternalContent;
+// Initialize the application
+const app = new MoviePlatform();
+
+// Global error handler
+window.addEventListener('error', (e) => {
+    console.error('Global error:', e.error);
+    app.showNotification('Something went wrong. Please refresh the page.', 'error');
+});
+
+// Expose app globally for HTML onclick handlers
+window.app = app;
