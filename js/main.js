@@ -76,6 +76,11 @@ const ApiService = {
     if (data.token) {
       TokenManager.set(data.token);
       AppState.user = data.user;
+      // Store auth state in sessionStorage temporarily for page navigation
+      sessionStorage.setItem('cinescope_auth', JSON.stringify({
+        token: data.token,
+        user: data.user
+      }));
     }
     
     return data;
@@ -90,6 +95,11 @@ const ApiService = {
     if (data.token) {
       TokenManager.set(data.token);
       AppState.user = data.user;
+      // Store auth state in sessionStorage temporarily for page navigation
+      sessionStorage.setItem('cinescope_auth', JSON.stringify({
+        token: data.token,
+        user: data.user
+      }));
     }
     
     return data;
@@ -393,6 +403,7 @@ function logout() {
   AppState.user = null;
   AppState.watchlist = [];
   AppState.favorites = [];
+  sessionStorage.removeItem('cinescope_auth');
   updateAuthUI();
   showToast('Logged out successfully', 'success');
   
@@ -402,10 +413,30 @@ function logout() {
   }
 }
 
+// Restore authentication state from sessionStorage
+function restoreAuthState() {
+  const authData = sessionStorage.getItem('cinescope_auth');
+  if (authData) {
+    try {
+      const { token, user } = JSON.parse(authData);
+      TokenManager.set(token);
+      AppState.user = user;
+      updateAuthUI();
+      return true;
+    } catch (error) {
+      console.error('Failed to restore auth state:', error);
+      sessionStorage.removeItem('cinescope_auth');
+      return false;
+    }
+  }
+  return false;
+}
+
 // User Interaction Functions
 async function addToWatchlist(contentId) {
   if (!AppState.user) {
     showToast('Please login to add to watchlist', 'info');
+    window.location.href = '/login';
     return;
   }
   
@@ -420,6 +451,7 @@ async function addToWatchlist(contentId) {
 async function addToFavorites(contentId) {
   if (!AppState.user) {
     showToast('Please login to add to favorites', 'info');
+    window.location.href = '/login';
     return;
   }
   
@@ -728,6 +760,16 @@ function renderDetailsPage(content) {
   setupLazyLoading();
 }
 
+async function initDashboard() {
+  // Check authentication before initializing
+  if (!AppState.user) {
+    window.location.href = '/login';
+    return;
+  }
+  
+  // Dashboard-specific initialization handled in dashboard.html
+}
+
 async function initCategoryPage() {
   const category = window.location.pathname.split('/').pop();
   const container = document.getElementById('category-content');
@@ -780,6 +822,7 @@ async function initLanguagePage() {
 }
 
 async function initWatchlistPage() {
+  // Check authentication before initializing
   if (!AppState.user) {
     window.location.href = '/login';
     return;
@@ -797,6 +840,7 @@ async function initWatchlistPage() {
 }
 
 async function initFavoritesPage() {
+  // Check authentication before initializing
   if (!AppState.user) {
     window.location.href = '/login';
     return;
@@ -818,6 +862,7 @@ async function initLoginPage() {
 }
 
 async function initAdminDashboard() {
+  // Check admin authentication before initializing
   if (!AppState.user || !AppState.user.is_admin) {
     window.location.href = '/';
     return;
@@ -828,6 +873,9 @@ async function initAdminDashboard() {
 
 // Initialize app on page load
 document.addEventListener('DOMContentLoaded', () => {
+  // Restore authentication state FIRST
+  restoreAuthState();
+  
   // Update auth UI
   updateAuthUI();
   
@@ -861,6 +909,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initDetailsPage();
   } else if (currentPath === '/login') {
     initLoginPage();
+  } else if (currentPath === '/dashboard') {
+    initDashboard();
   } else if (currentPath.includes('/categories/')) {
     initCategoryPage();
   } else if (currentPath.includes('/languages/')) {
@@ -877,6 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Export for use in other scripts
 window.ApiService = ApiService;
 window.AppState = AppState;
+window.TokenManager = TokenManager;
 window.showToast = showToast;
 window.navigateToDetails = navigateToDetails;
 window.navigateToCategory = navigateToCategory;
@@ -893,3 +944,4 @@ window.updateAuthUI = updateAuthUI;
 window.createContentCard = createContentCard;
 window.renderContentGrid = renderContentGrid;
 window.setupLazyLoading = setupLazyLoading;
+window.restoreAuthState = restoreAuthState;
