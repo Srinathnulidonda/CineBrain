@@ -1,1 +1,462 @@
-<!-- details.html content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Content Details - CineScope</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    .details-hero {
+      position: relative;
+      height: 60vh;
+      min-height: 400px;
+      background-size: cover;
+      background-position: center;
+      margin-top: -60px; /* Offset navbar */
+    }
+    
+    .details-hero-gradient {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(10,10,11,0.3) 0%, rgba(10,10,11,0.9) 70%, var(--bg-primary) 100%);
+    }
+    
+    .details-poster img {
+      width: 100%;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .cast-list {
+      display: flex;
+      gap: var(--space-md);
+      overflow-x: auto;
+      padding: var(--space-sm) 0;
+      scrollbar-width: none;
+    }
+    
+    .cast-list::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .cast-item {
+      flex: 0 0 auto;
+      text-align: center;
+      width: 120px;
+    }
+    
+    .cast-photo {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--bg-hover);
+      margin: 0 auto var(--space-sm);
+      overflow: hidden;
+    }
+    
+    .cast-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .cast-name {
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: var(--space-xs);
+    }
+    
+    .cast-character {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    
+    .streaming-platforms {
+      display: flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      margin-top: var(--space-md);
+    }
+    
+    .platform-badge {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--bg-hover);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      transition: all var(--transition-fast);
+    }
+    
+    .platform-badge:hover {
+      background: var(--primary-purple);
+      transform: translateY(-2px);
+    }
+    
+    .platform-logo {
+      width: 20px;
+      height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" style="display: none;">
+    <div class="spinner spinner-lg"></div>
+  </div>
+  
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container navbar-content">
+      <a href="/" class="navbar-brand gradient-text">CineScope</a>
+      
+      <button class="mobile-menu-toggle md:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
+      
+      <div class="navbar-menu hidden md:flex">
+        <a href="/" class="navbar-link">Home</a>
+        <a href="/categories/movies.html" class="navbar-link">Movies</a>
+        <a href="/categories/tv-shows.html" class="navbar-link">TV Shows</a>
+        <a href="/categories/anime.html" class="navbar-link">Anime</a>
+        
+        <div class="search-container">
+          <input type="text" class="search-input" placeholder="Search...">
+          <i class="fas fa-search search-icon"></i>
+          <div class="search-suggestions" style="display: none;"></div>
+        </div>
+        
+        <div class="auth-buttons flex gap-sm">
+          <a href="/login.html" class="btn btn-ghost btn-sm">Login</a>
+          <a href="/login.html#register" class="btn btn-primary btn-sm">Sign Up</a>
+        </div>
+        
+        <div class="user-menu" style="display: none;"></div>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Content Details -->
+  <div id="details-container">
+    <!-- Loading skeleton -->
+    <div class="details-hero skeleton"></div>
+    <div class="container details-layout mt-xl">
+      <div class="details-poster">
+        <div class="skeleton" style="padding-bottom: 150%;"></div>
+      </div>
+      <div class="details-info">
+        <div class="skeleton" style="height: 40px; width: 70%; margin-bottom: 1rem;"></div>
+        <div class="skeleton" style="height: 20px; width: 50%; margin-bottom: 2rem;"></div>
+        <div class="skeleton" style="height: 100px; margin-bottom: 2rem;"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Share Modal -->
+  <div id="share-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Share</h3>
+        <button class="modal-close" onclick="closeModal('share-modal')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="text-secondary mb-lg">Share this content with your friends</p>
+        <div class="flex gap-md justify-center">
+          <button class="btn btn-icon btn-secondary" onclick="shareOn('twitter')">
+            <i class="fab fa-twitter"></i>
+          </button>
+          <button class="btn btn-icon btn-secondary" onclick="shareOn('facebook')">
+            <i class="fab fa-facebook"></i>
+          </button>
+          <button class="btn btn-icon btn-secondary" onclick="shareOn('whatsapp')">
+            <i class="fab fa-whatsapp"></i>
+          </button>
+          <button class="btn btn-icon btn-secondary" onclick="copyLink()">
+            <i class="fas fa-link"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Rating Modal -->
+  <div id="rating-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Rate this content</h3>
+        <button class="modal-close" onclick="closeModal('rating-modal')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body text-center">
+        <div class="rating-stars mb-lg" style="font-size: 2rem;">
+          <i class="fas fa-star" data-rating="1" onclick="setRating(1)"></i>
+          <i class="fas fa-star" data-rating="2" onclick="setRating(2)"></i>
+          <i class="fas fa-star" data-rating="3" onclick="setRating(3)"></i>
+          <i class="fas fa-star" data-rating="4" onclick="setRating(4)"></i>
+          <i class="fas fa-star" data-rating="5" onclick="setRating(5)"></i>
+        </div>
+        <p class="text-secondary mb-lg">Click on a star to rate</p>
+        <button class="btn btn-primary" onclick="submitRating()">Submit Rating</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Trailer Modal -->
+  <div id="trailer-modal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+      <div class="modal-header">
+        <h3>Trailer</h3>
+        <button class="modal-close" onclick="closeModal('trailer-modal')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="video-container">
+          <iframe src="" frameborder="0" allowfullscreen></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toast Container -->
+  <div class="toast-container"></div>
+  
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script>
+    let currentContent = null;
+    let selectedRating = 0;
+    
+    // Modal functions
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      modal.classList.remove('active');
+      
+      // Clear iframe src if trailer modal
+      if (modalId === 'trailer-modal') {
+        modal.querySelector('iframe').src = '';
+      }
+    }
+    
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.add('active');
+    }
+    
+    // Rating functions
+    function setRating(rating) {
+      selectedRating = rating;
+      const stars = document.querySelectorAll('#rating-modal .rating-stars i');
+      stars.forEach((star, index) => {
+        if (index < rating) {
+          star.classList.add('text-yellow');
+        } else {
+          star.classList.remove('text-yellow');
+        }
+      });
+    }
+    
+    async function submitRating() {
+      if (!selectedRating || !currentContent) return;
+      
+      if (!AppState.user) {
+        showToast('Please login to rate content', 'info');
+        closeModal('rating-modal');
+        return;
+      }
+      
+      try {
+        await ApiService.rateContent(currentContent.id, selectedRating);
+        showToast('Rating submitted successfully!', 'success');
+        closeModal('rating-modal');
+      } catch (error) {
+        showToast('Failed to submit rating', 'error');
+      }
+    }
+    
+    // Share functions
+    function shareOn(platform) {
+      const url = window.location.href;
+      const title = currentContent ? currentContent.title : 'Check out this content';
+      
+      let shareUrl = '';
+      switch (platform) {
+        case 'twitter':
+          shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`;
+          break;
+        case 'facebook':
+          shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+          break;
+        case 'whatsapp':
+          shareUrl = `https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`;
+          break;
+      }
+      
+      if (shareUrl) {
+        window.open(shareUrl, '_blank', 'width=600,height=400');
+      }
+    }
+    
+    function copyLink() {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        showToast('Link copied to clipboard!', 'success');
+      });
+    }
+    
+    // Enhanced details page renderer
+    function renderDetailsPage(content) {
+      currentContent = content;
+      const container = document.getElementById('details-container');
+      if (!container) return;
+      
+      const backdropUrl = content.backdrop_path || content.poster_path || '';
+      const posterUrl = content.poster_path || '/assets/images/no-poster.jpg';
+      
+      // Mock streaming platforms (in real app, this would come from API)
+      const streamingPlatforms = [
+        { name: 'Netflix', logo: 'netflix', free: false },
+        { name: 'YouTube', logo: 'youtube', free: true },
+        { name: 'Hotstar', logo: 'hotstar', free: false }
+      ];
+      
+      container.innerHTML = `
+        <div class="details-hero" style="background-image: url('${backdropUrl}')">
+          <div class="details-hero-gradient"></div>
+        </div>
+        
+        <div class="container details-layout mt-xl">
+          <div class="details-poster">
+            <img src="${posterUrl}" alt="${content.title}" class="rounded-lg shadow-lg">
+            <div class="details-actions mt-lg">
+              <button class="btn btn-primary btn-full mb-sm" onclick="playTrailer('${content.youtube_trailer}')">
+                <i class="fas fa-play mr-sm"></i> Watch Trailer
+              </button>
+              <button class="btn btn-secondary btn-full mb-sm" onclick="addToWatchlist(${content.id})">
+                <i class="fas fa-plus mr-sm"></i> Add to Watchlist
+              </button>
+              <button class="btn btn-ghost btn-full mb-sm" onclick="addToFavorites(${content.id})">
+                <i class="fas fa-heart mr-sm"></i> Add to Favorites
+              </button>
+              <div class="flex gap-sm">
+                <button class="btn btn-ghost btn-icon" onclick="openModal('rating-modal')">
+                  <i class="fas fa-star"></i>
+                </button>
+                <button class="btn btn-ghost btn-icon" onclick="openModal('share-modal')">
+                  <i class="fas fa-share"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="details-info">
+            <h1 class="mb-md">${content.title}</h1>
+            ${content.original_title && content.original_title !== content.title ? `<p class="text-secondary mb-md">${content.original_title}</p>` : ''}
+            
+            <div class="flex gap-md mb-lg flex-wrap">
+              <div class="rating">
+                <i class="fas fa-star text-yellow"></i>
+                <span class="rating-value">${content.rating ? content.rating.toFixed(1) : 'N/A'}</span>
+                ${content.vote_count ? `<span class="text-secondary text-sm ml-xs">(${content.vote_count.toLocaleString()})</span>` : ''}
+              </div>
+              <span class="text-secondary">•</span>
+              <span class="text-secondary">${content.release_date ? new Date(content.release_date).getFullYear() : 'N/A'}</span>
+              <span class="text-secondary">•</span>
+              <span class="text-secondary">${content.runtime ? `${content.runtime} min` : content.content_type}</span>
+              ${content.languages && content.languages.length > 0 ? `
+                <span class="text-secondary">•</span>
+                <span class="text-secondary">${content.languages.join(', ')}</span>
+              ` : ''}
+            </div>
+            
+            <div class="flex gap-sm flex-wrap mb-lg">
+              ${content.genres.map(genre => `<span class="tag">${genre}</span>`).join('')}
+              ${content.anime_genres && content.anime_genres.length > 0 ? 
+                content.anime_genres.map(genre => `<span class="tag tag-primary">${genre}</span>`).join('') : ''
+              }
+            </div>
+            
+            <h3 class="mb-sm">Overview</h3>
+            <p class="text-secondary mb-lg">${content.overview || 'No overview available.'}</p>
+            
+            <h3 class="mb-sm">Where to Watch</h3>
+            <div class="streaming-platforms mb-lg">
+                            ${streamingPlatforms.map(platform => `
+                <a href="#" class="platform-badge">
+                  <i class="fab fa-${platform.logo}"></i>
+                  <span>${platform.name}</span>
+                  ${platform.free ? '<span class="text-xs text-green">(Free)</span>' : ''}
+                </a>
+              `).join('')}
+            </div>
+            
+            ${content.cast && content.cast.length > 0 ? `
+              <h3 class="mb-sm">Cast</h3>
+              <div class="cast-list mb-lg">
+                ${content.cast.slice(0, 10).map(actor => `
+                  <div class="cast-item">
+                    <div class="cast-photo">
+                      ${actor.profile_path ? 
+                        `<img src="https://image.tmdb.org/t/p/w200${actor.profile_path}" alt="${actor.name}">` :
+                        `<i class="fas fa-user" style="font-size: 2rem; line-height: 80px; color: var(--text-muted);"></i>`
+                      }
+                    </div>
+                    <div class="cast-name">${actor.name}</div>
+                    <div class="cast-character">${actor.character || actor.job || ''}</div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+            
+            ${content.crew && content.crew.length > 0 ? `
+              <h3 class="mb-sm">Crew</h3>
+              <div class="grid gap-md mb-lg" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                ${content.crew.slice(0, 4).map(crew => `
+                  <div>
+                    <div class="font-semibold">${crew.name}</div>
+                    <div class="text-secondary text-sm">${crew.job}</div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+            
+            ${content.similar_content && content.similar_content.length > 0 ? `
+              <h3 class="mb-md">Similar Content</h3>
+              <div class="grid">
+                ${content.similar_content.slice(0, 6).map(item => createContentCard(item).outerHTML).join('')}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+      
+      setupLazyLoading();
+    }
+    
+    // Override the global playTrailer function for this page
+    window.playTrailer = function(trailerUrl) {
+      if (!trailerUrl) {
+        showToast('No trailer available', 'info');
+        return;
+      }
+      
+      const modal = document.getElementById('trailer-modal');
+      const iframe = modal.querySelector('iframe');
+      iframe.src = trailerUrl.replace('watch?v=', 'embed/') + '?autoplay=1';
+      openModal('trailer-modal');
+    }
+    
+    // Initialize details page
+    window.initDetailsPage = initDetailsPage;
+  </script>
+</body>
+</html>

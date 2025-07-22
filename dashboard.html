@@ -1,1 +1,318 @@
-<!-- dashboard.html content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - CineScope</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    .dashboard-header {
+      background: var(--gradient-primary);
+      padding: var(--space-2xl) 0;
+      margin-bottom: var(--space-2xl);
+    }
+    
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-lg);
+      margin-bottom: var(--space-2xl);
+    }
+    
+    .stat-card {
+      background: var(--bg-card);
+      padding: var(--space-lg);
+      border-radius: var(--radius-lg);
+      text-align: center;
+      transition: all var(--transition-base);
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .stat-icon {
+      font-size: 2rem;
+      margin-bottom: var(--space-sm);
+      color: var(--primary-blue);
+    }
+    
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--space-xs);
+    }
+    
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" style="display: none;">
+    <div class="spinner spinner-lg"></div>
+  </div>
+  
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container navbar-content">
+      <a href="/" class="navbar-brand gradient-text">CineScope</a>
+      
+      <button class="mobile-menu-toggle md:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
+      
+      <div class="navbar-menu hidden md:flex">
+        <a href="/" class="navbar-link">Home</a>
+        <a href="/dashboard.html" class="navbar-link active">Dashboard</a>
+        <a href="/user/watchlist.html" class="navbar-link">Watchlist</a>
+        <a href="/user/favorites.html" class="navbar-link">Favorites</a>
+        
+        <div class="search-container">
+          <input type="text" class="search-input" placeholder="Search...">
+          <i class="fas fa-search search-icon"></i>
+          <div class="search-suggestions" style="display: none;"></div>
+        </div>
+        
+        <div class="user-menu"></div>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Dashboard Header -->
+  <div class="dashboard-header">
+    <div class="container">
+      <h1 class="text-white mb-sm">Welcome back, <span id="username">User</span>!</h1>
+      <p class="text-white opacity-80">Here's what we've prepared for you today</p>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Quick Stats -->
+    <div class="quick-stats">
+      <div class="stat-card">
+        <i class="fas fa-film stat-icon"></i>
+        <div class="stat-value" id="watchlist-count">0</div>
+        <div class="stat-label">In Watchlist</div>
+      </div>
+      
+      <div class="stat-card">
+        <i class="fas fa-heart stat-icon"></i>
+        <div class="stat-value" id="favorites-count">0</div>
+        <div class="stat-label">Favorites</div>
+      </div>
+      
+      <div class="stat-card">
+        <i class="fas fa-clock stat-icon"></i>
+        <div class="stat-value" id="watch-time">0h</div>
+        <div class="stat-label">Watch Time</div>
+      </div>
+      
+      <div class="stat-card">
+        <i class="fas fa-star stat-icon"></i>
+        <div class="stat-value" id="ratings-count">0</div>
+        <div class="stat-label">Ratings Given</div>
+      </div>
+    </div>
+    
+    <!-- Continue Watching -->
+    <section class="mb-2xl" id="continue-watching-section" style="display: none;">
+      <h2 class="mb-lg">Continue Watching</h2>
+      <div id="continue-watching" class="carousel-container"></div>
+    </section>
+    
+    <!-- Personalized Recommendations -->
+    <section class="mb-2xl">
+      <h2 class="mb-lg">Recommended For You</h2>
+      <div id="personalized-recommendations" class="grid">
+        <div class="skeleton" style="height: 300px;"></div>
+        <div class="skeleton" style="height: 300px;"></div>
+        <div class="skeleton" style="height: 300px;"></div>
+        <div class="skeleton" style="height: 300px;"></div>
+      </div>
+    </section>
+    
+    <!-- Based on Recent Activity -->
+    <section class="mb-2xl" id="recent-activity-section">
+      <h2 class="mb-lg">Based on Your Recent Activity</h2>
+      <div id="recent-recommendations" class="grid"></div>
+    </section>
+    
+    <!-- Genre Recommendations -->
+    <section class="mb-2xl" id="genre-recommendations-section">
+      <h2 class="mb-lg">Your Favorite Genres</h2>
+      <div class="tabs mb-lg" id="genre-tabs"></div>
+      <div id="genre-content" class="grid"></div>
+    </section>
+    
+    <!-- Preference Tuning -->
+    <section class="card p-xl mb-2xl">
+      <h3 class="mb-md">Fine-tune Your Recommendations</h3>
+      <p class="text-secondary mb-lg">Help us improve your recommendations by updating your preferences</p>
+      
+      <div class="grid gap-lg" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+        <div>
+          <h4 class="mb-sm">Preferred Languages</h4>
+          <div class="flex flex-wrap gap-sm" id="language-preferences"></div>
+        </div>
+        
+        <div>
+          <h4 class="mb-sm">Favorite Genres</h4>
+          <div class="flex flex-wrap gap-sm" id="genre-preferences"></div>
+        </div>
+      </div>
+      
+      <button class="btn btn-primary mt-lg" onclick="savePreferences()">
+        <i class="fas fa-save mr-sm"></i> Save Preferences
+      </button>
+    </section>
+  </main>
+  
+  <!-- Toast Container -->
+  <div class="toast-container"></div>
+  
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script>
+    // Check authentication
+    if (!AppState.user) {
+      window.location.href = '/login.html';
+    }
+    
+    // Initialize dashboard
+    async function initDashboard() {
+      // Update username
+      document.getElementById('username').textContent = AppState.user.username;
+      
+      // Load user stats (mock data for now)
+      updateStats();
+      
+      // Load personalized recommendations
+      try {
+        const recommendations = await ApiService.getPersonalizedRecommendations();
+        const container = document.getElementById('personalized-recommendations');
+        renderContentGrid(container, recommendations.recommendations);
+        
+        // Load genre-based recommendations
+        loadGenreRecommendations();
+        
+        // Load preference options
+        loadPreferences();
+        
+      } catch (error) {
+        console.error('Dashboard initialization error:', error);
+      }
+    }
+    
+    function updateStats() {
+      // These would normally come from the API
+      document.getElementById('watchlist-count').textContent = AppState.watchlist.length || '12';
+      document.getElementById('favorites-count').textContent = AppState.favorites.length || '8';
+      document.getElementById('watch-time').textContent = '24h';
+      document.getElementById('ratings-count').textContent = '15';
+    }
+    
+    async function loadGenreRecommendations() {
+      const genres = AppState.user.preferred_genres || ['action', 'drama'];
+      const tabsContainer = document.getElementById('genre-tabs');
+      const contentContainer = document.getElementById('genre-content');
+      
+      // Create tabs
+      tabsContainer.innerHTML = genres.map((genre, index) => `
+        <div class="tab ${index === 0 ? 'active' : ''}" onclick="loadGenreContent('${genre}', this)">
+          ${genre.charAt(0).toUpperCase() + genre.slice(1)}
+        </div>
+      `).join('');
+      
+      // Load first genre
+      if (genres.length > 0) {
+        loadGenreContent(genres[0]);
+      }
+    }
+    
+    async function loadGenreContent(genre, tabElement) {
+      // Update active tab
+      if (tabElement) {
+        document.querySelectorAll('#genre-tabs .tab').forEach(tab => tab.classList.remove('active'));
+        tabElement.classList.add('active');
+      }
+      
+      const contentContainer = document.getElementById('genre-content');
+      contentContainer.innerHTML = '<div class="spinner mx-auto"></div>';
+      
+      try {
+        const data = await ApiService.getGenreRecommendations(genre);
+        renderContentGrid(contentContainer, data.recommendations);
+      } catch (error) {
+        contentContainer.innerHTML = '<p class="text-center text-secondary">Failed to load recommendations</p>';
+      }
+    }
+    
+    function loadPreferences() {
+      const languages = ['english', 'hindi', 'telugu', 'tamil', 'kannada', 'malayalam'];
+      const genres = ['action', 'adventure', 'comedy', 'drama', 'horror', 'romance', 'sci-fi', 'thriller'];
+      
+      const userLanguages = AppState.user.preferred_languages || [];
+      const userGenres = AppState.user.preferred_genres || [];
+      
+      // Language preferences
+      document.getElementById('language-preferences').innerHTML = languages.map(lang => `
+        <label class="tag ${userLanguages.includes(lang) ? 'tag-primary' : ''}" style="cursor: pointer;">
+          <input type="checkbox" name="language" value="${lang}" ${userLanguages.includes(lang) ? 'checked' : ''} style="display: none;">
+          ${lang.charAt(0).toUpperCase() + lang.slice(1)}
+        </label>
+      `).join('');
+      
+      // Genre preferences
+      document.getElementById('genre-preferences').innerHTML = genres.map(genre => `
+        <label class="tag ${userGenres.includes(genre) ? 'tag-primary' : ''}" style="cursor: pointer;">
+          <input type="checkbox" name="genre" value="${genre}" ${userGenres.includes(genre) ? 'checked' : ''} style="display: none;">
+          ${genre.charAt(0).toUpperCase() + genre.slice(1)}
+        </label>
+      `).join('');
+      
+      // Add click handlers
+      document.querySelectorAll('.tag input').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const label = e.target.parentElement;
+          if (e.target.checked) {
+            label.classList.add('tag-primary');
+          } else {
+            label.classList.remove('tag-primary');
+          }
+        });
+      });
+    }
+    
+    async function savePreferences() {
+      const languages = Array.from(document.querySelectorAll('input[name="language"]:checked')).map(cb => cb.value);
+      const genres = Array.from(document.querySelectorAll('input[name="genre"]:checked')).map(cb => cb.value);
+      
+      // Update local state
+      AppState.user.preferred_languages = languages;
+      AppState.user.preferred_genres = genres;
+      
+      // TODO: Send to API
+      showToast('Preferences saved successfully!', 'success');
+      
+      // Reload genre recommendations
+      loadGenreRecommendations();
+    }
+    
+    // Initialize on load
+    initDashboard();
+  </script>
+</body>
+</html>

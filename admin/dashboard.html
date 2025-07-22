@@ -1,1 +1,405 @@
-<!-- dashboard.html content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - CineScope</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    .admin-layout {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      min-height: calc(100vh - 60px);
+    }
+    
+    .admin-sidebar {
+      background: var(--bg-secondary);
+      padding: var(--space-lg);
+      border-right: 1px solid var(--bg-hover);
+    }
+    
+    .admin-content {
+      padding: var(--space-xl);
+      overflow-y: auto;
+    }
+    
+    .admin-nav-item {
+      display: block;
+      padding: var(--space-sm) var(--space-md);
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-xs);
+      transition: all var(--transition-fast);
+    }
+    
+    .admin-nav-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    
+    .admin-nav-item.active {
+      background: var(--gradient-primary);
+      color: white;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--space-lg);
+      margin-bottom: var(--space-2xl);
+    }
+    
+    .stat-card {
+      background: var(--bg-card);
+      padding: var(--space-lg);
+      border-radius: var(--radius-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--gradient-primary);
+    }
+    
+    .ml-status-card {
+      background: var(--bg-card);
+      padding: var(--space-lg);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-xl);
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: var(--space-sm);
+    }
+    
+    .status-healthy { background: var(--accent-green); }
+    .status-partial { background: var(--accent-yellow); }
+    .status-unhealthy { background: var(--accent-red); }
+    
+    @media (max-width: 1024px) {
+      .admin-layout {
+        grid-template-columns: 1fr;
+      }
+      
+      .admin-sidebar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" style="display: none;">
+    <div class="spinner spinner-lg"></div>
+  </div>
+  
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container navbar-content">
+      <a href="/" class="navbar-brand gradient-text">CineScope Admin</a>
+      
+      <button class="mobile-menu-toggle lg:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
+      
+      <div class="navbar-menu hidden md:flex">
+        <a href="/" class="navbar-link">Back to Site</a>
+        
+        <div class="user-menu"></div>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Admin Layout -->
+  <div class="admin-layout" style="margin-top: 60px;">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <nav>
+        <a href="/admin/dashboard.html" class="admin-nav-item active">
+          <i class="fas fa-tachometer-alt mr-sm"></i> Dashboard
+        </a>
+        <a href="/admin/content-browser.html" class="admin-nav-item">
+          <i class="fas fa-search mr-sm"></i> Content Browser
+        </a>
+        <a href="/admin/posts.html" class="admin-nav-item">
+          <i class="fas fa-bullhorn mr-sm"></i> Admin Posts
+        </a>
+        <a href="/admin/analytics.html" class="admin-nav-item">
+          <i class="fas fa-chart-bar mr-sm"></i> Analytics
+        </a>
+      </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-content">
+      <h1 class="mb-xl">Admin Dashboard</h1>
+      
+      <!-- ML Service Status -->
+      <div class="ml-status-card" id="ml-status-card">
+        <div class="flex-between mb-md">
+          <h3>ML Service Status</h3>
+          <button class="btn btn-sm btn-secondary" onclick="checkMLService()">
+            <i class="fas fa-sync mr-xs"></i> Refresh
+          </button>
+        </div>
+        <div id="ml-status-content">
+          <div class="text-center p-lg">
+            <div class="spinner mx-auto"></div>
+            <p class="text-secondary mt-md">Checking ML service...</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3 class="text-secondary text-sm mb-sm">Total Users</h3>
+          <div class="text-3xl font-bold mb-sm" id="total-users">-</div>
+          <div class="text-sm text-secondary">
+            <i class="fas fa-arrow-up text-green mr-xs"></i>
+            <span id="user-growth">+0%</span> from last week
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <h3 class="text-secondary text-sm mb-sm">Total Content</h3>
+          <div class="text-3xl font-bold mb-sm" id="total-content">-</div>
+          <div class="text-sm text-secondary">
+            <span id="content-breakdown">Movies, TV Shows, Anime</span>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <h3 class="text-secondary text-sm mb-sm">User Interactions</h3>
+          <div class="text-3xl font-bold mb-sm" id="total-interactions">-</div>
+          <div class="text-sm text-secondary">
+            <i class="fas fa-chart-line text-blue mr-xs"></i>
+            <span id="interaction-trend">Trending up</span>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <h3 class="text-secondary text-sm mb-sm">Active Users (7d)</h3>
+          <div class="text-3xl font-bold mb-sm" id="active-users">-</div>
+          <div class="text-sm text-secondary">
+            <span id="active-percentage">0%</span> of total users
+          </div>
+        </div>
+      </div>
+      
+      <!-- Popular Content -->
+      <section class="mb-2xl">
+        <h2 class="mb-lg">Popular Content</h2>
+        <div class="card">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-hover">
+                <th class="text-left p-md">Title</th>
+                <th class="text-left p-md">Type</th>
+                <th class="text-left p-md">Interactions</th>
+                <th class="text-left p-md">Rating</th>
+              </tr>
+            </thead>
+            <tbody id="popular-content-table">
+              <tr>
+                <td colspan="4" class="text-center p-lg text-secondary">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      
+      <!-- Quick Actions -->
+      <section class="mb-2xl">
+        <h2 class="mb-lg">Quick Actions</h2>
+        <div class="grid gap-md" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <button class="btn btn-secondary" onclick="window.location.href='/admin/content-browser.html'">
+            <i class="fas fa-plus mr-sm"></i> Add Content
+          </button>
+          <button class="btn btn-secondary" onclick="window.location.href='/admin/posts.html'">
+            <i class="fas fa-bullhorn mr-sm"></i> Create Post
+          </button>
+          <button class="btn btn-secondary" onclick="updateMLModels()">
+            <i class="fas fa-brain mr-sm"></i> Update ML Models
+          </button>
+          <button class="btn btn-secondary" onclick="exportAnalytics()">
+            <i class="fas fa-download mr-sm"></i> Export Analytics
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+  
+  <!-- Toast Container -->
+  <div class="toast-container"></div>
+  
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script>
+    // Check admin authentication
+    if (!AppState.user || !AppState.user.is_admin) {
+      window.location.href = '/';
+    }
+    
+    // ML Service Health Check
+    async function checkMLService() {
+      const statusContent = document.getElementById('ml-status-content');
+      statusContent.innerHTML = `
+        <div class="text-center p-lg">
+          <div class="spinner mx-auto"></div>
+          <p class="text-secondary mt-md">Checking ML service...</p>
+        </div>
+      `;
+      
+      try {
+        const response = await fetch(`${API_BASE}/admin/ml-service-check`, {
+          headers: TokenManager.getHeaders()
+        });
+        
+        const data = await response.json();
+        
+        // Render status
+        const statusClass = data.status === 'healthy' ? 'healthy' : 
+                          data.status === 'partial' ? 'partial' : 'unhealthy';
+        
+        statusContent.innerHTML = `
+          <div class="flex items-center mb-md">
+            <span class="status-indicator status-${statusClass}"></span>
+            <span class="font-semibold">Overall Status: ${data.status.toUpperCase()}</span>
+          </div>
+          
+          <div class="grid gap-md mb-md" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            ${Object.entries(data.checks).map(([check, result]) => `
+              <div class="bg-hover p-md rounded-md">
+                <div class="font-semibold mb-xs">${check.charAt(0).toUpperCase() + check.slice(1)}</div>
+                <div class="text-sm text-${result.status === 'pass' ? 'green' : 'red'}">
+                  ${result.status === 'pass' ? '✓' : '✗'} ${result.status}
+                  ${result.response_time ? ` (${result.response_time})` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          
+          <div class="text-sm text-secondary">
+            Last checked: ${new Date(data.timestamp).toLocaleString()}
+          </div>
+        `;
+        
+      } catch (error) {
+        statusContent.innerHTML = `
+          <div class="text-center text-red p-lg">
+            <i class="fas fa-exclamation-triangle text-2xl mb-sm"></i>
+            <p>Failed to check ML service status</p>
+          </div>
+        `;
+      }
+    }
+    
+    // Update ML Models
+    async function updateMLModels() {
+      if (!confirm('This will trigger an ML model update. Continue?')) return;
+      
+      showToast('Updating ML models...', 'info');
+      
+      try {
+        const response = await fetch(`${API_BASE}/admin/ml-service-update`, {
+          method: 'POST',
+          headers: TokenManager.getHeaders()
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showToast('ML models update initiated successfully', 'success');
+        } else {
+          showToast(data.message || 'Failed to update ML models', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to update ML models', 'error');
+      }
+    }
+    
+    // Load Analytics
+    async function loadAnalytics() {
+      try {
+        const response = await fetch(`${API_BASE}/admin/analytics`, {
+          headers: TokenManager.getHeaders()
+        });
+        
+        const data = await response.json();
+        
+        // Update stats
+        document.getElementById('total-users').textContent = data.total_users.toLocaleString();
+        document.getElementById('total-content').textContent = data.total_content.toLocaleString();
+        document.getElementById('total-interactions').textContent = data.total_interactions.toLocaleString();
+        document.getElementById('active-users').textContent = data.active_users_last_week.toLocaleString();
+        
+        // Calculate percentages
+        const activePercentage = ((data.active_users_last_week / data.total_users) * 100).toFixed(1);
+        document.getElementById('active-percentage').textContent = `${activePercentage}%`;
+        
+        // Update popular content table
+        const tableBody = document.getElementById('popular-content-table');
+        if (data.popular_content && data.popular_content.length > 0) {
+          tableBody.innerHTML = data.popular_content.map(item => `
+            <tr class="border-b border-hover hover:bg-hover">
+              <td class="p-md">${item.title}</td>
+              <td class="p-md">
+                <span class="tag tag-sm">${item.content_type || 'Movie'}</span>
+              </td>
+              <td class="p-md">${item.interactions}</td>
+              <td class="p-md">
+                <div class="flex items-center gap-xs">
+                  <i class="fas fa-star text-yellow text-sm"></i>
+                  <span>${item.rating || 'N/A'}</span>
+                </div>
+              </td>
+            </tr>
+          `).join('');
+        } else {
+          tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-lg text-secondary">No data available</td></tr>';
+        }
+        
+      } catch (error) {
+        console.error('Failed to load analytics:', error);
+        showToast('Failed to load analytics', 'error');
+      }
+    }
+    
+    // Export Analytics
+    function exportAnalytics() {
+      showToast('Exporting analytics... (Feature coming soon)', 'info');
+    }
+    
+    // Initialize admin dashboard
+    async function initAdminDashboard() {
+      updateAuthUI();
+      checkMLService();
+      loadAnalytics();
+    }
+    
+    // Initialize on load
+    window.initAdminDashboard = initAdminDashboard;
+    initAdminDashboard();
+  </script>
+</body>
+</html>

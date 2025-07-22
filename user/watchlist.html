@@ -1,1 +1,281 @@
-<!-- watchlist.html content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Watchlist - CineScope</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    .watchlist-header {
+      background: linear-gradient(135deg, var(--dark-blue) 0%, var(--dark-purple) 100%);
+      padding: var(--space-xl) 0;
+      margin-bottom: var(--space-xl);
+    }
+    
+    .watchlist-actions {
+      display: flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-lg);
+    }
+    
+    .content-item {
+      position: relative;
+    }
+    
+    .remove-btn {
+      position: absolute;
+      top: var(--space-sm);
+      right: var(--space-sm);
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: all var(--transition-fast);
+    }
+    
+    .content-item:hover .remove-btn {
+      opacity: 1;
+    }
+    
+    .remove-btn:hover {
+      background: var(--accent-red);
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" style="display: none;">
+    <div class="spinner spinner-lg"></div>
+  </div>
+  
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container navbar-content">
+      <a href="/" class="navbar-brand gradient-text">CineScope</a>
+      
+      <button class="mobile-menu-toggle md:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
+      
+      <div class="navbar-menu hidden md:flex">
+        <a href="/" class="navbar-link">Home</a>
+        <a href="/dashboard.html" class="navbar-link">Dashboard</a>
+        <a href="/user/watchlist.html" class="navbar-link active">Watchlist</a>
+        <a href="/user/favorites.html" class="navbar-link">Favorites</a>
+        
+        <div class="search-container">
+          <input type="text" class="search-input" placeholder="Search...">
+          <i class="fas fa-search search-icon"></i>
+          <div class="search-suggestions" style="display: none;"></div>
+        </div>
+        
+        <div class="user-menu"></div>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Watchlist Header -->
+  <div class="watchlist-header" style="margin-top: 60px;">
+    <div class="container">
+      <h1 class="text-white mb-sm">My Watchlist</h1>
+      <p class="text-white opacity-80">Your saved content for later viewing</p>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Watchlist Actions -->
+    <div class="watchlist-actions">
+      <div class="filter-container">
+        <select class="form-select filter-select" id="filter-type">
+          <option value="all">All Types</option>
+          <option value="movie">Movies</option>
+          <option value="tv">TV Shows</option>
+          <option value="anime">Anime</option>
+        </select>
+        
+        <select class="form-select filter-select" id="sort-by">
+          <option value="added">Recently Added</option>
+          <option value="title">Title</option>
+          <option value="rating">Rating</option>
+          <option value="release">Release Date</option>
+        </select>
+      </div>
+      
+      <button class="btn btn-ghost ml-auto" onclick="clearWatchlist()">
+        <i class="fas fa-trash mr-sm"></i> Clear All
+      </button>
+    </div>
+    
+    <!-- Watchlist Grid -->
+    <div id="watchlist-content">
+      <div class="grid">
+        <div class="skeleton" style="height: 300px;"></div>
+        <div class="skeleton" style="height: 300px;"></div>
+        <div class="skeleton" style="height: 300px;"></div>
+        <div class="skeleton" style="height: 300px;"></div>
+      </div>
+    </div>
+  </main>
+  
+  <!-- Toast Container -->
+  <div class="toast-container"></div>
+  
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script>
+    let watchlistData = [];
+    let filteredData = [];
+    
+    // Check authentication
+    if (!AppState.user) {
+      window.location.href = '/login.html';
+    }
+    
+    // Load watchlist
+    async function loadWatchlist() {
+      try {
+        const data = await ApiService.getWatchlist();
+        watchlistData = data.watchlist || [];
+        filteredData = [...watchlistData];
+        renderWatchlist();
+      } catch (error) {
+        console.error('Failed to load watchlist:', error);
+        showToast('Failed to load watchlist', 'error');
+      }
+    }
+    
+    // Render watchlist
+    function renderWatchlist() {
+      const container = document.getElementById('watchlist-content');
+      
+      if (filteredData.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">
+              <i class="fas fa-bookmark"></i>
+            </div>
+            <h3 class="empty-state-title">Your watchlist is empty</h3>
+            <p class="empty-state-description">Add movies and shows you want to watch later</p>
+            <a href="/" class="btn btn-primary mt-lg">Browse Content</a>
+          </div>
+        `;
+        return;
+      }
+      
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      
+      filteredData.forEach(content => {
+        const item = document.createElement('div');
+        item.className = 'content-item';
+        
+        const card = createContentCard(content);
+        
+        // Add remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        removeBtn.onclick = (e) => {
+          e.stopPropagation();
+          removeFromWatchlist(content.id);
+        };
+        
+        item.appendChild(card);
+        item.appendChild(removeBtn);
+        grid.appendChild(item);
+      });
+      
+      container.innerHTML = '';
+      container.appendChild(grid);
+    }
+    
+    // Remove from watchlist
+    async function removeFromWatchlist(contentId) {
+      if (!confirm('Remove from watchlist?')) return;
+      
+      try {
+        // In a real app, this would call the API
+        watchlistData = watchlistData.filter(item => item.id !== contentId);
+        filteredData = filteredData.filter(item => item.id !== contentId);
+        renderWatchlist();
+        showToast('Removed from watchlist', 'success');
+      } catch (error) {
+        showToast('Failed to remove from watchlist', 'error');
+      }
+    }
+    
+    // Clear watchlist
+    async function clearWatchlist() {
+      if (!confirm('Are you sure you want to clear your entire watchlist?')) return;
+      
+      try {
+        // In a real app, this would call the API
+        watchlistData = [];
+        filteredData = [];
+        renderWatchlist();
+        showToast('Watchlist cleared', 'success');
+      } catch (error) {
+        showToast('Failed to clear watchlist', 'error');
+      }
+    }
+    
+    // Filter handlers
+    document.getElementById('filter-type').addEventListener('change', (e) => {
+      const type = e.target.value;
+      if (type === 'all') {
+        filteredData = [...watchlistData];
+      } else {
+        filteredData = watchlistData.filter(item => item.content_type === type);
+      }
+      renderWatchlist();
+    });
+    
+    document.getElementById('sort-by').addEventListener('change', (e) => {
+      const sortBy = e.target.value;
+      
+      switch (sortBy) {
+        case 'title':
+          filteredData.sort((a, b) => a.title.localeCompare(b.title));
+          break;
+        case 'rating':
+          filteredData.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          break;
+        case 'release':
+          filteredData.sort((a, b) => {
+            const dateA = a.release_date ? new Date(a.release_date) : new Date(0);
+            const dateB = b.release_date ? new Date(b.release_date) : new Date(0);
+            return dateB - dateA;
+          });
+          break;
+        case 'added':
+        default:
+          // Assume original order is by recently added
+          filteredData = [...watchlistData];
+      }
+      
+      renderWatchlist();
+    });
+    
+    // Initialize
+    updateAuthUI();
+    loadWatchlist();
+  </script>
+</body>
+</html>
