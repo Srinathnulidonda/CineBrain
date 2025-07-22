@@ -14,24 +14,70 @@ const AppState = {
   favorites: [],
   loading: false,
   cache: new Map(),
+  authInitialized: false // Add this flag
 };
 
-// Token management (no localStorage)
+// Token management (using sessionStorage for persistence)
 const TokenManager = {
   set(token) {
     AppState.token = token;
+    // Also store in sessionStorage for persistence
+    if (token) {
+      sessionStorage.setItem('cinescope_token', token);
+    }
   },
   get() {
+    // Try to get from memory first, then sessionStorage
+    if (!AppState.token) {
+      AppState.token = sessionStorage.getItem('cinescope_token');
+    }
     return AppState.token;
   },
   remove() {
     AppState.token = null;
+    sessionStorage.removeItem('cinescope_token');
+    sessionStorage.removeItem('cinescope_user');
   },
   getHeaders() {
     const token = this.get();
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   }
 };
+
+// Restore authentication state from sessionStorage
+function initializeAuth() {
+  if (AppState.authInitialized) return true;
+  
+  const token = sessionStorage.getItem('cinescope_token');
+  const userStr = sessionStorage.getItem('cinescope_user');
+  
+  if (token && userStr) {
+    try {
+      AppState.token = token;
+      AppState.user = JSON.parse(userStr);
+      AppState.authInitialized = true;
+      updateAuthUI();
+      return true;
+    } catch (error) {
+      console.error('Failed to restore auth state:', error);
+      TokenManager.remove();
+      return false;
+    }
+  }
+  
+  AppState.authInitialized = true;
+  return false;
+}
+
+// Check if user is authenticated
+function isAuthenticated() {
+  return !!AppState.user && !!TokenManager.get();
+}
+
+// Check if user is admin
+function isAdmin() {
+  return isAuthenticated() && AppState.user?.is_admin === true;
+}
 
 // API Service
 const ApiService = {
@@ -74,13 +120,11 @@ const ApiService = {
     });
     
     if (data.token) {
+      // Store auth state
       TokenManager.set(data.token);
       AppState.user = data.user;
-      // Store auth state in sessionStorage temporarily for page navigation
-      sessionStorage.setItem('cinescope_auth', JSON.stringify({
-        token: data.token,
-        user: data.user
-      }));
+      sessionStorage.setItem('cinescope_user', JSON.stringify(data.user));
+      AppState.authInitialized = true;
     }
     
     return data;
@@ -93,13 +137,11 @@ const ApiService = {
     });
     
     if (data.token) {
+      // Store auth state
       TokenManager.set(data.token);
       AppState.user = data.user;
-      // Store auth state in sessionStorage temporarily for page navigation
-      sessionStorage.setItem('cinescope_auth', JSON.stringify({
-        token: data.token,
-        user: data.user
-      }));
+      sessionStorage.setItem('cinescope_user', JSON.stringify(data.user));
+      AppState.authInitialized = true;
     }
     
     return data;
@@ -403,7 +445,7 @@ function logout() {
   AppState.user = null;
   AppState.watchlist = [];
   AppState.favorites = [];
-  sessionStorage.removeItem('cinescope_auth');
+  AppState.authInitialized = false;
   updateAuthUI();
   showToast('Logged out successfully', 'success');
   
@@ -413,28 +455,9 @@ function logout() {
   }
 }
 
-// Restore authentication state from sessionStorage
-function restoreAuthState() {
-  const authData = sessionStorage.getItem('cinescope_auth');
-  if (authData) {
-    try {
-      const { token, user } = JSON.parse(authData);
-      TokenManager.set(token);
-      AppState.user = user;
-      updateAuthUI();
-      return true;
-    } catch (error) {
-      console.error('Failed to restore auth state:', error);
-      sessionStorage.removeItem('cinescope_auth');
-      return false;
-    }
-  }
-  return false;
-}
-
 // User Interaction Functions
 async function addToWatchlist(contentId) {
-  if (!AppState.user) {
+  if (!isAuthenticated()) {
     showToast('Please login to add to watchlist', 'info');
     window.location.href = '/login';
     return;
@@ -449,7 +472,7 @@ async function addToWatchlist(contentId) {
 }
 
 async function addToFavorites(contentId) {
-  if (!AppState.user) {
+  if (!isAuthenticated()) {
     showToast('Please login to add to favorites', 'info');
     window.location.href = '/login';
     return;
@@ -760,14 +783,33 @@ function renderDetailsPage(content) {
   setupLazyLoading();
 }
 
-async function initDashboard() {
-  // Check authentication before initializing
-  if (!AppState.user) {
+// Protected Page Check Function
+function checkProtectedPage(requiredAuth = 'user') {
+  // Initialize auth first
+  initializeAuth();
+  
+  // Check authentication
+  if (!isAuthenticated()) {
+    console.log('Not authenticated, redirecting to login');
     window.location.href = '/login';
-    return;
+    return false;
   }
   
+  // Check admin requirement
+  if (requiredAuth === 'admin' && !isAdmin()) {
+    console.log('Not an admin, redirecting to home');
+    window.location.href = '/';
+    return false;
+  }
+  
+  return true;
+}
+
+async function initDashboard() {
+  if (!checkProtectedPage('user')) return;
+  
   // Dashboard-specific initialization handled in dashboard.html
+  console.log('Dashboard initialized for user:', AppState.user);
 }
 
 async function initCategoryPage() {
@@ -822,11 +864,7 @@ async function initLanguagePage() {
 }
 
 async function initWatchlistPage() {
-  // Check authentication before initializing
-  if (!AppState.user) {
-    window.location.href = '/login';
-    return;
-  }
+  if (!checkProtectedPage('user')) return;
   
   const container = document.getElementById('watchlist-content');
   if (!container) return;
@@ -840,11 +878,7 @@ async function initWatchlistPage() {
 }
 
 async function initFavoritesPage() {
-  // Check authentication before initializing
-  if (!AppState.user) {
-    window.location.href = '/login';
-    return;
-  }
+  if (!checkProtectedPage('user')) return;
   
   const container = document.getElementById('favorites-content');
   if (!container) return;
@@ -857,24 +891,38 @@ async function initFavoritesPage() {
   }
 }
 
+async function initProfilePage() {
+  if (!checkProtectedPage('user')) return;
+  
+  // Profile page specific initialization handled in profile.html
+  console.log('Profile initialized for user:', AppState.user);
+}
+
 async function initLoginPage() {
-  // Login page specific initialization is handled in the login.html script
+  // Initialize auth to check if already logged in
+  initializeAuth();
+  
+  if (isAuthenticated()) {
+    // Already logged in, redirect
+    if (isAdmin()) {
+      window.location.href = '/admin/dashboard';
+    } else {
+      window.location.href = '/dashboard';
+    }
+  }
 }
 
 async function initAdminDashboard() {
-  // Check admin authentication before initializing
-  if (!AppState.user || !AppState.user.is_admin) {
-    window.location.href = '/';
-    return;
-  }
+  if (!checkProtectedPage('admin')) return;
   
-  // Admin dashboard specific initialization is handled in the admin pages
+  // Admin dashboard specific initialization handled in admin pages
+  console.log('Admin dashboard initialized for admin:', AppState.user);
 }
 
 // Initialize app on page load
 document.addEventListener('DOMContentLoaded', () => {
-  // Restore authentication state FIRST
-  restoreAuthState();
+  // Initialize authentication FIRST
+  initializeAuth();
   
   // Update auth UI
   updateAuthUI();
@@ -911,6 +959,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initLoginPage();
   } else if (currentPath === '/dashboard') {
     initDashboard();
+  } else if (currentPath === '/profile') {
+    initProfilePage();
   } else if (currentPath.includes('/categories/')) {
     initCategoryPage();
   } else if (currentPath.includes('/languages/')) {
@@ -921,6 +971,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initFavoritesPage();
   } else if (currentPath === '/admin/dashboard') {
     initAdminDashboard();
+  } else if (currentPath.includes('/admin/')) {
+    checkProtectedPage('admin');
   }
 });
 
@@ -944,4 +996,7 @@ window.updateAuthUI = updateAuthUI;
 window.createContentCard = createContentCard;
 window.renderContentGrid = renderContentGrid;
 window.setupLazyLoading = setupLazyLoading;
-window.restoreAuthState = restoreAuthState;
+window.initializeAuth = initializeAuth;
+window.isAuthenticated = isAuthenticated;
+window.isAdmin = isAdmin;
+window.checkProtectedPage = checkProtectedPage;
