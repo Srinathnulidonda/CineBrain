@@ -1,181 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trending - CineScope</title>
-  
-  <!-- CSS -->
-  <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="/css/components.css">
-  <link rel="stylesheet" href="/css/responsive.css">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
+    <title>Trending Now | CineScope</title>
 </head>
 <body>
-  <!-- Loading Overlay -->
-  <div class="loading-overlay" style="display: none;">
-    <div class="spinner spinner-lg"></div>
-  </div>
-  
-  <!-- Navigation -->
-  <nav class="navbar">
-    <div class="container navbar-content">
-      <a href="/" class="navbar-brand gradient-text">CineScope</a>
-      
-      <button class="mobile-menu-toggle md:hidden">
-        <i class="fas fa-bars"></i>
-      </button>
-      
-      <div class="navbar-menu hidden md:flex">
-        <a href="/" class="navbar-link">Home</a>
-        <a href="/categories/movies.html" class="navbar-link">Movies</a>
-        <a href="/categories/tv-shows.html" class="navbar-link">TV Shows</a>
-        <a href="/categories/anime.html" class="navbar-link">Anime</a>
-        
-        <div class="search-container">
-          <input type="text" class="search-input" placeholder="Search...">
-          <i class="fas fa-search search-icon"></i>
-          <div class="search-suggestions" style="display: none;"></div>
+    <div data-include="header"></div>
+    
+    <main class="container py-8 pt-24">
+        <section class="category-header mb-8">
+            <h1 class="text-4xl font-bold mb-4">
+                <i class="fas fa-fire text-red-500 mr-3"></i>
+                Trending <span class="text-gradient">Now</span>
+            </h1>
+            <p class="text-gray-400 text-lg">Discover what's hot and popular right now</p>
+        </section>
+
+        <div class="category-filters mb-8">
+            <div class="flex flex-wrap gap-4">
+                <select id="contentType" class="filter-select" onchange="loadTrendingContent()">
+                    <option value="all">All Content</option>
+                    <option value="movie">Movies</option>
+                    <option value="tv">TV Shows</option>
+                </select>
+                <select id="timeWindow" class="filter-select" onchange="loadTrendingContent()">
+                    <option value="day">Today</option>
+                    <option value="week">This Week</option>
+                </select>
+            </div>
         </div>
-        
-        <div class="auth-buttons flex gap-sm">
-          <a href="/login.html" class="btn btn-ghost btn-sm">Login</a>
-          <a href="/login.html#register" class="btn btn-primary btn-sm">Sign Up</a>
+
+        <div id="trendingContent">
+            <div class="loading"><div class="spinner"></div></div>
         </div>
-        
-        <div class="user-menu" style="display: none;"></div>
-      </div>
-    </div>
-  </nav>
-  
-  <!-- Page Header -->
-  <header class="bg-gradient-primary p-xl mb-xl" style="margin-top: 60px;">
-    <div class="container">
-      <h1 class="text-white mb-sm">Trending Now</h1>
-      <p class="text-white opacity-80">Discover what everyone's watching</p>
-    </div>
-  </header>
-  
-  <!-- Filters -->
-  <div class="container mb-lg">
-    <div class="filter-container">
-      <select class="form-select filter-select" id="content-type-filter">
-        <option value="all">All Content</option>
-        <option value="movie">Movies</option>
-        <option value="tv">TV Shows</option>
-        <option value="anime">Anime</option>
-      </select>
-      
-      <select class="form-select filter-select" id="time-filter">
-        <option value="day">Today</option>
-        <option value="week">This Week</option>
-      </select>
-      
-      <select class="form-select filter-select" id="sort-filter">
-        <option value="popularity">Most Popular</option>
-        <option value="rating">Highest Rated</option>
-        <option value="recent">Most Recent</option>
-      </select>
-    </div>
-  </div>
-  
-  <!-- Main Content -->
-  <main class="container">
-    <div id="category-content">
-      <!-- Loading skeleton -->
-      <div class="grid">
-        <div class="skeleton" style="height: 300px;"></div>
-        <div class="skeleton" style="height: 300px;"></div>
-        <div class="skeleton" style="height: 300px;"></div>
-        <div class="skeleton" style="height: 300px;"></div>
-        <div class="skeleton" style="height: 300px;"></div>
-        <div class="skeleton" style="height: 300px;"></div>
-      </div>
-    </div>
-    
-    <!-- Load More -->
-    <div class="text-center mt-xl" id="load-more-container" style="display: none;">
-      <button class="btn btn-secondary" onclick="loadMore()">
-        <i class="fas fa-plus mr-sm"></i> Load More
-      </button>
-    </div>
-  </main>
-  
-  <!-- Toast Container -->
-  <div class="toast-container"></div>
-  
-  <!-- Scripts -->
-  <script src="/js/main.js"></script>
-  <script>
-    let currentPage = 1;
-    let currentFilters = {
-      type: 'all',
-      time: 'day',
-      sort: 'popularity'
-    };
-    
-    // Filter handlers
-    document.getElementById('content-type-filter').addEventListener('change', (e) => {
-      currentFilters.type = e.target.value;
-      currentPage = 1;
-      loadContent();
-    });
-    
-    document.getElementById('time-filter').addEventListener('change', (e) => {
-      currentFilters.time = e.target.value;
-      currentPage = 1;
-      loadContent();
-    });
-    
-    document.getElementById('sort-filter').addEventListener('change', (e) => {
-      currentFilters.sort = e.target.value;
-      currentPage = 1;
-      loadContent();
-    });
-    
-    // Load content based on filters
-    async function loadContent() {
-      const container = document.getElementById('category-content');
-      
-      if (currentPage === 1) {
-        container.innerHTML = `
-          <div class="grid">
-            ${Array(6).fill('<div class="skeleton" style="height: 300px;"></div>').join('')}
-          </div>
-        `;
-      }
-      
-      try {
-        const data = await ApiService.getTrending(currentFilters.type, 20);
-        
-        if (currentPage === 1) {
-          renderContentGrid(container, data.recommendations);
-        } else {
-          // Append to existing content
-          const grid = container.querySelector('.grid');
-          data.recommendations.forEach(content => {
-            grid.appendChild(createContentCard(content));
-          });
+    </main>
+
+    <div data-include="footer"></div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        async function loadTrendingContent() {
+            const container = document.getElementById('trendingContent');
+            const contentType = document.getElementById('contentType').value;
+            
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            try {
+                const response = await APIService.getTrending(contentType, 50);
+                const content = response.recommendations || [];
+                container.innerHTML = content.length > 0 ? 
+                    `<div class="content-grid">${content.map(item => app.createContentCard(item)).join('')}</div>` :
+                    '<p class="text-center text-gray-400 py-8">No trending content found</p>';
+            } catch (error) {
+                container.innerHTML = '<p class="text-center text-red-400 py-8">Failed to load trending content</p>';
+            }
         }
-        
-        // Show/hide load more button
-        const loadMoreContainer = document.getElementById('load-more-container');
-        loadMoreContainer.style.display = data.recommendations.length === 20 ? 'block' : 'none';
-        
-      } catch (error) {
-        console.error('Failed to load content:', error);
-      }
-    }
-    
-    function loadMore() {
-      currentPage++;
-      loadContent();
-    }
-    
-    // Initialize
-    loadContent();
-  </script>
+
+        document.addEventListener('DOMContentLoaded', loadTrendingContent);
+    </script>
 </body>
 </html>

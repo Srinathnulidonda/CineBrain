@@ -1,332 +1,310 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - CineScope</title>
-  
-  <!-- CSS -->
-  <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="/css/components.css">
-  <link rel="stylesheet" href="/css/responsive.css">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  
-  <style>
-    .dashboard-header {
-      background: var(--gradient-primary);
-      padding: var(--space-2xl) 0;
-      margin-bottom: var(--space-2xl);
-    }
-    
-    .quick-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: var(--space-lg);
-      margin-bottom: var(--space-2xl);
-    }
-    
-    .stat-card {
-      background: var(--bg-card);
-      padding: var(--space-lg);
-      border-radius: var(--radius-lg);
-      text-align: center;
-      transition: all var(--transition-base);
-    }
-    
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-    }
-    
-    .stat-icon {
-      font-size: 2rem;
-      margin-bottom: var(--space-sm);
-      color: var(--primary-blue);
-    }
-    
-    .stat-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: var(--space-xs);
-    }
-    
-    .stat-label {
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-    }
-  </style>
+    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
 </head>
 <body>
-  <!-- Loading Overlay -->
-  <div class="loading-overlay" style="display: none;">
-    <div class="spinner spinner-lg"></div>
-  </div>
-  
-  <!-- Navigation -->
-  <nav class="navbar">
-    <div class="container navbar-content">
-      <a href="/" class="navbar-brand gradient-text">CineScope</a>
-      
-      <button class="mobile-menu-toggle md:hidden">
-        <i class="fas fa-bars"></i>
-      </button>
-      
-      <div class="navbar-menu hidden md:flex">
-        <a href="/" class="navbar-link">Home</a>
-        <a href="/dashboard.html" class="navbar-link active">Dashboard</a>
-        <a href="/user/watchlist.html" class="navbar-link">Watchlist</a>
-        <a href="/user/favorites.html" class="navbar-link">Favorites</a>
-        
-        <div class="search-container">
-          <input type="text" class="search-input" placeholder="Search...">
-          <i class="fas fa-search search-icon"></i>
-          <div class="search-suggestions" style="display: none;"></div>
-        </div>
-        
-        <div class="user-menu"></div>
-      </div>
-    </div>
-  </nav>
-  
-  <!-- Dashboard Header -->
-  <div class="dashboard-header">
-    <div class="container">
-      <h1 class="text-white mb-sm">Welcome back, <span id="username">User</span>!</h1>
-      <p class="text-white opacity-80">Here's what we've prepared for you today</p>
-    </div>
-  </div>
-  
-  <!-- Main Content -->
-  <main class="container">
-    <!-- Quick Stats -->
-    <div class="quick-stats">
-      <div class="stat-card">
-        <i class="fas fa-film stat-icon"></i>
-        <div class="stat-value" id="watchlist-count">0</div>
-        <div class="stat-label">In Watchlist</div>
-      </div>
-      
-      <div class="stat-card">
-        <i class="fas fa-heart stat-icon"></i>
-        <div class="stat-value" id="favorites-count">0</div>
-        <div class="stat-label">Favorites</div>
-      </div>
-      
-      <div class="stat-card">
-        <i class="fas fa-clock stat-icon"></i>
-        <div class="stat-value" id="watch-time">0h</div>
-        <div class="stat-label">Watch Time</div>
-      </div>
-      
-      <div class="stat-card">
-        <i class="fas fa-star stat-icon"></i>
-        <div class="stat-value" id="ratings-count">0</div>
-        <div class="stat-label">Ratings Given</div>
-      </div>
-    </div>
-    
-    <!-- Continue Watching -->
-    <section class="mb-2xl" id="continue-watching-section" style="display: none;">
-      <h2 class="mb-lg">Continue Watching</h2>
-      <div id="continue-watching" class="carousel-container"></div>
-    </section>
-    
-    <!-- Personalized Recommendations -->
-    <section class="mb-2xl">
-      <h2 class="mb-lg">Recommended For You</h2>
-      <div id="personalized-recommendations" class="grid">
-        <div class="skeleton" style="height: 300px;"></div>
-        <div class="skeleton" style="height: 300px;"></div>
-        <div class="skeleton" style="height: 300px;"></div>
-        <div class="skeleton" style="height: 300px;"></div>
-      </div>
-    </section>
-    
-    <!-- Based on Recent Activity -->
-    <section class="mb-2xl" id="recent-activity-section">
-      <h2 class="mb-lg">Based on Your Recent Activity</h2>
-      <div id="recent-recommendations" class="grid"></div>
-    </section>
-    
-    <!-- Genre Recommendations -->
-    <section class="mb-2xl" id="genre-recommendations-section">
-      <h2 class="mb-lg">Your Favorite Genres</h2>
-      <div class="tabs mb-lg" id="genre-tabs"></div>
-      <div id="genre-content" class="grid"></div>
-    </section>
-    
-    <!-- Preference Tuning -->
-    <section class="card p-xl mb-2xl">
-      <h3 class="mb-md">Fine-tune Your Recommendations</h3>
-      <p class="text-secondary mb-lg">Help us improve your recommendations by updating your preferences</p>
-      
-      <div class="grid gap-lg" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
-        <div>
-          <h4 class="mb-sm">Preferred Languages</h4>
-          <div class="flex flex-wrap gap-sm" id="language-preferences"></div>
-        </div>
-        
-        <div>
-          <h4 class="mb-sm">Favorite Genres</h4>
-          <div class="flex flex-wrap gap-sm" id="genre-preferences"></div>
-        </div>
-      </div>
-      
-      <button class="btn btn-primary mt-lg" onclick="savePreferences()">
-        <i class="fas fa-save mr-sm"></i> Save Preferences
-      </button>
-    </section>
-  </main>
-  
-  <!-- Toast Container -->
-  <div class="toast-container"></div>
-  
-  <!-- Scripts -->
- <!-- Update the script section in dashboard.html -->
-<script src="/js/main.js"></script>
-<script>
-    // Wait for auth state to be restored
-    async function initializeDashboard() {
-        // Give time for main.js to restore auth state
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Check authentication
-        if (!AppState.user) {
-            console.log('No user found, redirecting to login');
-            window.location.href = '/login';
-            return;
-        }
-        
-        // Update username
-        document.getElementById('username').textContent = AppState.user.username;
-        
-        // Load user stats (mock data for now)
-        updateStats();
-        
-        // Load personalized recommendations
-        try {
-            const recommendations = await ApiService.getPersonalizedRecommendations();
-            const container = document.getElementById('personalized-recommendations');
-            renderContentGrid(container, recommendations.recommendations);
-            
-            // Load genre-based recommendations
-            loadGenreRecommendations();
-            
-            // Load preference options
-            loadPreferences();
-            
-        } catch (error) {
-            console.error('Dashboard initialization error:', error);
-        }
-    }
-    
-    function updateStats() {
-        // These would normally come from the API
-        document.getElementById('watchlist-count').textContent = AppState.watchlist.length || '12';
-        document.getElementById('favorites-count').textContent = AppState.favorites.length || '8';
-        document.getElementById('watch-time').textContent = '24h';
-        document.getElementById('ratings-count').textContent = '15';
-    }
-    
-    async function loadGenreRecommendations() {
-        const genres = AppState.user.preferred_genres || ['action', 'drama'];
-        const tabsContainer = document.getElementById('genre-tabs');
-        const contentContainer = document.getElementById('genre-content');
-        
-        // Create tabs
-        tabsContainer.innerHTML = genres.map((genre, index) => `
-            <div class="tab ${index === 0 ? 'active' : ''}" onclick="loadGenreContent('${genre}', this)">
-                ${genre.charAt(0).toUpperCase() + genre.slice(1)}
+    <!-- Header -->
+    <div data-include="header"></div>
+
+    <!-- Main Content -->
+    <main class="container py-8 pt-24">
+        <!-- Welcome Section -->
+        <section class="mb-12">
+            <div class="dashboard-welcome">
+                <h1 class="text-4xl font-bold mb-4">
+                    Welcome back, <span id="userName" class="text-gradient">User</span>!
+                </h1>
+                <p class="text-gray-400 text-lg">Continue your entertainment journey with personalized recommendations</p>
             </div>
-        `).join('');
-        
-        // Load first genre
-        if (genres.length > 0) {
-            loadGenreContent(genres[0]);
-        }
-    }
-    
-    async function loadGenreContent(genre, tabElement) {
-        // Update active tab
-        if (tabElement) {
-            document.querySelectorAll('#genre-tabs .tab').forEach(tab => tab.classList.remove('active'));
-            tabElement.classList.add('active');
-        }
-        
-        const contentContainer = document.getElementById('genre-content');
-        contentContainer.innerHTML = '<div class="spinner mx-auto"></div>';
-        
-        try {
-            const data = await ApiService.getGenreRecommendations(genre);
-            renderContentGrid(contentContainer, data.recommendations);
-        } catch (error) {
-            contentContainer.innerHTML = '<p class="text-center text-secondary">Failed to load recommendations</p>';
-        }
-    }
-    
-    function loadPreferences() {
-        const languages = ['english', 'hindi', 'telugu', 'tamil', 'kannada', 'malayalam'];
-        const genres = ['action', 'adventure', 'comedy', 'drama', 'horror', 'romance', 'sci-fi', 'thriller'];
-        
-        const userLanguages = AppState.user.preferred_languages || [];
-        const userGenres = AppState.user.preferred_genres || [];
-        
-        // Language preferences
-        document.getElementById('language-preferences').innerHTML = languages.map(lang => `
-            <label class="tag ${userLanguages.includes(lang) ? 'tag-primary' : ''}" style="cursor: pointer;">
-                <input type="checkbox" name="language" value="${lang}" ${userLanguages.includes(lang) ? 'checked' : ''} style="display: none;">
-                ${lang.charAt(0).toUpperCase() + lang.slice(1)}
-            </label>
-        `).join('');
-        
-        // Genre preferences
-        document.getElementById('genre-preferences').innerHTML = genres.map(genre => `
-            <label class="tag ${userGenres.includes(genre) ? 'tag-primary' : ''}" style="cursor: pointer;">
-                <input type="checkbox" name="genre" value="${genre}" ${userGenres.includes(genre) ? 'checked' : ''} style="display: none;">
-                ${genre.charAt(0).toUpperCase() + genre.slice(1)}
-            </label>
-        `).join('');
-        
-        // Add click handlers
-        document.querySelectorAll('.tag input').forEach(input => {
-            input.addEventListener('change', (e) => {
-                const label = e.target.parentElement;
-                if (e.target.checked) {
-                    label.classList.add('tag-primary');
-                } else {
-                    label.classList.remove('tag-primary');
+        </section>
+
+        <!-- Dashboard Stats -->
+        <section class="dashboard-stats mb-12">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-bookmark"></i>
+                </div>
+                <div class="stat-number" id="watchlistCount">0</div>
+                <div class="stat-label">Watchlist</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <div class="stat-number" id="favoritesCount">0</div>
+                <div class="stat-label">Favorites</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-number" id="recentViewsCount">0</div>
+                <div class="stat-label">Recent Views</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="stat-number" id="ratingsCount">0</div>
+                <div class="stat-label">Ratings Given</div>
+            </div>
+        </section>
+
+        <!-- Continue Watching -->
+        <section class="mb-12">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="section-title">
+                    <i class="fas fa-play-circle text-green-500"></i>
+                    Continue Watching
+                </h2>
+            </div>
+            <div id="continueWatching">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </section>
+
+        <!-- Recommended For You -->
+        <section class="mb-12">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="section-title">
+                    <i class="fas fa-magic text-purple-500"></i>
+                    Recommended For You
+                </h2>
+                <button class="btn btn-ghost btn-sm" onclick="refreshRecommendations()">
+                    <i class="fas fa-sync-alt mr-2"></i>
+                    Refresh
+                </button>
+            </div>
+            <div id="personalizedRecommendations">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </section>
+
+        <!-- Based on Your Activity -->
+        <section class="mb-12">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="section-title">
+                    <i class="fas fa-history text-blue-500"></i>
+                    Based on Your Activity
+                </h2>
+            </div>
+            <div id="activityBased">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </section>
+
+        <!-- Your Preferences -->
+        <section class="mb-12">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="section-title">
+                    <i class="fas fa-user-cog text-indigo-500"></i>
+                    Your Preferences
+                </h2>
+                <a href="/profile" class="btn btn-ghost btn-sm">
+                    <i class="fas fa-edit mr-2"></i>
+                    Edit Preferences
+                </a>
+            </div>
+            <div class="preferences-display">
+                <div class="preference-group">
+                    <h3 class="preference-title">Languages</h3>
+                    <div id="userLanguages" class="preference-tags"></div>
+                </div>
+                <div class="preference-group">
+                    <h3 class="preference-title">Genres</h3>
+                    <div id="userGenres" class="preference-tags"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Access -->
+        <section class="mb-12">
+            <h2 class="section-title mb-6">
+                <i class="fas fa-bolt text-yellow-500"></i>
+                Quick Access
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <a href="/user/watchlist" class="quick-access-card">
+                    <i class="fas fa-bookmark text-primary-500"></i>
+                    <span>My Watchlist</span>
+                </a>
+                <a href="/user/favorites" class="quick-access-card">
+                    <i class="fas fa-heart text-red-500"></i>
+                    <span>My Favorites</span>
+                </a>
+                <a href="/categories/trending" class="quick-access-card">
+                    <i class="fas fa-fire text-orange-500"></i>
+                    <span>Trending</span>
+                </a>
+                <a href="/categories/new-releases" class="quick-access-card">
+                    <i class="fas fa-clock text-green-500"></i>
+                    <span>New Releases</span>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <div data-include="footer"></div>
+
+    <!-- Scripts -->
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/main.js"></script>
+
+    <script>
+        class DashboardManager {
+            constructor() {
+                this.init();
+            }
+
+            async init() {
+                if (!AuthManager.requireAuth()) return;
+
+                await this.loadUserData();
+                await this.loadDashboardContent();
+            }
+
+            async loadUserData() {
+                const user = AuthManager.currentUser;
+                if (!user) return;
+
+                document.getElementById('userName').textContent = user.username;
+
+                // Display user preferences
+                if (user.preferred_languages) {
+                    this.displayPreferences('userLanguages', user.preferred_languages);
                 }
-            });
+                if (user.preferred_genres) {
+                    this.displayPreferences('userGenres', user.preferred_genres);
+                }
+
+                // Load user stats
+                await this.loadUserStats();
+            }
+
+            displayPreferences(containerId, preferences) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = preferences.map(pref => 
+                    `<span class="preference-tag">${pref}</span>`
+                ).join('');
+            }
+
+            async loadUserStats() {
+                try {
+                    const [watchlist, favorites] = await Promise.all([
+                        APIService.getWatchlist(),
+                        APIService.getFavorites()
+                    ]);
+
+                    document.getElementById('watchlistCount').textContent = watchlist.watchlist?.length || 0;
+                    document.getElementById('favoritesCount').textContent = favorites.favorites?.length || 0;
+                    // Note: Recent views and ratings would need additional API endpoints
+                } catch (error) {
+                    console.error('Error loading user stats:', error);
+                }
+            }
+
+            async loadDashboardContent() {
+                const sections = [
+                    { id: 'continueWatching', loader: this.loadContinueWatching },
+                    { id: 'personalizedRecommendations', loader: this.loadPersonalizedRecommendations },
+                    { id: 'activityBased', loader: this.loadActivityBased }
+                ];
+
+                for (const section of sections) {
+                    try {
+                        await section.loader.call(this, section.id);
+                    } catch (error) {
+                        console.error(`Error loading ${section.id}:`, error);
+                        document.getElementById(section.id).innerHTML = this.createErrorState();
+                    }
+                }
+            }
+
+            async loadContinueWatching(containerId) {
+                // For now, show recent watchlist items
+                try {
+                    const response = await APIService.getWatchlist();
+                    const content = response.watchlist?.slice(0, 10) || [];
+                    
+                    document.getElementById(containerId).innerHTML = content.length > 0 
+                        ? app.createContentGrid(content)
+                        : this.createEmptyState('No items to continue watching');
+                } catch (error) {
+                    document.getElementById(containerId).innerHTML = this.createErrorState();
+                }
+            }
+
+            async loadPersonalizedRecommendations(containerId) {
+                try {
+                    const response = await APIService.getPersonalizedRecommendations(20);
+                    const content = response.recommendations || [];
+                    
+                    document.getElementById(containerId).innerHTML = content.length > 0 
+                        ? app.createContentGrid(content)
+                        : this.createEmptyState('Building your recommendations...');
+                } catch (error) {
+                    // Fallback to trending
+                    const response = await APIService.getTrending();
+                    const content = response.recommendations || [];
+                    document.getElementById(containerId).innerHTML = app.createContentGrid(content);
+                }
+            }
+
+            async loadActivityBased(containerId) {
+                try {
+                    // Mix of different recommendation types based on user activity
+                    const [trending, newReleases] = await Promise.all([
+                        APIService.getTrending('all', 10),
+                        APIService.getNewReleases(null, 'movie', 10)
+                    ]);
+
+                    const content = [
+                        ...(trending.recommendations || []),
+                        ...(newReleases.recommendations || [])
+                    ].slice(0, 20);
+
+                    document.getElementById(containerId).innerHTML = content.length > 0 
+                        ? app.createContentGrid(content)
+                        : this.createEmptyState('No activity-based recommendations');
+                } catch (error) {
+                    document.getElementById(containerId).innerHTML = this.createErrorState();
+                }
+            }
+
+            createEmptyState(message) {
+                return `
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fas fa-inbox text-4xl mb-4"></i>
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+
+            createErrorState() {
+                return `
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p>Failed to load content</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function refreshRecommendations() {
+            const container = document.getElementById('personalizedRecommendations');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            const dashboard = new DashboardManager();
+            await dashboard.loadPersonalizedRecommendations('personalizedRecommendations');
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            new DashboardManager();
         });
-    }
-    
-    async function savePreferences() {
-        const languages = Array.from(document.querySelectorAll('input[name="language"]:checked')).map(cb => cb.value);
-        const genres = Array.from(document.querySelectorAll('input[name="genre"]:checked')).map(cb => cb.value);
-        
-        // Update local state
-        AppState.user.preferred_languages = languages;
-        AppState.user.preferred_genres = genres;
-        
-        // TODO: Send to API
-        showToast('Preferences saved successfully!', 'success');
-        
-        // Reload genre recommendations
-        loadGenreRecommendations();
-    }
-    
-    // Make functions available globally
-    window.loadGenreContent = loadGenreContent;
-    window.savePreferences = savePreferences;
-    
-    // Initialize dashboard after DOM is loaded
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeDashboard);
-    } else {
-        initializeDashboard();
-    }
-</script>
+    </script>
 </body>
 </html>

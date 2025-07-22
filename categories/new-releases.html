@@ -1,282 +1,164 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Releases - CineScope</title>
-  
-  <!-- CSS -->
-  <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="/css/components.css">
-  <link rel="stylesheet" href="/css/responsive.css">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  
-  <style>
-    .release-calendar {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: var(--space-lg);
-      margin-bottom: var(--space-2xl);
-    }
-    
-    .calendar-day {
-      background: var(--bg-card);
-      border-radius: var(--radius-lg);
-      padding: var(--space-lg);
-      border-left: 4px solid var(--primary-blue);
-    }
-    
-    .calendar-day h3 {
-      margin-bottom: var(--space-md);
-      color: var(--primary-blue);
-    }
-    
-    .release-item {
-      display: flex;
-      gap: var(--space-md);
-      padding: var(--space-sm) 0;
-      border-bottom: 1px solid var(--bg-hover);
-    }
-    
-    .release-item:last-child {
-      border-bottom: none;
-    }
-    
-    .release-poster {
-      width: 50px;
-      height: 75px;
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    
-    .release-poster img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-  </style>
+    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
+    <title>New Releases | CineScope</title>
 </head>
 <body>
-  <!-- Navigation -->
-  <nav class="navbar">
-    <div class="container navbar-content">
-      <a href="/" class="navbar-brand gradient-text">CineScope</a>
-      
-      <button class="mobile-menu-toggle md:hidden">
-        <i class="fas fa-bars"></i>
-      </button>
-      
-      <div class="navbar-menu hidden md:flex">
-        <a href="/" class="navbar-link">Home</a>
-        <a href="/categories/movies.html" class="navbar-link">Movies</a>
-        <a href="/categories/tv-shows.html" class="navbar-link">TV Shows</a>
-        <a href="/categories/anime.html" class="navbar-link">Anime</a>
-        
-        <div class="search-container">
-          <input type="text" class="search-input" placeholder="Search...">
-          <i class="fas fa-search search-icon"></i>
-          <div class="search-suggestions" style="display: none;"></div>
-        </div>
-        
-        <div class="auth-buttons flex gap-sm">
-          <a href="/login.html" class="btn btn-ghost btn-sm">Login</a>
-          <a href="/login.html#register" class="btn btn-primary btn-sm">Sign Up</a>
-        </div>
-        
-        <div class="user-menu" style="display: none;"></div>
-      </div>
-    </div>
-  </nav>
-  
-  <!-- Page Header -->
-  <header class="bg-gradient-primary p-xl mb-xl" style="margin-top: 60px;">
-    <div class="container">
-      <h1 class="text-white mb-sm">
-        <i class="fas fa-calendar-alt mr-sm"></i> New Releases
-      </h1>
-      <p class="text-white opacity-80">Fresh content from the last 60 days</p>
-    </div>
-  </header>
-  
-  <!-- Main Content -->
-  <main class="container">
-    <!-- Quick Filters -->
-    <div class="flex gap-sm mb-xl overflow-x-auto pb-sm">
-      <button class="btn btn-primary btn-sm" onclick="filterByDays(7)">This Week</button>
-      <button class="btn btn-ghost btn-sm" onclick="filterByDays(30)">This Month</button>
-      <button class="btn btn-ghost btn-sm" onclick="filterByDays(60)">Last 60 Days</button>
-      <button class="btn btn-ghost btn-sm" onclick="showUpcoming()">Upcoming</button>
-    </div>
+    <div data-include="header"></div>
     
-    <!-- Release Calendar (for This Week) -->
-    <section id="release-calendar" class="mb-2xl">
-      <h2 class="mb-lg">This Week's Releases</h2>
-      <div class="release-calendar" id="calendar-container">
-        <!-- Calendar will be populated here -->
-      </div>
-    </section>
-    
-    <!-- All New Releases Grid -->
-    <section>
-      <h2 class="mb-lg">All New Releases</h2>
-      <div class="filter-container mb-lg">
-        <select class="form-select filter-select" id="content-type-filter">
-          <option value="all">All Content</option>
-          <option value="movie">Movies</option>
-          <option value="tv">TV Shows</option>
-          <option value="anime">Anime</option>
-        </select>
-        
-        <select class="form-select filter-select" id="language-filter">
-          <option value="">All Languages</option>
-          <option value="en">English</option>
-          <option value="hi">Hindi</option>
-          <option value="te">Telugu</option>
-          <option value="ta">Tamil</option>
-        </select>
-      </div>
-      
-      <div id="category-content">
-        <div class="grid">
-          <div class="skeleton" style="height: 300px;"></div>
-          <div class="skeleton" style="height: 300px;"></div>
-          <div class="skeleton" style="height: 300px;"></div>
-          <div class="skeleton" style="height: 300px;"></div>
-        </div>
-      </div>
-    </section>
-  </main>
-  
-  <!-- Toast Container -->
-  <div class="toast-container"></div>
-  
-  <!-- Scripts -->
-  <script src="/js/main.js"></script>
-  <script>
-    let currentDays = 7;
-    let currentFilters = {
-      type: 'all',
-      language: ''
-    };
-    
-    // Filter handlers
-    document.getElementById('content-type-filter').addEventListener('change', (e) => {
-      currentFilters.type = e.target.value;
-      loadContent();
-    });
-    
-    document.getElementById('language-filter').addEventListener('change', (e) => {
-      currentFilters.language = e.target.value;
-      loadContent();
-    });
-    
-    // Filter by days
-    function filterByDays(days) {
-      currentDays = days;
-      
-      // Update button states
-      document.querySelectorAll('.btn').forEach(btn => {
-        btn.classList.remove('btn-primary');
-        btn.classList.add('btn-ghost');
-      });
-      event.target.classList.remove('btn-ghost');
-      event.target.classList.add('btn-primary');
-      
-      // Update calendar visibility
-      document.getElementById('release-calendar').style.display = days === 7 ? 'block' : 'none';
-      
-      loadContent();
-    }
-    
-    // Show upcoming releases
-    function showUpcoming() {
-      // Update button states
-      document.querySelectorAll('.btn').forEach(btn => {
-        btn.classList.remove('btn-primary');
-        btn.classList.add('btn-ghost');
-      });
-      event.target.classList.remove('btn-ghost');
-      event.target.classList.add('btn-primary');
-      
-      document.getElementById('release-calendar').style.display = 'none';
-      
-      // Load upcoming content
-      loadUpcoming();
-    }
-    
-    // Load release calendar
-    function loadReleaseCalendar() {
-      const container = document.getElementById('calendar-container');
-      const days = ['Today', 'Tomorrow', 'This Week'];
-      
-      container.innerHTML = days.map(day => `
-        <div class="calendar-day">
-          <h3>${day}</h3>
-          <div class="release-item">
-            <div class="release-poster skeleton"></div>
-            <div class="flex-1">
-              <div class="skeleton" style="height: 20px; width: 70%; margin-bottom: 8px;"></div>
-              <div class="skeleton" style="height: 16px; width: 50%;"></div>
+    <main class="container py-8 pt-24">
+        <section class="category-header mb-8">
+            <h1 class="text-4xl font-bold mb-4">
+                <i class="fas fa-clock text-green-500 mr-3"></i>
+                New <span class="text-gradient">Releases</span>
+            </h1>
+            <p class="text-gray-400 text-lg">Fresh content released in the last 60 days</p>
+        </section>
+
+        <div class="category-filters mb-8">
+            <div class="flex flex-wrap gap-4">
+                <select id="contentType" class="filter-select" onchange="loadNewReleases()">
+                    <option value="movie">Movies</option>
+                    <option value="tv">TV Shows</option>
+                </select>
+                <select id="language" class="filter-select" onchange="loadNewReleases()">
+                    <option value="">All Languages</option>
+                    <option value="english">English</option>
+                    <option value="hindi">Hindi</option>
+                    <option value="telugu">Telugu</option>
+                    <option value="tamil">Tamil</option>
+                    <option value="kannada">Kannada</option>
+                    <option value="malayalam">Malayalam</option>
+                </select>
+                <select id="sortBy" class="filter-select" onchange="loadNewReleases()">
+                    <option value="release_date">Release Date</option>
+                    <option value="rating">Rating</option>
+                    <option value="popularity">Popularity</option>
+                </select>
             </div>
-          </div>
-          <div class="release-item">
-            <div class="release-poster skeleton"></div>
-            <div class="flex-1">
-              <div class="skeleton" style="height: 20px; width: 70%; margin-bottom: 8px;"></div>
-              <div class="skeleton" style="height: 16px; width: 50%;"></div>
-            </div>
-          </div>
         </div>
-      `).join('');
-    }
-    
-    // Load new releases
-    async function loadContent() {
-      const container = document.getElementById('category-content');
-      
-      container.innerHTML = `
-        <div class="grid">
-          ${Array(8).fill('<div class="skeleton" style="height: 300px;"></div>').join('')}
+
+        <div id="newReleasesContent">
+            <div class="loading"><div class="spinner"></div></div>
         </div>
-      `;
-      
-      try {
-        const data = await ApiService.getNewReleases(
-          currentFilters.language || null,
-          currentFilters.type === 'all' ? 'movie' : currentFilters.type,
-          50
-        );
-        
-        renderContentGrid(container, data.recommendations);
-        
-      } catch (error) {
-        console.error('Failed to load new releases:', error);
-        container.innerHTML = '<div class="text-center text-secondary p-xl">Failed to load new releases</div>';
-      }
-    }
-    
-    // Load upcoming releases
-    async function loadUpcoming() {
-      const container = document.getElementById('category-content');
-      
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">
-            <i class="fas fa-clock"></i>
-          </div>
-          <h3 class="empty-state-title">Coming Soon</h3>
-          <p class="empty-state-description">Upcoming releases will be shown here</p>
+
+        <div id="loadMoreContainer" class="text-center mt-8 hidden">
+            <button id="loadMoreBtn" class="btn btn-secondary" onclick="loadMoreContent()">
+                Load More Content
+            </button>
         </div>
-      `;
-    }
-    
-    // Initialize
-    updateAuthUI();
-    loadReleaseCalendar();
-    loadContent();
-  </script>
+    </main>
+
+    <div data-include="footer"></div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        let currentPage = 1;
+        let allContent = [];
+
+        async function loadNewReleases(reset = true) {
+            const container = document.getElementById('newReleasesContent');
+            const contentType = document.getElementById('contentType').value;
+            const language = document.getElementById('language').value;
+            
+            if (reset) {
+                currentPage = 1;
+                allContent = [];
+                container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            }
+            
+            try {
+                const response = await APIService.getNewReleases(language, contentType, 20);
+                const content = response.recommendations || [];
+                
+                if (reset) {
+                    allContent = content;
+                } else {
+                    allContent = [...allContent, ...content];
+                }
+
+                sortContent();
+                displayContent();
+            } catch (error) {
+                container.innerHTML = '<p class="text-center text-red-400 py-8">Failed to load new releases</p>';
+            }
+        }
+
+        function sortContent() {
+            const sortBy = document.getElementById('sortBy').value;
+            
+            allContent.sort((a, b) => {
+                switch (sortBy) {
+                    case 'rating':
+                        return (b.rating || 0) - (a.rating || 0);
+                    case 'popularity':
+                        return (b.popularity || 0) - (a.popularity || 0);
+                    case 'release_date':
+                    default:
+                        const dateA = a.release_date ? new Date(a.release_date) : new Date(0);
+                        const dateB = b.release_date ? new Date(b.release_date) : new Date(0);
+                        return dateB - dateA;
+                }
+            });
+        }
+
+        function displayContent() {
+            const container = document.getElementById('newReleasesContent');
+            
+            if (allContent.length > 0) {
+                const contentHTML = allContent.map(item => {
+                    const releaseDate = item.release_date ? new Date(item.release_date).toLocaleDateString() : 'Unknown';
+                    const isNew = item.release_date && new Date(item.release_date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                    
+                    return `
+                        <div class="content-card cursor-pointer" onclick="window.location.href='/details?id=${item.id}'">
+                            <div class="content-card-image">
+                                <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" alt="${item.title}" loading="lazy">
+                                ${isNew ? '<div class="absolute top-2 left-2"><span class="badge badge-new">NEW</span></div>' : ''}
+                                <div class="content-card-overlay"></div>
+                                <div class="content-card-actions">
+                                    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); ContentManager.addToWatchlist(${item.id})">
+                                        <i class="fas fa-bookmark"></i>
+                                    </button>
+                                    <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); ContentManager.addToFavorites(${item.id})">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                    ${item.youtube_trailer ? `
+                                        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); ContentManager.playTrailer('${item.youtube_trailer}')">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="content-card-info">
+                                <div class="content-card-title">${item.title}</div>
+                                <div class="content-card-meta">
+                                    <span class="rating">
+                                        <i class="fas fa-star"></i> ${item.rating ? item.rating.toFixed(1) : 'N/A'}
+                                    </span>
+                                    <span class="badge">${item.content_type.toUpperCase()}</span>
+                                </div>
+                                <div class="text-xs text-gray-400 mt-2">Released: ${releaseDate}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                container.innerHTML = `<div class="content-grid">${contentHTML}</div>`;
+            } else {
+                container.innerHTML = '<p class="text-center text-gray-400 py-8">No new releases found</p>';
+            }
+        }
+
+        async function loadMoreContent() {
+            currentPage++;
+            await loadNewReleases(false);
+        }
+
+        document.addEventListener('DOMContentLoaded', loadNewReleases);
+    </script>
 </body>
 </html>

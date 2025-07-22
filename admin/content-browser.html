@@ -1,420 +1,519 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Content Browser - Admin - CineScope</title>
-  
-  <!-- CSS -->
-  <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="/css/components.css">
-  <link rel="stylesheet" href="/css/responsive.css">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  
-  <style>
-    .search-panel {
-      background: var(--bg-card);
-      padding: var(--space-xl);
-      border-radius: var(--radius-lg);
-      margin-bottom: var(--space-xl);
-    }
-    
-    .source-tabs {
-      display: flex;
-      gap: var(--space-md);
-      margin-bottom: var(--space-lg);
-      border-bottom: 1px solid var(--bg-hover);
-    }
-    
-    .source-tab {
-      padding: var(--space-sm) var(--space-lg);
-      color: var(--text-secondary);
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-    
-    .source-tab.active {
-      color: var(--primary-blue);
-      border-bottom-color: var(--primary-blue);
-    }
-    
-    .search-results {
-      display: grid;
-      gap: var(--space-md);
-    }
-    
-    .result-item {
-      background: var(--bg-card);
-      border-radius: var(--radius-lg);
-      padding: var(--space-lg);
-      display: grid;
-      grid-template-columns: 100px 1fr auto;
-      gap: var(--space-lg);
-      align-items: center;
-      transition: all var(--transition-base);
-    }
-    
-    .result-item:hover {
-      transform: translateX(4px);
-      box-shadow: var(--shadow-md);
-    }
-    
-    .result-poster {
-      width: 100px;
-      height: 150px;
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      background: var(--bg-hover);
-    }
-    
-    .result-poster img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    
-    .result-info h3 {
-      margin-bottom: var(--space-xs);
-    }
-    
-    .result-meta {
-      display: flex;
-      gap: var(--space-md);
-      flex-wrap: wrap;
-      margin-top: var(--space-sm);
-    }
-    
-    @media (max-width: 768px) {
-      .result-item {
-        grid-template-columns: 80px 1fr;
-      }
-      
-      .result-actions {
-        grid-column: 1 / -1;
-        margin-top: var(--space-md);
-      }
-      
-      .result-poster {
-        width: 80px;
-        height: 120px;
-      }
-    }
-  </style>
+    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
+    <title>Content Browser | Admin | CineScope</title>
 </head>
 <body>
-  <!-- Loading Overlay -->
-  <div class="loading-overlay" style="display: none;">
-    <div class="spinner spinner-lg"></div>
-  </div>
-  
-  <!-- Navigation -->
-  <nav class="navbar">
-    <div class="container navbar-content">
-      <a href="/" class="navbar-brand gradient-text">CineScope Admin</a>
-      
-      <button class="mobile-menu-toggle lg:hidden">
-        <i class="fas fa-bars"></i>
-      </button>
-      
-      <div class="navbar-menu hidden md:flex">
-        <a href="/" class="navbar-link">Back to Site</a>
-        <div class="user-menu"></div>
-      </div>
-    </div>
-  </nav>
-  
-  <!-- Admin Layout -->
-  <div class="admin-layout" style="margin-top: 60px;">
-    <!-- Sidebar -->
-    <aside class="admin-sidebar">
-      <nav>
-        <a href="/admin/dashboard.html" class="admin-nav-item">
-          <i class="fas fa-tachometer-alt mr-sm"></i> Dashboard
-        </a>
-        <a href="/admin/content-browser.html" class="admin-nav-item active">
-          <i class="fas fa-search mr-sm"></i> Content Browser
-        </a>
-        <a href="/admin/posts.html" class="admin-nav-item">
-          <i class="fas fa-bullhorn mr-sm"></i> Admin Posts
-        </a>
-        <a href="/admin/analytics.html" class="admin-nav-item">
-          <i class="fas fa-chart-bar mr-sm"></i> Analytics
-        </a>
-      </nav>
-    </aside>
+    <div data-include="header"></div>
     
-    <!-- Main Content -->
-    <main class="admin-content">
-      <h1 class="mb-xl">Content Browser</h1>
-      
-      <!-- Search Panel -->
-      <div class="search-panel">
-        <div class="source-tabs">
-          <div class="source-tab active" onclick="switchSource('tmdb')">TMDB</div>
-          <div class="source-tab" onclick="switchSource('anime')">Anime (MAL)</div>
-        </div>
-        
-        <form id="content-search-form" class="grid gap-md" style="grid-template-columns: 1fr auto;">
-          <input type="text" class="form-input" id="search-query" placeholder="Search for movies, TV shows, or anime..." required>
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-search mr-sm"></i> Search
-          </button>
-        </form>
-      </div>
-      
-      <!-- Search Results -->
-      <div id="search-results"></div>
-      
-      <!-- Pagination -->
-      <div id="pagination" class="flex-center gap-md mt-xl" style="display: none;">
-        <button class="btn btn-ghost" onclick="changePage(-1)" id="prev-page">
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <span id="page-info">Page 1</span>
-        <button class="btn btn-ghost" onclick="changePage(1)" id="next-page">
-          <i class="fas fa-chevron-right"></i>
-        </button>
-      </div>
-    </main>
-  </div>
-  
-  <!-- Add Content Modal -->
-  <div id="add-content-modal" class="modal">
-    <div class="modal-content" style="max-width: 600px;">
-      <div class="modal-header">
-        <h3>Add to CineScope</h3>
-        <button class="modal-close" onclick="closeModal('add-content-modal')">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div id="modal-content-details"></div>
-        
-        <form id="recommendation-form" class="mt-lg">
-          <div class="form-group">
-            <label class="form-label">Recommendation Type</label>
-            <select class="form-select" name="recommendation_type" required>
-              <option value="admin_choice">Admin's Choice</option>
-              <option value="trending">Trending</option>
-              <option value="critics_choice">Critics' Choice</option>
-              <option value="hidden_gem">Hidden Gem</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">Admin Note</label>
-            <textarea class="form-textarea" name="description" rows="3" placeholder="Why do you recommend this?" required></textarea>
-          </div>
-          
-          <div class="flex gap-md">
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-plus mr-sm"></i> Add Content
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="closeModal('add-content-modal')">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Toast Container -->
-  <div class="toast-container"></div>
-  
-  <!-- Scripts -->
-  <script src="/js/main.js"></script>
-  <script>
-    // Check admin authentication
-    if (!AppState.user || !AppState.user.is_admin) {
-      window.location.href = '/';
-    }
-    
-    let currentSource = 'tmdb';
-    let currentPage = 1;
-    let currentQuery = '';
-    let selectedContent = null;
-    
-    // Switch content source
-    function switchSource(source) {
-      currentSource = source;
-      currentPage = 1;
-      
-      // Update tabs
-      document.querySelectorAll('.source-tab').forEach(tab => {
-        tab.classList.remove('active');
-      });
-      event.target.classList.add('active');
-      
-      // Clear results
-      document.getElementById('search-results').innerHTML = '';
-      document.getElementById('pagination').style.display = 'none';
-    }
-    
-    // Search form handler
-    document.getElementById('content-search-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      currentQuery = document.getElementById('search-query').value;
-      currentPage = 1;
-      
-      await searchContent();
-    });
-    
-    // Search content
-    async function searchContent() {
-      if (!currentQuery) return;
-      
-      const resultsContainer = document.getElementById('search-results');
-      resultsContainer.innerHTML = '<div class="text-center p-xl"><div class="spinner mx-auto"></div></div>';
-      
-      try {
-        const response = await fetch(`${API_BASE}/admin/search?query=${encodeURIComponent(currentQuery)}&source=${currentSource}&page=${currentPage}`, {
-          headers: TokenManager.getHeaders()
-        });
-        
-        const data = await response.json();
-        renderSearchResults(data.results || []);
-        
-        // Update pagination
-        document.getElementById('page-info').textContent = `Page ${currentPage}`;
-        document.getElementById('pagination').style.display = data.results && data.results.length > 0 ? 'flex' : 'none';
-        
-      } catch (error) {
-        resultsContainer.innerHTML = '<div class="text-center text-secondary p-xl">Failed to search content</div>';
-        showToast('Search failed', 'error');
-      }
-    }
-    
-    // Render search results
-    function renderSearchResults(results) {
-      const container = document.getElementById('search-results');
-      
-      if (results.length === 0) {
-        container.innerHTML = '<div class="text-center text-secondary p-xl">No results found</div>';
-        return;
-      }
-      
-      container.innerHTML = `
-        <div class="search-results">
-          ${results.map(item => `
-            <div class="result-item">
-              <div class="result-poster">
-                ${item.poster_path ? `<img src="${item.poster_path}" alt="${item.title}">` : '<i class="fas fa-film text-2xl text-muted" style="line-height: 150px;"></i>'}
-              </div>
-              
-              <div class="result-info">
-                <h3>${item.title}</h3>
-                <p class="text-secondary text-sm mb-sm">${item.overview ? item.overview.substring(0, 150) + '...' : 'No description available'}</p>
-                
-                <div class="result-meta text-sm">
-                  <span class="tag">${item.content_type}</span>
-                  ${item.release_date ? `<span class="text-secondary">${new Date(item.release_date).getFullYear()}</span>` : ''}
-                  ${item.rating ? `
-                    <div class="flex items-center gap-xs">
-                      <i class="fas fa-star text-yellow"></i>
-                      <span>${item.rating}</span>
+    <main class="container py-8 pt-24">
+        <section class="admin-header mb-8">
+            <h1 class="text-4xl font-bold mb-4">
+                <i class="fas fa-search text-blue-500 mr-3"></i>
+                Content <span class="text-gradient">Browser</span>
+            </h1>
+            <p class="text-gray-400 text-lg">Search and add content from external sources</p>
+        </section>
+
+        <!-- Search Form -->
+        <section class="search-section mb-8">
+            <div class="admin-search-form">
+                <div class="search-controls">
+                    <div class="form-group">
+                        <label class="form-label">Search Query</label>
+                        <input type="text" id="searchQuery" class="form-input" placeholder="Enter movie, TV show, or anime title">
                     </div>
-                  ` : ''}
-                  <span class="tag tag-primary">${item.source.toUpperCase()}</span>
+                    <div class="form-group">
+                        <label class="form-label">Source</label>
+                        <select id="searchSource" class="form-select">
+                            <option value="tmdb">TMDB (Movies & TV)</option>
+                            <option value="anime">MyAnimeList (Anime)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="searchExternalContent()">
+                            <i class="fas fa-search mr-2"></i>
+                            Search
+                        </button>
+                    </div>
                 </div>
-              </div>
-              
-              <div class="result-actions">
-                <button class="btn btn-primary btn-sm" onclick='addContent(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
-                  <i class="fas fa-plus mr-xs"></i> Add
-                </button>
-              </div>
             </div>
-          `).join('')}
+        </section>
+
+        <!-- Search Results -->
+        <section class="results-section">
+            <div id="searchResults" class="hidden">
+                <div class="results-header">
+                    <h2 class="text-2xl font-bold mb-4">Search Results</h2>
+                    <div class="results-meta">
+                        <span id="resultsCount">0 results found</span>
+                    </div>
+                </div>
+                <div id="resultsGrid" class="admin-results"></div>
+            </div>
+
+            <div id="searchLoading" class="hidden">
+                <div class="loading-large">
+                    <div class="spinner-large"></div>
+                    <p class="mt-4 text-gray-400">Searching external sources...</p>
+                </div>
+            </div>
+
+            <div id="noResults" class="hidden">
+                <div class="no-results">
+                    <i class="fas fa-search text-4xl text-gray-500 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">No results found</h3>
+                    <p class="text-gray-400">Try different search terms or check another source</p>
+                </div>
+            </div>
+
+            <div id="emptyState" class="empty-search-state">
+                <div class="text-center py-20">
+                    <i class="fas fa-film text-6xl text-gray-500 mb-6"></i>
+                    <h2 class="text-2xl font-bold mb-4">Content Browser</h2>
+                    <p class="text-gray-400 mb-8">Search for movies, TV shows, and anime to add to the platform</p>
+                    <div class="feature-list">
+                        <div class="feature-item">
+                            <i class="fas fa-database text-blue-500"></i>
+                            <span>Access TMDB Database</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-tv text-purple-500"></i>
+                            <span>Browse MyAnimeList</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-plus text-green-500"></i>
+                            <span>Add to Platform</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Content Preview Modal -->
+        <div id="contentModal" class="modal hidden">
+            <div class="modal-overlay" onclick="closeContentModal()"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Content Preview</h3>
+                    <button class="modal-close" onclick="closeContentModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalContentDetails">
+                        <!-- Content details will be loaded here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-ghost" onclick="closeContentModal()">Cancel</button>
+                    <button id="addContentBtn" class="btn btn-primary" onclick="addSelectedContent()">
+                        <i class="fas fa-plus mr-2"></i>
+                        Add to Platform
+                    </button>
+                </div>
+            </div>
         </div>
-      `;
-    }
-    
-    // Add content
-    function addContent(content) {
-      selectedContent = content;
-      
-      // Show modal with content details
-      const modalDetails = document.getElementById('modal-content-details');
-      modalDetails.innerHTML = `
-        <div class="flex gap-md mb-lg">
-          <div style="width: 100px;">
-            ${content.poster_path ? `<img src="${content.poster_path}" alt="${content.title}" class="rounded-md">` : '<div class="bg-hover rounded-md" style="height: 150px;"></div>'}
-          </div>
-          <div>
-            <h3 class="mb-sm">${content.title}</h3>
-            <p class="text-secondary text-sm">${content.content_type} • ${content.release_date ? new Date(content.release_date).getFullYear() : 'N/A'}</p>
-            ${content.rating ? `<div class="rating mt-sm"><i class="fas fa-star text-yellow"></i> <span>${content.rating}</span></div>` : ''}
-          </div>
-        </div>
-      `;
-      
-      document.getElementById('add-content-modal').classList.add('active');
-    }
-    
-    // Close modal
-    function closeModal(modalId) {
-      document.getElementById(modalId).classList.remove('active');
-    }
-    
-    // Recommendation form handler
-    document.getElementById('recommendation-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const formData = new FormData(e.target);
-      
-      try {
-        // First, save the content
-        const saveResponse = await fetch(`${API_BASE}/admin/content`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...TokenManager.getHeaders()
-          },
-          body: JSON.stringify(selectedContent)
-        });
-        
-        const saveData = await saveResponse.json();
-        
-        if (saveData.content_id) {
-          // Then create recommendation
-          const recResponse = await fetch(`${API_BASE}/admin/recommendations`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...TokenManager.getHeaders()
-            },
-            body: JSON.stringify({
-              content_id: saveData.content_id,
-              recommendation_type: formData.get('recommendation_type'),
-              description: formData.get('description')
-            })
-          });
-          
-          const recData = await recResponse.json();
-          
-          showToast('Content added successfully!', 'success');
-          closeModal('add-content-modal');
-          e.target.reset();
+    </main>
+
+    <div data-include="footer"></div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        let currentSearchResults = [];
+        let selectedContent = null;
+
+        class ContentBrowser {
+            constructor() {
+                this.init();
+            }
+
+            init() {
+                if (!AuthManager.requireAdmin()) return;
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Enter key to search
+                document.getElementById('searchQuery').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        searchExternalContent();
+                    }
+                });
+            }
         }
-        
-      } catch (error) {
-        showToast('Failed to add content', 'error');
-      }
-    });
-    
-    // Pagination
-    function changePage(direction) {
-      currentPage = Math.max(1, currentPage + direction);
-      searchContent();
-    }
-    
-    // Initialize
-    updateAuthUI();
-  </script>
+
+        async function searchExternalContent() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const source = document.getElementById('searchSource').value;
+
+            if (!query) {
+                ContentManager.showToast('Please enter a search query', 'error');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await APIService.adminSearch(query, source);
+                currentSearchResults = response.results || [];
+
+                if (currentSearchResults.length > 0) {
+                    displaySearchResults();
+                } else {
+                    showNoResults();
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showError();
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('noResults').classList.add('hidden');
+            document.getElementById('searchLoading').classList.remove('hidden');
+        }
+
+        function displaySearchResults() {
+            document.getElementById('searchLoading').classList.add('hidden');
+            document.getElementById('noResults').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+
+            const resultsContainer = document.getElementById('searchResults');
+            const resultsGrid = document.getElementById('resultsGrid');
+            const resultsCount = document.getElementById('resultsCount');
+
+            resultsCount.textContent = `${currentSearchResults.length} results found`;
+            
+            const resultsHTML = currentSearchResults.map(item => createSearchResultCard(item)).join('');
+            resultsGrid.innerHTML = resultsHTML;
+            
+            resultsContainer.classList.remove('hidden');
+        }
+
+        function createSearchResultCard(item) {
+            const posterUrl = item.poster_path || '/assets/images/placeholder.jpg';
+            const rating = item.rating || 'N/A';
+            const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
+            
+            return `
+                <div class="admin-card">
+                    <div class="admin-card-image">
+                        <img src="${posterUrl}" alt="${item.title}" loading="lazy" onerror="this.src='/assets/images/placeholder.jpg'">
+                    </div>
+                    <div class="admin-card-content">
+                        <div class="admin-card-title">${item.title}</div>
+                        <div class="admin-card-meta">
+                            <span class="rating">⭐ ${rating}</span>
+                            <span class="content-type">${item.content_type?.toUpperCase() || (item.source === 'anime' ? 'ANIME' : 'MOVIE')}</span>
+                            ${year ? `<span class="year">${year}</span>` : ''}
+                        </div>
+                        <div class="admin-card-overview">${item.overview ? item.overview.substring(0, 100) + '...' : 'No description available'}</div>
+                        <div class="admin-card-actions">
+                            <button class="btn btn-ghost btn-sm" onclick="previewContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-eye mr-2"></i>
+                                Preview
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="quickAddContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-plus mr-2"></i>
+                                Add
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showNoResults() {
+            document.getElementById('searchLoading').classList.add('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('noResults').classList.remove('hidden');
+        }
+
+        function showError() {
+            document.getElementById('searchLoading').classList.add('hidden');
+            const noResults = document.getElementById('noResults');
+            noResults.innerHTML = `
+                <div class="no-results">
+                    <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Search Error</h3>
+                    <p class="text-gray-400">Failed to search external sources. Please try again.</p>
+                </div>
+            `;
+            noResults.classList.remove('hidden');
+        }
+
+        function previewContent(item) {
+            selectedContent = item;
+            const modal = document.getElementById('contentModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalDetails = document.getElementById('modalContentDetails');
+
+            modalTitle.textContent = item.title;
+            
+            const detailsHTML = `
+                <div class="content-preview">
+                    <div class="preview-poster">
+                        <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" alt="${item.title}" onerror="this.src='/assets/images/placeholder.jpg'">
+                    </div>
+                    <div class="preview-details">
+                        <h4>${item.title}</h4>
+                        ${item.original_title && item.original_title !== item.title ? `<p class="original-title">${item.original_title}</p>` : ''}
+                        <div class="preview-meta">
+                            <span class="rating">⭐ ${item.rating || 'N/A'}</span>
+                            <span class="content-type">${item.content_type?.toUpperCase() || (item.source === 'anime' ? 'ANIME' : 'MOVIE')}</span>
+                            ${item.release_date ? `<span class="year">${new Date(item.release_date).getFullYear()}</span>` : ''}
+                        </div>
+                        <div class="preview-overview">
+                            <h5>Overview</h5>
+                            <p>${item.overview || 'No description available'}</p>
+                        </div>
+                        ${item.genres ? `
+                            <div class="preview-genres">
+                                <h5>Genres</h5>
+                                <div class="genre-tags">
+                                    ${item.genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            modalDetails.innerHTML = detailsHTML;
+            modal.classList.remove('hidden');
+        }
+
+        function closeContentModal() {
+            document.getElementById('contentModal').classList.add('hidden');
+            selectedContent = null;
+        }
+
+        async function quickAddContent(item) {
+            try {
+                const loadingBtn = event.target;
+                const originalText = loadingBtn.innerHTML;
+                loadingBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding...';
+                loadingBtn.disabled = true;
+
+                const response = await APIService.saveExternalContent(item);
+                
+                if (response) {
+                    ContentManager.showToast('Content added successfully', 'success');
+                    loadingBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Added';
+                    loadingBtn.classList.remove('btn-primary');
+                    loadingBtn.classList.add('btn-ghost');
+                } else {
+                    throw new Error('Failed to add content');
+                }
+            } catch (error) {
+                console.error('Add content error:', error);
+                ContentManager.showToast('Failed to add content', 'error');
+                
+                // Reset button
+                event.target.innerHTML = '<i class="fas fa-plus mr-2"></i>Add';
+                event.target.disabled = false;
+            }
+        }
+
+        async function addSelectedContent() {
+            if (!selectedContent) return;
+
+            try {
+                const response = await APIService.saveExternalContent(selectedContent);
+                
+                if (response) {
+                    ContentManager.showToast('Content added successfully', 'success');
+                    closeContentModal();
+                } else {
+                    throw new Error('Failed to add content');
+                }
+            } catch (error) {
+                console.error('Add content error:', error);
+                ContentManager.showToast('Failed to add content', 'error');
+            }
+        }
+
+        // Initialize content browser
+        document.addEventListener('DOMContentLoaded', () => {
+            new ContentBrowser();
+        });
+    </script>
+
+    <style>
+        .loading-large {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+        }
+        .spinner-large {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .feature-list {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+        }
+        .feature-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .feature-item i {
+            font-size: 24px;
+        }
+        .feature-item span {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+        }
+        .modal-content {
+            position: relative;
+            background: var(--dark-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        .content-preview {
+            display: flex;
+            gap: 20px;
+        }
+        .preview-poster {
+            flex-shrink: 0;
+            width: 150px;
+        }
+        .preview-poster img {
+            width: 100%;
+            border-radius: 8px;
+        }
+        .preview-details {
+            flex: 1;
+        }
+        .preview-details h4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .original-title {
+            color: var(--text-muted);
+            font-style: italic;
+            margin-bottom: 12px;
+        }
+        .preview-meta {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .preview-overview h5,
+        .preview-genres h5 {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+        .preview-overview {
+            margin-bottom: 16px;
+        }
+        .preview-overview p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .genre-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .genre-tag {
+            padding: 4px 8px;
+            background: var(--dark-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        @media (max-width: 640px) {
+            .content-preview {
+                flex-direction: column;
+            }
+            .preview-poster {
+                width: 100%;
+                max-width: 200px;
+                margin: 0 auto;
+            }
+            .feature-list {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+    </style>
 </body>
 </html>

@@ -1,405 +1,682 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Posts - CineScope</title>
-  
-  <!-- CSS -->
-  <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="/css/components.css">
-  <link rel="stylesheet" href="/css/responsive.css">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  
-  <style>
-    .post-card {
-      background: var(--bg-card);
-      border-radius: var(--radius-lg);
-      padding: var(--space-lg);
-      margin-bottom: var(--space-lg);
-      position: relative;
-    }
-    
-    .post-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      margin-bottom: var(--space-md);
-    }
-    
-    .post-meta {
-      display: flex;
-      gap: var(--space-md);
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-    }
-    
-    .post-content {
-      display: grid;
-      grid-template-columns: 150px 1fr;
-      gap: var(--space-lg);
-      align-items: start;
-    }
-    
-    .post-poster {
-      width: 150px;
-      height: 225px;
-      border-radius: var(--radius-md);
-      overflow: hidden;
-    }
-    
-    .post-poster img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    
-    .telegram-status {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-xs);
-      padding: var(--space-xs) var(--space-sm);
-      background: var(--bg-hover);
-      border-radius: var(--radius-full);
-      font-size: 0.75rem;
-    }
-    
-    .telegram-success {
-      background: var(--accent-green);
-      color: white;
-    }
-    
-    @media (max-width: 768px) {
-      .post-content {
-        grid-template-columns: 1fr;
-      }
-      
-      .post-poster {
-        width: 100px;
-        height: 150px;
-      }
-    }
-  </style>
+    <script>document.write('<script src="/includes/head.html"><\/script>');</script>
+    <title>Recommendations | Admin | CineScope</title>
 </head>
 <body>
-  <!-- Loading Overlay -->
-  <div class="loading-overlay" style="display: none;">
-    <div class="spinner spinner-lg"></div>
-  </div>
-  
-  <!-- Navigation -->
-  <nav class="navbar">
-    <div class="container navbar-content">
-      <a href="/" class="navbar-brand gradient-text">CineScope Admin</a>
-      
-      <button class="mobile-menu-toggle lg:hidden">
-        <i class="fas fa-bars"></i>
-      </button>
-      
-      <div class="navbar-menu hidden md:flex">
-        <a href="/" class="navbar-link">Back to Site</a>
-        <div class="user-menu"></div>
-      </div>
-    </div>
-  </nav>
-  
-  <!-- Admin Layout -->
-  <div class="admin-layout" style="margin-top: 60px;">
-    <!-- Sidebar -->
-    <aside class="admin-sidebar">
-      <nav>
-        <a href="/admin/dashboard.html" class="admin-nav-item">
-          <i class="fas fa-tachometer-alt mr-sm"></i> Dashboard
-        </a>
-        <a href="/admin/content-browser.html" class="admin-nav-item">
-          <i class="fas fa-search mr-sm"></i> Content Browser
-        </a>
-        <a href="/admin/posts.html" class="admin-nav-item active">
-          <i class="fas fa-bullhorn mr-sm"></i> Admin Posts
-        </a>
-        <a href="/admin/analytics.html" class="admin-nav-item">
-          <i class="fas fa-chart-bar mr-sm"></i> Analytics
-        </a>
-      </nav>
-    </aside>
+    <div data-include="header"></div>
     
-    <!-- Main Content -->
-    <main class="admin-content">
-      <div class="flex-between mb-xl">
-        <h1>Admin Recommendations</h1>
-        <a href="/admin/content-browser.html" class="btn btn-primary">
-          <i class="fas fa-plus mr-sm"></i> Create New Post
-        </a>
-      </div>
-      
-      <!-- Stats -->
-      <div class="grid gap-md mb-xl" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-        <div class="stat-card">
-          <h3 class="text-secondary text-sm mb-sm">Total Posts</h3>
-          <div class="text-2xl font-bold" id="total-posts">0</div>
-        </div>
-        
-        <div class="stat-card">
-          <h3 class="text-secondary text-sm mb-sm">This Month</h3>
-          <div class="text-2xl font-bold" id="month-posts">0</div>
-        </div>
-        
-        <div class="stat-card">
-          <h3 class="text-secondary text-sm mb-sm">Telegram Sent</h3>
-          <div class="text-2xl font-bold" id="telegram-sent">0</div>
-        </div>
-        
-        <div class="stat-card">
-          <h3 class="text-secondary text-sm mb-sm">Active Posts</h3>
-          <div class="text-2xl font-bold" id="active-posts">0</div>
-        </div>
-      </div>
-      
-      <!-- Filter Tabs -->
-      <div class="tabs mb-lg">
-        <div class="tab active" onclick="filterPosts('all')">All Posts</div>
-        <div class="tab" onclick="filterPosts('admin_choice')">Admin's Choice</div>
-        <div class="tab" onclick="filterPosts('trending')">Trending</div>
-        <div class="tab" onclick="filterPosts('critics_choice')">Critics' Choice</div>
-      </div>
-      
-      <!-- Posts List -->
-      <div id="posts-list">
-        <div class="text-center p-xl">
-          <div class="spinner mx-auto"></div>
-          <p class="text-secondary mt-md">Loading posts...</p>
-        </div>
-      </div>
-      
-      <!-- Pagination -->
-      <div id="pagination" class="flex-center gap-md mt-xl" style="display: none;">
-        <button class="btn btn-ghost" onclick="changePage(-1)">
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <span id="page-info">Page 1</span>
-        <button class="btn btn-ghost" onclick="changePage(1)">
-          <i class="fas fa-chevron-right"></i>
-        </button>
-      </div>
+    <main class="container py-8 pt-24">
+        <section class="admin-header mb-8">
+            <h1 class="text-4xl font-bold mb-4">
+                <i class="fas fa-bullhorn text-green-500 mr-3"></i>
+                Admin <span class="text-gradient">Recommendations</span>
+            </h1>
+            <p class="text-gray-400 text-lg">Create and manage content recommendations for users</p>
+        </section>
+
+        <!-- Create Recommendation Form -->
+        <section class="create-recommendation mb-12">
+            <div class="form-card">
+                <div class="form-header">
+                    <h2 class="text-xl font-bold">Create New Recommendation</h2>
+                    <p class="text-gray-400">Recommend content to users and share on Telegram</p>
+                </div>
+                
+                <form id="recommendationForm" class="recommendation-form">
+                    <!-- Content Search -->
+                    <div class="form-section">
+                        <h3 class="form-section-title">Select Content</h3>
+                        <div class="content-search">
+                            <div class="search-input-group">
+                                <input type="text" id="contentSearch" class="form-input" 
+                                       placeholder="Search for content to recommend...">
+                                <button type="button" class="btn btn-secondary" onclick="searchContent()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div id="contentSearchResults" class="search-results-dropdown hidden"></div>
+                        </div>
+                        
+                        <!-- Selected Content Display -->
+                        <div id="selectedContent" class="selected-content hidden">
+                            <div class="selected-content-card">
+                                <img id="selectedPoster" src="" alt="" class="selected-poster">
+                                <div class="selected-info">
+                                    <h4 id="selectedTitle">Title</h4>
+                                    <div id="selectedMeta" class="selected-meta"></div>
+                                    <button type="button" class="btn btn-ghost btn-sm" onclick="clearSelectedContent()">
+                                        <i class="fas fa-times mr-2"></i>
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendation Details -->
+                    <div class="form-section">
+                        <h3 class="form-section-title">Recommendation Details</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Recommendation Type</label>
+                                <select id="recommendationType" class="form-select" required>
+                                    <option value="">Select type</option>
+                                    <option value="trending">Trending</option>
+                                    <option value="popular">Popular</option>
+                                    <option value="critics_choice">Critics Choice</option>
+                                    <option value="admin_choice">Admin's Choice</option>
+                                    <option value="hidden_gem">Hidden Gem</option>
+                                    <option value="must_watch">Must Watch</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Priority</label>
+                                <select id="priority" class="form-select">
+                                    <option value="normal">Normal</option>
+                                    <option value="high">High</option>
+                                    <option value="featured">Featured</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Description/Review</label>
+                            <textarea id="description" class="form-textarea" rows="4" 
+                                      placeholder="Write your recommendation description or review..." required></textarea>
+                            <div class="form-help">This will be shared with users and on Telegram</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Tags (Optional)</label>
+                            <input type="text" id="tags" class="form-input" 
+                                   placeholder="e.g., blockbuster, emotional, must-watch">
+                            <div class="form-help">Separate tags with commas</div>
+                        </div>
+                    </div>
+
+                    <!-- Publishing Options -->
+                    <div class="form-section">
+                        <h3 class="form-section-title">Publishing Options</h3>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="publishToTelegram" checked>
+                                <span class="checkbox-label">Share on Telegram Channel</span>
+                                <small class="checkbox-help">Post recommendation to the Telegram channel</small>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="featuredRecommendation">
+                                <span class="checkbox-label">Feature on Homepage</span>
+                                <small class="checkbox-help">Show as featured recommendation</small>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="notifyUsers">
+                                <span class="checkbox-label">Notify Users</span>
+                                <small class="checkbox-help">Send notification to active users</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost" onclick="resetForm()">
+                            <i class="fas fa-undo mr-2"></i>
+                            Reset
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane mr-2"></i>
+                            Create Recommendation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Recent Recommendations -->
+        <section class="recent-recommendations">
+            <div class="section-header">
+                <h2 class="text-2xl font-bold">Recent Recommendations</h2>
+                <div class="section-controls">
+                    <select id="filterType" class="filter-select" onchange="filterRecommendations()">
+                        <option value="">All Types</option>
+                        <option value="trending">Trending</option>
+                        <option value="popular">Popular</option>
+                        <option value="critics_choice">Critics Choice</option>
+                        <option value="admin_choice">Admin's Choice</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="recommendationsList">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </section>
     </main>
-  </div>
-  
-  <!-- Edit Post Modal -->
-  <div id="edit-post-modal" class="modal">
-    <div class="modal-content" style="max-width: 600px;">
-      <div class="modal-header">
-        <h3>Edit Recommendation</h3>
-        <button class="modal-close" onclick="closeModal('edit-post-modal')">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body">
-        <form id="edit-post-form">
-          <input type="hidden" name="post_id">
-          
-          <div class="form-group">
-            <label class="form-label">Recommendation Type</label>
-            <select class="form-select" name="recommendation_type">
-              <option value="admin_choice">Admin's Choice</option>
-              <option value="trending">Trending</option>
-              <option value="critics_choice">Critics' Choice</option>
-              <option value="hidden_gem">Hidden Gem</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea class="form-textarea" name="description" rows="4"></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label class="flex items-center gap-sm">
-              <input type="checkbox" name="is_active">
-              <span>Active</span>
-            </label>
-          </div>
-          
-          <div class="flex gap-md">
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-            <button type="button" class="btn btn-secondary" onclick="closeModal('edit-post-modal')">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Toast Container -->
-  <div class="toast-container"></div>
-  
-  <!-- Scripts -->
-  <script src="/js/main.js"></script>
-  <script>
-    // Check admin authentication
-    if (!AppState.user || !AppState.user.is_admin) {
-      window.location.href = '/';
-    }
-    
-    let currentFilter = 'all';
-    let currentPage = 1;
-    let allPosts = [];
-    
-    // Load admin posts
-    async function loadPosts() {
-      try {
-        const response = await fetch(`${API_BASE}/admin/recommendations?page=${currentPage}`, {
-          headers: TokenManager.getHeaders()
-        });
-        
-        const data = await response.json();
-        
-        // Update stats
-        document.getElementById('total-posts').textContent = data.total || '0';
-        document.getElementById('active-posts').textContent = data.recommendations?.filter(r => r.is_active !== false).length || '0';
-        document.getElementById('telegram-sent').textContent = data.recommendations?.length || '0';
-        document.getElementById('month-posts').textContent = data.recommendations?.filter(r => {
-          const date = new Date(r.created_at);
-          const now = new Date();
-          return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-        }).length || '0';
-        
-        allPosts = data.recommendations || [];
-        renderPosts();
-        
-        // Update pagination
-        document.getElementById('page-info').textContent = `Page ${data.current_page || 1} of ${data.pages || 1}`;
-        document.getElementById('pagination').style.display = data.pages > 1 ? 'flex' : 'none';
-        
-      } catch (error) {
-        console.error('Failed to load posts:', error);
-        document.getElementById('posts-list').innerHTML = '<div class="text-center text-secondary p-xl">Failed to load posts</div>';
-      }
-    }
-    
-    // Render posts
-    function renderPosts() {
-      const container = document.getElementById('posts-list');
-      
-      let filteredPosts = allPosts;
-      if (currentFilter !== 'all') {
-        filteredPosts = allPosts.filter(post => post.recommendation_type === currentFilter);
-      }
-      
-      if (filteredPosts.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">
-              <i class="fas fa-bullhorn"></i>
-            </div>
-            <h3 class="empty-state-title">No posts found</h3>
-            <p class="empty-state-description">Create your first admin recommendation</p>
-          </div>
-        `;
-        return;
-      }
-      
-      container.innerHTML = filteredPosts.map(post => `
-        <div class="post-card">
-          <div class="post-header">
-            <div>
-              <h3 class="mb-sm">${post.content.title}</h3>
-              <div class="post-meta">
-                <span><i class="fas fa-user"></i> ${post.admin_name}</span>
-                <span><i class="fas fa-calendar"></i> ${new Date(post.created_at).toLocaleDateString()}</span>
-                <span class="tag tag-primary">${post.recommendation_type.replace('_', ' ')}</span>
-                ${post.telegram_sent !== false ? '<span class="telegram-status telegram-success"><i class="fab fa-telegram"></i> Sent</span>' : ''}
-              </div>
-            </div>
-            <div class="flex gap-sm">
-              <button class="btn btn-ghost btn-sm" onclick='editPost(${JSON.stringify(post).replace(/'/g, "&apos;")}'>
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn btn-ghost btn-sm text-red" onclick="deletePost(${post.id})">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-          
-          <div class="post-content">
-            <div class="post-poster">
-              ${post.content.poster_path ? `<img src="${post.content.poster_path}" alt="${post.content.title}">` : '<div class="bg-hover h-full"></div>'}
-            </div>
+
+    <div data-include="footer"></div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        let selectedContentData = null;
+        let allRecommendations = [];
+
+        class RecommendationManager {
+            constructor() {
+                this.init();
+            }
+
+            async init() {
+                if (!AuthManager.requireAdmin()) return;
+
+                this.setupEventListeners();
+                await this.loadRecentRecommendations();
+            }
+
+            setupEventListeners() {
+                // Form submission
+                document.getElementById('recommendationForm').addEventListener('submit', this.handleFormSubmit.bind(this));
+
+                // Content search
+                document.getElementById('contentSearch').addEventListener('input', this.debounceSearch.bind(this));
+                
+                // Clear search results when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.content-search')) {
+                        document.getElementById('contentSearchResults').classList.add('hidden');
+                    }
+                });
+            }
+
+            debounceSearch() {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    const query = document.getElementById('contentSearch').value.trim();
+                    if (query.length >= 2) {
+                        this.searchContentForRecommendation(query);
+                    } else {
+                        document.getElementById('contentSearchResults').classList.add('hidden');
+                    }
+                }, 300);
+            }
+
+            async searchContentForRecommendation(query) {
+                const resultsContainer = document.getElementById('contentSearchResults');
+                
+                try {
+                    resultsContainer.innerHTML = '<div class="p-4 text-center"><div class="spinner mx-auto"></div></div>';
+                    resultsContainer.classList.remove('hidden');
+
+                    const response = await APIService.searchContent(query);
+                    
+                    if (response.results && response.results.length > 0) {
+                        const resultsHTML = response.results.slice(0, 8).map(item => `
+                            <div class="search-result-item" onclick="selectContentForRecommendation(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
+                                     alt="${item.title}" class="result-poster">
+                                <div class="result-info">
+                                    <div class="result-title">${item.title}</div>
+                                    <div class="result-meta">
+                                        <span class="content-type">${item.content_type.toUpperCase()}</span>
+                                        ${item.rating ? `<span class="rating">⭐ ${item.rating.toFixed(1)}</span>` : ''}
+                                        ${item.release_date ? `<span class="year">${new Date(item.release_date).getFullYear()}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                        
+                        resultsContainer.innerHTML = resultsHTML;
+                    } else {
+                        resultsContainer.innerHTML = '<div class="p-4 text-center text-gray-400">No results found</div>';
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                    resultsContainer.innerHTML = '<div class="p-4 text-center text-red-400">Search failed</div>';
+                }
+            }
+
+            async handleFormSubmit(e) {
+                e.preventDefault();
+                
+                if (!selectedContentData) {
+                    ContentManager.showToast('Please select content to recommend', 'error');
+                    return;
+                }
+
+                const formData = {
+                    content_id: selectedContentData.id,
+                    recommendation_type: document.getElementById('recommendationType').value,
+                    description: document.getElementById('description').value,
+                    tags: document.getElementById('tags').value,
+                    priority: document.getElementById('priority').value,
+                    publish_to_telegram: document.getElementById('publishToTelegram').checked,
+                    featured: document.getElementById('featuredRecommendation').checked,
+                    notify_users: document.getElementById('notifyUsers').checked
+                };
+
+                try {
+                    const submitBtn = document.querySelector('#recommendationForm button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
+                    submitBtn.disabled = true;
+
+                    const response = await APIService.createAdminRecommendation(formData);
+                    
+                    if (response) {
+                        ContentManager.showToast('Recommendation created successfully!', 'success');
+                        this.resetForm();
+                        await this.loadRecentRecommendations();
+                        
+                        if (response.telegram_sent) {
+                            ContentManager.showToast('Shared on Telegram channel', 'success');
+                        }
+                    }
+
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                } catch (error) {
+                    console.error('Error creating recommendation:', error);
+                    ContentManager.showToast('Failed to create recommendation', 'error');
+                    
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            }
+
+            async loadRecentRecommendations() {
+                const container = document.getElementById('recommendationsList');
+                
+                try {
+                    const response = await APIService.getAdminRecommendations(1, 20);
+                    allRecommendations = response.recommendations || [];
+                    
+                    this.displayRecommendations(allRecommendations);
+                } catch (error) {
+                    console.error('Error loading recommendations:', error);
+                    container.innerHTML = '<p class="text-center text-red-400 py-8">Failed to load recommendations</p>';
+                }
+            }
+
+            displayRecommendations(recommendations) {
+                const container = document.getElementById('recommendationsList');
+                
+                if (recommendations.length === 0) {
+                    container.innerHTML = '<p class="text-center text-gray-400 py-8">No recommendations found</p>';
+                    return;
+                }
+
+                const recommendationsHTML = recommendations.map(rec => `
+                    <div class="recommendation-card">
+                        <div class="rec-poster">
+                            <img src="${rec.content.poster_path || '/assets/images/placeholder.jpg'}" 
+                                 alt="${rec.content.title}">
+                        </div>
+                        <div class="rec-content">
+                            <div class="rec-header">
+                                <h3 class="rec-title">${rec.content.title}</h3>
+                                <div class="rec-badges">
+                                    <span class="badge badge-${rec.recommendation_type}">${rec.recommendation_type.replace('_', ' ')}</span>
+                                    <span class="badge badge-content">${rec.content.content_type}</span>
+                                </div>
+                            </div>
+                            <div class="rec-meta">
+                                <span class="rec-admin">by ${rec.admin_name}</span>
+                                <span class="rec-date">${new Date(rec.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <p class="rec-description">${rec.description}</p>
+                        </div>
+                        <div class="rec-actions">
+                            <button class="btn btn-ghost btn-sm" onclick="editRecommendation(${rec.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-ghost btn-sm" onclick="deleteRecommendation(${rec.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = recommendationsHTML;
+            }
+
+            resetForm() {
+                document.getElementById('recommendationForm').reset();
+                clearSelectedContent();
+                document.getElementById('contentSearchResults').classList.add('hidden');
+            }
+        }
+
+        function selectContentForRecommendation(content) {
+            selectedContentData = content;
             
-            <div>
-              <p class="mb-md">${post.description}</p>
-              
-              <div class="flex gap-md text-sm text-secondary">
-                <span><i class="fas fa-star text-yellow"></i> ${post.content.rating || 'N/A'}</span>
-                <span>${post.content.content_type}</span>
-                <span><i class="fas fa-eye"></i> View on site</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      `).join('');
-    }
-    
-    // Filter posts
-    function filterPosts(filter) {
-      currentFilter = filter;
-      
-      // Update active tab
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-      event.target.classList.add('active');
-      
-      renderPosts();
-    }
-    
-    // Edit post
-    function editPost(post) {
-      const form = document.getElementById('edit-post-form');
-      form.post_id.value = post.id;
-      form.recommendation_type.value = post.recommendation_type;
-      form.description.value = post.description;
-      form.is_active.checked = post.is_active !== false;
-      
-      document.getElementById('edit-post-modal').classList.add('active');
-    }
-    
-    // Delete post
-    async function deletePost(postId) {
-      if (!confirm('Are you sure you want to delete this post?')) return;
-      
-      try {
-        // In a real app, this would call the delete API
-        showToast('Post deleted successfully', 'success');
-        allPosts = allPosts.filter(p => p.id !== postId);
-        renderPosts();
-      } catch (error) {
-        showToast('Failed to delete post', 'error');
-      }
-    }
-    
-    // Close modal
-    function closeModal(modalId) {
-      document.getElementById(modalId).classList.remove('active');
-    }
-    
-    // Edit form submission
-    document.getElementById('edit-post-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      // In a real app, this would update the post via API
-      showToast('Post updated successfully', 'success');
-      closeModal('edit-post-modal');
-      loadPosts();
-    });
-    
-    // Pagination
-    function changePage(direction) {
-      currentPage = Math.max(1, currentPage + direction);
-      loadPosts();
-    }
-    
-    // Initialize
-    updateAuthUI();
-    loadPosts();
-  </script>
+            // Hide search results
+            document.getElementById('contentSearchResults').classList.add('hidden');
+            
+            // Clear search input
+            document.getElementById('contentSearch').value = '';
+            
+            // Show selected content
+            const selectedContainer = document.getElementById('selectedContent');
+            const poster = document.getElementById('selectedPoster');
+            const title = document.getElementById('selectedTitle');
+            const meta = document.getElementById('selectedMeta');
+            
+            poster.src = content.poster_path || '/assets/images/placeholder.jpg';
+            poster.alt = content.title;
+            title.textContent = content.title;
+            
+            const metaInfo = [];
+            metaInfo.push(`<span class="content-type">${content.content_type.toUpperCase()}</span>`);
+            if (content.rating) {
+                metaInfo.push(`<span class="rating">⭐ ${content.rating.toFixed(1)}</span>`);
+            }
+            if (content.release_date) {
+                metaInfo.push(`<span class="year">${new Date(content.release_date).getFullYear()}</span>`);
+            }
+            
+            meta.innerHTML = metaInfo.join(' • ');
+            selectedContainer.classList.remove('hidden');
+        }
+
+        function clearSelectedContent() {
+            selectedContentData = null;
+            document.getElementById('selectedContent').classList.add('hidden');
+        }
+
+        function searchContent() {
+            const query = document.getElementById('contentSearch').value.trim();
+            if (query) {
+                recommendationManager.searchContentForRecommendation(query);
+            }
+        }
+
+        function resetForm() {
+            recommendationManager.resetForm();
+        }
+
+        function filterRecommendations() {
+            const filterType = document.getElementById('filterType').value;
+            
+            let filteredRecommendations = allRecommendations;
+            if (filterType) {
+                filteredRecommendations = allRecommendations.filter(rec => rec.recommendation_type === filterType);
+            }
+            
+            recommendationManager.displayRecommendations(filteredRecommendations);
+        }
+
+        function editRecommendation(recId) {
+            ContentManager.showToast('Edit functionality coming soon', 'info');
+        }
+
+        function deleteRecommendation(recId) {
+            if (confirm('Are you sure you want to delete this recommendation?')) {
+                ContentManager.showToast('Delete functionality coming soon', 'info');
+            }
+        }
+
+        let recommendationManager;
+        document.addEventListener('DOMContentLoaded', () => {
+            recommendationManager = new RecommendationManager();
+        });
+    </script>
+
+    <style>
+        .form-card {
+            background: var(--dark-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+        }
+        .form-header {
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .form-header h2 {
+            margin-bottom: 8px;
+        }
+        .form-section {
+            margin-bottom: 32px;
+        }
+        .form-section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--primary);
+        }
+        .content-search {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .search-input-group {
+            display: flex;
+            gap: 8px;
+        }
+        .search-input-group .form-input {
+            flex: 1;
+        }
+        .search-results-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--dark-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 100;
+            margin-top: 4px;
+        }
+        .search-result-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .search-result-item:hover {
+            background: var(--dark-hover);
+        }
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        .result-poster {
+            width: 40px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .result-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .result-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+        .result-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .selected-content {
+            margin-top: 16px;
+        }
+        .selected-content-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--dark-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .selected-poster {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+        .selected-info {
+            flex: 1;
+        }
+        .selected-info h4 {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .selected-meta {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .form-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--dark-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            resize: vertical;
+            min-height: 100px;
+        }
+        .form-help {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+        }
+        .checkbox-item input[type="checkbox"] {
+            margin-top: 2px;
+            accent-color: var(--primary);
+        }
+        .checkbox-label {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        .checkbox-help {
+            display: block;
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 2px;
+        }
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .section-controls {
+            display: flex;
+            gap: 12px;
+        }
+        .recommendation-card {
+            display: flex;
+            gap: 16px;
+            background: var(--dark-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .rec-poster {
+            flex-shrink: 0;
+        }
+        .rec-poster img {
+            width: 80px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+        .rec-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .rec-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .rec-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .rec-badges {
+            display: flex;
+            gap: 6px;
+        }
+        .rec-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+        .rec-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .rec-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .badge-trending { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .badge-popular { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .badge-critics_choice { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .badge-admin_choice { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+        .badge-content { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .selected-content-card {
+                flex-direction: column;
+                text-align: center;
+            }
+            .recommendation-card {
+                flex-direction: column;
+            }
+            .rec-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .rec-actions {
+                flex-direction: row;
+                justify-content: center;
+            }
+        }
+    </style>
 </body>
 </html>
