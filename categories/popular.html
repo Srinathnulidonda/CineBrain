@@ -3,135 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Popular Content - CineScope</title>
+    <title>Popular - CineScope</title>
     <meta name="description" content="Discover the most popular movies, TV shows, and anime on CineScope.">
     
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/responsive.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Header -->
-    <div data-include="header"></div>
+    <div id="preloader" class="preloader">
+        <div class="flex flex-col items-center">
+            <div class="loader"></div>
+            <p class="mt-4 text-lg font-medium">Loading Popular Content...</p>
+        </div>
+    </div>
 
-    <main style="padding-top: 80px;">
-        <!-- Page Hero -->
-        <section class="page-hero">
-            <div class="container">
-                <div class="breadcrumb">
-                    <a href="/">Home</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <span>Popular</span>
-                </div>
-                <h1 class="page-title">⭐ Popular Content</h1>
-                <p class="page-description">The most loved content by our community</p>
-            </div>
-        </section>
+    <div id="header-placeholder"></div>
 
-        <div class="container">
-            <!-- Content Tabs -->
-            <div class="tabs">
-                <ul class="tab-list">
-                    <li><button class="tab-button active" data-type="all">All Content</button></li>
-                    <li><button class="tab-button" data-type="movie">Movies</button></li>
-                    <li><button class="tab-button" data-type="tv">TV Shows</button></li>
-                    <li><button class="tab-button" data-type="anime">Anime</button></li>
-                </ul>
-            </div>
+    <main class="container py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-4">⭐ Popular</h1>
+            <p class="text-gray-400 text-lg">Most loved by our community</p>
+        </div>
 
-            <!-- Filters -->
-            <div class="filter-bar">
-                <div class="filter-group">
-                    <label for="timeFrame">Time Frame:</label>
-                    <select id="timeFrame" class="filter-select">
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="year">This Year</option>
-                        <option value="all">All Time</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="region">Region:</label>
-                    <select id="region" class="filter-select">
-                        <option value="">Global</option>
-                        <option value="US">United States</option>
-                        <option value="IN">India</option>
-                        <option value="JP">Japan</option>
-                        <option value="KR">South Korea</option>
-                    </select>
-                </div>
-                <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
+        <!-- Content Type Filter -->
+        <div class="tabs mb-8" id="contentTabs">
+            <div class="tab-list">
+                <button class="tab-button active" data-tab="movie">Movies</button>
+                <button class="tab-button" data-tab="tv">TV Shows</button>
+                <button class="tab-button" data-tab="anime">Anime</button>
             </div>
+        </div>
 
-            <!-- Content Grid -->
-            <div class="content-grid" id="popularContent">
-                <!-- Content will be loaded here -->
-            </div>
+        <!-- Region Filter -->
+        <div class="flex justify-center mb-8">
+            <select id="regionFilter" class="form-input max-w-xs">
+                <option value="">All Regions</option>
+                <option value="US">United States</option>
+                <option value="IN">India</option>
+                <option value="JP">Japan</option>
+                <option value="KR">South Korea</option>
+                <option value="GB">United Kingdom</option>
+            </select>
+        </div>
+
+        <div class="content-grid" id="popularContent">
+            <!-- Content will be loaded here -->
+        </div>
+
+        <div class="text-center mt-12">
+            <button id="loadMoreBtn" class="btn btn-secondary" onclick="loadMore()" style="display: none;">
+                Load More Popular
+            </button>
         </div>
     </main>
 
-    <!-- Footer -->
-    <div data-include="footer"></div>
+    <div id="footer-placeholder"></div>
 
-    <!-- Scripts -->
     <script src="/js/include.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
-
     <script>
-        let currentType = 'all';
+        let currentType = 'movie';
+        let currentRegion = '';
+        let currentPage = 1;
+        let allResults = [];
+        let isLoading = false;
 
-        document.addEventListener('DOMContentLoaded', function() {
-            setupTabSwitching();
+        document.addEventListener('DOMContentLoaded', () => {
+            UI.initTabs(document.getElementById('contentTabs'));
+            setupEventListeners();
             loadPopularContent();
         });
 
-        function setupTabSwitching() {
-            const tabButtons = document.querySelectorAll('.tab-button');
-            
-            tabButtons.forEach(button => {
+        function setupEventListeners() {
+            document.querySelectorAll('.tab-button').forEach(button => {
                 button.addEventListener('click', () => {
-                    const type = button.getAttribute('data-type');
-                    currentType = type;
-                    
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                    
-                    loadPopularContent();
+                    currentType = button.dataset.tab;
+                    resetAndLoad();
                 });
+            });
+
+            document.getElementById('regionFilter').addEventListener('change', (e) => {
+                currentRegion = e.target.value;
+                resetAndLoad();
             });
         }
 
+        function resetAndLoad() {
+            currentPage = 1;
+            allResults = [];
+            loadPopularContent();
+        }
+
         async function loadPopularContent() {
-            const container = document.getElementById('popularContent');
-            
+            if (isLoading) return;
+
             try {
-                showLoadingSkeleton(container);
+                isLoading = true;
+                const container = document.getElementById('popularContent');
                 
-                // Load popular content based on type
+                if (currentPage === 1) {
+                    UI.showSkeleton(container, 20);
+                }
+
                 let response;
-                if (currentType === 'all') {
-                    response = await ApiService.getTrending('all', 40);
+                if (currentType === 'anime') {
+                    response = await api.getAnimeRecommendations(null, 20);
                 } else {
-                    response = await ApiService.getTrending(currentType, 40);
+                    // For movies and TV shows, we'll use getTrending as a fallback since getPopular might not be implemented
+                    response = await api.getTrending(currentType, 20);
                 }
                 
-                if (response.success && response.data.recommendations) {
-                    renderContentGrid(container, response.data.recommendations);
+                const content = response.recommendations || [];
+
+                if (currentPage === 1) {
+                    allResults = content;
                 } else {
-                    showErrorMessage(container, 'Failed to load popular content');
+                    allResults = [...allResults, ...content];
                 }
+
+                contentManager.renderMovieGrid(container, { recommendations: allResults });
+                
+                const loadMoreBtn = document.getElementById('loadMoreBtn');
+                loadMoreBtn.style.display = content.length >= 20 ? 'block' : 'none';
+
             } catch (error) {
                 console.error('Error loading popular content:', error);
-                showErrorMessage(container, 'Failed to load popular content');
+                showErrorState();
+            } finally {
+                isLoading = false;
             }
         }
 
-        function applyFilters() {
+        function loadMore() {
+            currentPage++;
             loadPopularContent();
+        }
+
+        function showErrorState() {
+            const container = document.getElementById('popularContent');
+            container.innerHTML = `
+                <div class="col-span-full">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <h3 class="empty-state-title">Failed to load popular content</h3>
+                        <p class="empty-state-description">Please try again later.</p>
+                        <button class="btn btn-primary mt-4" onclick="loadPopularContent()">Retry</button>
+                    </div>
+                </div>
+            `;
         }
     </script>
 </body>

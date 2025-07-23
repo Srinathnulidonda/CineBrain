@@ -1,78 +1,224 @@
-<header class="header">
-    <nav class="navbar container-fluid">
-        <div class="d-flex align-items-center justify-content-between w-100">
-            <a href="/" class="navbar-brand">
-                <i class="fas fa-film"></i>
-                CineScope
-            </a>
-            
-            <div class="search-container">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" 
-                       class="search-input" 
-                       placeholder="Search movies, TV shows, anime..."
-                       oninput="handleSearch(this.value)">
-                <div class="search-suggestions"></div>
-            </div>
-            
-            <ul class="nav-menu">
-                <li><a href="/" class="nav-link">Home</a></li>
-                <li class="dropdown">
-                    <a href="#" class="nav-link dropdown-toggle">Categories</a>
-                    <div class="dropdown-menu">
-                        <a href="/categories/trending">Trending</a>
-                        <a href="/categories/popular">Popular</a>
-                        <a href="/categories/new-releases">New Releases</a>
-                        <a href="/categories/critic-choices">Critics' Choice</a>
-                        <a href="/categories/movies">Movies</a>
-                        <a href="/categories/tv-shows">TV Shows</a>
-                        <a href="/categories/anime">Anime</a>
-                    </div>
-                </li>
-                <li class="dropdown">
-                    <a href="#" class="nav-link dropdown-toggle">Languages</a>
-                    <div class="dropdown-menu">
-                        <a href="/languages/english">English</a>
-                        <a href="/languages/hindi">Hindi</a>
-                        <a href="/languages/telugu">Telugu</a>
-                        <a href="/languages/tamil">Tamil</a>
-                        <a href="/languages/kannada">Kannada</a>
-                        <a href="/languages/malayalam">Malayalam</a>
-                    </div>
-                </li>
-                <li id="userMenu"></li>
-            </ul>
-        </div>
-    </nav>
-</header>
-
-<script>
-    // Update user menu based on auth state
-    const userMenu = document.getElementById('userMenu');
-    const user = AppState.user;
-    
-    if (user) {
-        userMenu.innerHTML = `
+<nav class="navbar">
+    <div class="container flex items-center justify-between py-4">
+        <!-- Brand -->
+        <a href="/" class="nav-brand">CineScope</a>
+        
+        <!-- Desktop Navigation -->
+        <div class="hidden md:flex items-center gap-8">
+            <a href="/" class="nav-link">Home</a>
             <div class="dropdown">
-                <a href="#" class="nav-link dropdown-toggle">
-                    <i class="fas fa-user-circle"></i> ${user.username}
-                </a>
-                <div class="dropdown-menu dropdown-menu-end">
-                    <a href="/dashboard">Dashboard</a>
-                    <a href="/profile">Profile</a>
-                    <a href="/user/watchlist">My Watchlist</a>
-                    <a href="/user/favorites">Favorites</a>
-                    ${user.is_admin ? '<a href="/admin/dashboard">Admin Panel</a>' : ''}
-                    <div class="dropdown-divider"></div>
-                    <a href="#" onclick="handleLogout()">Logout</a>
+                <button class="dropdown-toggle nav-link">
+                    Categories
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div class="dropdown-menu">
+                    <a href="/categories/trending" class="dropdown-item">Trending</a>
+                    <a href="/categories/popular" class="dropdown-item">Popular</a>
+                    <a href="/categories/new-releases" class="dropdown-item">New Releases</a>
+                    <a href="/categories/critic-choices" class="dropdown-item">Critics' Choice</a>
+                    <div class="border-t border-gray-700 my-2"></div>
+                    <a href="/categories/movies" class="dropdown-item">Movies</a>
+                    <a href="/categories/tv-shows" class="dropdown-item">TV Shows</a>
+                    <a href="/categories/anime" class="dropdown-item">Anime</a>
                 </div>
             </div>
-        `;
+            
+            <div class="dropdown">
+                <button class="dropdown-toggle nav-link">
+                    Languages
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div class="dropdown-menu">
+                    <a href="/languages/english" class="dropdown-item">English</a>
+                    <a href="/languages/hindi" class="dropdown-item">Hindi</a>
+                    <a href="/languages/telugu" class="dropdown-item">Telugu</a>
+                    <a href="/languages/tamil" class="dropdown-item">Tamil</a>
+                    <a href="/languages/kannada" class="dropdown-item">Kannada</a>
+                    <a href="/languages/malayalam" class="dropdown-item">Malayalam</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="hidden lg:block search-container relative">
+            <input type="search" id="searchInput" class="search-input" placeholder="Search movies, TV shows, anime...">
+            <svg class="search-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <div id="searchResults" class="absolute top-full left-0 right-0 bg-gray-900 border border-gray-700 rounded-lg mt-1 max-h-96 overflow-y-auto z-50" style="display: none;"></div>
+        </div>
+
+        <!-- User Menu -->
+        <div class="hidden md:flex items-center gap-4">
+            <div id="authButtons" class="flex items-center gap-2">
+                <a href="/login" class="btn btn-ghost btn-sm">Sign In</a>
+                <a href="/login" class="btn btn-primary btn-sm">Sign Up</a>
+            </div>
+            
+            <div id="userMenu" class="dropdown" style="display: none;">
+                <button class="dropdown-toggle flex items-center gap-2">
+                    <div class="avatar avatar-sm" id="userAvatar">
+                        <span id="userInitials">U</span>
+                    </div>
+                    <span id="userName">User</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div class="dropdown-menu">
+                    <a href="/dashboard" class="dropdown-item">Dashboard</a>
+                    <a href="/profile" class="dropdown-item">Profile</a>
+                    <a href="/user/watchlist" class="dropdown-item">Watchlist</a>
+                    <a href="/user/favorites" class="dropdown-item">Favorites</a>
+                    <div id="adminMenuItems" style="display: none;">
+                        <div class="border-t border-gray-700 my-2"></div>
+                        <a href="/admin/dashboard" class="dropdown-item">Admin Dashboard</a>
+                        <a href="/admin/content-browser" class="dropdown-item">Content Manager</a>
+                        <a href="/admin/analytics" class="dropdown-item">Analytics</a>
+                    </div>
+                    <div class="border-t border-gray-700 my-2"></div>
+                    <button class="dropdown-item logout-btn w-full text-left text-red-400">Sign Out</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Toggle -->
+        <button id="mobileMenuToggle" class="md:hidden p-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+    </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div id="mobileMenu" class="mobile-menu">
+    <div class="mobile-menu-content">
+        <div class="flex items-center justify-between mb-8">
+            <a href="/" class="nav-brand">CineScope</a>
+            <button onclick="document.getElementById('mobileMenu').classList.remove('open')" class="p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mobile Search -->
+        <div class="search-container relative mb-6">
+            <input type="search" id="mobileSearchInput" class="search-input" placeholder="Search...">
+            <svg class="search-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <div id="mobileSearchResults" class="absolute top-full left-0 right-0 bg-gray-900 border border-gray-700 rounded-lg mt-1 max-h-64 overflow-y-auto z-50" style="display: none;"></div>
+        </div>
+
+        <!-- Mobile Navigation Links -->
+        <div class="space-y-4">
+            <a href="/" class="mobile-menu-link">Home</a>
+            
+            <!-- Categories -->
+            <div class="space-y-2">
+                <div class="text-gray-400 font-medium px-4 py-2">Categories</div>
+                <a href="/categories/trending" class="mobile-menu-link">Trending</a>
+                <a href="/categories/popular" class="mobile-menu-link">Popular</a>
+                <a href="/categories/new-releases" class="mobile-menu-link">New Releases</a>
+                <a href="/categories/critic-choices" class="mobile-menu-link">Critics' Choice</a>
+                <a href="/categories/movies" class="mobile-menu-link">Movies</a>
+                <a href="/categories/tv-shows" class="mobile-menu-link">TV Shows</a>
+                <a href="/categories/anime" class="mobile-menu-link">Anime</a>
+            </div>
+
+            <!-- Languages -->
+            <div class="space-y-2">
+                <div class="text-gray-400 font-medium px-4 py-2">Languages</div>
+                <a href="/languages/english" class="mobile-menu-link">English</a>
+                <a href="/languages/hindi" class="mobile-menu-link">Hindi</a>
+                <a href="/languages/telugu" class="mobile-menu-link">Telugu</a>
+                <a href="/languages/tamil" class="mobile-menu-link">Tamil</a>
+                <a href="/languages/kannada" class="mobile-menu-link">Kannada</a>
+                <a href="/languages/malayalam" class="mobile-menu-link">Malayalam</a>
+            </div>
+
+            <!-- User Links -->
+            <div id="mobileAuthButtons" class="space-y-2">
+                <a href="/login" class="mobile-menu-link">Sign In</a>
+                <a href="/login" class="mobile-menu-link">Sign Up</a>
+            </div>
+
+            <div id="mobileUserMenu" class="space-y-2" style="display: none;">
+                <div class="text-gray-400 font-medium px-4 py-2">Account</div>
+                <a href="/dashboard" class="mobile-menu-link">Dashboard</a>
+                <a href="/profile" class="mobile-menu-link">Profile</a>
+                <a href="/user/watchlist" class="mobile-menu-link">Watchlist</a>
+                <a href="/user/favorites" class="mobile-menu-link">Favorites</a>
+                <div id="mobileAdminMenuItems" style="display: none;">
+                    <div class="text-gray-400 font-medium px-4 py-2">Admin</div>
+                    <a href="/admin/dashboard" class="mobile-menu-link">Admin Dashboard</a>
+                    <a href="/admin/content-browser" class="mobile-menu-link">Content Manager</a>
+                    <a href="/admin/analytics" class="mobile-menu-link">Analytics</a>
+                </div>
+                <button class="mobile-menu-link logout-btn text-red-400">Sign Out</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update header based on authentication state
+function updateHeader() {
+    const authButtons = document.getElementById('authButtons');
+    const userMenu = document.getElementById('userMenu');
+    const mobileAuthButtons = document.getElementById('mobileAuthButtons');
+    const mobileUserMenu = document.getElementById('mobileUserMenu');
+    const adminMenuItems = document.getElementById('adminMenuItems');
+    const mobileAdminMenuItems = document.getElementById('mobileAdminMenuItems');
+
+    if (appState.isAuthenticated()) {
+        // Hide auth buttons
+        authButtons.style.display = 'none';
+        mobileAuthButtons.style.display = 'none';
+        
+        // Show user menu
+        userMenu.style.display = 'block';
+        mobileUserMenu.style.display = 'block';
+        
+        // Update user info
+        const user = appState.user;
+        document.getElementById('userName').textContent = user.username;
+        document.getElementById('userInitials').textContent = user.username.charAt(0).toUpperCase();
+        
+        // Show admin menu if admin
+        if (appState.isAdmin()) {
+            adminMenuItems.style.display = 'block';
+            mobileAdminMenuItems.style.display = 'block';
+        }
     } else {
-        userMenu.innerHTML = `
-            <a href="/login" class="btn btn-primary btn-sm">
-                <i class="fas fa-sign-in-alt"></i> Login
-            </a>
-        `;
+        // Show auth buttons
+        authButtons.style.display = 'flex';
+        mobileAuthButtons.style.display = 'block';
+        
+        // Hide user menu
+        userMenu.style.display = 'none';
+        mobileUserMenu.style.display = 'none';
     }
+}
+
+// Update header when authentication state changes
+EventBus.on('user:updated', updateHeader);
+EventBus.on('user:logout', updateHeader);
+
+// Initialize header state
+document.addEventListener('DOMContentLoaded', updateHeader);
+
+// Setup mobile search
+document.addEventListener('DOMContentLoaded', () => {
+    UI.initSearch('#mobileSearchInput', '#mobileSearchResults', async (query) => {
+        const response = await api.search(query);
+        return response.results || [];
+    });
+});
 </script>

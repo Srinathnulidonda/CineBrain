@@ -4,407 +4,362 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Watchlist - CineScope</title>
-    <meta name="description" content="Your personal watchlist on CineScope.">
+    <meta name="description" content="Your personal watchlist of movies, TV shows, and anime to watch later.">
     
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/responsive.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Header -->
-    <div data-include="header"></div>
+    <div id="preloader" class="preloader">
+        <div class="flex flex-col items-center">
+            <div class="loader"></div>
+            <p class="mt-4 text-lg font-medium">Loading Watchlist...</p>
+        </div>
+    </div>
 
-    <main style="padding-top: 80px;">
-        <!-- Page Hero -->
-        <section class="page-hero">
-            <div class="container">
-                <div class="breadcrumb">
-                    <a href="/">Home</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <span>Watchlist</span>
-                </div>
-                <h1 class="page-title">📚 My Watchlist</h1>
-                <p class="page-description" id="watchlistDescription">Your saved content to watch later</p>
+    <div id="header-placeholder"></div>
+
+    <main class="container py-8">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
+            <div>
+                <h1 class="text-4xl font-bold mb-2">📋 My Watchlist</h1>
+                <p class="text-gray-400">Movies and shows you want to watch</p>
             </div>
-        </section>
-
-        <div class="container">
-            <!-- Watchlist Stats -->
-            <div class="watchlist-stats">
-                <div class="stat-card">
-                    <div class="stat-number" id="totalItems">0</div>
-                    <div class="stat-label">Total Items</div>
+            <div class="flex items-center gap-4 mt-4 md:mt-0">
+                <div class="stats-card min-w-0">
+                    <div class="stats-value text-2xl" id="watchlistCount">0</div>
+                    <div class="stats-label">Items</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="movieCount">0</div>
-                    <div class="stat-label">Movies</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="tvCount">0</div>
-                    <div class="stat-label">TV Shows</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="animeCount">0</div>
-                    <div class="stat-label">Anime</div>
-                </div>
-            </div>
-
-            <!-- Filters -->
-            <div class="filter-bar">
-                <div class="filter-group">
-                    <label for="typeFilter">Type:</label>
-                    <select id="typeFilter" class="filter-select">
-                        <option value="">All</option>
-                        <option value="movie">Movies</option>
-                        <option value="tv">TV Shows</option>
-                        <option value="anime">Anime</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="sortFilter">Sort by:</label>
-                    <select id="sortFilter" class="filter-select">
-                        <option value="recent">Recently Added</option>
-                        <option value="title">Title</option>
-                        <option value="rating">Rating</option>
-                        <option value="year">Year</option>
-                    </select>
-                </div>
-                <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
-                <button class="btn btn-outline" onclick="clearWatchlist()">Clear All</button>
-            </div>
-
-            <!-- Watchlist Content -->
-            <div class="content-grid" id="watchlistContent">
-                <!-- Content will be loaded here -->
-            </div>
-
-            <!-- Empty State -->
-            <div class="empty-state" id="emptyState" style="display: none;">
-                <div class="empty-icon">
-                    <i class="fas fa-bookmark"></i>
-                </div>
-                <h2>Your watchlist is empty</h2>
-                <p>Start adding movies, TV shows, and anime to your watchlist</p>
-                <a href="/" class="btn btn-primary">Discover Content</a>
+                <button class="btn btn-secondary" onclick="clearWatchlist()">
+                    Clear All
+                </button>
             </div>
         </div>
+
+        <!-- Filters and Sort -->
+        <div class="card mb-8">
+            <div class="card-content">
+                <div class="grid grid-1 md:grid-4 gap-6">
+                    <div>
+                        <label class="form-label">Filter by Type</label>
+                        <select id="typeFilter" class="form-input">
+                            <option value="">All Types</option>
+                            <option value="movie">Movies</option>
+                            <option value="tv">TV Shows</option>
+                            <option value="anime">Anime</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Filter by Genre</label>
+                        <select id="genreFilter" class="form-input">
+                            <option value="">All Genres</option>
+                            <option value="action">Action</option>
+                            <option value="comedy">Comedy</option>
+                            <option value="drama">Drama</option>
+                            <option value="thriller">Thriller</option>
+                            <option value="romance">Romance</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Sort by</label>
+                        <select id="sortBy" class="form-input">
+                            <option value="added">Date Added</option>
+                            <option value="title">Title</option>
+                            <option value="rating">Rating</option>
+                            <option value="release_date">Release Date</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button class="btn btn-ghost w-full" onclick="exportWatchlist()">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Watchlist Content -->
+        <div id="watchlistContent">
+            <!-- Content will be loaded here -->
+        </div>
+
+        <!-- Recommendations based on watchlist -->
+        <section class="section mt-16">
+            <h2 class="section-title">Recommended for You</h2>
+            <p class="text-gray-400 mb-6">Based on your watchlist preferences</p>
+            <div class="content-grid" id="recommendationsContent">
+                <!-- Recommendations will be loaded here -->
+            </div>
+        </section>
     </main>
 
-    <!-- Footer -->
-    <div data-include="footer"></div>
+    <div id="footer-placeholder"></div>
 
-    <!-- Scripts -->
     <script src="/js/include.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
-
     <script>
-        let watchlistData = [];
+        let watchlistItems = [];
+        let filteredItems = [];
 
-        document.addEventListener('DOMContentLoaded', function() {
-            if (!requireAuth()) return;
-            
-            loadWatchlist();
-            setupRealTimeUpdates();
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!appState.isAuthenticated()) {
+                window.location.href = '/login';
+                return;
+            }
+
+            setupEventListeners();
+            await loadWatchlist();
+            await loadRecommendations();
         });
 
+        function setupEventListeners() {
+            ['typeFilter', 'genreFilter', 'sortBy'].forEach(id => {
+                document.getElementById(id).addEventListener('change', applyFiltersAndSort);
+            });
+        }
+
         async function loadWatchlist() {
-            const container = document.getElementById('watchlistContent');
-            const emptyState = document.getElementById('emptyState');
-            
             try {
-                showLoadingSkeleton(container);
+                const container = document.getElementById('watchlistContent');
+                UI.showSkeleton(container, 6);
+
+                const response = await api.getWatchlist();
+                watchlistItems = response.watchlist || [];
                 
-                const response = await ApiService.getWatchlist();
-                
-                if (response.success && response.data.watchlist) {
-                    watchlistData = response.data.watchlist;
-                    
-                    if (watchlistData.length > 0) {
-                        updateWatchlistStats();
-                        renderWatchlist(watchlistData);
-                        container.style.display = 'grid';
-                        emptyState.style.display = 'none';
-                    } else {
-                        container.style.display = 'none';
-                        emptyState.style.display = 'block';
-                    }
-                } else {
-                    container.style.display = 'none';
-                    emptyState.style.display = 'block';
-                }
+                document.getElementById('watchlistCount').textContent = watchlistItems.length;
+                applyFiltersAndSort();
+
             } catch (error) {
                 console.error('Error loading watchlist:', error);
-                showErrorMessage(container, 'Failed to load watchlist');
+                showErrorState();
             }
         }
 
-        function updateWatchlistStats() {
-            const total = watchlistData.length;
-            const movies = watchlistData.filter(item => item.content_type === 'movie').length;
-            const tv = watchlistData.filter(item => item.content_type === 'tv').length;
-            const anime = watchlistData.filter(item => item.content_type === 'anime').length;
-            
-            document.getElementById('totalItems').textContent = total;
-            document.getElementById('movieCount').textContent = movies;
-            document.getElementById('tvCount').textContent = tv;
-            document.getElementById('animeCount').textContent = anime;
-            
-            document.getElementById('watchlistDescription').textContent = 
-                `${total} item${total !== 1 ? 's' : ''} in your watchlist`;
+        function applyFiltersAndSort() {
+            const typeFilter = document.getElementById('typeFilter').value;
+            const genreFilter = document.getElementById('genreFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            // Apply filters
+            filteredItems = watchlistItems.filter(item => {
+                if (typeFilter && item.content_type !== typeFilter) return false;
+                if (genreFilter) {
+                    const genres = item.genres || [];
+                    if (!genres.some(genre => genre.toLowerCase().includes(genreFilter.toLowerCase()))) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            // Apply sort
+            switch (sortBy) {
+                case 'title':
+                    filteredItems.sort((a, b) => a.title.localeCompare(b.title));
+                    break;
+                case 'rating':
+                    filteredItems.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+                    break;
+                case 'release_date':
+                    filteredItems.sort((a, b) => new Date(b.release_date || 0) - new Date(a.release_date || 0));
+                    break;
+                default: // added
+                    // Keep original order (most recently added first)
+            }
+
+            renderWatchlist();
         }
 
-        function renderWatchlist(data) {
+        function renderWatchlist() {
             const container = document.getElementById('watchlistContent');
-            
-            container.innerHTML = data.map(item => `
-                <div class="watchlist-card" data-id="${item.id}">
-                    <div class="card-image">
-                        <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
-                             alt="${item.title}" class="content-poster">
-                        <div class="card-overlay">
-                            <button class="action-btn" onclick="viewDetails(${item.id})" title="View Details">
-                                <i class="fas fa-play"></i>
+
+            if (filteredItems.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <h3 class="empty-state-title">
+                            ${watchlistItems.length === 0 ? 'Your watchlist is empty' : 'No items match your filters'}
+                        </h3>
+                        <p class="empty-state-description">
+                            ${watchlistItems.length === 0 
+                                ? 'Start adding movies and shows you want to watch later.' 
+                                : 'Try adjusting your filters to see more items.'
+                            }
+                        </p>
+                        ${watchlistItems.length === 0 ? `
+                            <a href="/categories/trending" class="btn btn-primary mt-4">
+                                Discover Content
+                            </a>
+                        ` : `
+                            <button class="btn btn-secondary mt-4" onclick="clearFilters()">
+                                Clear Filters
                             </button>
-                            <button class="action-btn remove-btn" onclick="removeFromWatchlist(${item.id})" title="Remove">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
+                        `}
                     </div>
-                    <div class="card-info">
-                        <h3 class="content-title">${item.title}</h3>
-                        <div class="content-meta">
-                            <span class="content-type">${item.content_type.toUpperCase()}</span>
-                            ${item.rating ? `<span class="rating">⭐ ${item.rating}</span>` : ''}
-                        </div>
-                        <p class="content-overview">${(item.overview || '').substring(0, 100)}${item.overview && item.overview.length > 100 ? '...' : ''}</p>
-                        <div class="card-actions">
-                            <button class="btn btn-primary btn-sm" onclick="viewDetails(${item.id})">
-                                Watch Now
+                `;
+                return;
+            }
+
+            // Enhanced grid view with remove buttons
+            container.innerHTML = `
+                <div class="content-grid">
+                    ${filteredItems.map(item => `
+                        <div class="movie-card relative group">
+                            <img src="${item.poster_path || Utils.getPlaceholderImage()}" 
+                                 alt="${Utils.sanitizeHTML(item.title)}" 
+                                 class="w-full h-full object-cover rounded-lg"
+                                 onerror="this.src='${Utils.getPlaceholderImage()}'">
+                            
+                            <!-- Remove button -->
+                            <button class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onclick="removeFromWatchlist(${item.id})"
+                                    title="Remove from watchlist">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
                             </button>
-                            <button class="btn btn-outline btn-sm" onclick="addToFavorites(${item.id})">
-                                <i class="fas fa-heart"></i>
-                            </button>
+                            
+                            <!-- Content overlay -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                <div class="absolute bottom-0 left-0 right-0 p-4">
+                                    <h3 class="font-semibold text-sm mb-2">${Utils.sanitizeHTML(item.title)}</h3>
+                                    <div class="flex items-center gap-2 text-xs text-gray-300">
+                                        ${item.rating ? `<span class="flex items-center gap-1">⭐ ${Utils.formatRating(item.rating)}</span>` : ''}
+                                        ${item.release_date ? `<span>${Utils.formatDate(item.release_date)}</span>` : ''}
+                                        <span class="badge badge-ghost text-xs">${item.content_type?.toUpperCase()}</span>
+                                    </div>
+                                    <button class="btn btn-primary btn-sm mt-2 w-full" onclick="Router.navigate('/details?id=${item.id}')">
+                                        View Details
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    `).join('')}
                 </div>
-            `).join('');
+            `;
+
+            Utils.lazyLoadImages();
         }
 
         async function removeFromWatchlist(contentId) {
-            if (!confirm('Remove this item from your watchlist?')) return;
-            
             try {
-                // Remove from UI immediately for better UX
-                const card = document.querySelector(`[data-id="${contentId}"]`);
-                if (card) {
-                    card.style.opacity = '0.5';
-                    card.style.pointerEvents = 'none';
-                }
+                // In a real implementation, this would call an API to remove the item
+                // For now, we'll simulate it by removing from the local array
+                watchlistItems = watchlistItems.filter(item => item.id !== contentId);
+                document.getElementById('watchlistCount').textContent = watchlistItems.length;
                 
-                // Here you would make an API call to remove from watchlist
-                // For now, we'll simulate it
-                setTimeout(() => {
-                    watchlistData = watchlistData.filter(item => item.id !== contentId);
-                    updateWatchlistStats();
-                    renderWatchlist(watchlistData);
-                    showToast('Removed from watchlist', 'success');
-                    
-                    if (watchlistData.length === 0) {
-                        document.getElementById('watchlistContent').style.display = 'none';
-                        document.getElementById('emptyState').style.display = 'block';
-                    }
-                }, 500);
-                
+                UI.showToast('Removed from watchlist', 'success');
+                applyFiltersAndSort();
+
             } catch (error) {
                 console.error('Error removing from watchlist:', error);
-                showToast('Failed to remove from watchlist', 'error');
-                
-                // Restore card on error
-                if (card) {
-                    card.style.opacity = '1';
-                    card.style.pointerEvents = 'auto';
-                }
+                UI.showToast('Failed to remove from watchlist', 'error');
             }
         }
 
-        function applyFilters() {
-            const typeFilter = document.getElementById('typeFilter').value;
-            const sortFilter = document.getElementById('sortFilter').value;
-            
-            let filtered = [...watchlistData];
-            
-            // Apply type filter
-            if (typeFilter) {
-                filtered = filtered.filter(item => item.content_type === typeFilter);
-            }
-            
-            // Apply sorting
-            filtered.sort((a, b) => {
-                switch (sortFilter) {
-                    case 'title':
-                        return a.title.localeCompare(b.title);
-                    case 'rating':
-                        return (b.rating || 0) - (a.rating || 0);
-                    case 'year':
-                        const yearA = a.release_date ? new Date(a.release_date).getFullYear() : 0;
-                        const yearB = b.release_date ? new Date(b.release_date).getFullYear() : 0;
-                        return yearB - yearA;
-                    default: // recent
-                        return 0; // Keep original order (most recent first)
-                }
-            });
-            
-            renderWatchlist(filtered);
+        function clearFilters() {
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('genreFilter').value = '';
+            document.getElementById('sortBy').value = 'added';
+            applyFiltersAndSort();
         }
 
         function clearWatchlist() {
-            if (!confirm('Are you sure you want to clear your entire watchlist? This action cannot be undone.')) {
+            if (watchlistItems.length === 0) return;
+
+            UI.showModal(`
+                <div class="text-center">
+                    <h3 class="text-xl font-semibold mb-4">Clear Watchlist?</h3>
+                    <p class="text-gray-400 mb-6">This will remove all items from your watchlist. This action cannot be undone.</p>
+                    <div class="flex justify-center gap-4">
+                        <button class="btn btn-secondary" onclick="UI.hideModal(this.closest('.modal-overlay'))">Cancel</button>
+                        <button class="btn btn-error" onclick="confirmClearWatchlist()">Clear Watchlist</button>
+                    </div>
+                </div>
+            `, 'Clear Watchlist');
+        }
+
+        function confirmClearWatchlist() {
+            watchlistItems = [];
+            filteredItems = [];
+            document.getElementById('watchlistCount').textContent = '0';
+            renderWatchlist();
+            UI.hideModal(document.querySelector('.modal-overlay'));
+            UI.showToast('Watchlist cleared', 'success');
+        }
+
+        function exportWatchlist() {
+            if (watchlistItems.length === 0) {
+                UI.showToast('Nothing to export', 'warning');
                 return;
             }
+
+            const exportData = {
+                exported_at: new Date().toISOString(),
+                total_items: watchlistItems.length,
+                watchlist: watchlistItems.map(item => ({
+                    title: item.title,
+                    type: item.content_type,
+                    rating: item.rating,
+                    release_date: item.release_date,
+                    genres: item.genres
+                }))
+            };
+
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
             
-            // This would make API calls to remove all items
-            watchlistData = [];
-            updateWatchlistStats();
-            document.getElementById('watchlistContent').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'block';
-            showToast('Watchlist cleared', 'success');
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `cinescope-watchlist-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            UI.showToast('Watchlist exported successfully!', 'success');
         }
 
-        function setupRealTimeUpdates() {
-            // Listen for watchlist updates from other tabs/windows
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'watchlistUpdated') {
-                    loadWatchlist();
-                }
-            });
-        }
+        async function loadRecommendations() {
+            if (watchlistItems.length === 0) return;
 
-        // Enhanced add to favorites with optimistic updates
-        async function addToFavorites(contentId) {
             try {
-                const response = await ApiService.recordInteraction(contentId, 'favorite');
-                if (response.success) {
-                    showToast('Added to favorites', 'success');
-                } else {
-                    throw new Error(response.error);
-                }
+                const container = document.getElementById('recommendationsContent');
+                UI.showSkeleton(container, 6);
+
+                // Get recommendations based on watchlist content
+                // For now, we'll use trending as a fallback
+                const response = await api.getTrending('all', 12);
+                const recommendations = response.recommendations || [];
+
+                contentManager.renderMovieGrid(container, { recommendations });
+
             } catch (error) {
-                handleApiError(error, 'Failed to add to favorites');
+                console.error('Error loading recommendations:', error);
+                document.getElementById('recommendationsContent').innerHTML = `
+                    <div class="col-span-full text-center text-gray-400 py-8">
+                        Failed to load recommendations
+                    </div>
+                `;
             }
+        }
+
+        function showErrorState() {
+            const container = document.getElementById('watchlistContent');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">❌</div>
+                    <h3 class="empty-state-title">Failed to load watchlist</h3>
+                    <p class="empty-state-description">Please try again later.</p>
+                    <button class="btn btn-primary mt-4" onclick="loadWatchlist()">Retry</button>
+                </div>
+            `;
         }
     </script>
-
-    <style>
-        .watchlist-stats {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            overflow-x: auto;
-        }
-        
-        .stat-card {
-            background: var(--dark-surface);
-            padding: 1.5rem;
-            border-radius: var(--border-radius);
-            text-align: center;
-            min-width: 120px;
-            border: 2px solid transparent;
-            transition: var(--transition-smooth);
-        }
-        
-        .stat-card:hover {
-            border-color: var(--primary-blue);
-        }
-        
-        .watchlist-card {
-            background: var(--dark-surface);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            transition: var(--transition-smooth);
-        }
-        
-        .watchlist-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-xl);
-        }
-        
-        .card-image {
-            position: relative;
-        }
-        
-        .card-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            opacity: 0;
-            transition: var(--transition-smooth);
-        }
-        
-        .watchlist-card:hover .card-overlay {
-            opacity: 1;
-        }
-        
-        .card-info {
-            padding: 1rem;
-        }
-        
-        .card-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-        
-        .btn-sm {
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-        }
-        
-        .remove-btn {
-            background: #ef4444 !important;
-        }
-        
-        .remove-btn:hover {
-            background: #dc2626 !important;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            background: var(--dark-surface);
-            border-radius: var(--border-radius);
-        }
-        
-        .empty-icon {
-            font-size: 4rem;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-        }
-        
-        @media (max-width: 768px) {
-            .watchlist-stats {
-                gap: 0.5rem;
-            }
-            
-            .stat-card {
-                padding: 1rem;
-                min-width: 100px;
-            }
-            
-            .card-actions {
-                flex-direction: column;
-            }
-        }
-    </style>
 </body>
 </html>

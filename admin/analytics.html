@@ -3,689 +3,429 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytics - Admin - CineScope</title>
-    <meta name="description" content="Analytics dashboard for CineScope admin panel.">
+    <title>Analytics - CineScope Admin</title>
+    <meta name="description" content="Comprehensive analytics and insights for CineScope platform.">
     
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/responsive.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Header -->
-    <div data-include="header"></div>
+    <div id="preloader" class="preloader">
+        <div class="flex flex-col items-center">
+            <div class="loader"></div>
+            <p class="mt-4 text-lg font-medium">Loading Analytics...</p>
+        </div>
+    </div>
 
-    <main style="padding-top: 80px;">
-        <!-- Admin Header -->
-        <section class="admin-header">
-            <div class="container">
-                <div class="breadcrumb">
-                    <a href="/">Home</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <a href="/admin/dashboard">Admin</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <span>Analytics</span>
-                </div>
-                <h1 class="admin-title">📊 Analytics Dashboard</h1>
-                <p class="text-secondary">Comprehensive insights into platform performance and user behavior</p>
+    <div id="header-placeholder"></div>
+
+    <main class="container py-8">
+        <!-- Analytics Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-4xl font-bold mb-2">📊 Analytics Dashboard</h1>
+                <p class="text-gray-400">Comprehensive insights and platform statistics</p>
             </div>
-        </section>
-
-        <div class="container">
-            <!-- Time Period Selector -->
-            <div class="time-selector">
-                <button class="time-btn active" data-period="7d">7 Days</button>
-                <button class="time-btn" data-period="30d">30 Days</button>
-                <button class="time-btn" data-period="90d">90 Days</button>
-                <button class="time-btn" data-period="1y">1 Year</button>
+            <div class="flex items-center gap-4">
+                <select id="timeRangeFilter" class="form-input">
+                    <option value="7">Last 7 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                    <option value="365">Last year</option>
+                </select>
+                <button class="btn btn-primary" onclick="exportAnalytics()">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Export Data
+                </button>
             </div>
+        </div>
 
-            <!-- Key Metrics -->
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="metric-trend positive" id="usersTrend">+12%</div>
-                    </div>
-                    <div class="metric-value" id="totalUsers">0</div>
-                    <div class="metric-label">Total Users</div>
-                    <div class="metric-chart" id="usersChart"></div>
-                </div>
-
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">
-                            <i class="fas fa-mouse-pointer"></i>
-                        </div>
-                        <div class="metric-trend positive" id="interactionsTrend">+25%</div>
-                    </div>
-                    <div class="metric-value" id="totalInteractions">0</div>
-                    <div class="metric-label">User Interactions</div>
-                    <div class="metric-chart" id="interactionsChart"></div>
-                </div>
-
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">
-                            <i class="fas fa-film"></i>
-                        </div>
-                        <div class="metric-trend positive" id="contentTrend">+8%</div>
-                    </div>
-                    <div class="metric-value" id="totalContent">0</div>
-                    <div class="metric-label">Content Items</div>
-                    <div class="metric-chart" id="contentChart"></div>
-                </div>
-
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">
-                            <i class="fas fa-star"></i>
-                        </div>
-                        <div class="metric-trend positive" id="ratingsTrend">+15%</div>
-                    </div>
-                    <div class="metric-value" id="avgRating">0</div>
-                    <div class="metric-label">Avg. Rating</div>
-                    <div class="metric-chart" id="ratingsChart"></div>
-                </div>
+        <!-- Key Metrics Overview -->
+        <div class="grid grid-2 md:grid-4 gap-6 mb-8">
+            <div class="stats-card">
+                <div class="stats-value" id="totalUsers">0</div>
+                <div class="stats-label">Total Users</div>
+                <div class="text-xs text-green-400 mt-1">+12% from last month</div>
             </div>
+            <div class="stats-card">
+                <div class="stats-value" id="totalContent">0</div>
+                <div class="stats-label">Content Items</div>
+                <div class="text-xs text-blue-400 mt-1">+8% from last month</div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-value" id="totalInteractions">0</div>
+                <div class="stats-label">User Interactions</div>
+                <div class="text-xs text-purple-400 mt-1">+25% from last month</div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-value" id="activeUsers">0</div>
+                <div class="stats-label">Active Users</div>
+                <div class="text-xs text-yellow-400 mt-1">+5% from last week</div>
+            </div>
+        </div>
 
-            <!-- Charts Section -->
-            <div class="charts-section">
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3>User Activity Over Time</h3>
-                        <div class="chart-controls">
-                            <select id="activityMetric" class="chart-select">
-                                <option value="users">Active Users</option>
-                                <option value="interactions">Interactions</option>
-                                <option value="searches">Searches</option>
-                            </select>
+        <!-- Charts and Analytics -->
+        <div class="grid grid-1 lg:grid-2 gap-8 mb-8">
+            <!-- User Growth Chart -->
+            <div class="card">
+                <div class="card-content">
+                    <h3 class="text-xl font-semibold mb-4">User Growth</h3>
+                    <div id="userGrowthChart" class="h-64 flex items-center justify-center bg-gray-800 rounded">
+                        <div class="text-center">
+                            <div class="text-4xl mb-2">📈</div>
+                            <p class="text-gray-400">Chart visualization would go here</p>
+                            <p class="text-xs text-gray-500">Integration with Chart.js or similar library</p>
                         </div>
-                    </div>
-                    <div class="chart-area" id="activityChart">
-                        <p class="chart-placeholder">Chart would be rendered here with real data</p>
-                    </div>
-                </div>
-
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3>Content Performance</h3>
-                    </div>
-                    <div class="chart-area" id="contentPerformanceChart">
-                        <p class="chart-placeholder">Content performance visualization</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Data Tables -->
-            <div class="analytics-tables">
-                <div class="table-container">
-                    <div class="table-header">
-                        <h3>Popular Content</h3>
-                        <button class="btn btn-outline btn-sm" onclick="exportData('popular')">
-                            <i class="fas fa-download"></i> Export
-                        </button>
-                    </div>
-                    <div class="table-content" id="popularContentTable">
-                        <!-- Popular content table will be loaded here -->
-                    </div>
-                </div>
-
-                <div class="table-container">
-                    <div class="table-header">
-                        <h3>Top Genres</h3>
-                        <button class="btn btn-outline btn-sm" onclick="exportData('genres')">
-                            <i class="fas fa-download"></i> Export
-                        </button>
-                    </div>
-                    <div class="table-content" id="topGenresTable">
-                        <!-- Top genres table will be loaded here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- User Insights -->
-            <div class="insights-section">
-                <div class="insight-card">
-                    <h3>User Behavior Insights</h3>
-                    <div class="insights-grid">
-                        <div class="insight-item">
-                            <div class="insight-value" id="avgSessionTime">0m</div>
-                            <div class="insight-label">Avg. Session Time</div>
-                        </div>
-                        <div class="insight-item">
-                            <div class="insight-value" id="bounceRate">0%</div>
-                            <div class="insight-label">Bounce Rate</div>
-                        </div>
-                        <div class="insight-item">
-                            <div class="insight-value" id="returnUsers">0%</div>
-                            <div class="insight-label">Return Users</div>
-                        </div>
-                        <div class="insight-item">
-                            <div class="insight-value" id="conversionRate">0%</div>
-                            <div class="insight-label">Conversion Rate</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="insight-card">
-                    <h3>Content Insights</h3>
-                    <div class="insights-grid">
-                        <div class="insight-item">
-                            <div class="insight-value" id="mostPopularGenre">Action</div>
-                            <div class="insight-label">Most Popular Genre</div>
-                        </div>
-                        <div class="insight-item">
-                            <div class="insight-value" id="avgRatingValue">8.2</div>
-                            <div class="insight-label">Avg. Content Rating</div>
-                        </div>
-                        <div class="insight-item">
-                            <div class="insight-value" id="totalWatchlistItems">0</div>
-                            <div class="insight-label">Total Watchlist Items</div>
-                        </div>
-                        <div class="insight-item">
-                            <div class="insight-value" id="newContentThisWeek">0</div>
-                            <div class="insight-label">New Content This Week</div>
+            <!-- Content Engagement -->
+            <div class="card">
+                <div class="card-content">
+                    <h3 class="text-xl font-semibold mb-4">Content Engagement</h3>
+                    <div id="engagementChart" class="h-64 flex items-center justify-center bg-gray-800 rounded">
+                        <div class="text-center">
+                            <div class="text-4xl mb-2">💹</div>
+                            <p class="text-gray-400">Engagement metrics chart</p>
+                            <p class="text-xs text-gray-500">Shows views, likes, watchlist adds</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Popular Content Analysis -->
+        <div class="grid grid-1 lg:grid-2 gap-8 mb-8">
+            <!-- Top Content -->
+            <div class="card">
+                <div class="card-content">
+                    <h3 class="text-xl font-semibold mb-4">Top Performing Content</h3>
+                    <div id="topContent" class="space-y-4">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Popular Genres -->
+            <div class="card">
+                <div class="card-content">
+                    <h3 class="text-xl font-semibold mb-4">Popular Genres</h3>
+                    <div id="popularGenres" class="space-y-3">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Behavior Analysis -->
+        <div class="grid grid-1 lg:grid-3 gap-8 mb-8">
+            <!-- User Activity Heatmap -->
+            <div class="card">
+                <div class="card-content">
+                    <h3 class="text-lg font-semibold mb-4">Activity Heatmap</h3>
+                    <div class="grid grid-7 gap-1 text-xs">
+                        <!-- Days of week -->
+                        <div class="text-center font-medium">S</div>
+                        <div class="text-center font-medium">M</div>
+                        <div class="text-center font-medium">T</div>
+                        <div class="text-center font-medium">W</div>
+                        <div class="text-center font-medium">T</div>
+                        <div class="text-center font-medium">F</div>
+                        <div class="text-center font-medium">S</div>
+                        
+                        <!-- Activity squares (simulated) -->
+                        ${Array(28).fill(0).map((_, i) => `
+                            <div class="aspect-square bg-gray-800 rounded-sm ${Math.random() > 0.5 ? 'bg-primary opacity-' + Math.floor(Math.random() * 100) : ''}" 
+                                 title="Day ${i + 1}"></div>
+                        `).join('')}
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-400 mt-2">
+                        <span>Less</span>
+                        <span>More</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Device Statistics -->
+            <div class="card">
+                <div class="card-content">
+                    <h3 class="text-lg font-semibold mb-4">Device Usage</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                <span class="text-sm">Mobile</span>
+                            </div>
+                            <span class="text-sm font-medium">65%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                <span class="text-sm">Desktop</span>
+                            </div>
+                            <span class="text-sm font-medium">25%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
+                                <span class="text-sm">Tablet</span>
+                            </div>
+                            <span class="text-sm font-medium">10%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Retention -->
+            <div class="card">
+                <div class="card-content">
+                    <h3 class="text-lg font-semibold mb-4">User Retention</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Day 1</span>
+                                <span>78%</span>
+                            </div>
+                            <div class="w-full bg-gray-800 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: 78%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Day 7</span>
+                                <span>45%</span>
+                            </div>
+                            <div class="w-full bg-gray-800 rounded-full h-2">
+                                <div class="bg-yellow-500 h-2 rounded-full" style="width: 45%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Day 30</span>
+                                <span>23%</span>
+                            </div>
+                            <div class="w-full bg-gray-800 rounded-full h-2">
+                                <div class="bg-red-500 h-2 rounded-full" style="width: 23%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="card mb-8">
+            <div class="card-content">
+                <h3 class="text-xl font-semibold mb-6">System Performance</h3>
+                <div class="grid grid-1 md:grid-4 gap-6">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-400 mb-1">99.9%</div>
+                        <div class="text-sm text-gray-400">Uptime</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-400 mb-1">1.2s</div>
+                        <div class="text-sm text-gray-400">Avg Response</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-purple-400 mb-1">15GB</div>
+                        <div class="text-sm text-gray-400">Data Usage</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-yellow-400 mb-1">2.1K</div>
+                        <div class="text-sm text-gray-400">API Calls/min</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Feed -->
+        <div class="card">
+            <div class="card-content">
+                <h3 class="text-xl font-semibold mb-4">Recent Platform Activity</h3>
+                <div id="activityFeed" class="space-y-4 max-h-96 overflow-y-auto">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
     </main>
 
-    <!-- Footer -->
-    <div data-include="footer"></div>
+    <div id="footer-placeholder"></div>
 
-    <!-- Scripts -->
     <script src="/js/include.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
-
     <script>
-        let currentPeriod = '7d';
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!appState.isAuthenticated() || !appState.isAdmin()) {
+                window.location.href = '/login';
+                return;
+            }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            if (!requireAdmin()) return;
-            
-            setupTimePeriodSelector();
-            loadAnalyticsData();
-            setupRealTimeUpdates();
+            await loadAnalyticsData();
+            setupEventListeners();
         });
 
-        function setupTimePeriodSelector() {
-            const timeButtons = document.querySelectorAll('.time-btn');
-            
-            timeButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    timeButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                    currentPeriod = button.getAttribute('data-period');
-                    loadAnalyticsData();
-                });
-            });
+        function setupEventListeners() {
+            document.getElementById('timeRangeFilter').addEventListener('change', loadAnalyticsData);
         }
 
         async function loadAnalyticsData() {
             try {
-                const response = await ApiService.getAnalytics();
-                
-                if (response.success) {
-                    updateMetrics(response.data);
-                    updateTables(response.data);
-                    updateInsights(response.data);
-                } else {
-                    showToast('Failed to load analytics data', 'error');
-                }
+                const response = await api.getAnalytics();
+                updateKeyMetrics(response);
+                updateTopContent(response.popular_content || []);
+                updatePopularGenres(response.popular_genres || []);
+                updateActivityFeed();
+
             } catch (error) {
                 console.error('Error loading analytics:', error);
-                showToast('Failed to load analytics data', 'error');
+                UI.showToast('Failed to load analytics data', 'error');
             }
         }
 
-        function updateMetrics(data) {
-            // Update metric values
-            document.getElementById('totalUsers').textContent = data.total_users || 0;
-            document.getElementById('totalInteractions').textContent = data.total_interactions || 0;
-            document.getElementById('totalContent').textContent = data.total_content || 0;
-            document.getElementById('avgRating').textContent = '8.2'; // Would be calculated from data
-            
-            // Generate mini charts (mock data)
-            generateMiniChart('usersChart', [10, 12, 8, 15, 20, 18, 25]);
-            generateMiniChart('interactionsChart', [50, 60, 45, 80, 90, 75, 100]);
-            generateMiniChart('contentChart', [5, 7, 6, 8, 10, 9, 12]);
-            generateMiniChart('ratingsChart', [8.1, 8.0, 8.3, 8.2, 8.4, 8.1, 8.2]);
+        function updateKeyMetrics(data) {
+            document.getElementById('totalUsers').textContent = (data.total_users || 0).toLocaleString();
+            document.getElementById('totalContent').textContent = (data.total_content || 0).toLocaleString();
+            document.getElementById('totalInteractions').textContent = (data.total_interactions || 0).toLocaleString();
+            document.getElementById('activeUsers').textContent = (data.active_users_last_week || 0).toLocaleString();
         }
 
-        function generateMiniChart(elementId, data) {
-            const container = document.getElementById(elementId);
-            const max = Math.max(...data);
-            const min = Math.min(...data);
+        function updateTopContent(contentList) {
+            const container = document.getElementById('topContent');
             
-            const points = data.map((value, index) => {
-                const x = (index / (data.length - 1)) * 100;
-                const y = 100 - ((value - min) / (max - min)) * 100;
-                return `${x},${y}`;
-            }).join(' ');
-            
-            container.innerHTML = `
-                <svg width="100%" height="40" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <polyline points="${points}" 
-                              fill="none" 
-                              stroke="var(--primary-blue)" 
-                              stroke-width="2"/>
-                </svg>
-            `;
-        }
-
-        function updateTables(data) {
-            // Popular Content Table
-            const popularContent = data.popular_content || [];
-            const popularTable = document.getElementById('popularContentTable');
-            
-            if (popularContent.length > 0) {
-                popularTable.innerHTML = `
-                    <table class="analytics-table">
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Type</th>
-                                <th>Interactions</th>
-                                <th>Rating</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${popularContent.map(item => `
-                                <tr>
-                                    <td class="title-cell">
-                                        <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" alt="${item.title}" class="table-poster">
-                                        <span>${item.title}</span>
-                                    </td>
-                                    <td><span class="type-badge">${item.content_type}</span></td>
-                                    <td>${item.interactions || 0}</td>
-                                    <td>${item.rating || 'N/A'}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+            if (contentList.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <p>No content data available</p>
+                    </div>
                 `;
-            } else {
-                popularTable.innerHTML = '<p class="table-empty">No data available</p>';
+                return;
             }
+
+            container.innerHTML = contentList.slice(0, 10).map((item, index) => `
+                <div class="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
+                    <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-sm font-bold">
+                        ${index + 1}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-medium truncate">${Utils.sanitizeHTML(item.title)}</h4>
+                        <p class="text-sm text-gray-400">${item.interactions} interactions</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-medium">${item.interactions}</div>
+                        <div class="text-xs text-gray-400">views</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updatePopularGenres(genreList) {
+            const container = document.getElementById('popularGenres');
             
-            // Top Genres Table
-            const topGenres = data.popular_genres || [];
-            const genresTable = document.getElementById('topGenresTable');
-            
-            if (topGenres.length > 0) {
-                genresTable.innerHTML = `
-                    <table class="analytics-table">
-                        <thead>
-                            <tr>
-                                <th>Genre</th>
-                                <th>Count</th>
-                                <th>Percentage</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${topGenres.map(genre => {
-                                const total = topGenres.reduce((sum, g) => sum + g.count, 0);
-                                const percentage = ((genre.count / total) * 100).toFixed(1);
-                                return `
-                                    <tr>
-                                        <td>
-                                            <span class="genre-tag">${genre.genre}</span>
-                                        </td>
-                                        <td>${genre.count}</td>
-                                        <td>
-                                            <div class="progress-bar">
-                                                <div class="progress-fill" style="width: ${percentage}%"></div>
-                                            </div>
-                                            ${percentage}%
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
+            if (genreList.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <p>No genre data available</p>
+                    </div>
                 `;
-            } else {
-                genresTable.innerHTML = '<p class="table-empty">No data available</p>';
+                return;
             }
+
+            const maxCount = Math.max(...genreList.map(g => g.count));
+
+            container.innerHTML = genreList.slice(0, 8).map(genre => {
+                const percentage = Math.round((genre.count / maxCount) * 100);
+                return `
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">${Utils.sanitizeHTML(genre.genre)}</span>
+                        <div class="flex items-center gap-3 flex-1 ml-4">
+                            <div class="flex-1 bg-gray-800 rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full transition-all duration-300" 
+                                     style="width: ${percentage}%"></div>
+                            </div>
+                            <span class="text-xs text-gray-400 w-8">${genre.count}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function updateInsights(data) {
-            // Generate mock insights (would be calculated from real data)
-            document.getElementById('avgSessionTime').textContent = '12m';
-            document.getElementById('bounceRate').textContent = '23%';
-            document.getElementById('returnUsers').textContent = '68%';
-            document.getElementById('conversionRate').textContent = '15%';
+        function updateActivityFeed() {
+            const activities = [
+                { type: 'user_signup', message: 'New user registered: john_doe', time: '2 minutes ago', icon: '👤' },
+                { type: 'content_add', message: 'New movie added: "The Matrix Resurrections"', time: '5 minutes ago', icon: '🎬' },
+                { type: 'interaction', message: 'High engagement on "Stranger Things S4"', time: '10 minutes ago', icon: '📈' },
+                { type: 'admin_action', message: 'Admin recommendation created', time: '15 minutes ago', icon: '⭐' },
+                { type: 'system', message: 'ML recommendations updated', time: '30 minutes ago', icon: '🤖' },
+                { type: 'user_signup', message: 'New user registered: movie_lover_23', time: '45 minutes ago', icon: '👤' },
+                { type: 'content_add', message: 'New anime series added: "Demon Slayer"', time: '1 hour ago', icon: '🎌' },
+                { type: 'milestone', message: 'Platform reached 10,000 users!', time: '2 hours ago', icon: '🎉' },
+            ];
+
+            const container = document.getElementById('activityFeed');
+            container.innerHTML = activities.map(activity => `
+                <div class="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-lg transition-colors">
+                    <div class="text-2xl">${activity.icon}</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm">${activity.message}</p>
+                        <p class="text-xs text-gray-400">${activity.time}</p>
+                    </div>
+                    <div class="w-2 h-2 bg-primary rounded-full"></div>
+                </div>
+            `).join('');
+        }
+
+        function exportAnalytics() {
+            const timeRange = document.getElementById('timeRangeFilter').value;
             
-            document.getElementById('mostPopularGenre').textContent = 
-                data.popular_genres && data.popular_genres[0] ? data.popular_genres[0].genre : 'Action';
-            document.getElementById('avgRatingValue').textContent = '8.2';
-            document.getElementById('totalWatchlistItems').textContent = '1,234';
-            document.getElementById('newContentThisWeek').textContent = '15';
-        }
-
-        function exportData(type) {
-            try {
-                let data, filename;
-                
-                if (type === 'popular') {
-                    data = 'Title,Type,Interactions,Rating\n';
-                    // Would fetch actual data
-                    filename = 'popular-content.csv';
-                } else if (type === 'genres') {
-                    data = 'Genre,Count,Percentage\n';
-                    // Would fetch actual data
-                    filename = 'top-genres.csv';
+            // Simulate analytics data export
+            const analyticsData = {
+                exported_at: new Date().toISOString(),
+                time_range_days: timeRange,
+                metrics: {
+                    total_users: parseInt(document.getElementById('totalUsers').textContent.replace(/,/g, '')),
+                    total_content: parseInt(document.getElementById('totalContent').textContent.replace(/,/g, '')),
+                    total_interactions: parseInt(document.getElementById('totalInteractions').textContent.replace(/,/g, '')),
+                    active_users: parseInt(document.getElementById('activeUsers').textContent.replace(/,/g, ''))
+                },
+                device_stats: {
+                    mobile: 65,
+                    desktop: 25,
+                    tablet: 10
+                },
+                retention_rates: {
+                    day_1: 78,
+                    day_7: 45,
+                    day_30: 23
                 }
-                
-                const blob = new Blob([data], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                a.click();
-                window.URL.revokeObjectURL(url);
-                
-                showToast('Data exported successfully!', 'success');
-            } catch (error) {
-                showToast('Failed to export data', 'error');
-            }
+            };
+
+            const dataStr = JSON.stringify(analyticsData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `cinescope-analytics-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            UI.showToast('Analytics data exported successfully!', 'success');
         }
 
-        function setupRealTimeUpdates() {
-            // Update analytics every 5 minutes
-            setInterval(() => {
-                loadAnalyticsData();
-            }, 5 * 60 * 1000);
-        }
-
-        // Export functions
-        window.exportData = exportData;
+        // Simulate real-time updates
+        setInterval(() => {
+            // Update active users count with small random changes
+            const activeUsersElement = document.getElementById('activeUsers');
+            const currentValue = parseInt(activeUsersElement.textContent.replace(/,/g, ''));
+            const change = Math.floor(Math.random() * 10) - 5; // Random change between -5 and +5
+            const newValue = Math.max(0, currentValue + change);
+            activeUsersElement.textContent = newValue.toLocaleString();
+        }, 30000); // Update every 30 seconds
     </script>
-
-    <style>
-        .time-selector {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 2rem;
-            justify-content: center;
-        }
-        
-        .time-btn {
-            padding: 0.75rem 1.5rem;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            background: transparent;
-            color: var(--text-secondary);
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            transition: var(--transition-smooth);
-        }
-        
-        .time-btn.active,
-        .time-btn:hover {
-            border-color: var(--primary-blue);
-            color: var(--primary-blue);
-        }
-        
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-        
-        .metric-card {
-            background: var(--dark-surface);
-            padding: 2rem;
-            border-radius: var(--border-radius);
-            border-left: 4px solid var(--primary-blue);
-        }
-        
-        .metric-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        
-        .metric-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--gradient-blue);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-        }
-        
-        .metric-trend {
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        
-        .metric-trend.positive {
-            color: #10b981;
-        }
-        
-        .metric-trend.negative {
-            color: #ef4444;
-        }
-        
-        .metric-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
-        
-        .metric-label {
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-        }
-        
-        .metric-chart {
-            height: 40px;
-            opacity: 0.8;
-        }
-        
-        .charts-section {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-        
-        .chart-container {
-            background: var(--dark-surface);
-            padding: 2rem;
-            border-radius: var(--border-radius);
-        }
-        
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-        
-        .chart-area {
-            height: 300px;
-            background: var(--dark-surface-2);
-            border-radius: var(--border-radius);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-        }
-        
-        .analytics-tables {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-        
-        .table-container {
-            background: var(--dark-surface);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-        }
-        
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .table-content {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .analytics-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .analytics-table th,
-        .analytics-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
-        .analytics-table th {
-            background: var(--dark-surface-2);
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-        
-        .title-cell {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .table-poster {
-            width: 30px;
-            height: 45px;
-            object-fit: cover;
-            border-radius: 4px;
-            flex-shrink: 0;
-        }
-        
-        .type-badge {
-            background: var(--gradient-purple);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 15px;
-            font-size: 0.75rem;
-        }
-        
-        .genre-tag {
-            background: var(--gradient-blue);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 15px;
-            font-size: 0.875rem;
-        }
-        
-        .progress-bar {
-            background: rgba(255, 255, 255, 0.1);
-            height: 6px;
-            border-radius: 3px;
-            overflow: hidden;
-            margin-right: 0.5rem;
-            display: inline-block;
-            width: 60px;
-            vertical-align: middle;
-        }
-        
-        .progress-fill {
-            background: var(--primary-blue);
-            height: 100%;
-            transition: width 0.3s ease;
-        }
-        
-        .insights-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
-        
-        .insight-card {
-            background: var(--dark-surface);
-            padding: 2rem;
-            border-radius: var(--border-radius);
-        }
-        
-        .insights-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-        }
-        
-        .insight-item {
-            text-align: center;
-            padding: 1rem;
-            background: var(--dark-surface-2);
-            border-radius: var(--border-radius);
-        }
-        
-        .insight-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary-blue);
-            margin-bottom: 0.5rem;
-        }
-        
-        .insight-label {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-        
-        .table-empty {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-muted);
-        }
-        
-        .chart-placeholder {
-            text-align: center;
-            color: var(--text-muted);
-        }
-        
-        @media (max-width: 768px) {
-            .charts-section,
-            .analytics-tables,
-            .insights-section {
-                grid-template-columns: 1fr;
-            }
-            
-            .time-selector {
-                flex-wrap: wrap;
-            }
-            
-            .insights-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .metric-card {
-                padding: 1.5rem;
-            }
-        }
-    </style>
 </body>
 </html>

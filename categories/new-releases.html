@@ -6,234 +6,153 @@
     <title>New Releases - CineScope</title>
     <meta name="description" content="Latest movies, TV shows, and anime releases on CineScope.">
     
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/responsive.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Header -->
-    <div data-include="header"></div>
+    <div id="preloader" class="preloader">
+        <div class="flex flex-col items-center">
+            <div class="loader"></div>
+            <p class="mt-4 text-lg font-medium">Loading New Releases...</p>
+        </div>
+    </div>
 
-    <main style="padding-top: 80px;">
-        <!-- Page Hero -->
-        <section class="page-hero">
-            <div class="container">
-                <div class="breadcrumb">
-                    <a href="/">Home</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <span>New Releases</span>
+    <div id="header-placeholder"></div>
+
+    <main class="container py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-4">🆕 New Releases</h1>
+            <p class="text-gray-400 text-lg">Fresh content just for you</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-8">
+            <div class="card-content">
+                <div class="grid grid-1 md:grid-3 gap-6">
+                    <div>
+                        <label class="form-label">Content Type</label>
+                        <select id="contentType" class="form-input">
+                            <option value="movie">Movies</option>
+                            <option value="tv">TV Shows</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Language</label>
+                        <select id="languageFilter" class="form-input">
+                            <option value="">All Languages</option>
+                            <option value="english">English</option>
+                            <option value="hindi">Hindi</option>
+                            <option value="telugu">Telugu</option>
+                            <option value="tamil">Tamil</option>
+                            <option value="kannada">Kannada</option>
+                            <option value="malayalam">Malayalam</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Time Period</label>
+                        <select id="timePeriod" class="form-input">
+                            <option value="30">Last 30 Days</option>
+                            <option value="60" selected>Last 60 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </div>
                 </div>
-                <h1 class="page-title">🆕 New Releases</h1>
-                <p class="page-description">Fresh content added in the last 60 days</p>
             </div>
-        </section>
+        </div>
 
-        <div class="container">
-            <!-- Release Calendar -->
-            <div class="release-calendar">
-                <div class="calendar-header">
-                    <h2>Release Calendar</h2>
-                    <div class="calendar-controls">
-                        <button class="calendar-btn" data-period="today">Today</button>
-                        <button class="calendar-btn active" data-period="week">This Week</button>
-                        <button class="calendar-btn" data-period="month">This Month</button>
-                    </div>
-                </div>
-                <div class="calendar-content" id="releaseCalendar">
-                    <!-- Calendar will be populated here -->
-                </div>
-            </div>
+        <div class="content-grid" id="newReleasesContent">
+            <!-- Content will be loaded here -->
+        </div>
 
-            <!-- Content Sections -->
-            <div class="releases-sections">
-                <section class="content-row">
-                    <div class="row-header">
-                        <h2 class="row-title">🎬 New Movies</h2>
-                        <a href="/categories/movies" class="view-all-btn">View All</a>
-                    </div>
-                    <div class="content-carousel" id="newMovies">
-                        <!-- New movies will be loaded here -->
-                    </div>
-                </section>
-
-                <section class="content-row">
-                    <div class="row-header">
-                        <h2 class="row-title">📺 New TV Shows</h2>
-                        <a href="/categories/tv-shows" class="view-all-btn">View All</a>
-                    </div>
-                    <div class="content-carousel" id="newTVShows">
-                        <!-- New TV shows will be loaded here -->
-                    </div>
-                </section>
-
-                <section class="content-row">
-                    <div class="row-header">
-                        <h2 class="row-title">🎌 New Anime</h2>
-                        <a href="/categories/anime" class="view-all-btn">View All</a>
-                    </div>
-                    <div class="content-carousel" id="newAnime">
-                        <!-- New anime will be loaded here -->
-                    </div>
-                </section>
-            </div>
+        <div class="text-center mt-12">
+            <button id="loadMoreBtn" class="btn btn-secondary" onclick="loadMore()" style="display: none;">
+                Load More Releases
+            </button>
         </div>
     </main>
 
-    <!-- Footer -->
-    <div data-include="footer"></div>
+    <div id="footer-placeholder"></div>
 
-    <!-- Scripts -->
     <script src="/js/include.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
-
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        let currentPage = 1;
+        let allResults = [];
+        let isLoading = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
             loadNewReleases();
-            setupCalendarControls();
         });
 
-        async function loadNewReleases() {
-            const sections = [
-                { id: 'newMovies', type: 'movie' },
-                { id: 'newTVShows', type: 'tv' },
-                { id: 'newAnime', type: 'anime' }
-            ];
+        function setupEventListeners() {
+            ['contentType', 'languageFilter', 'timePeriod'].forEach(id => {
+                document.getElementById(id).addEventListener('change', resetAndLoad);
+            });
+        }
 
-            for (const section of sections) {
-                const container = document.getElementById(section.id);
-                try {
-                    showLoadingSkeleton(container);
-                    
-                    let response;
-                    if (section.type === 'anime') {
-                        response = await ApiService.getAnimeRecommendations(null, 15);
-                    } else {
-                        response = await ApiService.getNewReleases(null, section.type, 15);
-                    }
-                    
-                    if (response.success && response.data.recommendations) {
-                        renderContentCarousel(container, response.data.recommendations);
-                    } else {
-                        showErrorMessage(container, `No new ${section.type} releases`);
-                    }
-                } catch (error) {
-                    console.error(`Error loading new ${section.type}:`, error);
-                    showErrorMessage(container, 'Failed to load content');
+        function resetAndLoad() {
+            currentPage = 1;
+            allResults = [];
+            loadNewReleases();
+        }
+
+        async function loadNewReleases() {
+            if (isLoading) return;
+
+            try {
+                isLoading = true;
+                const container = document.getElementById('newReleasesContent');
+                
+                if (currentPage === 1) {
+                    UI.showSkeleton(container, 20);
                 }
+
+                const contentType = document.getElementById('contentType').value;
+                const language = document.getElementById('languageFilter').value || null;
+                
+                const response = await api.getNewReleases(language, contentType, 20);
+                const content = response.recommendations || [];
+
+                if (currentPage === 1) {
+                    allResults = content;
+                } else {
+                    allResults = [...allResults, ...content];
+                }
+
+                contentManager.renderMovieGrid(container, { recommendations: allResults });
+                
+                const loadMoreBtn = document.getElementById('loadMoreBtn');
+                loadMoreBtn.style.display = content.length >= 20 ? 'block' : 'none';
+
+            } catch (error) {
+                console.error('Error loading new releases:', error);
+                showErrorState();
+            } finally {
+                isLoading = false;
             }
         }
 
-        function setupCalendarControls() {
-            const calendarBtns = document.querySelectorAll('.calendar-btn');
-            
-            calendarBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    calendarBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    
-                    const period = btn.getAttribute('data-period');
-                    loadCalendarData(period);
-                });
-            });
-            
-            // Load initial calendar data
-            loadCalendarData('week');
+        function loadMore() {
+            currentPage++;
+            loadNewReleases();
         }
 
-        function loadCalendarData(period) {
-            const calendar = document.getElementById('releaseCalendar');
-            
-            // Mock calendar data
-            const releases = [
-                { title: 'Spider-Man: No Way Home', date: 'Today', type: 'movie' },
-                { title: 'The Witcher S3', date: 'Tomorrow', type: 'tv' },
-                { title: 'Attack on Titan Final', date: 'Friday', type: 'anime' },
-                { title: 'Stranger Things S5', date: 'Next Week', type: 'tv' }
-            ];
-            
-            calendar.innerHTML = releases.map(release => `
-                <div class="calendar-item">
-                    <div class="release-date">${release.date}</div>
-                    <div class="release-info">
-                        <h4>${release.title}</h4>
-                        <span class="release-type">${release.type.toUpperCase()}</span>
+        function showErrorState() {
+            const container = document.getElementById('newReleasesContent');
+            container.innerHTML = `
+                <div class="col-span-full">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <h3 class="empty-state-title">Failed to load new releases</h3>
+                        <p class="empty-state-description">Please try again later.</p>
+                        <button class="btn btn-primary mt-4" onclick="loadNewReleases()">Retry</button>
                     </div>
                 </div>
-            `).join('');
+            `;
         }
     </script>
-
-    <style>
-        .release-calendar {
-            background: var(--dark-surface);
-            padding: 2rem;
-            border-radius: var(--border-radius);
-            margin-bottom: 3rem;
-        }
-        
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-        
-        .calendar-controls {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .calendar-btn {
-            padding: 0.5rem 1rem;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            background: transparent;
-            color: var(--text-secondary);
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            transition: var(--transition-smooth);
-        }
-        
-        .calendar-btn.active,
-        .calendar-btn:hover {
-            border-color: var(--primary-blue);
-            color: var(--primary-blue);
-        }
-        
-        .calendar-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-        }
-        
-        .calendar-item {
-            background: var(--dark-surface-2);
-            padding: 1rem;
-            border-radius: var(--border-radius);
-            border-left: 4px solid var(--primary-blue);
-        }
-        
-        .release-date {
-            font-size: 0.875rem;
-            color: var(--primary-blue);
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-        
-        .release-type {
-            background: var(--gradient-purple);
-            color: white;
-            padding: 0.125rem 0.5rem;
-            border-radius: 10px;
-            font-size: 0.75rem;
-        }
-        
-        .releases-sections {
-            margin-top: 2rem;
-        }
-    </style>
 </body>
 </html>
