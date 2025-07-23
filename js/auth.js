@@ -1,169 +1,61 @@
-// Authentication Management
-class AuthManager {
-    constructor() {
-        this.user = null;
-        this.loadUser();
-        this.setupAuthCheck();
-    }
+// /js/auth.js
 
-    loadUser() {
-        const userData = sessionStorage.getItem('userData') || localStorage.getItem('userData');
-        if (userData) {
-            try {
-                this.user = JSON.parse(userData);
-            } catch (e) {
-                console.error('Failed to parse user data:', e);
-                this.clearAuth();
-            }
-        }
-    }
+// Global variable to hold the JWT token
+let authToken = null;
+let currentUser = null; // Store user data if needed
 
-    saveUser(user, remember = false) {
-        this.user = user;
-        const userStr = JSON.stringify(user);
-        
-        if (remember) {
-            localStorage.setItem('userData', userStr);
-        } else {
-            sessionStorage.setItem('userData', userStr);
-        }
-    }
-
-    clearAuth() {
-        this.user = null;
-        sessionStorage.removeItem('userData');
-        localStorage.removeItem('userData');
-        API.clearToken();
-    }
-
-    isAuthenticated() {
-        return this.user !== null && API.token !== null;
-    }
-
-    isAdmin() {
-        return this.user && this.user.is_admin === true;
-    }
-
-    getUser() {
-        return this.user;
-    }
-
-    async login(credentials, remember = false) {
-        try {
-            const response = await ApiService.login(credentials);
-            
-            if (response.success) {
-                const { token, user } = response.data;
-                
-                API.saveToken(token, remember);
-                this.saveUser(user, remember);
-                
-                // Redirect based on user role
-                if (user.is_admin) {
-                    window.location.href = '/admin/dashboard';
-                } else {
-                    window.location.href = '/dashboard';
-                }
-                
-                return { success: true };
-            } else {
-                return { success: false, error: response.error };
-            }
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
-
-    async register(userData, remember = false) {
-        try {
-            const response = await ApiService.register(userData);
-            
-            if (response.success) {
-                const { token, user } = response.data;
-                
-                API.saveToken(token, remember);
-                this.saveUser(user, remember);
-                
-                window.location.href = '/dashboard';
-                return { success: true };
-            } else {
-                return { success: false, error: response.error };
-            }
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
-
-    logout() {
-        this.clearAuth();
-        window.location.href = '/';
-    }
-
-    requireAuth() {
-        if (!this.isAuthenticated()) {
-            window.location.href = '/login';
-            return false;
-        }
-        return true;
-    }
-
-    requireAdmin() {
-        if (!this.requireAuth()) return false;
-        
-        if (!this.isAdmin()) {
-            showToast('Admin access required', 'error');
-            window.location.href = '/dashboard';
-            return false;
-        }
-        return true;
-    }
-
-    setupAuthCheck() {
-        // Check authentication status periodically
-        setInterval(() => {
-            if (this.isAuthenticated() && !API.token) {
-                this.clearAuth();
-                window.location.href = '/login';
-            }
-        }, 60000); // Check every minute
-    }
-
-    updateUserProfile(userData) {
-        if (this.user) {
-            this.user = { ...this.user, ...userData };
-            const remember = localStorage.getItem('userData') !== null;
-            this.saveUser(this.user, remember);
-        }
-    }
+/**
+ * Sets the authentication token and user data.
+ * @param {string} token - The JWT token.
+ * @param {object} user - The user object from the login response.
+ */
+function setAuth(token, user) {
+    authToken = token;
+    currentUser = user;
+    console.log("Auth set:", { authToken, currentUser });
+    // Update UI based on auth status (call from main.js after header loads)
+    // updateAuthUI();
 }
 
-// Initialize auth manager
-const Auth = new AuthManager();
+/**
+ * Clears the authentication token and user data.
+ */
+function clearAuth() {
+    authToken = null;
+    currentUser = null;
+    console.log("Auth cleared");
+    // Update UI based on auth status (call from main.js after header loads)
+    // updateAuthUI();
+}
 
-// Utility functions
-window.requireAuth = function() {
-    return Auth.requireAuth();
-};
+/**
+ * Checks if the user is currently authenticated.
+ * @returns {boolean} True if authenticated, false otherwise.
+ */
+function isAuthenticated() {
+    return !!authToken; // Returns true if authToken is not null/undefined/empty
+}
 
-window.requireAdmin = function() {
-    return Auth.requireAdmin();
-};
+/**
+ * Checks if the authenticated user is an admin.
+ * @returns {boolean} True if admin, false otherwise.
+ */
+function isAdmin() {
+    return isAuthenticated() && currentUser && currentUser.is_admin;
+}
 
-window.isAuthenticated = function() {
-    return Auth.isAuthenticated();
-};
+/**
+ * Gets the current authentication token.
+ * @returns {string|null} The JWT token or null if not authenticated.
+ */
+function getAuthToken() {
+    return authToken;
+}
 
-window.isAdmin = function() {
-    return Auth.isAdmin();
-};
-
-window.getCurrentUser = function() {
-    return Auth.getUser();
-};
-
-window.logout = function() {
-    Auth.logout();
-};
-
-// Export Auth manager
-window.Auth = Auth;
+/**
+ * Gets the current user object.
+ * @returns {object|null} The user object or null if not authenticated.
+ */
+function getCurrentUser() {
+    return currentUser;
+}

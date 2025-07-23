@@ -1,1195 +1,528 @@
-// Global Configuration
-const CONFIG = {
-    API_BASE: 'https://backend-app-970m.onrender.com/api',
-    APP_NAME: 'CineScope',
-    VERSION: '2.0.0',
-    CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
-    ANIMATION_DURATION: 300,
-    DEBOUNCE_DELAY: 500,
-    IMAGE_PLACEHOLDER: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMkEyQTJBIi8+CjxwYXRoIGQ9Ik05MiAxMDBWMTgwSDEwOFYxMDBIOTJaTTEwMCA4NEMxMDQuNDE4IDg0IDEwOCA4Ny41ODE3IDEwOCA5MkMxMDggOTYuNDE4MyAxMDQuNDE4IDEwMCAxMDAgMTAwQzk1LjU4MTcgMTAwIDkyIDk2LjQxODMgOTIgOTJDOTIgODcuNTgxNyA5NS41ODE3IDg0IDEwMCA4NFoiIGZpbGw9IiM2QjcyODAiLz4KPC9zdmc+'
-};
+// /js/main.js
 
-// Global State Management
-class AppState {
-    constructor() {
-        this.user = null;
-        this.token = null;
-        this.cache = new Map();
-        this.isLoading = false;
-        this.currentRoute = '';
-        this.preferences = {
-            theme: 'dark',
-            language: 'en',
-            region: 'US'
-        };
-        this.init();
+const API_BASE = 'https://backend-app-970m.onrender.com/api'; // Use your actual backend URL
+
+// --- Utility Functions ---
+
+/**
+ * Shows the preloader.
+ */
+function showPreloader() {
+    const preloader = document.getElementById('preloader');
+    if (preloader) preloader.classList.remove('hidden');
+}
+
+/**
+ * Hides the preloader.
+ */
+function hidePreloader() {
+    const preloader = document.getElementById('preloader');
+    if (preloader) preloader.classList.add('hidden');
+}
+
+/**
+ * Fetches data from the API with error handling and auth header.
+ * @param {string} endpoint - The API endpoint (e.g., '/recommendations/trending').
+ * @param {object} options - Optional fetch options (method, body, etc.).
+ * @returns {Promise<object|null>} The parsed JSON response or null on error.
+ */
+async function apiFetch(endpoint, options = {}) {
+    const url = `${API_BASE}${endpoint}`;
+    const defaultHeaders = {
+        'Content-Type': 'application/json',
+    };
+
+    if (authToken) {
+        defaultHeaders['Authorization'] = `Bearer ${authToken}`;
     }
 
-    init() {
-        this.loadFromStorage();
-        this.setupEventListeners();
-    }
+    const config = {
+        ...options,
+        headers: {
+            ...defaultHeaders,
+            ...(options.headers || {}),
+        },
+    };
 
-    loadFromStorage() {
-        try {
-            const token = localStorage.getItem('auth_token');
-            const user = localStorage.getItem('user_data');
-            const preferences = localStorage.getItem('user_preferences');
+    try {
+        showPreloader();
+        const response = await fetch(url, config);
+        hidePreloader();
 
-            if (token) this.token = token;
-            if (user) this.user = JSON.parse(user);
-            if (preferences) this.preferences = { ...this.preferences, ...JSON.parse(preferences) };
-        } catch (error) {
-            console.error('Error loading from storage:', error);
-            this.clearStorage();
-        }
-    }
-
-    saveToStorage() {
-        try {
-            if (this.token) localStorage.setItem('auth_token', this.token);
-            if (this.user) localStorage.setItem('user_data', JSON.stringify(this.user));
-            localStorage.setItem('user_preferences', JSON.stringify(this.preferences));
-        } catch (error) {
-            console.error('Error saving to storage:', error);
-        }
-    }
-
-    clearStorage() {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_preferences');
-        this.token = null;
-        this.user = null;
-    }
-
-    setupEventListeners() {
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'auth_token' && !e.newValue) {
-                this.clearStorage();
-                window.location.href = '/login';
+        if (!response.ok) {
+            if (response.status === 401) {
+                console.warn("Unauthorized access, clearing auth.");
+                clearAuth(); // Clear token if unauthorized
+                window.location.href = '/login'; // Redirect to login
+                return null;
             }
-        });
-    }
-
-    setUser(user, token) {
-        this.user = user;
-        this.token = token;
-        this.saveToStorage();
-        EventBus.emit('user:updated', user);
-    }
-
-    logout() {
-        this.clearStorage();
-        this.cache.clear();
-        EventBus.emit('user:logout');
-        window.location.href = '/login';
-    }
-
-    isAuthenticated() {
-        return !!(this.token && this.user);
-    }
-
-    isAdmin() {
-        return this.user && this.user.is_admin;
-    }
-
-    getCache(key) {
-        const cached = this.cache.get(key);
-        if (cached && Date.now() - cached.timestamp < CONFIG.CACHE_DURATION) {
-            return cached.data;
+            throw new Error(`API Error: ${response.status} - ${response.statusText}`);
         }
-        this.cache.delete(key);
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        hidePreloader();
+        console.error(`Error fetching ${url}:`, error);
+        alert(`An error occurred: ${error.message}`);
         return null;
     }
+}
 
-    setCache(key, data) {
-        this.cache.set(key, {
-            data,
-            timestamp: Date.now()
-        });
+/**
+ * Creates a content card element.
+ * @param {object} item - The content item data.
+ * @returns {HTMLElement} The card element.
+ */
+function createContentCard(item) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.setAttribute('data-content-id', item.id);
+    card.setAttribute('data-content-type', item.content_type);
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'card-placeholder';
+
+    const img = document.createElement('img');
+    img.className = 'card-img loading';
+    img.alt = item.title;
+    img.loading = 'lazy'; // Enable lazy loading
+    img.src = item.poster_path || './assets/images/placeholder-poster.jpg'; // Fallback
+
+    // Simulate image load for placeholder effect
+    img.onload = function () {
+        img.classList.remove('loading');
+        img.classList.add('loaded');
+        if (placeholder.parentNode) {
+            placeholder.parentNode.removeChild(placeholder);
+        }
+    };
+    img.onerror = function () {
+        img.src = './assets/images/placeholder-poster.jpg'; // Final fallback
+        img.classList.remove('loading');
+        img.classList.add('loaded');
+        if (placeholder.parentNode) {
+            placeholder.parentNode.removeChild(placeholder);
+        }
+    };
+
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    title.textContent = item.title;
+
+    card.appendChild(placeholder);
+    card.appendChild(img);
+    card.appendChild(title);
+
+    // Add click listener to navigate to details
+    card.addEventListener('click', () => {
+        const params = new URLSearchParams({ id: item.id });
+        window.location.href = `/details?${params.toString()}`;
+    });
+
+    return card;
+}
+
+/**
+ * Populates a container with content cards.
+ * @param {string} containerId - The ID of the container element.
+ * @param {Array} items - Array of content item objects.
+ */
+function populateContent(containerId, items) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = ''; // Clear previous content
+
+    if (!items || items.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 p-4">No content found.</p>';
+        return;
     }
 
-    clearCache() {
-        this.cache.clear();
+    items.forEach(item => {
+        const card = createContentCard(item);
+        container.appendChild(card);
+    });
+}
+
+// --- Page-Specific Logic ---
+
+/**
+ * Initializes the homepage.
+ */
+async function initHomepage() {
+    console.log("Initializing Homepage...");
+    // Hero Section - Use a popular/new release for hero
+    const trendingData = await apiFetch('/recommendations/trending?limit=1');
+    if (trendingData && trendingData.recommendations.length > 0) {
+        const heroItem = trendingData.recommendations[0];
+        const hero = document.querySelector('.hero');
+        if (hero) {
+            hero.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${heroItem.backdrop_path})`;
+            document.querySelector('.hero-title').textContent = heroItem.title;
+            document.querySelector('.hero-description').textContent = heroItem.overview?.substring(0, 150) + '...';
+            const heroButton = document.querySelector('.hero-button');
+            if (heroButton) {
+                 heroButton.onclick = () => {
+                     const params = new URLSearchParams({ id: heroItem.id });
+                     window.location.href = `/details?${params.toString()}`;
+                 };
+            }
+        }
+    }
+
+    // Load Carousels
+    const carousels = [
+        { id: 'trending-carousel', endpoint: '/recommendations/trending?limit=10', title: 'Trending Now' },
+        { id: 'new-releases-carousel', endpoint: '/recommendations/new-releases?limit=10', title: 'New Releases' },
+        { id: 'critics-choice-carousel', endpoint: '/recommendations/critics-choice?limit=10', title: 'Critics\' Choice' },
+        { id: 'action-carousel', endpoint: '/recommendations/genre/action?limit=10', title: 'Action Movies' },
+        { id: 'comedy-carousel', endpoint: '/recommendations/genre/comedy?limit=10', title: 'Comedy Hits' },
+        { id: 'anime-carousel', endpoint: '/recommendations/anime?limit=10', title: 'Popular Anime' },
+    ];
+
+    for (const carousel of carousels) {
+        const data = await apiFetch(carousel.endpoint);
+        if (data && data.recommendations) {
+            populateContent(carousel.id, data.recommendations);
+            // Update carousel title if needed (assuming a sibling h2 or similar)
+            const titleElement = document.querySelector(`#${carousel.id}`).previousElementSibling?.querySelector('.carousel-title');
+            if(titleElement) titleElement.textContent = carousel.title;
+        }
     }
 }
 
-// Event Bus for global communication
-class EventBusClass {
-    constructor() {
-        this.events = {};
+/**
+ * Initializes the details page.
+ */
+async function initDetailsPage() {
+    console.log("Initializing Details Page...");
+    const urlParams = new URLSearchParams(window.location.search);
+    const contentId = urlParams.get('id');
+
+    if (!contentId) {
+        document.getElementById('detail-content-placeholder').innerHTML = '<p class="text-red-500">Content ID not provided.</p>';
+        return;
     }
 
-    on(event, callback) {
-        if (!this.events[event]) {
-            this.events[event] = [];
-        }
-        this.events[event].push(callback);
+    const data = await apiFetch(`/content/${contentId}`);
+    if (!data) {
+        document.getElementById('detail-content-placeholder').innerHTML = '<p class="text-red-500">Failed to load content details.</p>';
+        return;
     }
 
-    emit(event, data) {
-        if (this.events[event]) {
-            this.events[event].forEach(callback => callback(data));
-        }
+    // Populate Details
+    const backdropElement = document.querySelector('.detail-backdrop');
+    if(backdropElement && data.backdrop_path) {
+        backdropElement.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
     }
 
-    off(event, callback) {
-        if (this.events[event]) {
-            this.events[event] = this.events[event].filter(cb => cb !== callback);
-        }
+    document.querySelector('.detail-title').textContent = data.title;
+    document.querySelector('.detail-meta').innerHTML = `
+        <span>⭐ ${data.rating || 'N/A'}</span>
+        <span>${data.release_date ? new Date(data.release_date).getFullYear() : 'N/A'}</span>
+        <span>${data.runtime ? `${data.runtime} min` : ''}</span>
+        <span>${data.genres ? data.genres.join(', ') : 'N/A'}</span>
+    `;
+    document.querySelector('.detail-overview').textContent = data.overview;
+
+    const posterImg = document.querySelector('.detail-poster');
+    if(posterImg) {
+        posterImg.src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : './assets/images/placeholder-poster.jpg';
+        posterImg.alt = data.title;
+    }
+
+    // Populate Cast & Crew (basic)
+    const castContainer = document.getElementById('cast-list');
+    if (castContainer && data.cast) {
+        castContainer.innerHTML = data.cast.slice(0, 10).map(person =>
+            `<div class="mb-2"><span class="font-medium">${person.name}</span> as ${person.character || person.role || 'N/A'}</div>`
+        ).join('');
+    }
+
+    // Populate Similar Content Carousel
+    const similarData = await apiFetch(`/recommendations/similar/${contentId}?limit=10`);
+    if (similarData && similarData.recommendations) {
+        populateContent('similar-content', similarData.recommendations);
+    }
+
+    // Populate Trailer (if available)
+    const trailerContainer = document.getElementById('trailer-container');
+    if (trailerContainer && data.youtube_trailer) {
+        trailerContainer.innerHTML = `
+            <iframe class="w-full aspect-video rounded-lg" src="https://www.youtube.com/embed/${new URL(data.youtube_trailer).searchParams.get('v')}" 
+            title="Trailer" frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen></iframe>
+        `;
     }
 }
 
-// API Service
-class APIService {
-    constructor() {
-        this.baseURL = CONFIG.API_BASE;
-        this.defaultHeaders = {
-            'Content-Type': 'application/json'
-        };
-    }
+/**
+ * Initializes the login page.
+ */
+function initLoginPage() {
+    console.log("Initializing Login Page...");
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
 
-    getAuthHeaders() {
-        const headers = { ...this.defaultHeaders };
-        if (appState.token) {
-            headers['Authorization'] = `Bearer ${appState.token}`;
-        }
-        return headers;
-    }
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
 
-    async request(endpoint, options = {}) {
-        const url = `${this.baseURL}${endpoint}`;
-        const config = {
-            headers: this.getAuthHeaders(),
-            ...options
-        };
-
-        try {
-            const response = await fetch(url, config);
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || `HTTP ${response.status}`);
-            }
-
-            return data;
-        } catch (error) {
-            console.error(`API Error [${endpoint}]:`, error);
-            
-            if (error.message.includes('401') || error.message.includes('Invalid token')) {
-                appState.logout();
-                return;
-            }
-            
-            throw error;
-        }
-    }
-
-    // Authentication
-    async login(username, password) {
-        return this.request('/login', {
-            method: 'POST',
-            body: JSON.stringify({ username, password })
-        });
-    }
-
-    async register(userData) {
-        return this.request('/register', {
-            method: 'POST',
-            body: JSON.stringify(userData)
-        });
-    }
-
-    // Content Discovery
-    async search(query, type = 'multi', page = 1) {
-        const params = new URLSearchParams({ query, type, page });
-        return this.request(`/search?${params}`);
-    }
-
-    async getContent(contentId) {
-        return this.request(`/content/${contentId}`);
-    }
-
-    // Recommendations
-    async getTrending(type = 'all', limit = 20) {
-        const params = new URLSearchParams({ type, limit });
-        return this.request(`/recommendations/trending?${params}`);
-    }
-
-    async getPopular(type = 'movie', limit = 20) {
-        const params = new URLSearchParams({ type, limit });
-        return this.request(`/recommendations/popular?${params}`);
-    }
-
-    async getNewReleases(language = null, type = 'movie', limit = 20) {
-        const params = new URLSearchParams({ type, limit });
-        if (language) params.append('language', language);
-        return this.request(`/recommendations/new-releases?${params}`);
-    }
-
-    async getCriticsChoice(type = 'movie', limit = 20) {
-        const params = new URLSearchParams({ type, limit });
-        return this.request(`/recommendations/critics-choice?${params}`);
-    }
-
-    async getGenreRecommendations(genre, type = 'movie', limit = 20) {
-        const params = new URLSearchParams({ type, limit });
-        return this.request(`/recommendations/genre/${genre}?${params}`);
-    }
-
-    async getRegionalContent(language, type = 'movie', limit = 20) {
-        const params = new URLSearchParams({ type, limit });
-        return this.request(`/recommendations/regional/${language}?${params}`);
-    }
-
-    async getAnimeRecommendations(genre = null, limit = 20) {
-        const params = new URLSearchParams({ limit });
-        if (genre) params.append('genre', genre);
-        return this.request(`/recommendations/anime?${params}`);
-    }
-
-    async getSimilarContent(contentId, limit = 20) {
-        const params = new URLSearchParams({ limit });
-        return this.request(`/recommendations/similar/${contentId}?${params}`);
-    }
-
-    async getPersonalizedRecommendations() {
-        return this.request('/recommendations/personalized');
-    }
-
-    async getAnonymousRecommendations(limit = 20) {
-        const params = new URLSearchParams({ limit });
-        return this.request(`/recommendations/anonymous?${params}`);
-    }
-
-    async getAdminChoice(type = 'admin_choice', limit = 20) {
-        const params = new URLSearchParams({ type, limit });
-        return this.request(`/recommendations/admin-choice?${params}`);
-    }
-
-    // User Interactions
-    async recordInteraction(contentId, interactionType, rating = null) {
-        return this.request('/interactions', {
-            method: 'POST',
-            body: JSON.stringify({
-                content_id: contentId,
-                interaction_type: interactionType,
-                rating
-            })
-        });
-    }
-
-    async getWatchlist() {
-        return this.request('/user/watchlist');
-    }
-
-    async getFavorites() {
-        return this.request('/user/favorites');
-    }
-
-    // Admin APIs
-    async adminSearch(query, source = 'tmdb', page = 1) {
-        const params = new URLSearchParams({ query, source, page });
-        return this.request(`/admin/search?${params}`);
-    }
-
-    async saveContent(contentData) {
-        return this.request('/admin/content', {
-            method: 'POST',
-            body: JSON.stringify(contentData)
-        });
-    }
-
-    async createAdminRecommendation(contentId, type, description) {
-        return this.request('/admin/recommendations', {
-            method: 'POST',
-            body: JSON.stringify({
-                content_id: contentId,
-                recommendation_type: type,
-                description
-            })
-        });
-    }
-
-    async getAdminRecommendations(page = 1, perPage = 20) {
-        const params = new URLSearchParams({ page, per_page: perPage });
-        return this.request(`/admin/recommendations?${params}`);
-    }
-
-    async getAnalytics() {
-        return this.request('/admin/analytics');
-    }
-
-    async checkMLService() {
-        return this.request('/admin/ml-service-check');
-    }
-
-    async updateMLService() {
-        return this.request('/admin/ml-service-update', {
-            method: 'POST'
-        });
-    }
-}
-
-// Utility Functions
-const Utils = {
-    // Debounce function
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    },
-
-    // Throttle function
-    throttle(func, limit) {
-        let inThrottle;
-        return function() {
-            const args = arguments;
-            const context = this;
-            if (!inThrottle) {
-                func.apply(context, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
-            }
-        }
-    },
-
-    // Format date
-    formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        try {
-            const date = new Date(dateString);
-            return date.getFullYear();
-        } catch {
-            return 'N/A';
-        }
-    },
-
-    // Format runtime
-    formatRuntime(minutes) {
-        if (!minutes) return 'N/A';
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-    },
-
-    // Format rating
-    formatRating(rating) {
-        if (!rating) return 'N/A';
-        return Math.round(rating * 10) / 10;
-    },
-
-    // Truncate text
-    truncateText(text, length = 150) {
-        if (!text) return '';
-        return text.length > length ? text.substring(0, length) + '...' : text;
-    },
-
-    // Generate placeholder image
-    getPlaceholderImage(width = 300, height = 450) {
-        return `data:image/svg+xml;base64,${btoa(`
-            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="${width}" height="${height}" fill="#2A2A2A"/>
-                <path d="M${width/2-8} ${height/2-40}V${height/2+40}H${width/2+8}V${height/2-40}H${width/2-8}ZM${width/2} ${height/2-56}C${width/2+4.418} ${height/2-56} ${width/2+8} ${height/2-52.582} ${width/2+8} ${height/2-48}C${width/2+8} ${height/2-43.582} ${width/2+4.418} ${height/2-40} ${width/2} ${height/2-40}C${width/2-4.418} ${height/2-40} ${width/2-8} ${height/2-43.582} ${width/2-8} ${height/2-48}C${width/2-8} ${height/2-52.582} ${width/2-4.418} ${height/2-56} ${width/2} ${height/2-56}Z" fill="#6B7280"/>
-            </svg>
-        `)}`;
-    },
-
-    // Handle image loading errors
-    handleImageError(img) {
-        img.src = this.getPlaceholderImage();
-        img.onerror = null;
-    },
-
-    // Lazy load images
-    lazyLoadImages() {
-        const images = document.querySelectorAll('img[data-src]');
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    img.src = img.dataset.src;
-                    img.onerror = () => this.handleImageError(img);
-                    img.removeAttribute('data-src');
-                    observer.unobserve(img);
-                }
+            const response = await apiFetch('/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password })
             });
-        });
 
-        images.forEach(img => imageObserver.observe(img));
-    },
-
-    // Smooth scroll to element
-    scrollToElement(selector, offset = 0) {
-        const element = document.querySelector(selector);
-        if (element) {
-            const elementPosition = element.offsetTop - offset;
-            window.scrollTo({
-                top: elementPosition,
-                behavior: 'smooth'
-            });
-        }
-    },
-
-    // Copy to clipboard
-    async copyToClipboard(text) {
-        try {
-            await navigator.clipboard.writeText(text);
-            return true;
-        } catch {
-            // Fallback for older browsers
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            const result = document.execCommand('copy');
-            document.body.removeChild(textArea);
-            return result;
-        }
-    },
-
-    // Generate random ID
-    generateId() {
-        return Math.random().toString(36).substr(2, 9);
-    },
-
-    // Validate email
-    validateEmail(email) {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email);
-    },
-
-    // Sanitize HTML
-    sanitizeHTML(str) {
-        const temp = document.createElement('div');
-        temp.textContent = str;
-        return temp.innerHTML;
-    },
-
-    // Parse URL parameters
-    getURLParams() {
-        const params = new URLSearchParams(window.location.search);
-        const result = {};
-        for (const [key, value] of params) {
-            result[key] = value;
-        }
-        return result;
-    },
-
-    // Set URL parameter
-    setURLParam(key, value) {
-        const url = new URL(window.location);
-        url.searchParams.set(key, value);
-        window.history.pushState({}, '', url);
-    }
-};
-
-// UI Components
-const UI = {
-    // Show loading spinner
-    showLoading(target = 'body') {
-        const container = typeof target === 'string' ? document.querySelector(target) : target;
-        if (!container) return;
-
-        const loader = document.createElement('div');
-        loader.className = 'flex items-center justify-center p-8';
-        loader.innerHTML = `
-            <div class="loader"></div>
-        `;
-        container.appendChild(loader);
-        return loader;
-    },
-
-    // Hide loading spinner
-    hideLoading(loader) {
-        if (loader && loader.parentNode) {
-            loader.parentNode.removeChild(loader);
-        }
-    },
-
-    // Show skeleton loading
-    showSkeleton(container, count = 6) {
-        const skeletonHTML = Array(count).fill(0).map(() => `
-            <div class="skeleton skeleton-card"></div>
-        `).join('');
-        
-        container.innerHTML = skeletonHTML;
-    },
-
-    // Show toast notification
-    showToast(message, type = 'success', duration = 3000) {
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.innerHTML = `
-            <div class="flex items-center gap-2">
-                <span class="toast-icon">${this.getToastIcon(type)}</span>
-                <span class="toast-message">${Utils.sanitizeHTML(message)}</span>
-                <button class="toast-close ml-auto" onclick="this.closest('.toast').remove()">×</button>
-            </div>
-        `;
-
-        document.body.appendChild(toast);
-        
-        // Trigger animation
-        setTimeout(() => toast.classList.add('show'), 100);
-        
-        // Auto remove
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, duration);
-
-        return toast;
-    },
-
-    getToastIcon(type) {
-        const icons = {
-            success: '✓',
-            error: '✕',
-            warning: '⚠',
-            info: 'ℹ'
-        };
-        return icons[type] || icons.info;
-    },
-
-    // Show modal
-    showModal(content, title = '') {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal">
-                ${title ? `
-                    <div class="modal-header">
-                        <h3 class="modal-title">${Utils.sanitizeHTML(title)}</h3>
-                        <button class="modal-close">×</button>
-                    </div>
-                ` : ''}
-                <div class="modal-body">
-                    ${content}
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-        
-        // Event listeners
-        modal.querySelector('.modal-close')?.addEventListener('click', () => this.hideModal(modal));
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) this.hideModal(modal);
-        });
-
-        // Show animation
-        setTimeout(() => modal.classList.add('show'), 10);
-
-        return modal;
-    },
-
-    // Hide modal
-    hideModal(modal) {
-        modal.classList.remove('show');
-        setTimeout(() => modal.remove(), 300);
-    },
-
-    // Show alert
-    showAlert(message, type = 'info') {
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${type}`;
-        alert.innerHTML = `
-            <span class="alert-icon">${this.getToastIcon(type)}</span>
-            <span class="alert-message">${Utils.sanitizeHTML(message)}</span>
-            <button class="alert-close ml-auto" onclick="this.closest('.alert').remove()">×</button>
-        `;
-
-        const container = document.querySelector('.alert-container') || document.body;
-        container.insertBefore(alert, container.firstChild);
-
-        return alert;
-    },
-
-    // Create movie card
-    createMovieCard(movie) {
-        const card = document.createElement('div');
-        card.className = 'movie-card';
-        card.onclick = () => Router.navigate(`/details?id=${movie.id}`);
-
-        const posterUrl = movie.poster_path || Utils.getPlaceholderImage();
-        const rating = Utils.formatRating(movie.rating);
-        const year = Utils.formatDate(movie.release_date);
-
-        card.innerHTML = `
-            <img data-src="${posterUrl}" alt="${Utils.sanitizeHTML(movie.title)}" class="skeleton">
-            <div class="movie-card-overlay">
-                <h3 class="movie-card-title">${Utils.sanitizeHTML(movie.title)}</h3>
-                <div class="movie-card-meta">
-                    ${rating !== 'N/A' ? `<span class="rating">⭐ ${rating}</span>` : ''}
-                    ${year !== 'N/A' ? `<span class="year">${year}</span>` : ''}
-                    <span class="type">${movie.content_type?.toUpperCase() || 'MOVIE'}</span>
-                </div>
-            </div>
-        `;
-
-        return card;
-    },
-
-    // Create content section
-    createContentSection(title, content, seeMoreLink = null) {
-        const section = document.createElement('section');
-        section.className = 'section';
-        
-        section.innerHTML = `
-            <div class="section-header">
-                <div>
-                    <h2 class="section-title">${Utils.sanitizeHTML(title)}</h2>
-                </div>
-                ${seeMoreLink ? `<a href="${seeMoreLink}" class="btn btn-ghost btn-sm">See More</a>` : ''}
-            </div>
-            <div class="content-grid">
-                ${content}
-            </div>
-        `;
-
-        return section;
-    },
-
-    // Initialize tabs
-    initTabs(container) {
-        const tabButtons = container.querySelectorAll('.tab-button');
-        const tabPanels = container.querySelectorAll('.tab-panel');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const targetTab = button.dataset.tab;
-
-                // Update active states
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabPanels.forEach(panel => panel.classList.remove('active'));
-
-                button.classList.add('active');
-                const targetPanel = container.querySelector(`[data-panel="${targetTab}"]`);
-                if (targetPanel) {
-                    targetPanel.classList.add('active');
-                }
-            });
-        });
-    },
-
-    // Initialize dropdowns
-    initDropdowns() {
-        document.addEventListener('click', (e) => {
-            const dropdown = e.target.closest('.dropdown');
-            if (dropdown) {
-                const toggle = e.target.closest('.dropdown-toggle');
-                if (toggle) {
-                    e.preventDefault();
-                    dropdown.classList.toggle('open');
-                    return;
-                }
-            }
-
-            // Close all dropdowns when clicking outside
-            document.querySelectorAll('.dropdown.open').forEach(dd => {
-                dd.classList.remove('open');
-            });
-        });
-    },
-
-    // Initialize search
-    initSearch(inputSelector, resultsSelector, searchFunction) {
-        const input = document.querySelector(inputSelector);
-        const results = document.querySelector(resultsSelector);
-        
-        if (!input || !results) return;
-
-        const debouncedSearch = Utils.debounce(async (query) => {
-            if (query.length < 2) {
-                results.innerHTML = '';
-                results.style.display = 'none';
-                return;
-            }
-
-            try {
-                results.style.display = 'block';
-                this.showSkeleton(results, 3);
-                
-                const searchResults = await searchFunction(query);
-                this.renderSearchResults(results, searchResults);
-            } catch (error) {
-                results.innerHTML = `<div class="p-4 text-center text-red-400">Search failed: ${error.message}</div>`;
-            }
-        }, CONFIG.DEBOUNCE_DELAY);
-
-        input.addEventListener('input', (e) => {
-            debouncedSearch(e.target.value.trim());
-        });
-
-        // Hide results when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!input.contains(e.target) && !results.contains(e.target)) {
-                results.style.display = 'none';
-            }
-        });
-    },
-
-    renderSearchResults(container, results) {
-        if (!results || results.length === 0) {
-            container.innerHTML = '<div class="p-4 text-center text-gray-400">No results found</div>';
-            return;
-        }
-
-        const resultsHTML = results.map(item => `
-            <div class="search-result-item flex items-center gap-3 p-3 hover:bg-gray-800 cursor-pointer" 
-                 onclick="Router.navigate('/details?id=${item.id}')">
-                <img src="${item.poster_path || Utils.getPlaceholderImage(60, 90)}" 
-                     alt="${Utils.sanitizeHTML(item.title)}" 
-                     class="w-12 h-18 object-cover rounded">
-                <div class="flex-1 min-w-0">
-                    <h4 class="font-medium truncate">${Utils.sanitizeHTML(item.title)}</h4>
-                    <p class="text-sm text-gray-400 truncate">${Utils.formatDate(item.release_date)} • ${item.content_type?.toUpperCase()}</p>
-                    ${item.rating ? `<span class="text-xs text-yellow-400">⭐ ${Utils.formatRating(item.rating)}</span>` : ''}
-                </div>
-            </div>
-        `).join('');
-
-        container.innerHTML = resultsHTML;
-    }
-};
-
-// Router for navigation
-class Router {
-    constructor() {
-        this.routes = {};
-        this.currentRoute = '';
-        this.init();
-    }
-
-    init() {
-        window.addEventListener('popstate', () => this.handleRoute());
-        this.handleRoute();
-    }
-
-    route(path, handler) {
-        this.routes[path] = handler;
-    }
-
-    navigate(path) {
-        window.history.pushState({}, '', path);
-        this.handleRoute();
-    }
-
-    handleRoute() {
-        const path = window.location.pathname;
-        const params = Utils.getURLParams();
-        
-        // Route matching
-        let handler = this.routes[path];
-        
-        if (!handler) {
-            // Try to match dynamic routes
-            for (const route in this.routes) {
-                if (route.includes(':')) {
-                    const routeParts = route.split('/');
-                    const pathParts = path.split('/');
-                    
-                    if (routeParts.length === pathParts.length) {
-                        const routeParams = {};
-                        let matches = true;
-                        
-                        for (let i = 0; i < routeParts.length; i++) {
-                            if (routeParts[i].startsWith(':')) {
-                                routeParams[routeParts[i].slice(1)] = pathParts[i];
-                            } else if (routeParts[i] !== pathParts[i]) {
-                                matches = false;
-                                break;
-                            }
-                        }
-                        
-                        if (matches) {
-                            handler = this.routes[route];
-                            Object.assign(params, routeParams);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (handler) {
-            this.currentRoute = path;
-            handler(params);
-        } else {
-            this.handle404();
-        }
-
-        // Update navigation active states
-        this.updateNavigation();
-    }
-
-    handle404() {
-        document.body.innerHTML = `
-            <div class="container mx-auto px-4 py-20 text-center">
-                <h1 class="text-6xl font-bold text-primary mb-4">404</h1>
-                <h2 class="text-2xl font-semibold mb-4">Page Not Found</h2>
-                <p class="text-gray-400 mb-8">The page you're looking for doesn't exist.</p>
-                <a href="/" class="btn btn-primary">Go Home</a>
-            </div>
-        `;
-    }
-
-    updateNavigation() {
-        const navLinks = document.querySelectorAll('.nav-link');
-        navLinks.forEach(link => {
-            const href = link.getAttribute('href');
-            if (href === this.currentRoute) {
-                link.classList.add('active');
+            if (response && response.token) {
+                setAuth(response.token, response.user);
+                alert('Login successful!');
+                window.location.href = '/dashboard'; // Redirect to dashboard
             } else {
-                link.classList.remove('active');
+                alert(response?.error || 'Login failed.');
             }
         });
     }
-}
 
-// Authentication Manager
-class AuthManager {
-    constructor() {
-        this.init();
-    }
+    if (registerForm) {
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
 
-    init() {
-        this.checkAuthOnLoad();
-        this.setupAuthForms();
-    }
-
-    checkAuthOnLoad() {
-        const protectedRoutes = ['/dashboard', '/profile', '/user/', '/admin/'];
-        const currentPath = window.location.pathname;
-        
-        const isProtectedRoute = protectedRoutes.some(route => currentPath.startsWith(route));
-        
-        if (isProtectedRoute && !appState.isAuthenticated()) {
-            window.location.href = '/login';
-            return;
-        }
-
-        if (currentPath === '/login' && appState.isAuthenticated()) {
-            window.location.href = '/dashboard';
-            return;
-        }
-    }
-
-    setupAuthForms() {
-        // Login form
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await this.handleLogin(new FormData(loginForm));
+            const response = await apiFetch('/register', {
+                method: 'POST',
+                body: JSON.stringify({ username, email, password })
             });
-        }
 
-        // Register form
-        const registerForm = document.getElementById('registerForm');
-        if (registerForm) {
-            registerForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await this.handleRegister(new FormData(registerForm));
-            });
-        }
-
-        // Logout buttons
-        document.addEventListener('click', (e) => {
-            if (e.target.matches('.logout-btn')) {
-                this.handleLogout();
-            }
-        });
-    }
-
-    async handleLogin(formData) {
-        const username = formData.get('username');
-        const password = formData.get('password');
-
-        if (!username || !password) {
-            UI.showToast('Please fill in all fields', 'error');
-            return;
-        }
-
-        try {
-            const submitBtn = document.querySelector('#loginForm button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Signing in...';
-
-            const response = await api.login(username, password);
-            
-            appState.setUser(response.user, response.token);
-            UI.showToast('Login successful!', 'success');
-            
-            // Redirect based on user role
-            const redirectPath = appState.isAdmin() ? '/admin/dashboard' : '/dashboard';
-            setTimeout(() => window.location.href = redirectPath, 1000);
-
-        } catch (error) {
-            UI.showToast(error.message || 'Login failed', 'error');
-        } finally {
-            const submitBtn = document.querySelector('#loginForm button[type="submit"]');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Sign In';
-        }
-    }
-
-    async handleRegister(formData) {
-        const username = formData.get('username');
-        const email = formData.get('email');
-        const password = formData.get('password');
-        const confirmPassword = formData.get('confirmPassword');
-
-        // Validation
-        if (!username || !email || !password || !confirmPassword) {
-            UI.showToast('Please fill in all fields', 'error');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            UI.showToast('Passwords do not match', 'error');
-            return;
-        }
-
-        if (password.length < 6) {
-            UI.showToast('Password must be at least 6 characters', 'error');
-            return;
-        }
-
-        if (!Utils.validateEmail(email)) {
-            UI.showToast('Please enter a valid email', 'error');
-            return;
-        }
-
-        try {
-            const submitBtn = document.querySelector('#registerForm button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Creating Account...';
-
-            const userData = {
-                username,
-                email,
-                password,
-                preferred_languages: Array.from(document.querySelectorAll('input[name="languages"]:checked')).map(cb => cb.value),
-                preferred_genres: Array.from(document.querySelectorAll('input[name="genres"]:checked')).map(cb => cb.value)
-            };
-
-            const response = await api.register(userData);
-            
-            appState.setUser(response.user, response.token);
-            UI.showToast('Account created successfully!', 'success');
-            
-            setTimeout(() => window.location.href = '/dashboard', 1000);
-
-        } catch (error) {
-            UI.showToast(error.message || 'Registration failed', 'error');
-        } finally {
-            const submitBtn = document.querySelector('#registerForm button[type="submit"]');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Create Account';
-        }
-    }
-
-    handleLogout() {
-        appState.logout();
-        UI.showToast('Logged out successfully', 'success');
-    }
-}
-
-// Content Manager
-class ContentManager {
-    constructor() {
-        this.loadingStates = new Set();
-    }
-
-    async loadContent(endpoint, container, renderFunction, cacheKey = null) {
-        if (this.loadingStates.has(container)) return;
-        
-        try {
-            this.loadingStates.add(container);
-            
-            // Check cache first
-            let data = null;
-            if (cacheKey) {
-                data = appState.getCache(cacheKey);
-            }
-            
-            if (!data) {
-                UI.showSkeleton(container);
-                data = await api[endpoint]();
-                
-                if (cacheKey) {
-                    appState.setCache(cacheKey, data);
-                }
-            }
-            
-            renderFunction(container, data);
-            
-        } catch (error) {
-            console.error(`Error loading ${endpoint}:`, error);
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">⚠️</div>
-                    <h3 class="empty-state-title">Failed to load content</h3>
-                    <p class="empty-state-description">${error.message}</p>
-                    <button class="btn btn-primary" onclick="location.reload()">Retry</button>
-                </div>
-            `;
-        } finally {
-            this.loadingStates.delete(container);
-        }
-    }
-
-    async recordInteraction(contentId, type, rating = null) {
-        if (!appState.isAuthenticated()) return;
-        
-        try {
-            await api.recordInteraction(contentId, type, rating);
-        } catch (error) {
-            console.error('Failed to record interaction:', error);
-        }
-    }
-
-    renderMovieGrid(container, data) {
-        const content = data.recommendations || data.results || data.watchlist || data.favorites || data;
-        
-        if (!content || content.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">🎬</div>
-                    <h3 class="empty-state-title">No content found</h3>
-                    <p class="empty-state-description">Try browsing other categories or check back later.</p>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = content.map(item => {
-            const card = UI.createMovieCard(item);
-            return card.outerHTML;
-        }).join('');
-
-        // Initialize lazy loading for new images
-        Utils.lazyLoadImages();
-    }
-
-    async loadHomepageContent() {
-        const sections = [
-            { key: 'trending', title: 'Trending Now', endpoint: 'getTrending' },
-            { key: 'newReleases', title: 'New Releases', endpoint: 'getNewReleases' },
-            { key: 'criticsChoice', title: 'Critics Choice', endpoint: 'getCriticsChoice' },
-            { key: 'adminChoice', title: 'Admin Recommendations', endpoint: 'getAdminChoice' }
-        ];
-
-        const contentContainer = document.getElementById('homepage-content');
-        if (!contentContainer) return;
-
-        for (const section of sections) {
-            try {
-                const sectionContainer = document.createElement('div');
-                sectionContainer.innerHTML = `
-                    <section class="section">
-                        <div class="section-header">
-                            <h2 class="section-title">${section.title}</h2>
-                            <a href="/categories/${section.key}" class="btn btn-ghost btn-sm">See More</a>
-                        </div>
-                        <div class="content-grid" id="${section.key}-grid"></div>
-                    </section>
-                `;
-                contentContainer.appendChild(sectionContainer);
-
-                const grid = document.getElementById(`${section.key}-grid`);
-                await this.loadContent(section.endpoint, grid, this.renderMovieGrid.bind(this), section.key);
-            } catch (error) {
-                console.error(`Error loading ${section.title}:`, error);
-            }
-        }
-    }
-}
-
-// Initialize Global Objects
-const appState = new AppState();
-const EventBus = new EventBusClass();
-const api = new APIService();
-const router = new Router();
-const authManager = new AuthManager();
-const contentManager = new ContentManager();
-
-// Page Initialization
-document.addEventListener('DOMContentLoaded', () => {
-    // Hide preloader
-    setTimeout(() => {
-        const preloader = document.getElementById('preloader');
-        if (preloader) {
-            preloader.classList.add('hidden');
-            setTimeout(() => preloader.remove(), 500);
-        }
-    }, 1000);
-
-    // Initialize UI components
-    UI.initDropdowns();
-    
-    // Initialize lazy loading
-    Utils.lazyLoadImages();
-    
-    // Setup search if on appropriate page
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        UI.initSearch('#searchInput', '#searchResults', async (query) => {
-            const response = await api.search(query);
-            return response.results || [];
-        });
-    }
-
-    // Handle mobile menu
-    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-    const mobileMenu = document.getElementById('mobileMenu');
-    
-    if (mobileMenuToggle && mobileMenu) {
-        mobileMenuToggle.addEventListener('click', () => {
-            mobileMenu.classList.toggle('open');
-        });
-
-        // Close mobile menu when clicking on links
-        mobileMenu.addEventListener('click', (e) => {
-            if (e.target.matches('a')) {
-                mobileMenu.classList.remove('open');
-            }
-        });
-    }
-
-    // Update navbar on scroll
-    const navbar = document.querySelector('.navbar');
-    if (navbar) {
-        window.addEventListener('scroll', Utils.throttle(() => {
-            if (window.scrollY > 100) {
-                navbar.classList.add('scrolled');
+            if (response && response.token) {
+                setAuth(response.token, response.user);
+                alert('Registration successful!');
+                window.location.href = '/dashboard'; // Redirect to dashboard
             } else {
-                navbar.classList.remove('scrolled');
+                alert(response?.error || 'Registration failed.');
             }
-        }, 100));
+        });
+    }
+}
+
+/**
+ * Initializes the dashboard page.
+ */
+async function initDashboardPage() {
+     console.log("Initializing Dashboard Page...");
+     if (!isAuthenticated()) {
+         window.location.href = '/login';
+         return;
+     }
+
+     const user = getCurrentUser();
+     if (user) {
+         document.getElementById('welcome-user').textContent = user.username;
+         // Load personalized recommendations
+         const personalizedData = await apiFetch('/recommendations/personalized?limit=10');
+         if (personalizedData && personalizedData.recommendations) {
+             populateContent('personalized-recommendations', personalizedData.recommendations);
+         } else {
+              // Fallback to trending if personalized fails
+              const trendingData = await apiFetch('/recommendations/trending?limit=10');
+              if (trendingData && trendingData.recommendations) {
+                  populateContent('personalized-recommendations', trendingData.recommendations);
+              }
+         }
+         // Load Watchlist Quick Access
+         const watchlistData = await apiFetch('/user/watchlist');
+         if (watchlistData && watchlistData.watchlist) {
+             populateContent('watchlist-preview', watchlistData.watchlist);
+         }
+     }
+}
+
+/**
+ * Initializes category pages (e.g., trending, anime).
+ */
+async function initCategoryPage() {
+    console.log("Initializing Category Page...");
+    const path = window.location.pathname;
+    let endpoint = '';
+    let title = 'Content';
+
+    if (path.includes('/categories/trending')) {
+        endpoint = '/recommendations/trending';
+        title = 'Trending';
+    } else if (path.includes('/categories/popular')) {
+        endpoint = '/recommendations/trending'; // Assuming popular is trending for now
+        title = 'Popular';
+    } else if (path.includes('/categories/new-releases')) {
+        endpoint = '/recommendations/new-releases';
+        title = 'New Releases';
+    } else if (path.includes('/categories/critic-choices')) {
+        endpoint = '/recommendations/critics-choice';
+        title = 'Critics\' Choice';
+    } else if (path.includes('/categories/movies')) {
+        endpoint = '/recommendations/trending?type=movie'; // Or a dedicated movie endpoint
+        title = 'Movies';
+    } else if (path.includes('/categories/tv-shows')) {
+        endpoint = '/recommendations/trending?type=tv'; // Or a dedicated tv endpoint
+        title = 'TV Shows';
+    } else if (path.includes('/categories/anime')) {
+        endpoint = '/recommendations/anime';
+        title = 'Anime';
+    } else if (path.includes('/languages/')) {
+        const lang = path.split('/').pop(); // Get language from URL
+        endpoint = `/recommendations/regional/${lang}`;
+        title = `${lang.charAt(0).toUpperCase() + lang.slice(1)} Content`;
+    } else if (path.includes('/user/watchlist')) {
+         if (!isAuthenticated()) { window.location.href = '/login'; return; }
+         endpoint = '/user/watchlist';
+         title = 'Your Watchlist';
+    } else if (path.includes('/user/favorites')) {
+         if (!isAuthenticated()) { window.location.href = '/login'; return; }
+         endpoint = '/user/favorites';
+         title = 'Your Favorites';
     }
 
-    // Initialize page-specific functionality
-    const currentPage = window.location.pathname;
-    
-    if (currentPage === '/' || currentPage === '/index') {
-        contentManager.loadHomepageContent();
+
+    if (endpoint) {
+        document.title = `${title} - CineScope`;
+        const pageTitleElement = document.querySelector('h1'); // Assuming an <h1> for the page title
+        if (pageTitleElement) pageTitleElement.textContent = title;
+
+        const data = await apiFetch(`${endpoint}?limit=50`); // Load more for category pages
+        let items = [];
+        if (data) {
+            if (data.recommendations) items = data.recommendations;
+            else if (data.watchlist) items = data.watchlist;
+            else if (data.favorites) items = data.favorites;
+        }
+        populateContent('category-content', items);
+    }
+}
+
+
+// --- Header Scripts (called by include.js) ---
+function initHeaderScripts() {
+    console.log("Initializing Header Scripts...");
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileNav = document.getElementById('mobile-nav');
+    const userMenuButton = document.getElementById('user-menu-button');
+    const userDropdown = document.getElementById('user-dropdown');
+    const logoutButton = document.getElementById('logout-button');
+
+    if (mobileMenuButton && mobileNav) {
+        mobileMenuButton.addEventListener('click', () => {
+            mobileNav.classList.toggle('hidden');
+        });
+    }
+
+    if (userMenuButton && userDropdown) {
+        userMenuButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent immediate closing
+            userDropdown.classList.toggle('hidden');
+        });
+
+        // Close dropdown if clicked outside
+        document.addEventListener('click', (e) => {
+            if (!userMenuButton.contains(e.target) && !userDropdown.contains(e.target)) {
+                userDropdown.classList.add('hidden');
+            }
+        });
+    }
+
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+            clearAuth();
+            alert('You have been logged out.');
+            window.location.href = '/'; // Redirect to homepage
+        });
+    }
+
+    // Update UI based on auth status
+    updateAuthUI();
+}
+
+function updateAuthUI() {
+    const authLinks = document.getElementById('auth-links');
+    const userSection = document.getElementById('user-section');
+    const userInitials = document.getElementById('user-initials');
+    const adminLink = document.getElementById('admin-link');
+
+    if (isAuthenticated()) {
+        authLinks?.classList.add('hidden');
+        userSection?.classList.remove('hidden');
+        const user = getCurrentUser();
+        if (userInitials && user) {
+            userInitials.textContent = user.username.charAt(0).toUpperCase();
+        }
+        if (adminLink) {
+            if (isAdmin()) {
+                adminLink.classList.remove('hidden');
+            } else {
+                adminLink.classList.add('hidden');
+            }
+        }
+        // Show user-specific links in mobile nav if needed
+    } else {
+        authLinks?.classList.remove('hidden');
+        userSection?.classList.add('hidden');
+        adminLink?.classList.add('hidden');
+         // Hide user-specific links in mobile nav if needed
+    }
+}
+
+
+// --- Carousel Navigation ---
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.carousel-arrow')) {
+        const arrow = e.target.closest('.carousel-arrow');
+        const carouselTrack = arrow.closest('.carousel-container').querySelector('.carousel-track');
+        const scrollAmount = carouselTrack.clientWidth * 0.8; // Scroll 80% of viewport width
+
+        if (arrow.dataset.direction === 'left') {
+            carouselTrack.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        } else if (arrow.dataset.direction === 'right') {
+            carouselTrack.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
     }
 });
 
-// Export for use in other files
-window.appState = appState;
-window.api = api;
-window.UI = UI;
-window.Utils = Utils;
-window.Router = router;
-window.contentManager = contentManager;
+// --- Initialize on Page Load ---
+document.addEventListener('DOMContentLoaded', async () => {
+    // Wait a tiny bit for includes to load
+    setTimeout(() => {
+         // Determine which page to initialize
+        const path = window.location.pathname;
+
+        if (path === '/' || path === '/index.html') {
+            initHomepage();
+        } else if (path === '/login' || path === '/login.html') {
+            initLoginPage();
+        } else if (path === '/dashboard' || path === '/dashboard.html') {
+            initDashboardPage();
+        } else if (path === '/details' || path === '/details.html') {
+            initDetailsPage();
+        } else if (path.startsWith('/categories/') ||
+                   path.startsWith('/languages/') ||
+                   path.startsWith('/user/watchlist') ||
+                   path.startsWith('/user/favorites')) {
+            initCategoryPage();
+        } else if (path.startsWith('/admin/')) {
+             // Basic check, redirect if not admin
+             if(isAuthenticated() && isAdmin()) {
+                 // Specific admin page init can go here if needed
+                 console.log("Admin page loaded");
+             } else {
+                 window.location.href = '/'; // Redirect non-admins
+             }
+        } else {
+            console.log("No specific initialization for this page:", path);
+        }
+
+        hidePreloader(); // Ensure preloader hides after page logic
+    }, 100); // Adjust timeout if needed
+
+});
