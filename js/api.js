@@ -1,218 +1,310 @@
-// API Configuration and Helper Functions
+// API Client for CineScope
 class APIClient {
-    constructor(baseURL) {
-        this.baseURL = baseURL;
-        this.token = null;
-        this.loadToken();
+    constructor() {
+        this.baseURL = 'https://backend-app-970m.onrender.com/api';
+        this.token = localStorage.getItem('authToken');
+        this.cache = new Map();
+        this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
     }
 
-    loadToken() {
-        this.token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
-    }
-
-    saveToken(token, remember = false) {
-        this.token = token;
-        if (remember) {
-            localStorage.setItem('authToken', token);
-        } else {
-            sessionStorage.setItem('authToken', token);
-        }
-    }
-
-    clearToken() {
-        this.token = null;
-        sessionStorage.removeItem('authToken');
-        localStorage.removeItem('authToken');
-    }
-
-    getHeaders() {
-        const headers = {
-            'Content-Type': 'application/json',
-        };
-        
-        if (this.token) {
-            headers['Authorization'] = `Bearer ${this.token}`;
-        }
-        
-        return headers;
-    }
-
+    // HTTP Methods
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
         const config = {
-            headers: this.getHeaders(),
-            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            },
+            ...options
         };
+
+        if (this.token && !config.headers.Authorization) {
+            config.headers.Authorization = `Bearer ${this.token}`;
+        }
 
         try {
             const response = await fetch(url, config);
             
             if (!response.ok) {
-                if (response.status === 401) {
-                    this.clearToken();
-                    window.location.href = '/login';
-                    return;
-                }
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
-            return { success: true, data };
+            return await response.json();
         } catch (error) {
-            console.error('API Request failed:', error);
-            return { success: false, error: error.message };
+            console.error(`API Error (${endpoint}):`, error);
+            throw error;
         }
     }
 
-    async get(endpoint) {
-        return this.request(endpoint, { method: 'GET' });
+    async get(endpoint, params = {}, useCache = true) {
+        const queryString = new URLSearchParams(params).toString();
+        const fullEndpoint = queryString ? `${endpoint}?${queryString}` : endpoint;
+        
+        // Check cache
+        if (useCache && this.cache.has(fullEndpoint)) {
+            const cached = this.cache.get(fullEndpoint);
+            if (Date.now() - cached.timestamp < this.cacheTimeout) {
+                return cached.data;
+            }
+        }
+
+        const data = await this.request(fullEndpoint);
+        
+        // Cache the response
+        if (useCache) {
+            this.cache.set(fullEndpoint, {
+                data,
+                timestamp: Date.now()
+            });
+        }
+
+        return data;
     }
 
-    async post(endpoint, data) {
+    async post(endpoint, data = {}) {
         return this.request(endpoint, {
             method: 'POST',
-            body: JSON.stringify(data),
+            body: JSON.stringify(data)
         });
     }
 
-    async put(endpoint, data) {
+    async put(endpoint, data = {}) {
         return this.request(endpoint, {
             method: 'PUT',
-            body: JSON.stringify(data),
+            body: JSON.stringify(data)
         });
     }
 
     async delete(endpoint) {
-        return this.request(endpoint, { method: 'DELETE' });
+        return this.request(endpoint, {
+            method: 'DELETE'
+        });
     }
-}
 
-// Initialize API client
-const API = new APIClient('https://backend-app-970m.onrender.com/api');
-
-// API Methods
-const ApiService = {
     // Authentication
-    async login(credentials) {
-        return await API.post('/login', credentials);
-    },
+    async login(username, password) {
+        const response = await this.post('/login', { username, password });
+        if (response.token) {
+            this.token = response.token;
+            localStorage.setItem('authToken', this.token);
+        }
+        return response;
+    }
 
     async register(userData) {
-        return await API.post('/register', userData);
-    },
+        const response = await this.post('/register', userData);
+        if (response.token) {
+            this.token = response.token;
+            localStorage.setItem('authToken', this.token);
+        }
+        return response;
+    }
+
+    async validateToken(token) {
+        try {
+            return await this.request('/user/profile', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (error) {
+            return null;
+        }
+    }
+
+    logout() {
+        this.token = null;
+        localStorage.removeItem('authToken');
+        this.cache.clear();
+    }
 
     // Content Discovery
     async search(query, type = 'multi', page = 1) {
-        return await API.get(`/search?query=${encodeURIComponent(query)}&type=${type}&page=${page}`);
-    },
+        return this.get('/search', { query, type, page });
+    }
 
     async getContentDetails(contentId) {
-        return await API.get(`/content/${contentId}`);
-    },
+        return this.get(`/content/${contentId}`);
+    }
 
     // Recommendations
     async getTrending(type = 'all', limit = 20) {
-        return await API.get(`/recommendations/trending?type=${type}&limit=${limit}`);
-    },
+        const response = await this.get('/recommendations/trending', { type, limit });
+        return response.recommendations || [];
+    }
 
-    async getNewReleases(language = null, type = 'movie', limit = 20) {
-        const params = new URLSearchParams({ type, limit });
-        if (language) params.append('language', language);
-        return await API.get(`/recommendations/new-releases?${params}`);
-    },
+    async getPopular(type = 'movie', limit = 20) {
+        const response = await this.get('/recommendations/trending', { type, limit });
+        return response.recommendations || [];
+    }
+
+    async getNewReleases(type = 'movie', limit = 20, language = null) {
+        const params = { type, limit };
+        if (language) params.language = language;
+        const response = await this.get('/recommendations/new-releases', params);
+        return response.recommendations || [];
+    }
 
     async getCriticsChoice(type = 'movie', limit = 20) {
-        return await API.get(`/recommendations/critics-choice?type=${type}&limit=${limit}`);
-    },
+        const response = await this.get('/recommendations/critics-choice', { type, limit });
+        return response.recommendations || [];
+    }
 
     async getGenreRecommendations(genre, type = 'movie', limit = 20) {
-        return await API.get(`/recommendations/genre/${genre}?type=${type}&limit=${limit}`);
-    },
+        const response = await this.get(`/recommendations/genre/${genre}`, { type, limit });
+        return response.recommendations || [];
+    }
 
     async getRegionalContent(language, type = 'movie', limit = 20) {
-        return await API.get(`/recommendations/regional/${language}?type=${type}&limit=${limit}`);
-    },
+        const response = await this.get(`/recommendations/regional/${language}`, { type, limit });
+        return response.recommendations || [];
+    }
 
-    async getAnimeRecommendations(genre = null, limit = 20) {
-        const params = new URLSearchParams({ limit });
-        if (genre) params.append('genre', genre);
-        return await API.get(`/recommendations/anime?${params}`);
-    },
+    async getAnime(limit = 20, genre = null) {
+        const params = { limit };
+        if (genre) params.genre = genre;
+        const response = await this.get('/recommendations/anime', params);
+        return response.recommendations || [];
+    }
 
     async getSimilarContent(contentId, limit = 20) {
-        return await API.get(`/recommendations/similar/${contentId}?limit=${limit}`);
-    },
-
-    async getPersonalizedRecommendations(limit = 20) {
-        return await API.get(`/recommendations/personalized?limit=${limit}`);
-    },
+        const response = await this.get(`/recommendations/similar/${contentId}`, { limit });
+        return response.recommendations || [];
+    }
 
     async getAnonymousRecommendations(limit = 20) {
-        return await API.get(`/recommendations/anonymous?limit=${limit}`);
-    },
+        const response = await this.get('/recommendations/anonymous', { limit });
+        return response.recommendations || [];
+    }
 
-    async getAdminChoice(limit = 20) {
-        return await API.get(`/recommendations/admin-choice?limit=${limit}`);
-    },
+    async getPersonalizedRecommendations(limit = 20) {
+        const response = await this.get('/recommendations/personalized', { limit });
+        return response.recommendations || [];
+    }
+
+    async getMLPersonalizedRecommendations(limit = 20) {
+        const response = await this.get('/recommendations/ml-personalized', { limit });
+        return response.recommendations || [];
+    }
+
+    async getAdminRecommendations(limit = 20, type = 'admin_choice') {
+        const response = await this.get('/recommendations/admin-choice', { limit, type });
+        return response.recommendations || [];
+    }
 
     // User Interactions
     async recordInteraction(contentId, interactionType, rating = null) {
-        return await API.post('/interactions', {
+        return this.post('/interactions', {
             content_id: contentId,
             interaction_type: interactionType,
             rating
         });
-    },
+    }
+
+    async addToWatchlist(contentId) {
+        return this.recordInteraction(contentId, 'watchlist');
+    }
+
+    async addToFavorites(contentId) {
+        return this.recordInteraction(contentId, 'favorite');
+    }
+
+    async rateContent(contentId, rating) {
+        return this.recordInteraction(contentId, 'rating', rating);
+    }
 
     async getWatchlist() {
-        return await API.get('/user/watchlist');
-    },
+        const response = await this.get('/user/watchlist');
+        return response.watchlist || [];
+    }
 
     async getFavorites() {
-        return await API.get('/user/favorites');
-    },
+        const response = await this.get('/user/favorites');
+        return response.favorites || [];
+    }
 
-    // Admin APIs
+    // User Profile
+    async getUserProfile() {
+        return this.get('/user/profile');
+    }
+
+    async updateProfile(profileData) {
+        return this.put('/user/profile', profileData);
+    }
+
+    // Admin Functions
     async adminSearch(query, source = 'tmdb', page = 1) {
-        return await API.get(`/admin/search?query=${encodeURIComponent(query)}&source=${source}&page=${page}`);
-    },
+        return this.get('/admin/search', { query, source, page });
+    }
 
     async saveExternalContent(contentData) {
-        return await API.post('/admin/content', contentData);
-    },
+        return this.post('/admin/content', contentData);
+    }
 
     async createAdminRecommendation(contentId, type, description) {
-        return await API.post('/admin/recommendations', {
+        return this.post('/admin/recommendations', {
             content_id: contentId,
             recommendation_type: type,
             description
         });
-    },
+    }
 
-    async getAdminRecommendations(page = 1, perPage = 20) {
-        return await API.get(`/admin/recommendations?page=${page}&per_page=${perPage}`);
-    },
+    async getAdminRecommendationsList(page = 1, perPage = 20) {
+        return this.get('/admin/recommendations', { page, per_page: perPage });
+    }
 
     async getAnalytics() {
-        return await API.get('/admin/analytics');
-    },
+        return this.get('/admin/analytics');
+    }
 
     async checkMLService() {
-        return await API.get('/admin/ml-service-check');
-    },
-
-    async updateMLService() {
-        return await API.post('/admin/ml-service-update');
+        return this.get('/admin/ml-service-check');
     }
-};
 
-// Error handling utility
-window.handleApiError = function(error, defaultMessage = 'An error occurred') {
-    const message = error?.message || defaultMessage;
-    showToast(message, 'error');
-    console.error('API Error:', error);
-};
+    async forceMLUpdate() {
+        return this.post('/admin/ml-service-update');
+    }
 
-// Export for use in other files
-window.ApiService = ApiService;
-window.API = API;
+    async getMLStats() {
+        return this.get('/admin/ml-stats');
+    }
+
+    // Cache Management
+    clearCache() {
+        this.cache.clear();
+    }
+
+    getCacheSize() {
+        return this.cache.size;
+    }
+
+    getCacheStats() {
+        const entries = Array.from(this.cache.entries());
+        const totalSize = entries.length;
+        const expired = entries.filter(([key, value]) => 
+            Date.now() - value.timestamp > this.cacheTimeout
+        ).length;
+
+        return {
+            total: totalSize,
+            expired,
+            valid: totalSize - expired
+        };
+    }
+
+    // Cleanup expired cache entries
+    cleanupCache() {
+        const now = Date.now();
+        for (const [key, value] of this.cache.entries()) {
+            if (now - value.timestamp > this.cacheTimeout) {
+                this.cache.delete(key);
+            }
+        }
+    }
+}
+
+// Global API instance
+window.API = new APIClient();
+
+// Cleanup cache periodically
+setInterval(() => {
+    window.API.cleanupCache();
+}, 60000); // Every minute

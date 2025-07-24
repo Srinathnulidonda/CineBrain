@@ -1,251 +1,208 @@
-// Include Management System
-const IncludeManager = {
-    cache: new Map(),
-    
-    async loadInclude(path) {
-        // Check cache first
-        if (this.cache.has(path)) {
-            return this.cache.get(path);
+
+
+// HTML Include System
+async function includeHTML(containerId, filePath) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.warn(`Container with ID "${containerId}" not found`);
+        return false;
+    }
+
+    try {
+        const response = await fetch(filePath);
+        if (!response.ok) {
+            throw new Error(`Failed to load ${filePath}: ${response.status}`);
         }
         
+        const html = await response.text();
+        container.innerHTML = html;
+        
+        // Trigger custom event for include loaded
+        const event = new CustomEvent('includeLoaded', {
+            detail: { containerId, filePath }
+        });
+        document.dispatchEvent(event);
+        
+        return true;
+    } catch (error) {
+        console.error(`Error including ${filePath}:`, error);
+        
+        // Show fallback content for critical includes
+        if (containerId === 'header-container') {
+            container.innerHTML = createFallbackHeader();
+        } else if (containerId === 'footer-container') {
+            container.innerHTML = createFallbackFooter();
+        }
+        
+        return false;
+    }
+}
+
+function createFallbackHeader() {
+    return `
+        <nav class="navbar fixed-top" style="background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid #333;">
+            <div class="nav-container" style="max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                <div class="nav-brand">
+                    <a href="/" style="text-decoration: none;">
+                        <span style="font-size: 1.8rem; font-weight: 700; background: linear-gradient(135deg, #2E86AB, #A23B72); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">CineScope</span>
+                    </a>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <a href="/" style="color: #B8B8B8; text-decoration: none;">Home</a>
+                    <a href="/search" style="color: #B8B8B8; text-decoration: none;">Search</a>
+                    <button onclick="showLogin()" style="background: linear-gradient(135deg, #2E86AB, #A23B72); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 2rem; cursor: pointer;">
+                        Sign In
+                    </button>
+                </div>
+            </div>
+        </nav>
+    `;
+}
+
+function createFallbackFooter() {
+    return `
+        <footer style="background: #1A1A1A; padding: 2rem 0; margin-top: 4rem; border-top: 1px solid #333;">
+            <div style="max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; text-align: center;">
+                <p style="color: #8A8A8A; margin: 0;">© 2024 CineScope. All rights reserved.</p>
+            </div>
+        </footer>
+    `;
+}
+
+// Auto-include system for data-include attributes
+document.addEventListener('DOMContentLoaded', () => {
+    const includeElements = document.querySelectorAll('[data-include]');
+    
+    const loadPromises = Array.from(includeElements).map(element => {
+        const filePath = element.dataset.include;
+        const containerId = element.id || `include-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        if (!element.id) {
+            element.id = containerId;
+        }
+        
+        return includeHTML(containerId, filePath);
+    });
+    
+    Promise.allSettled(loadPromises).then(results => {
+        const failed = results.filter(result => result.status === 'rejected').length;
+        if (failed > 0) {
+            console.warn(`${failed} includes failed to load`);
+        }
+    });
+});
+
+// Dynamic include loader
+class IncludeManager {
+    constructor() {
+        this.cache = new Map();
+        this.loading = new Set();
+    }
+
+    async load(containerId, filePath, useCache = true) {
+        // Prevent duplicate loads
+        const loadKey = `${containerId}:${filePath}`;
+        if (this.loading.has(loadKey)) {
+            return false;
+        }
+
+        this.loading.add(loadKey);
+
         try {
-            const response = await fetch(path);
-            if (!response.ok) {
-                throw new Error(`Failed to load ${path}: ${response.status}`);
+            let html;
+            
+            if (useCache && this.cache.has(filePath)) {
+                html = this.cache.get(filePath);
+            } else {
+                const response = await fetch(filePath);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                html = await response.text();
+                
+                if (useCache) {
+                    this.cache.set(filePath, html);
+                }
+            }
+
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = html;
+                
+                // Process any nested includes
+                await this.processNestedIncludes(container);
+                
+                // Trigger loaded event
+                container.dispatchEvent(new CustomEvent('includeLoaded', {
+                    detail: { filePath, cached: useCache && this.cache.has(filePath) }
+                }));
+                
+                return true;
             }
             
-            const content = await response.text();
-            this.cache.set(path, content);
-            return content;
+            return false;
         } catch (error) {
-            console.error('Include load error:', error);
-            return this.getFallbackContent(path);
+            console.error(`Failed to load include ${filePath}:`, error);
+            return false;
+        } finally {
+            this.loading.delete(loadKey);
         }
-    },
-    
-    getFallbackContent(path) {
-        if (path.includes('header')) {
-            return this.getHeaderFallback();
-        } else if (path.includes('footer')) {
-            return this.getFooterFallback();
-        }
-        return '';
-    },
-    
-    getHeaderFallback() {
-        return `
-            <header class="main-header">
-                <nav class="navbar navbar-expand-lg">
-                    <div class="container">
-                        <a class="navbar-brand" href="/">
-                            <i class="fas fa-film me-2"></i>
-                            <span class="brand-text">CineScope</span>
-                        </a>
-                        
-                        <button class="btn btn-outline-primary d-lg-none me-2" id="mobileSearchToggle">
-                            <i class="fas fa-search"></i>
-                        </button>
-                        
-                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                            <span class="navbar-toggler-icon"></span>
-                        </button>
-                        
-                        <div class="collapse navbar-collapse" id="navbarNav">
-                            <div class="search-container d-none d-lg-flex mx-auto">
-                                <div class="search-input-group">
-                                    <input type="text" id="searchInput" class="form-control" placeholder="Search movies, TV shows, anime...">
-                                    <button class="btn btn-primary" id="searchBtn">
-                                        <i class="fas fa-search"></i>
-                                    </button>
-                                </div>
-                                <div id="searchSuggestions" class="search-suggestions"></div>
-                            </div>
-                            
-                            <ul class="navbar-nav ms-auto">
-                                <li class="nav-item">
-                                    <a class="nav-link" href="/">Home</a>
-                                </li>
-                                <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                        Categories
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="/categories/trending">Trending</a></li>
-                                        <li><a class="dropdown-item" href="/categories/popular">Popular</a></li>
-                                        <li><a class="dropdown-item" href="/categories/new-releases">New Releases</a></li>
-                                        <li><a class="dropdown-item" href="/categories/critic-choices">Critics Choice</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="/categories/movies">Movies</a></li>
-                                        <li><a class="dropdown-item" href="/categories/tv-shows">TV Shows</a></li>
-                                        <li><a class="dropdown-item" href="/categories/anime">Anime</a></li>
-                                    </ul>
-                                </li>
-                                <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                        Languages
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="/languages/english">English</a></li>
-                                        <li><a class="dropdown-item" href="/languages/hindi">Hindi</a></li>
-                                        <li><a class="dropdown-item" href="/languages/telugu">Telugu</a></li>
-                                        <li><a class="dropdown-item" href="/languages/tamil">Tamil</a></li>
-                                        <li><a class="dropdown-item" href="/languages/kannada">Kannada</a></li>
-                                        <li><a class="dropdown-item" href="/languages/malayalam">Malayalam</a></li>
-                                    </ul>
-                                </li>
-                                <li class="nav-item" id="userNavItem" style="display: none;">
-                                    <div class="dropdown">
-                                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                            <i class="fas fa-user-circle me-1"></i>
-                                            <span id="userNameDisplay"></span>
-                                        </a>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
-                                            <li><a class="dropdown-item" href="/user/watchlist">Watchlist</a></li>
-                                            <li><a class="dropdown-item" href="/user/favorites">Favorites</a></li>
-                                            <li><a class="dropdown-item" href="/profile">Profile</a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item" href="#" id="logoutBtn">Logout</a></li>
-                                        </ul>
-                                    </div>
-                                </li>
-                                <li class="nav-item" id="loginNavItem">
-                                    <a class="nav-link btn btn-primary px-3" href="/login">Login</a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </nav>
+    }
+
+    async processNestedIncludes(container) {
+        const nestedIncludes = container.querySelectorAll('[data-include]');
+        
+        if (nestedIncludes.length > 0) {
+            const nestedPromises = Array.from(nestedIncludes).map(element => {
+                const filePath = element.dataset.include;
+                const containerId = element.id || `nested-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 
-                <div id="mobileSearchBar" class="mobile-search-bar d-lg-none">
-                    <div class="container">
-                        <div class="search-input-group">
-                            <input type="text" id="mobileSearchInput" class="form-control" placeholder="Search...">
-                            <button class="btn btn-primary" id="mobileSearchBtn">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </header>
-        `;
-    },
-    
-    getFooterFallback() {
-        return `
-            <footer class="main-footer">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-lg-4 mb-4">
-                            <div class="footer-brand">
-                                <i class="fas fa-film me-2"></i>
-                                <span>CineScope</span>
-                            </div>
-                            <p class="footer-description">
-                                Your ultimate destination for discovering amazing movies, TV shows, and anime from around the world.
-                            </p>
-                            <div class="social-links">
-                                <a href="#"><i class="fab fa-twitter"></i></a>
-                                <a href="#"><i class="fab fa-facebook"></i></a>
-                                <a href="#"><i class="fab fa-instagram"></i></a>
-                                <a href="#"><i class="fab fa-youtube"></i></a>
-                            </div>
-                        </div>
-                        <div class="col-lg-2 col-md-6 mb-4">
-                            <h6 class="footer-title">Categories</h6>
-                            <ul class="footer-links">
-                                <li><a href="/categories/movies">Movies</a></li>
-                                <li><a href="/categories/tv-shows">TV Shows</a></li>
-                                <li><a href="/categories/anime">Anime</a></li>
-                                <li><a href="/categories/trending">Trending</a></li>
-                            </ul>
-                        </div>
-                        <div class="col-lg-2 col-md-6 mb-4">
-                            <h6 class="footer-title">Languages</h6>
-                            <ul class="footer-links">
-                                <li><a href="/languages/english">English</a></li>
-                                <li><a href="/languages/hindi">Hindi</a></li>
-                                <li><a href="/languages/telugu">Telugu</a></li>
-                                <li><a href="/languages/tamil">Tamil</a></li>
-                            </ul>
-                        </div>
-                        <div class="col-lg-2 col-md-6 mb-4">
-                            <h6 class="footer-title">Support</h6>
-                            <ul class="footer-links">
-                                <li><a href="/help">Help Center</a></li>
-                                <li><a href="/contact">Contact Us</a></li>
-                                <li><a href="/privacy">Privacy Policy</a></li>
-                                <li><a href="/terms">Terms of Service</a></li>
-                            </ul>
-                        </div>
-                        <div class="col-lg-2 col-md-6 mb-4">
-                            <h6 class="footer-title">Account</h6>
-                            <ul class="footer-links">
-                                <li><a href="/login">Login</a></li>
-                                <li><a href="/dashboard">Dashboard</a></li>
-                                <li><a href="/user/watchlist">Watchlist</a></li>
-                                <li><a href="/user/favorites">Favorites</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <hr class="footer-divider">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <p class="footer-copyright">
-                                &copy; 2024 CineScope. All rights reserved.
-                            </p>
-                        </div>
-                        <div class="col-md-6 text-md-end">
-                            <p class="footer-credits">
-                                Made with <i class="fas fa-heart text-danger"></i> for movie lovers
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </footer>
-        `;
-    }
-};
-
-// Global functions for easy use
-async function loadHeader() {
-    try {
-        const headerContent = await IncludeManager.loadInclude('../includes/header.html');
-        const headerContainer = document.getElementById('headerContainer');
-        if (headerContainer) {
-            headerContainer.innerHTML = headerContent;
+                if (!element.id) {
+                    element.id = containerId;
+                }
+                
+                return this.load(containerId, filePath);
+            });
             
-            // Re-initialize search and auth after loading
-            setTimeout(() => {
-                SearchManager.init();
-                AuthManager.init();
-            }, 100);
+            await Promise.allSettled(nestedPromises);
         }
-    } catch (error) {
-        console.error('Failed to load header:', error);
-        // Use fallback
-        const headerContainer = document.getElementById('headerContainer');
-        if (headerContainer) {
-            headerContainer.innerHTML = IncludeManager.getHeaderFallback();
-            SearchManager.init();
-            AuthManager.init();
-        }
+    }
+
+    clearCache() {
+        this.cache.clear();
+    }
+
+    getCacheSize() {
+        return this.cache.size;
+    }
+
+    preload(filePaths) {
+        return Promise.allSettled(
+            filePaths.map(async filePath => {
+                try {
+                    const response = await fetch(filePath);
+                    if (response.ok) {
+                        const html = await response.text();
+                        this.cache.set(filePath, html);
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    console.warn(`Preload failed for ${filePath}:`, error);
+                    return false;
+                }
+            })
+        );
     }
 }
 
-async function loadFooter() {
-    try {
-        const footerContent = await IncludeManager.loadInclude('../includes/footer.html');
-        const footerContainer = document.getElementById('footerContainer');
-        if (footerContainer) {
-            footerContainer.innerHTML = footerContent;
-        }
-    } catch (error) {
-        console.error('Failed to load footer:', error);
-        // Use fallback
-        const footerContainer = document.getElementById('footerContainer');
-        if (footerContainer) {
-            footerContainer.innerHTML = IncludeManager.getFooterFallback();
-        }
-    }
-}
+// Global include manager
+window.IncludeManager = new IncludeManager();
+
+// Preload common includes
+document.addEventListener('DOMContentLoaded', () => {
+    window.IncludeManager.preload([
+        '/includes/header.html',
+        '/includes/footer.html'
+    ]);
+});
