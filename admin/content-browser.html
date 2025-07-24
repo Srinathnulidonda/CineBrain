@@ -3,674 +3,829 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Browser - CineScope Admin</title>
-    <meta name="description" content="Browse and manage all content on CineScope platform.">
+    <title>Content Browser - Admin - CineScope</title>
     
-    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/responsive.css">
+    <!-- Stylesheets -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="../css/main.css" rel="stylesheet">
+    <link href="../css/components.css" rel="stylesheet">
+    <link href="../css/responsive.css" rel="stylesheet">
 </head>
-<body>
-    <div id="preloader" class="preloader">
-        <div class="flex flex-col items-center">
-            <div class="loader"></div>
-            <p class="mt-4 text-lg font-medium">Loading Content Browser...</p>
+<body class="bg-dark text-light">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-container">
+            <div class="loading-logo">
+                <i class="fas fa-film"></i>
+                <span>CineScope</span>
+            </div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading content browser...</div>
         </div>
     </div>
 
-    <div id="header-placeholder"></div>
+    <!-- Header -->
+    <div id="headerContainer"></div>
 
-    <main class="container py-8">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-8">
-            <div>
-                <h1 class="text-4xl font-bold mb-2">🗂️ Content Browser</h1>
-                <p class="text-gray-400">Browse, search, and manage all platform content</p>
+    <!-- Main Content -->
+    <main class="main-content admin-content">
+        <!-- Admin Header -->
+        <section class="admin-header">
+            <div class="container">
+                <div class="admin-header-content">
+                    <div class="breadcrumb-nav">
+                        <nav class="breadcrumb">
+                            <span class="breadcrumb-item"><a href="/">Home</a></span>
+                            <span class="breadcrumb-item"><a href="/admin/dashboard">Admin</a></span>
+                            <span class="breadcrumb-item active">Content Browser</span>
+                        </nav>
+                    </div>
+                    <h1 class="admin-title">
+                        <i class="fas fa-search text-primary me-3"></i>
+                        Content Browser
+                    </h1>
+                    <p class="admin-subtitle">
+                        Search and manage content from external sources
+                    </p>
+                </div>
             </div>
-            <div class="flex items-center gap-4">
-                <button class="btn btn-secondary" onclick="openFilterModal()">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
-                    </svg>
-                    Advanced Filters
-                </button>
-                <button class="btn btn-primary" onclick="openAddContentModal()">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Add Content
-                </button>
-            </div>
-        </div>
+        </section>
 
-        <!-- Search Bar -->
-        <div class="card mb-8">
-            <div class="card-content">
-                <div class="grid grid-1 md:grid-4 gap-4">
-                    <div class="md:col-span-2">
-                        <input type="search" id="contentSearch" class="form-input" placeholder="Search by title, ID, or IMDB ID...">
+        <!-- Search Section -->
+        <section class="content-search-section">
+            <div class="container">
+                <div class="search-card">
+                    <div class="search-header">
+                        <h3>Search External Content</h3>
+                        <div class="source-selector">
+                            <label>Source:</label>
+                            <select class="form-select form-select-sm" id="sourceSelect">
+                                <option value="tmdb">TMDB (Movies & TV)</option>
+                                <option value="anime">Jikan (Anime)</option>
+                                <option value="omdb">OMDb</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <select id="contentTypeFilter" class="form-input">
-                            <option value="">All Types</option>
-                            <option value="movie">Movies</option>
-                            <option value="tv">TV Shows</option>
-                            <option value="anime">Anime</option>
-                        </select>
-                    </div>
-                    <div>
-                        <button class="btn btn-primary w-full" onclick="searchContent()">
-                            Search Content
-                        </button>
+                    <div class="search-form">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <div class="search-input-wrapper">
+                                    <input type="text" class="form-control" id="searchInput" 
+                                           placeholder="Search for movies, TV shows, or anime...">
+                                    <button class="btn btn-primary" id="searchBtn">
+                                        <i class="fas fa-search me-2"></i>
+                                        Search
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" id="contentTypeFilter">
+                                    <option value="multi">All Types</option>
+                                    <option value="movie">Movies</option>
+                                    <option value="tv">TV Shows</option>
+                                    <option value="anime">Anime</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="search-tips">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <span>Search by title, year, or IMDb ID. Use filters to narrow results.</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- Content Table -->
-        <div class="card">
-            <div class="card-content">
-                <!-- Table Actions -->
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-4">
-                        <select id="bulkAction" class="form-input">
-                            <option value="">Bulk Actions</option>
-                            <option value="recommend">Create Recommendations</option>
-                            <option value="update">Update Metadata</option>
-                            <option value="delete">Delete Selected</option>
-                        </select>
-                        <button class="btn btn-secondary btn-sm" onclick="applyBulkAction()">Apply</button>
-                    </div>
-                    <div class="text-sm text-gray-400">
-                        Showing <span id="showingCount">0</span> of <span id="totalCount">0</span> items
+        <!-- Search Results -->
+        <section class="search-results-section">
+            <div class="container">
+                <div class="results-header" id="resultsHeader" style="display: none;">
+                    <h3>Search Results</h3>
+                    <div class="results-stats">
+                        <span id="resultCount">0 results</span>
+                        <span id="searchTime">0s</span>
                     </div>
                 </div>
-
-                <!-- Table -->
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-800">
-                            <tr>
-                                <th class="px-4 py-3 text-left">
-                                    <input type="checkbox" id="selectAll" onclick="toggleSelectAll()">
-                                </th>
-                                <th class="px-4 py-3 text-left">ID</th>
-                                <th class="px-4 py-3 text-left">Title</th>
-                                <th class="px-4 py-3 text-left">Type</th>
-                                <th class="px-4 py-3 text-left">Rating</th>
-                                <th class="px-4 py-3 text-left">Release Date</th>
-                                <th class="px-4 py-3 text-left">Status</th>
-                                <th class="px-4 py-3 text-left">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="contentTableBody">
-                            <!-- Content rows will be populated here -->
-                        </tbody>
-                    </table>
+                
+                <div class="results-grid" id="resultsGrid">
+                    <!-- Initial state -->
+                    <div class="empty-state">
+                        <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+                        <h4>No search performed yet</h4>
+                        <p>Enter a search term above to find content from external sources.</p>
+                    </div>
                 </div>
 
                 <!-- Pagination -->
-                <div class="flex items-center justify-between mt-6">
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-gray-400">Items per page:</span>
-                        <select id="itemsPerPage" class="form-input" onchange="changeItemsPerPage()">
-                            <option value="20">20</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button class="btn btn-ghost btn-sm" onclick="previousPage()" id="prevBtn" disabled>
-                            Previous
-                        </button>
-                        <span class="px-4 py-2 text-sm">
-                            Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
-                        </span>
-                        <button class="btn btn-ghost btn-sm" onclick="nextPage()" id="nextBtn">
-                            Next
-                        </button>
+                <div class="pagination-container" id="paginationContainer" style="display: none;">
+                    <button class="btn btn-outline-primary" id="prevPageBtn" disabled>
+                        <i class="fas fa-chevron-left me-2"></i>
+                        Previous
+                    </button>
+                    <span class="page-info" id="pageInfo">Page 1 of 1</span>
+                    <button class="btn btn-outline-primary" id="nextPageBtn" disabled>
+                        Next
+                        <i class="fas fa-chevron-right ms-2"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Database Content Section -->
+        <section class="database-content-section">
+            <div class="container">
+                <div class="section-header">
+                    <h3>Recently Added to Database</h3>
+                    <button class="btn btn-outline-primary btn-sm" id="refreshRecentBtn">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Refresh
+                    </button>
+                </div>
+                <div class="recent-content-grid" id="recentContentGrid">
+                    <div class="loading-skeleton">
+                        <div class="skeleton-card skeleton"></div>
+                        <div class="skeleton-card skeleton"></div>
+                        <div class="skeleton-card skeleton"></div>
+                        <div class="skeleton-card skeleton"></div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     </main>
 
-    <div id="footer-placeholder"></div>
+    <!-- Footer -->
+    <div id="footerContainer"></div>
 
-    <!-- Add Content Modal -->
-    <div id="addContentModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">Add New Content</h3>
-                <button class="modal-close" onclick="closeAddContentModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="space-y-4">
-                    <div class="form-group">
-                        <label class="form-label">Search External Sources</label>
-                        <input type="text" id="externalSearchQuery" class="form-input" 
-                               placeholder="Enter movie/show title...">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Source</label>
-                        <select id="externalSource" class="form-input">
-                            <option value="tmdb">TMDB (Movies & TV)</option>
-                            <option value="anime">Jikan (Anime)</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-primary w-full" onclick="searchExternal()">
-                        Search External Database
+    <!-- Content Details Modal -->
+    <div class="modal fade" id="contentDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Content Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Content will be dynamically loaded -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" id="saveToDbBtn">
+                        <i class="fas fa-save me-2"></i>
+                        Save to Database
                     </button>
-                    
-                    <div id="externalSearchResults" class="mt-6" style="display: none;">
-                        <!-- Search results will appear here -->
-                    </div>
+                    <button type="button" class="btn btn-primary" id="createRecommendationBtn">
+                        <i class="fas fa-star me-2"></i>
+                        Create Recommendation
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Edit Content Modal -->
-    <div id="editContentModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">Edit Content</h3>
-                <button class="modal-close" onclick="closeEditModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <form id="editContentForm" class="space-y-4">
-                    <!-- Form fields will be populated dynamically -->
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recommendation Modal -->
-    <div id="recommendationModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">Create Admin Recommendation</h3>
-                <button class="modal-close" onclick="closeRecommendationModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <form id="recommendationForm" class="space-y-4">
-                    <div id="selectedContentInfo" class="mb-4">
-                        <!-- Selected content info will be shown here -->
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Recommendation Type</label>
-                        <select id="recommendationType" class="form-input">
-                            <option value="admin_choice">Admin's Choice</option>
-                            <option value="trending">Trending Pick</option>
-                            <option value="hidden_gem">Hidden Gem</option>
-                            <option value="must_watch">Must Watch</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Description</label>
-                        <textarea id="recommendationDescription" class="form-input h-32" 
-                                  placeholder="Why do you recommend this content?" required></textarea>
-                    </div>
-                    <div class="flex justify-end gap-4">
-                        <button type="button" class="btn btn-secondary" onclick="closeRecommendationModal()">
-                            Cancel
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            Create Recommendation
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <script src="/js/include.js"></script>
-    <script src="/js/main.js"></script>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/include.js"></script>
     <script>
-        let currentPage = 1;
-        let itemsPerPage = 20;
-        let totalItems = 0;
-        let selectedItems = new Set();
-        let allContent = [];
+        let searchState = {
+            currentPage: 1,
+            totalPages: 1,
+            currentQuery: '',
+            currentSource: 'tmdb',
+            searchResults: [],
+            selectedContent: null
+        };
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (!appState.isAuthenticated() || !appState.isAdmin()) {
-                window.location.href = '/login';
-                return;
-            }
-
-            await loadContent();
-            setupEventListeners();
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeContentBrowser();
         });
 
-        function setupEventListeners() {
-            document.getElementById('contentSearch').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') searchContent();
-            });
-
-            document.getElementById('recommendationForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await createRecommendation();
-            });
-        }
-
-        async function loadContent() {
-            try {
-                // Simulate loading content from database
-                const response = await api.getTrending('all', 100);
-                allContent = response.recommendations || [];
-                totalItems = allContent.length;
-                
-                renderContent();
-                updatePagination();
-
-            } catch (error) {
-                console.error('Error loading content:', error);
-                UI.showToast('Failed to load content', 'error');
-            }
-        }
-
-        function renderContent() {
-            const tbody = document.getElementById('contentTableBody');
-            const start = (currentPage - 1) * itemsPerPage;
-            const end = start + itemsPerPage;
-            const pageContent = allContent.slice(start, end);
-
-            if (pageContent.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="text-center py-8 text-gray-400">
-                            No content found
-                        </td>
-                    </tr>
-                `;
+        async function initializeContentBrowser() {
+            // Check admin authentication
+            if (!AuthManager.requireAuth()) return;
+            
+            if (!AppState.user || !AppState.user.is_admin) {
+                Utils.showToast('Admin access required', 'error');
+                window.location.href = '/dashboard';
                 return;
             }
 
-            tbody.innerHTML = pageContent.map(item => `
-                <tr class="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td class="px-4 py-3">
-                        <input type="checkbox" value="${item.id}" onchange="toggleSelection(${item.id})"
-                               ${selectedItems.has(item.id) ? 'checked' : ''}>
-                    </td>
-                    <td class="px-4 py-3 text-sm">${item.id}</td>
-                    <td class="px-4 py-3">
-                        <div class="flex items-center gap-3">
-                            <img src="${item.poster_path || Utils.getPlaceholderImage(40, 60)}" 
-                                 alt="${Utils.sanitizeHTML(item.title)}" 
-                                 class="w-10 h-15 object-cover rounded">
-                            <div>
-                                <div class="font-medium">${Utils.sanitizeHTML(item.title)}</div>
-                                <div class="text-xs text-gray-400">${item.original_title || ''}</div>
-                            </div>
+            // Load includes
+            await loadIncludes();
+            
+            // Initialize content browser
+            bindContentBrowserEvents();
+            await loadRecentContent();
+
+            Utils.hideLoadingScreen();
+        }
+
+        async function loadIncludes() {
+            try {
+                await Promise.all([
+                    loadHeader(),
+                    loadFooter()
+                ]);
+            } catch (error) {
+                console.error('Failed to load includes:', error);
+            }
+        }
+
+        function bindContentBrowserEvents() {
+            // Search events
+            document.getElementById('searchBtn').onclick = performSearch;
+            document.getElementById('searchInput').onkeypress = (e) => {
+                if (e.key === 'Enter') performSearch();
+            };
+
+            // Source change
+            document.getElementById('sourceSelect').onchange = (e) => {
+                searchState.currentSource = e.target.value;
+                // Update content type filter based on source
+                updateContentTypeFilter();
+            };
+
+            // Pagination
+            document.getElementById('prevPageBtn').onclick = () => changePage(-1);
+            document.getElementById('nextPageBtn').onclick = () => changePage(1);
+
+            // Refresh recent content
+            document.getElementById('refreshRecentBtn').onclick = loadRecentContent;
+
+            // Modal events
+            document.getElementById('saveToDbBtn').onclick = saveContentToDatabase;
+            document.getElementById('createRecommendationBtn').onclick = createRecommendation;
+        }
+
+        function updateContentTypeFilter() {
+            const contentTypeFilter = document.getElementById('contentTypeFilter');
+            const source = searchState.currentSource;
+
+            if (source === 'anime') {
+                contentTypeFilter.innerHTML = `
+                    <option value="anime">All Anime</option>
+                    <option value="tv">TV Series</option>
+                    <option value="movie">Movies</option>
+                    <option value="ova">OVA</option>
+                `;
+            } else {
+                contentTypeFilter.innerHTML = `
+                    <option value="multi">All Types</option>
+                    <option value="movie">Movies</option>
+                    <option value="tv">TV Shows</option>
+                `;
+            }
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                Utils.showToast('Please enter a search term', 'error');
+                return;
+            }
+
+            const searchBtn = document.getElementById('searchBtn');
+            const originalText = searchBtn.innerHTML;
+            
+            try {
+                searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Searching...';
+                searchBtn.disabled = true;
+
+                const startTime = Date.now();
+                searchState.currentQuery = query;
+                searchState.currentPage = 1;
+
+                const response = await ApiService.adminSearch(query, searchState.currentSource, searchState.currentPage);
+                searchState.searchResults = response.results || [];
+                
+                const endTime = Date.now();
+                const searchTime = ((endTime - startTime) / 1000).toFixed(2);
+
+                displaySearchResults();
+                updateResultsHeader(searchState.searchResults.length, searchTime);
+
+            } catch (error) {
+                console.error('Search failed:', error);
+                Utils.showToast('Search failed. Please try again.', 'error');
+                displayEmptyState('Search failed. Please try again.');
+            } finally {
+                searchBtn.innerHTML = originalText;
+                searchBtn.disabled = false;
+            }
+        }
+
+        function displaySearchResults() {
+            const grid = document.getElementById('resultsGrid');
+            document.getElementById('resultsHeader').style.display = 'block';
+
+            if (searchState.searchResults.length === 0) {
+                displayEmptyState('No results found. Try a different search term.');
+                return;
+            }
+
+            const resultsHtml = searchState.searchResults.map(item => `
+                <div class="result-card" onclick="showContentDetails(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                    <div class="result-poster">
+                        <img src="${item.poster_path || 'https://via.placeholder.com/300x450?text=No+Image'}" 
+                             alt="${item.title}"
+                             onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                        <div class="result-overlay">
+                            <button class="btn btn-primary btn-sm">
+                                <i class="fas fa-eye me-2"></i>
+                                View Details
+                            </button>
                         </div>
-                    </td>
-                    <td class="px-4 py-3">
-                        <span class="badge badge-ghost">${item.content_type?.toUpperCase()}</span>
-                    </td>
-                    <td class="px-4 py-3">
-                        ${item.rating ? `<span class="text-yellow-400">⭐ ${item.rating.toFixed(1)}</span>` : '-'}
-                    </td>
-                    <td class="px-4 py-3 text-sm">
-                        ${item.release_date ? new Date(item.release_date).toLocaleDateString() : '-'}
-                    </td>
-                    <td class="px-4 py-3">
-                        <span class="badge ${getStatusBadgeClass(item)}">
-                            ${getContentStatus(item)}
-                        </span>
-                    </td>
-                    <td class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                            <button class="btn btn-ghost btn-sm" onclick="Router.navigate('/details?id=${item.id}')" 
-                                    title="View">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                </svg>
-                            </button>
-                            <button class="btn btn-ghost btn-sm" onclick="editContent(${item.id})" 
-                                    title="Edit">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                </svg>
-                            </button>
-                            <button class="btn btn-ghost btn-sm" onclick="openRecommendationModal(${item.id})" 
-                                    title="Recommend">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                                </svg>
-                            </button>
+                    </div>
+                    <div class="result-info">
+                        <h6 class="result-title">${item.title}</h6>
+                        <div class="result-meta">
+                            <span class="content-type">${item.content_type.toUpperCase()}</span>
+                            <span class="release-date">${item.release_date || 'N/A'}</span>
                         </div>
-                    </td>
-                </tr>
+                        <div class="result-rating">
+                            <i class="fas fa-star"></i>
+                            <span>${item.rating || 'N/A'}</span>
+                        </div>
+                        <p class="result-overview">${Utils.truncateText(item.overview || 'No overview available', 100)}</p>
+                        <div class="result-source">
+                            <span class="badge bg-info">Source: ${item.source.toUpperCase()}</span>
+                        </div>
+                    </div>
+                </div>
             `).join('');
 
-            document.getElementById('showingCount').textContent = pageContent.length;
-            document.getElementById('totalCount').textContent = totalItems;
+            grid.innerHTML = resultsHtml;
+            updatePagination();
         }
 
-        function getContentStatus(item) {
-            if (item.is_trending) return 'Trending';
-            if (item.is_new_release) return 'New';
-            if (item.is_critics_choice) return 'Critics\' Choice';
-            return 'Active';
+        function displayEmptyState(message) {
+            const grid = document.getElementById('resultsGrid');
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+                    <h4>${message}</h4>
+                </div>
+            `;
+            document.getElementById('paginationContainer').style.display = 'none';
         }
 
-        function getStatusBadgeClass(item) {
-            if (item.is_trending) return 'badge-warning';
-            if (item.is_new_release) return 'badge-success';
-            if (item.is_critics_choice) return 'badge-primary';
-            return 'badge-ghost';
+        function updateResultsHeader(count, time) {
+            document.getElementById('resultCount').textContent = `${count} result${count !== 1 ? 's' : ''}`;
+            document.getElementById('searchTime').textContent = `${time}s`;
         }
 
         function updatePagination() {
-            const totalPages = Math.ceil(totalItems / itemsPerPage);
-            document.getElementById('currentPage').textContent = currentPage;
-            document.getElementById('totalPages').textContent = totalPages;
+            const container = document.getElementById('paginationContainer');
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+            const pageInfo = document.getElementById('pageInfo');
 
-            document.getElementById('prevBtn').disabled = currentPage === 1;
-            document.getElementById('nextBtn').disabled = currentPage === totalPages;
-        }
-
-        function previousPage() {
-            if (currentPage > 1) {
-                currentPage--;
-                renderContent();
-                updatePagination();
-            }
-        }
-
-        function nextPage() {
-            const totalPages = Math.ceil(totalItems / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderContent();
-                updatePagination();
-            }
-        }
-
-        function changeItemsPerPage() {
-            itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
-            currentPage = 1;
-            renderContent();
-            updatePagination();
-        }
-
-        function toggleSelection(id) {
-            if (selectedItems.has(id)) {
-                selectedItems.delete(id);
+            if (searchState.searchResults.length > 0) {
+                container.style.display = 'flex';
+                prevBtn.disabled = searchState.currentPage === 1;
+                nextBtn.disabled = searchState.currentPage >= searchState.totalPages;
+                pageInfo.textContent = `Page ${searchState.currentPage} of ${searchState.totalPages}`;
             } else {
-                selectedItems.add(id);
+                container.style.display = 'none';
             }
         }
 
-        function toggleSelectAll() {
-            const selectAll = document.getElementById('selectAll');
-            const checkboxes = document.querySelectorAll('#contentTableBody input[type="checkbox"]');
+        async function changePage(direction) {
+            searchState.currentPage += direction;
+            await performSearch();
+        }
+
+        function showContentDetails(content) {
+            searchState.selectedContent = content;
+            const modal = new bootstrap.Modal(document.getElementById('contentDetailsModal'));
             
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = selectAll.checked;
-                const id = parseInt(checkbox.value);
-                if (selectAll.checked) {
-                    selectedItems.add(id);
-                } else {
-                    selectedItems.delete(id);
-                }
-            });
-        }
-
-        async function searchContent() {
-            const query = document.getElementById('contentSearch').value.trim();
-            const type = document.getElementById('contentTypeFilter').value;
-
-            if (!query && !type) {
-                await loadContent();
-                return;
-            }
-
-            // Filter content
-            let filtered = allContent;
-
-            if (query) {
-                filtered = filtered.filter(item => 
-                    item.title.toLowerCase().includes(query.toLowerCase()) ||
-                    item.id.toString() === query ||
-                    (item.imdb_id && item.imdb_id === query)
-                );
-            }
-
-            if (type) {
-                filtered = filtered.filter(item => item.content_type === type);
-            }
-
-            allContent = filtered;
-            totalItems = filtered.length;
-            currentPage = 1;
-            renderContent();
-            updatePagination();
-        }
-
-        function openAddContentModal() {
-            document.getElementById('addContentModal').classList.add('show');
-        }
-
-        function closeAddContentModal() {
-            document.getElementById('addContentModal').classList.remove('show');
-            document.getElementById('externalSearchResults').style.display = 'none';
-            document.getElementById('externalSearchQuery').value = '';
-        }
-
-        async function searchExternal() {
-            const query = document.getElementById('externalSearchQuery').value.trim();
-            const source = document.getElementById('externalSource').value;
-
-            if (!query) {
-                UI.showToast('Please enter a search query', 'error');
-                return;
-            }
-
-            try {
-                const resultsContainer = document.getElementById('externalSearchResults');
-                resultsContainer.style.display = 'block';
-                resultsContainer.innerHTML = '<div class="text-center py-4"><div class="loader"></div></div>';
-
-                const response = await api.adminSearch(query, source);
-                const results = response.results || [];
-
-                if (results.length === 0) {
-                    resultsContainer.innerHTML = '<div class="text-center text-gray-400 py-4">No results found</div>';
-                    return;
-                }
-
-                resultsContainer.innerHTML = `
-                    <h4 class="font-semibold mb-4">Search Results (${results.length})</h4>
-                    <div class="space-y-3 max-h-96 overflow-y-auto">
-                        ${results.map(item => `
-                            <div class="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
-                                <img src="${item.poster_path || Utils.getPlaceholderImage(60, 90)}" 
-                                     alt="${Utils.sanitizeHTML(item.title)}" 
-                                     class="w-12 h-18 object-cover rounded">
-                                <div class="flex-1 min-w-0">
-                                    <h5 class="font-medium truncate">${Utils.sanitizeHTML(item.title)}</h5>
-                                    <p class="text-sm text-gray-400">${item.release_date || 'N/A'} • ${item.content_type?.toUpperCase()}</p>
-                                    ${item.rating ? `<div class="text-xs text-yellow-400">⭐ ${item.rating}</div>` : ''}
-                                </div>
-                                <button class="btn btn-primary btn-sm" onclick="addExternalContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                                    Add to DB
-                                </button>
+            // Update modal content
+            document.getElementById('modalTitle').textContent = content.title;
+            
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = `
+                <div class="content-details">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img src="${content.poster_path || 'https://via.placeholder.com/300x450?text=No+Image'}" 
+                                 alt="${content.title}" 
+                                 class="img-fluid rounded">
+                        </div>
+                        <div class="col-md-8">
+                            <h5>${content.title}</h5>
+                            <div class="details-meta">
+                                <span class="badge bg-primary">${content.content_type.toUpperCase()}</span>
+                                <span class="badge bg-secondary">${content.release_date || 'N/A'}</span>
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-star me-1"></i>
+                                    ${content.rating || 'N/A'}
+                                </span>
                             </div>
-                        `).join('')}
+                            <div class="details-info">
+                                <p><strong>Overview:</strong></p>
+                                <p>${content.overview || 'No overview available'}</p>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-6">
+                                        <p><strong>Source:</strong> ${content.source.toUpperCase()}</p>
+                                        <p><strong>External ID:</strong> ${content.id}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p><strong>Type:</strong> ${content.content_type}</p>
+                                        <p><strong>Release:</strong> ${content.release_date || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                `;
-
-            } catch (error) {
-                console.error('Error searching external content:', error);
-                document.getElementById('externalSearchResults').innerHTML = 
-                    '<div class="text-center text-red-400 py-4">Search failed. Please try again.</div>';
-            }
-        }
-
-        async function addExternalContent(contentData) {
-            try {
-                const response = await api.saveContent(contentData);
-                UI.showToast('Content added successfully!', 'success');
-                closeAddContentModal();
-                await loadContent();
-
-            } catch (error) {
-                console.error('Error adding content:', error);
-                UI.showToast('Failed to add content', 'error');
-            }
-        }
-
-        function editContent(contentId) {
-            const content = allContent.find(item => item.id === contentId);
-            if (!content) return;
-
-            // Populate edit form
-            const modal = document.getElementById('editContentModal');
-            const form = document.getElementById('editContentForm');
+                </div>
+            `;
             
-            form.innerHTML = `
-                <div class="form-group">
-                    <label class="form-label">Title</label>
-                    <input type="text" class="form-input" value="${Utils.sanitizeHTML(content.title)}" disabled>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select class="form-input">
-                        <option value="active" ${!content.is_hidden ? 'selected' : ''}>Active</option>
-                        <option value="hidden" ${content.is_hidden ? 'selected' : ''}>Hidden</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="flex items-center gap-2">
-                        <input type="checkbox" ${content.is_trending ? 'checked' : ''}>
-                        <span>Mark as Trending</span>
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="flex items-center gap-2">
-                        <input type="checkbox" ${content.is_critics_choice ? 'checked' : ''}>
-                        <span>Mark as Critics' Choice</span>
-                    </label>
-                </div>
-                <div class="flex justify-end gap-4">
-                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveContentEdits(${contentId})">Save Changes</button>
-                </div>
-            `;
-
-            modal.classList.add('show');
+            modal.show();
         }
 
-        function closeEditModal() {
-            document.getElementById('editContentModal').classList.remove('show');
-        }
+        async function saveContentToDatabase() {
+            if (!searchState.selectedContent) return;
 
-        async function saveContentEdits(contentId) {
-            // Implement save functionality
-            UI.showToast('Content updated successfully!', 'success');
-            closeEditModal();
-            await loadContent();
-        }
+            const saveBtn = document.getElementById('saveToDbBtn');
+            const originalText = saveBtn.innerHTML;
 
-        function openRecommendationModal(contentId) {
-            const content = allContent.find(item => item.id === contentId);
-            if (!content) return;
+            try {
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+                saveBtn.disabled = true;
 
-            currentRecommendationContent = content;
+                await ApiService.saveExternalContent(searchState.selectedContent);
+                
+                Utils.showToast('Content saved to database successfully!', 'success');
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('contentDetailsModal'));
+                modal.hide();
+                
+                // Refresh recent content
+                await loadRecentContent();
 
-            // Show content info
-            document.getElementById('selectedContentInfo').innerHTML = `
-                <div class="flex items-center gap-4 p-4 bg-gray-800 rounded-lg">
-                    <img src="${content.poster_path || Utils.getPlaceholderImage(60, 90)}" 
-                         alt="${Utils.sanitizeHTML(content.title)}" 
-                         class="w-12 h-18 object-cover rounded">
-                    <div>
-                        <h4 class="font-semibold">${Utils.sanitizeHTML(content.title)}</h4>
-                        <p class="text-sm text-gray-400">
-                            ${content.release_date ? new Date(content.release_date).getFullYear() : 'N/A'} • 
-                            ${content.content_type?.toUpperCase()} • 
-                            ${content.rating ? `⭐ ${content.rating.toFixed(1)}` : 'No rating'}
-                        </p>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('recommendationModal').classList.add('show');
-        }
-
-        function closeRecommendationModal() {
-            document.getElementById('recommendationModal').classList.remove('show');
-            document.getElementById('recommendationForm').reset();
-            currentRecommendationContent = null;
+            } catch (error) {
+                console.error('Failed to save content:', error);
+                Utils.showToast('Failed to save content to database', 'error');
+            } finally {
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            }
         }
 
         async function createRecommendation() {
-            if (!currentRecommendationContent) return;
+            if (!searchState.selectedContent) return;
 
-            const type = document.getElementById('recommendationType').value;
-            const description = document.getElementById('recommendationDescription').value;
+            // First save to database if not already saved
+            await saveContentToDatabase();
+            
+            // Then redirect to create recommendation
+            const contentId = searchState.selectedContent.id;
+            window.location.href = `/admin/posts?content_id=${contentId}`;
+        }
 
+        async function loadRecentContent() {
             try {
-                await api.createAdminRecommendation(
-                    currentRecommendationContent.id,
-                    type,
-                    description
-                );
+                const grid = document.getElementById('recentContentGrid');
+                grid.innerHTML = '<div class="loading-skeleton"><div class="skeleton-card skeleton"></div><div class="skeleton-card skeleton"></div><div class="skeleton-card skeleton"></div><div class="skeleton-card skeleton"></div></div>';
 
-                UI.showToast('Recommendation created successfully!', 'success');
-                closeRecommendationModal();
+                const response = await ApiService.getRecentContent();
+                const recentContent = response.content || [];
+
+                if (recentContent.length === 0) {
+                    grid.innerHTML = '<p class="text-muted text-center">No recent content added</p>';
+                    return;
+                }
+
+                const contentHtml = recentContent.map(item => `
+                    <div class="recent-card">
+                        <div class="recent-poster">
+                            <img src="${Utils.getImageUrl(item.poster_path)}" 
+                                 alt="${item.title}"
+                                 onerror="this.src='https://via.placeholder.com/200x300?text=No+Image'">
+                        </div>
+                        <div class="recent-info">
+                            <h6 class="recent-title">${item.title}</h6>
+                            <div class="recent-meta">
+                                <span class="content-type">${item.content_type.toUpperCase()}</span>
+                                <span class="added-date">Added ${new Date(item.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <div class="recent-actions">
+                                <button class="btn btn-sm btn-outline-primary" onclick="Utils.navigateToDetails(${item.id})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-success" onclick="window.location.href='/admin/posts?content_id=${item.id}'">
+                                    <i class="fas fa-star"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                grid.innerHTML = contentHtml;
 
             } catch (error) {
-                console.error('Error creating recommendation:', error);
-                UI.showToast('Failed to create recommendation', 'error');
+                console.error('Failed to load recent content:', error);
+                document.getElementById('recentContentGrid').innerHTML = '<p class="text-muted text-center">Failed to load recent content</p>';
             }
         }
 
-        function applyBulkAction() {
-            const action = document.getElementById('bulkAction').value;
-            
-            if (!action) {
-                UI.showToast('Please select an action', 'warning');
-                return;
-            }
+        // Extended API service
+        ApiService.adminSearch = async function(query, source = 'tmdb', page = 1) {
+            return await this.request(`/admin/search?query=${encodeURIComponent(query)}&source=${source}&page=${page}`);
+        };
 
-            if (selectedItems.size === 0) {
-                UI.showToast('Please select items first', 'warning');
-                return;
-            }
+        ApiService.saveExternalContent = async function(content) {
+            return await this.request('/admin/content', {
+                method: 'POST',
+                body: JSON.stringify(content)
+            });
+        };
 
-            switch (action) {
-                case 'recommend':
-                    UI.showToast(`Creating recommendations for ${selectedItems.size} items...`, 'info');
-                    break;
-                case 'update':
-                    UI.showToast(`Updating metadata for ${selectedItems.size} items...`, 'info');
-                    break;
-                case 'delete':
-                    if (confirm(`Are you sure you want to delete ${selectedItems.size} items?`)) {
-                        UI.showToast(`Deleting ${selectedItems.size} items...`, 'warning');
-                    }
-                    break;
-            }
-
-            // Clear selections
-            selectedItems.clear();
-            document.getElementById('selectAll').checked = false;
-            renderContent();
-        }
-
-        let currentRecommendationContent = null;
-
-        // Click outside modal to close
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal-overlay')) {
-                e.target.classList.remove('show');
-            }
-        });
+        ApiService.getRecentContent = async function() {
+            return await this.request('/admin/content/recent');
+        };
     </script>
+
+    <style>
+        .content-search-section {
+            padding: 2rem 0;
+        }
+
+        .search-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+        }
+
+        .search-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .search-header h3 {
+            margin: 0;
+        }
+
+        .source-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-input-wrapper {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .search-input-wrapper .form-control {
+            flex: 1;
+        }
+
+        .search-tips {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .search-results-section {
+            padding: 2rem 0;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .results-stats {
+            display: flex;
+            gap: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .result-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-color);
+        }
+
+        .result-poster {
+            position: relative;
+            overflow: hidden;
+            height: 200px;
+        }
+
+        .result-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .result-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .result-card:hover .result-overlay {
+            opacity: 1;
+        }
+
+        .result-info {
+            padding: 1.5rem;
+        }
+
+        .result-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .result-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .result-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-bottom: 0.75rem;
+            color: var(--warning-color);
+        }
+
+        .result-overview {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+
+        .result-source {
+            margin-top: auto;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .page-info {
+            color: var(--text-secondary);
+        }
+
+        .database-content-section {
+            padding: 3rem 0;
+            background: var(--bg-secondary);
+        }
+
+        .recent-content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .recent-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .recent-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .recent-poster {
+            height: 150px;
+            overflow: hidden;
+        }
+
+        .recent-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .recent-info {
+            padding: 1rem;
+        }
+
+        .recent-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .recent-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .recent-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .content-details {
+            color: var(--text-primary);
+        }
+
+        .details-meta {
+            margin: 1rem 0;
+        }
+
+        .details-info {
+            margin-top: 1rem;
+        }
+
+        .details-info p {
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .search-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+
+            .search-input-wrapper {
+                flex-direction: column;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .recent-content-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .pagination-container {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+        }
+    </style>
 </body>
 </html>

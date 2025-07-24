@@ -1,528 +1,858 @@
-// /js/main.js
+// API Configuration
+const API_BASE = 'https://backend-app-970m.onrender.com/api';
 
-const API_BASE = 'https://backend-app-970m.onrender.com/api'; // Use your actual backend URL
+// Application State
+const AppState = {
+    user: null,
+    isAuthenticated: false,
+    searchCache: new Map(),
+    contentCache: new Map(),
+    currentPage: window.location.pathname,
+    isLoading: false
+};
 
-// --- Utility Functions ---
+// Utility Functions
+const Utils = {
+    // Debounce function for search
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    },
 
-/**
- * Shows the preloader.
- */
-function showPreloader() {
-    const preloader = document.getElementById('preloader');
-    if (preloader) preloader.classList.remove('hidden');
-}
+    // Format date
+    formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString(undefined, options);
+    },
 
-/**
- * Hides the preloader.
- */
-function hidePreloader() {
-    const preloader = document.getElementById('preloader');
-    if (preloader) preloader.classList.add('hidden');
-}
+    // Format rating
+    formatRating(rating) {
+        if (!rating) return 'N/A';
+        return parseFloat(rating).toFixed(1);
+    },
 
-/**
- * Fetches data from the API with error handling and auth header.
- * @param {string} endpoint - The API endpoint (e.g., '/recommendations/trending').
- * @param {object} options - Optional fetch options (method, body, etc.).
- * @returns {Promise<object|null>} The parsed JSON response or null on error.
- */
-async function apiFetch(endpoint, options = {}) {
-    const url = `${API_BASE}${endpoint}`;
-    const defaultHeaders = {
-        'Content-Type': 'application/json',
-    };
+    // Truncate text
+    truncateText(text, maxLength = 150) {
+        if (!text) return '';
+        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    },
 
-    if (authToken) {
-        defaultHeaders['Authorization'] = `Bearer ${authToken}`;
-    }
+    // Get image URL
+    getImageUrl(path, size = 'w300') {
+        if (!path) return 'https://via.placeholder.com/300x450?text=No+Image';
+        if (path.startsWith('http')) return path;
+        return `https://image.tmdb.org/t/p/${size}${path}`;
+    },
 
-    const config = {
-        ...options,
-        headers: {
-            ...defaultHeaders,
-            ...(options.headers || {}),
-        },
-    };
-
-    try {
-        showPreloader();
-        const response = await fetch(url, config);
-        hidePreloader();
-
-        if (!response.ok) {
-            if (response.status === 401) {
-                console.warn("Unauthorized access, clearing auth.");
-                clearAuth(); // Clear token if unauthorized
-                window.location.href = '/login'; // Redirect to login
-                return null;
-            }
-            throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+    // Show loading
+    showLoading(element) {
+        if (element) {
+            element.innerHTML = '<div class="loading-spinner-small"></div>';
         }
+    },
 
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        hidePreloader();
-        console.error(`Error fetching ${url}:`, error);
-        alert(`An error occurred: ${error.message}`);
-        return null;
-    }
-}
-
-/**
- * Creates a content card element.
- * @param {object} item - The content item data.
- * @returns {HTMLElement} The card element.
- */
-function createContentCard(item) {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.setAttribute('data-content-id', item.id);
-    card.setAttribute('data-content-type', item.content_type);
-
-    const placeholder = document.createElement('div');
-    placeholder.className = 'card-placeholder';
-
-    const img = document.createElement('img');
-    img.className = 'card-img loading';
-    img.alt = item.title;
-    img.loading = 'lazy'; // Enable lazy loading
-    img.src = item.poster_path || './assets/images/placeholder-poster.jpg'; // Fallback
-
-    // Simulate image load for placeholder effect
-    img.onload = function () {
-        img.classList.remove('loading');
-        img.classList.add('loaded');
-        if (placeholder.parentNode) {
-            placeholder.parentNode.removeChild(placeholder);
+    // Hide loading screen
+    hideLoadingScreen() {
+        const loadingScreen = document.getElementById('loadingScreen');
+        if (loadingScreen) {
+            loadingScreen.classList.add('hidden');
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500);
         }
-    };
-    img.onerror = function () {
-        img.src = './assets/images/placeholder-poster.jpg'; // Final fallback
-        img.classList.remove('loading');
-        img.classList.add('loaded');
-        if (placeholder.parentNode) {
-            placeholder.parentNode.removeChild(placeholder);
-        }
-    };
+    },
 
-    const title = document.createElement('div');
-    title.className = 'card-title';
-    title.textContent = item.title;
-
-    card.appendChild(placeholder);
-    card.appendChild(img);
-    card.appendChild(title);
-
-    // Add click listener to navigate to details
-    card.addEventListener('click', () => {
-        const params = new URLSearchParams({ id: item.id });
-        window.location.href = `/details?${params.toString()}`;
-    });
-
-    return card;
-}
-
-/**
- * Populates a container with content cards.
- * @param {string} containerId - The ID of the container element.
- * @param {Array} items - Array of content item objects.
- */
-function populateContent(containerId, items) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    container.innerHTML = ''; // Clear previous content
-
-    if (!items || items.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 p-4">No content found.</p>';
-        return;
-    }
-
-    items.forEach(item => {
-        const card = createContentCard(item);
-        container.appendChild(card);
-    });
-}
-
-// --- Page-Specific Logic ---
-
-/**
- * Initializes the homepage.
- */
-async function initHomepage() {
-    console.log("Initializing Homepage...");
-    // Hero Section - Use a popular/new release for hero
-    const trendingData = await apiFetch('/recommendations/trending?limit=1');
-    if (trendingData && trendingData.recommendations.length > 0) {
-        const heroItem = trendingData.recommendations[0];
-        const hero = document.querySelector('.hero');
-        if (hero) {
-            hero.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${heroItem.backdrop_path})`;
-            document.querySelector('.hero-title').textContent = heroItem.title;
-            document.querySelector('.hero-description').textContent = heroItem.overview?.substring(0, 150) + '...';
-            const heroButton = document.querySelector('.hero-button');
-            if (heroButton) {
-                 heroButton.onclick = () => {
-                     const params = new URLSearchParams({ id: heroItem.id });
-                     window.location.href = `/details?${params.toString()}`;
-                 };
-            }
-        }
-    }
-
-    // Load Carousels
-    const carousels = [
-        { id: 'trending-carousel', endpoint: '/recommendations/trending?limit=10', title: 'Trending Now' },
-        { id: 'new-releases-carousel', endpoint: '/recommendations/new-releases?limit=10', title: 'New Releases' },
-        { id: 'critics-choice-carousel', endpoint: '/recommendations/critics-choice?limit=10', title: 'Critics\' Choice' },
-        { id: 'action-carousel', endpoint: '/recommendations/genre/action?limit=10', title: 'Action Movies' },
-        { id: 'comedy-carousel', endpoint: '/recommendations/genre/comedy?limit=10', title: 'Comedy Hits' },
-        { id: 'anime-carousel', endpoint: '/recommendations/anime?limit=10', title: 'Popular Anime' },
-    ];
-
-    for (const carousel of carousels) {
-        const data = await apiFetch(carousel.endpoint);
-        if (data && data.recommendations) {
-            populateContent(carousel.id, data.recommendations);
-            // Update carousel title if needed (assuming a sibling h2 or similar)
-            const titleElement = document.querySelector(`#${carousel.id}`).previousElementSibling?.querySelector('.carousel-title');
-            if(titleElement) titleElement.textContent = carousel.title;
-        }
-    }
-}
-
-/**
- * Initializes the details page.
- */
-async function initDetailsPage() {
-    console.log("Initializing Details Page...");
-    const urlParams = new URLSearchParams(window.location.search);
-    const contentId = urlParams.get('id');
-
-    if (!contentId) {
-        document.getElementById('detail-content-placeholder').innerHTML = '<p class="text-red-500">Content ID not provided.</p>';
-        return;
-    }
-
-    const data = await apiFetch(`/content/${contentId}`);
-    if (!data) {
-        document.getElementById('detail-content-placeholder').innerHTML = '<p class="text-red-500">Failed to load content details.</p>';
-        return;
-    }
-
-    // Populate Details
-    const backdropElement = document.querySelector('.detail-backdrop');
-    if(backdropElement && data.backdrop_path) {
-        backdropElement.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${data.backdrop_path})`;
-    }
-
-    document.querySelector('.detail-title').textContent = data.title;
-    document.querySelector('.detail-meta').innerHTML = `
-        <span>⭐ ${data.rating || 'N/A'}</span>
-        <span>${data.release_date ? new Date(data.release_date).getFullYear() : 'N/A'}</span>
-        <span>${data.runtime ? `${data.runtime} min` : ''}</span>
-        <span>${data.genres ? data.genres.join(', ') : 'N/A'}</span>
-    `;
-    document.querySelector('.detail-overview').textContent = data.overview;
-
-    const posterImg = document.querySelector('.detail-poster');
-    if(posterImg) {
-        posterImg.src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : './assets/images/placeholder-poster.jpg';
-        posterImg.alt = data.title;
-    }
-
-    // Populate Cast & Crew (basic)
-    const castContainer = document.getElementById('cast-list');
-    if (castContainer && data.cast) {
-        castContainer.innerHTML = data.cast.slice(0, 10).map(person =>
-            `<div class="mb-2"><span class="font-medium">${person.name}</span> as ${person.character || person.role || 'N/A'}</div>`
-        ).join('');
-    }
-
-    // Populate Similar Content Carousel
-    const similarData = await apiFetch(`/recommendations/similar/${contentId}?limit=10`);
-    if (similarData && similarData.recommendations) {
-        populateContent('similar-content', similarData.recommendations);
-    }
-
-    // Populate Trailer (if available)
-    const trailerContainer = document.getElementById('trailer-container');
-    if (trailerContainer && data.youtube_trailer) {
-        trailerContainer.innerHTML = `
-            <iframe class="w-full aspect-video rounded-lg" src="https://www.youtube.com/embed/${new URL(data.youtube_trailer).searchParams.get('v')}" 
-            title="Trailer" frameborder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowfullscreen></iframe>
+    // Show toast notification
+    showToast(message, type = 'info') {
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+            <div class="toast-body">
+                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}-circle me-2"></i>
+                ${message}
+            </div>
         `;
+
+        // Add to document
+        document.body.appendChild(toast);
+
+        // Show toast
+        setTimeout(() => toast.classList.add('show'), 100);
+
+        // Remove toast
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => document.body.removeChild(toast), 300);
+        }, 3000);
+    },
+
+    // Navigate to page with content ID
+    navigateToDetails(contentId) {
+        localStorage.setItem('selectedContentId', contentId);
+        window.location.href = `/details?id=${contentId}`;
+    },
+
+    // Get URL parameter
+    getUrlParameter(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+    },
+
+    // Set URL parameter
+    setUrlParameter(name, value) {
+        const url = new URL(window.location);
+        url.searchParams.set(name, value);
+        window.history.pushState({}, '', url);
     }
-}
+};
 
-/**
- * Initializes the login page.
- */
-function initLoginPage() {
-    console.log("Initializing Login Page...");
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
+// API Service
+const ApiService = {
+    // Make API request
+    async request(endpoint, options = {}) {
+        const url = `${API_BASE}${endpoint}`;
+        const defaultOptions = {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        };
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-
-            const response = await apiFetch('/login', {
-                method: 'POST',
-                body: JSON.stringify({ username, password })
-            });
-
-            if (response && response.token) {
-                setAuth(response.token, response.user);
-                alert('Login successful!');
-                window.location.href = '/dashboard'; // Redirect to dashboard
-            } else {
-                alert(response?.error || 'Login failed.');
-            }
-        });
-    }
-
-    if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('register-username').value;
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-
-            const response = await apiFetch('/register', {
-                method: 'POST',
-                body: JSON.stringify({ username, email, password })
-            });
-
-            if (response && response.token) {
-                setAuth(response.token, response.user);
-                alert('Registration successful!');
-                window.location.href = '/dashboard'; // Redirect to dashboard
-            } else {
-                alert(response?.error || 'Registration failed.');
-            }
-        });
-    }
-}
-
-/**
- * Initializes the dashboard page.
- */
-async function initDashboardPage() {
-     console.log("Initializing Dashboard Page...");
-     if (!isAuthenticated()) {
-         window.location.href = '/login';
-         return;
-     }
-
-     const user = getCurrentUser();
-     if (user) {
-         document.getElementById('welcome-user').textContent = user.username;
-         // Load personalized recommendations
-         const personalizedData = await apiFetch('/recommendations/personalized?limit=10');
-         if (personalizedData && personalizedData.recommendations) {
-             populateContent('personalized-recommendations', personalizedData.recommendations);
-         } else {
-              // Fallback to trending if personalized fails
-              const trendingData = await apiFetch('/recommendations/trending?limit=10');
-              if (trendingData && trendingData.recommendations) {
-                  populateContent('personalized-recommendations', trendingData.recommendations);
-              }
-         }
-         // Load Watchlist Quick Access
-         const watchlistData = await apiFetch('/user/watchlist');
-         if (watchlistData && watchlistData.watchlist) {
-             populateContent('watchlist-preview', watchlistData.watchlist);
-         }
-     }
-}
-
-/**
- * Initializes category pages (e.g., trending, anime).
- */
-async function initCategoryPage() {
-    console.log("Initializing Category Page...");
-    const path = window.location.pathname;
-    let endpoint = '';
-    let title = 'Content';
-
-    if (path.includes('/categories/trending')) {
-        endpoint = '/recommendations/trending';
-        title = 'Trending';
-    } else if (path.includes('/categories/popular')) {
-        endpoint = '/recommendations/trending'; // Assuming popular is trending for now
-        title = 'Popular';
-    } else if (path.includes('/categories/new-releases')) {
-        endpoint = '/recommendations/new-releases';
-        title = 'New Releases';
-    } else if (path.includes('/categories/critic-choices')) {
-        endpoint = '/recommendations/critics-choice';
-        title = 'Critics\' Choice';
-    } else if (path.includes('/categories/movies')) {
-        endpoint = '/recommendations/trending?type=movie'; // Or a dedicated movie endpoint
-        title = 'Movies';
-    } else if (path.includes('/categories/tv-shows')) {
-        endpoint = '/recommendations/trending?type=tv'; // Or a dedicated tv endpoint
-        title = 'TV Shows';
-    } else if (path.includes('/categories/anime')) {
-        endpoint = '/recommendations/anime';
-        title = 'Anime';
-    } else if (path.includes('/languages/')) {
-        const lang = path.split('/').pop(); // Get language from URL
-        endpoint = `/recommendations/regional/${lang}`;
-        title = `${lang.charAt(0).toUpperCase() + lang.slice(1)} Content`;
-    } else if (path.includes('/user/watchlist')) {
-         if (!isAuthenticated()) { window.location.href = '/login'; return; }
-         endpoint = '/user/watchlist';
-         title = 'Your Watchlist';
-    } else if (path.includes('/user/favorites')) {
-         if (!isAuthenticated()) { window.location.href = '/login'; return; }
-         endpoint = '/user/favorites';
-         title = 'Your Favorites';
-    }
-
-
-    if (endpoint) {
-        document.title = `${title} - CineScope`;
-        const pageTitleElement = document.querySelector('h1'); // Assuming an <h1> for the page title
-        if (pageTitleElement) pageTitleElement.textContent = title;
-
-        const data = await apiFetch(`${endpoint}?limit=50`); // Load more for category pages
-        let items = [];
-        if (data) {
-            if (data.recommendations) items = data.recommendations;
-            else if (data.watchlist) items = data.watchlist;
-            else if (data.favorites) items = data.favorites;
+        // Add auth token if available
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            defaultOptions.headers.Authorization = `Bearer ${token}`;
         }
-        populateContent('category-content', items);
-    }
-}
 
-
-// --- Header Scripts (called by include.js) ---
-function initHeaderScripts() {
-    console.log("Initializing Header Scripts...");
-    const mobileMenuButton = document.getElementById('mobile-menu-button');
-    const mobileNav = document.getElementById('mobile-nav');
-    const userMenuButton = document.getElementById('user-menu-button');
-    const userDropdown = document.getElementById('user-dropdown');
-    const logoutButton = document.getElementById('logout-button');
-
-    if (mobileMenuButton && mobileNav) {
-        mobileMenuButton.addEventListener('click', () => {
-            mobileNav.classList.toggle('hidden');
-        });
-    }
-
-    if (userMenuButton && userDropdown) {
-        userMenuButton.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent immediate closing
-            userDropdown.classList.toggle('hidden');
-        });
-
-        // Close dropdown if clicked outside
-        document.addEventListener('click', (e) => {
-            if (!userMenuButton.contains(e.target) && !userDropdown.contains(e.target)) {
-                userDropdown.classList.add('hidden');
+        try {
+            const response = await fetch(url, { ...defaultOptions, ...options });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        });
-    }
 
-    if (logoutButton) {
-        logoutButton.addEventListener('click', () => {
-            clearAuth();
-            alert('You have been logged out.');
-            window.location.href = '/'; // Redirect to homepage
+            return await response.json();
+        } catch (error) {
+            console.error('API request failed:', error);
+            throw error;
+        }
+    },
+
+    // Authentication
+    async login(credentials) {
+        return await this.request('/login', {
+            method: 'POST',
+            body: JSON.stringify(credentials)
         });
+    },
+
+    async register(userData) {
+        return await this.request('/register', {
+            method: 'POST',
+            body: JSON.stringify(userData)
+        });
+    },
+
+    // Content
+    async search(query, type = 'multi', page = 1) {
+        return await this.request(`/search?query=${encodeURIComponent(query)}&type=${type}&page=${page}`);
+    },
+
+    async getContentDetails(contentId) {
+        return await this.request(`/content/${contentId}`);
+    },
+
+    // Recommendations
+    async getTrending(type = 'all', limit = 20) {
+        return await this.request(`/recommendations/trending?type=${type}&limit=${limit}`);
+    },
+
+    async getNewReleases(type = 'movie', limit = 20) {
+        return await this.request(`/recommendations/new-releases?type=${type}&limit=${limit}`);
+    },
+
+    async getCriticsChoice(type = 'movie', limit = 20) {
+        return await this.request(`/recommendations/critics-choice?type=${type}&limit=${limit}`);
+    },
+
+    async getRegional(language, type = 'movie', limit = 20) {
+        return await this.request(`/recommendations/regional/${language}?type=${type}&limit=${limit}`);
+    },
+
+    async getAnime(genre = null, limit = 20) {
+        const genreParam = genre ? `?genre=${genre}` : '';
+        return await this.request(`/recommendations/anime${genreParam}&limit=${limit}`);
+    },
+
+    async getSimilar(contentId, limit = 20) {
+        return await this.request(`/recommendations/similar/${contentId}?limit=${limit}`);
+    },
+
+    async getPersonalized(limit = 20) {
+        return await this.request(`/recommendations/personalized?limit=${limit}`);
+    },
+
+    async getAnonymous(limit = 20) {
+        return await this.request(`/recommendations/anonymous?limit=${limit}`);
+    },
+
+    // User interactions
+    async recordInteraction(contentId, type, rating = null) {
+        return await this.request('/interactions', {
+            method: 'POST',
+            body: JSON.stringify({
+                content_id: contentId,
+                interaction_type: type,
+                rating
+            })
+        });
+    },
+
+    async getWatchlist() {
+        return await this.request('/user/watchlist');
+    },
+
+    async getFavorites() {
+        return await this.request('/user/favorites');
     }
+};
+
+// UI Components
+const UIComponents = {
+    // Create content card
+    createContentCard(content) {
+        const card = document.createElement('div');
+        card.className = 'content-card';
+        card.onclick = () => Utils.navigateToDetails(content.id);
+
+        const badges = [];
+        if (content.is_trending) badges.push('<span class="badge badge-trending">Trending</span>');
+        if (content.is_new_release) badges.push('<span class="badge badge-new">New</span>');
+        if (content.is_critics_choice) badges.push('<span class="badge badge-critics">Critics Choice</span>');
+
+        card.innerHTML = `
+            <div class="content-card-poster">
+                <img src="${Utils.getImageUrl(content.poster_path)}" 
+                     alt="${content.title}" 
+                     loading="lazy"
+                     onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                <div class="content-card-overlay">
+                    <button class="play-btn" onclick="event.stopPropagation(); UIComponents.playTrailer('${content.youtube_trailer || ''}')">
+                        <i class="fas fa-play"></i>
+                    </button>
+                </div>
+                ${badges.length ? `<div class="content-card-badges">${badges.join('')}</div>` : ''}
+            </div>
+            <div class="content-card-info">
+                <h6 class="content-card-title">${content.title}</h6>
+                <div class="content-card-meta">
+                    <span class="content-type">${content.content_type.toUpperCase()}</span>
+                    <div class="content-card-rating">
+                        <i class="fas fa-star"></i>
+                        <span>${Utils.formatRating(content.rating)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return card;
+    },
+
+    // Create carousel
+    createCarousel(items, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const carouselContainer = document.createElement('div');
+        carouselContainer.className = 'carousel-container';
+
+        if (items.length === 0) {
+            carouselContainer.innerHTML = '<p class="text-muted text-center py-4">No content available</p>';
+        } else {
+            items.forEach(item => {
+                const card = this.createContentCard(item);
+                carouselContainer.appendChild(card);
+            });
+        }
+
+        container.innerHTML = '';
+        container.appendChild(carouselContainer);
+
+        // Add navigation if needed
+        if (items.length > 5) {
+            this.addCarouselNavigation(container, carouselContainer);
+        }
+    },
+
+    // Add carousel navigation
+    addCarouselNavigation(container, carouselContainer) {
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'carousel-nav carousel-nav-prev';
+        prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'carousel-nav carousel-nav-next';
+        nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+
+        prevBtn.onclick = () => {
+            carouselContainer.scrollBy({ left: -220, behavior: 'smooth' });
+        };
+
+        nextBtn.onclick = () => {
+            carouselContainer.scrollBy({ left: 220, behavior: 'smooth' });
+        };
+
+        container.style.position = 'relative';
+        container.appendChild(prevBtn);
+        container.appendChild(nextBtn);
+    },
+
+    // Play trailer
+    playTrailer(youtubeUrl) {
+        if (!youtubeUrl) {
+            Utils.showToast('Trailer not available', 'error');
+            return;
+        }
+
+        // Extract video ID from URL
+        const videoId = youtubeUrl.includes('watch?v=') 
+            ? youtubeUrl.split('watch?v=')[1].split('&')[0]
+            : youtubeUrl.split('/').pop();
+
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'trailer-modal';
+        modal.innerHTML = `
+            <div class="trailer-modal-content">
+                <button class="trailer-modal-close">&times;</button>
+                <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" 
+                        frameborder="0" 
+                        allowfullscreen></iframe>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.classList.add('show');
+
+        // Close modal
+        const closeModal = () => {
+            modal.classList.remove('show');
+            setTimeout(() => document.body.removeChild(modal), 300);
+        };
+
+        modal.querySelector('.trailer-modal-close').onclick = closeModal;
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal();
+        };
+
+        // Close on escape key
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+    },
+
+    // Create search suggestions
+    createSearchSuggestions(results, container) {
+        container.innerHTML = '';
+        
+        if (results.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+
+        results.slice(0, 5).forEach(item => {
+            const suggestion = document.createElement('div');
+            suggestion.className = 'suggestion-item';
+            suggestion.onclick = () => Utils.navigateToDetails(item.id);
+
+            suggestion.innerHTML = `
+                <img src="${Utils.getImageUrl(item.poster_path, 'w92')}" 
+                     alt="${item.title}" 
+                     class="suggestion-poster"
+                     onerror="this.src='https://via.placeholder.com/92x138?text=No+Image'">
+                <div class="suggestion-details">
+                    <h6>${item.title}</h6>
+                    <p>${item.content_type.toUpperCase()} • ${Utils.formatRating(item.rating)}</p>
+                </div>
+            `;
+
+            container.appendChild(suggestion);
+        });
+
+        container.style.display = 'block';
+    }
+};
+
+// Authentication Manager
+const AuthManager = {
+    // Initialize authentication
+    init() {
+        this.checkAuthStatus();
+        this.bindEvents();
+    },
+
+    // Check authentication status
+    checkAuthStatus() {
+        const token = localStorage.getItem('authToken');
+        const userData = localStorage.getItem('userData');
+
+        if (token && userData) {
+            try {
+                AppState.user = JSON.parse(userData);
+                AppState.isAuthenticated = true;
+                this.updateUI();
+            } catch (error) {
+                this.logout();
+            }
+        }
+    },
 
     // Update UI based on auth status
-    updateAuthUI();
-}
+    updateUI() {
+        const userNavItem = document.getElementById('userNavItem');
+        const loginNavItem = document.getElementById('loginNavItem');
+        const userNameDisplay = document.getElementById('userNameDisplay');
 
-function updateAuthUI() {
-    const authLinks = document.getElementById('auth-links');
-    const userSection = document.getElementById('user-section');
-    const userInitials = document.getElementById('user-initials');
-    const adminLink = document.getElementById('admin-link');
-
-    if (isAuthenticated()) {
-        authLinks?.classList.add('hidden');
-        userSection?.classList.remove('hidden');
-        const user = getCurrentUser();
-        if (userInitials && user) {
-            userInitials.textContent = user.username.charAt(0).toUpperCase();
-        }
-        if (adminLink) {
-            if (isAdmin()) {
-                adminLink.classList.remove('hidden');
-            } else {
-                adminLink.classList.add('hidden');
-            }
-        }
-        // Show user-specific links in mobile nav if needed
-    } else {
-        authLinks?.classList.remove('hidden');
-        userSection?.classList.add('hidden');
-        adminLink?.classList.add('hidden');
-         // Hide user-specific links in mobile nav if needed
-    }
-}
-
-
-// --- Carousel Navigation ---
-document.addEventListener('click', (e) => {
-    if (e.target.closest('.carousel-arrow')) {
-        const arrow = e.target.closest('.carousel-arrow');
-        const carouselTrack = arrow.closest('.carousel-container').querySelector('.carousel-track');
-        const scrollAmount = carouselTrack.clientWidth * 0.8; // Scroll 80% of viewport width
-
-        if (arrow.dataset.direction === 'left') {
-            carouselTrack.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-        } else if (arrow.dataset.direction === 'right') {
-            carouselTrack.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-        }
-    }
-});
-
-// --- Initialize on Page Load ---
-document.addEventListener('DOMContentLoaded', async () => {
-    // Wait a tiny bit for includes to load
-    setTimeout(() => {
-         // Determine which page to initialize
-        const path = window.location.pathname;
-
-        if (path === '/' || path === '/index.html') {
-            initHomepage();
-        } else if (path === '/login' || path === '/login.html') {
-            initLoginPage();
-        } else if (path === '/dashboard' || path === '/dashboard.html') {
-            initDashboardPage();
-        } else if (path === '/details' || path === '/details.html') {
-            initDetailsPage();
-        } else if (path.startsWith('/categories/') ||
-                   path.startsWith('/languages/') ||
-                   path.startsWith('/user/watchlist') ||
-                   path.startsWith('/user/favorites')) {
-            initCategoryPage();
-        } else if (path.startsWith('/admin/')) {
-             // Basic check, redirect if not admin
-             if(isAuthenticated() && isAdmin()) {
-                 // Specific admin page init can go here if needed
-                 console.log("Admin page loaded");
-             } else {
-                 window.location.href = '/'; // Redirect non-admins
-             }
+        if (AppState.isAuthenticated && AppState.user) {
+            if (userNavItem) userNavItem.style.display = 'block';
+            if (loginNavItem) loginNavItem.style.display = 'none';
+            if (userNameDisplay) userNameDisplay.textContent = AppState.user.username;
         } else {
-            console.log("No specific initialization for this page:", path);
+            if (userNavItem) userNavItem.style.display = 'none';
+            if (loginNavItem) loginNavItem.style.display = 'block';
+        }
+    },
+
+    // Bind events
+    bindEvents() {
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.onclick = () => this.logout();
+        }
+    },
+
+    // Login
+    async login(credentials) {
+        try {
+            const response = await ApiService.login(credentials);
+            
+            localStorage.setItem('authToken', response.token);
+            localStorage.setItem('userData', JSON.stringify(response.user));
+            
+            AppState.user = response.user;
+            AppState.isAuthenticated = true;
+            
+            this.updateUI();
+            Utils.showToast('Login successful!', 'success');
+            
+            // Redirect to dashboard or return URL
+            const returnUrl = new URLSearchParams(window.location.search).get('return') || '/dashboard';
+            window.location.href = returnUrl;
+            
+        } catch (error) {
+            Utils.showToast('Login failed. Please check your credentials.', 'error');
+            throw error;
+        }
+    },
+
+    // Register
+    async register(userData) {
+        try {
+            const response = await ApiService.register(userData);
+            
+            localStorage.setItem('authToken', response.token);
+            localStorage.setItem('userData', JSON.stringify(response.user));
+            
+            AppState.user = response.user;
+            AppState.isAuthenticated = true;
+            
+            this.updateUI();
+            Utils.showToast('Registration successful!', 'success');
+            
+            window.location.href = '/dashboard';
+            
+        } catch (error) {
+            Utils.showToast('Registration failed. Please try again.', 'error');
+            throw error;
+        }
+    },
+
+    // Logout
+    logout() {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        
+        AppState.user = null;
+        AppState.isAuthenticated = false;
+        
+        this.updateUI();
+        Utils.showToast('Logged out successfully', 'info');
+        
+        // Redirect to home if on protected page
+        const protectedPages = ['/dashboard', '/profile', '/user/watchlist', '/user/favorites'];
+        if (protectedPages.some(page => window.location.pathname.startsWith(page))) {
+            window.location.href = '/';
+        }
+    },
+
+    // Check if user is authenticated
+    requireAuth() {
+        if (!AppState.isAuthenticated) {
+            const currentUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.href = `/login?return=${currentUrl}`;
+            return false;
+        }
+        return true;
+    }
+};
+
+// Search Manager
+const SearchManager = {
+    init() {
+        this.bindEvents();
+    },
+
+    bindEvents() {
+        // Desktop search
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const searchSuggestions = document.getElementById('searchSuggestions');
+
+        // Mobile search
+        const mobileSearchToggle = document.getElementById('mobileSearchToggle');
+        const mobileSearchBar = document.getElementById('mobileSearchBar');
+        const mobileSearchInput = document.getElementById('mobileSearchInput');
+        const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+
+        // Desktop search events
+        if (searchInput) {
+            searchInput.addEventListener('input', Utils.debounce((e) => {
+                this.handleSearchInput(e.target.value, searchSuggestions);
+            }, 300));
+
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.performSearch(e.target.value);
+                }
+            });
         }
 
-        hidePreloader(); // Ensure preloader hides after page logic
-    }, 100); // Adjust timeout if needed
+        if (searchBtn) {
+            searchBtn.onclick = () => {
+                const query = searchInput ? searchInput.value : '';
+                this.performSearch(query);
+            };
+        }
 
+        // Mobile search events
+        if (mobileSearchToggle) {
+            mobileSearchToggle.onclick = () => {
+                mobileSearchBar.classList.toggle('show');
+                if (mobileSearchBar.classList.contains('show')) {
+                    mobileSearchInput.focus();
+                }
+            };
+        }
+
+        if (mobileSearchInput) {
+            mobileSearchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.performSearch(e.target.value);
+                }
+            });
+        }
+
+        if (mobileSearchBtn) {
+            mobileSearchBtn.onclick = () => {
+                const query = mobileSearchInput ? mobileSearchInput.value : '';
+                this.performSearch(query);
+            };
+        }
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (searchSuggestions && !searchInput?.contains(e.target) && !searchSuggestions.contains(e.target)) {
+                searchSuggestions.style.display = 'none';
+            }
+        });
+    },
+
+    async handleSearchInput(query, suggestionsContainer) {
+        if (!query.trim() || query.length < 2) {
+            if (suggestionsContainer) {
+                suggestionsContainer.style.display = 'none';
+            }
+            return;
+        }
+
+        try {
+            // Check cache first
+            const cacheKey = `search_${query.toLowerCase()}`;
+            let results = AppState.searchCache.get(cacheKey);
+
+            if (!results) {
+                const response = await ApiService.search(query, 'multi', 1);
+                results = response.results || [];
+                AppState.searchCache.set(cacheKey, results);
+            }
+
+            if (suggestionsContainer) {
+                UIComponents.createSearchSuggestions(results, suggestionsContainer);
+            }
+        } catch (error) {
+            console.error('Search suggestions failed:', error);
+        }
+    },
+
+    performSearch(query) {
+        if (!query.trim()) return;
+
+        // Store search query and navigate to search page
+        localStorage.setItem('searchQuery', query);
+        window.location.href = `/search?q=${encodeURIComponent(query)}`;
+    }
+};
+
+// Content Manager
+const ContentManager = {
+    // Load homepage content
+    async loadHomepageContent() {
+        try {
+            // Load trending content
+            const trending = await ApiService.getTrending('all', 20);
+            UIComponents.createCarousel(trending.recommendations || [], 'trendingCarousel');
+
+            // Load new releases
+            const newReleases = await ApiService.getNewReleases('movie', 20);
+            UIComponents.createCarousel(newReleases.recommendations || [], 'newReleasesCarousel');
+
+            // Load critics choice
+            const criticsChoice = await ApiService.getCriticsChoice('movie', 20);
+            UIComponents.createCarousel(criticsChoice.recommendations || [], 'criticsChoiceCarousel');
+
+            // Load regional content (Hindi by default)
+            await this.loadRegionalContent('hindi');
+
+            // Load anime
+            const anime = await ApiService.getAnime(null, 20);
+            UIComponents.createCarousel(anime.recommendations || [], 'animeCarousel');
+
+        } catch (error) {
+            console.error('Failed to load homepage content:', error);
+            Utils.showToast('Failed to load content. Please refresh the page.', 'error');
+        }
+    },
+
+    // Load regional content
+    async loadRegionalContent(language) {
+        try {
+            const regional = await ApiService.getRegional(language, 'movie', 20);
+            UIComponents.createCarousel(regional.recommendations || [], 'regionalCarousel');
+        } catch (error) {
+            console.error('Failed to load regional content:', error);
+        }
+    },
+
+    // Bind regional language tabs
+    bindRegionalTabs() {
+        const languageTabs = document.querySelectorAll('.language-tabs .btn');
+        languageTabs.forEach(tab => {
+            tab.onclick = async () => {
+                // Update active state
+                languageTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Load content for selected language
+                const language = tab.getAttribute('data-language');
+                await this.loadRegionalContent(language);
+            };
+        });
+    },
+
+    // Load content details
+    async loadContentDetails(contentId) {
+        try {
+            const response = await ApiService.getContentDetails(contentId);
+            return response;
+        } catch (error) {
+            console.error('Failed to load content details:', error);
+            throw error;
+        }
+    }
+};
+
+// Page-specific initialization
+const PageInitializers = {
+    // Initialize homepage
+    async initHomepage() {
+        await ContentManager.loadHomepageContent();
+        ContentManager.bindRegionalTabs();
+
+        // Hero section interactions
+        const exploreBtn = document.getElementById('exploreBtn');
+        if (exploreBtn) {
+            exploreBtn.onclick = () => {
+                document.querySelector('.content-sections').scrollIntoView({ 
+                    behavior: 'smooth' 
+                });
+            };
+        }
+    },
+
+    // Initialize dashboard
+    async initDashboard() {
+        if (!AuthManager.requireAuth()) return;
+
+        try {
+            let recommendations;
+            
+            if (AppState.isAuthenticated) {
+                // Try to get personalized recommendations
+                try {
+                    recommendations = await ApiService.getPersonalized(20);
+                } catch (error) {
+                    // Fallback to anonymous recommendations
+                    recommendations = await ApiService.getAnonymous(20);
+                }
+            } else {
+                recommendations = await ApiService.getAnonymous(20);
+            }
+
+            UIComponents.createCarousel(recommendations.recommendations || [], 'recommendationsCarousel');
+
+            // Load continue watching, watchlist, etc.
+            if (AppState.isAuthenticated) {
+                await this.loadUserContent();
+            }
+
+        } catch (error) {
+            console.error('Failed to load dashboard content:', error);
+            Utils.showToast('Failed to load dashboard. Please refresh the page.', 'error');
+        }
+    },
+
+    // Load user-specific content
+    async loadUserContent() {
+        try {
+            // Load watchlist
+            const watchlist = await ApiService.getWatchlist();
+            if (watchlist.watchlist) {
+                UIComponents.createCarousel(watchlist.watchlist, 'watchlistCarousel');
+            }
+
+            // Load favorites
+            const favorites = await ApiService.getFavorites();
+            if (favorites.favorites) {
+                UIComponents.createCarousel(favorites.favorites, 'favoritesCarousel');
+            }
+
+        } catch (error) {
+            console.error('Failed to load user content:', error);
+        }
+    },
+
+    // Initialize details page
+    async initDetailsPage() {
+        const contentId = Utils.getUrlParameter('id') || localStorage.getItem('selectedContentId');
+        
+        if (!contentId) {
+            Utils.showToast('Content not found', 'error');
+            window.location.href = '/';
+            return;
+        }
+
+        try {
+            const content = await ContentManager.loadContentDetails(contentId);
+            this.renderContentDetails(content);
+
+            // Load similar content
+            if (content.similar_content) {
+                UIComponents.createCarousel(content.similar_content, 'similarCarousel');
+            }
+
+            // Record view interaction
+            if (AppState.isAuthenticated) {
+                try {
+                    await ApiService.recordInteraction(contentId, 'view');
+                } catch (error) {
+                    console.error('Failed to record interaction:', error);
+                }
+            }
+
+        } catch (error) {
+            console.error('Failed to load content details:', error);
+            Utils.showToast('Failed to load content details', 'error');
+            window.location.href = '/';
+        }
+    },
+
+    // Render content details
+    renderContentDetails(content) {
+        document.title = `${content.title} - CineScope`;
+
+        // Update meta description
+        const metaDescription = document.querySelector('meta[name="description"]');
+        if (metaDescription) {
+            metaDescription.content = Utils.truncateText(content.overview, 160);
+        }
+
+        // Populate content details in the page
+        // This would be implemented based on the details.html structure
+        console.log('Content details:', content);
+    }
+};
+
+// Global initialization
+function initializeApp() {
+    // Initialize core managers
+    AuthManager.init();
+    SearchManager.init();
+
+    // Page-specific initialization
+    const currentPage = window.location.pathname;
+
+    if (currentPage === '/' || currentPage === '/index.html') {
+        PageInitializers.initHomepage();
+    } else if (currentPage === '/dashboard') {
+        PageInitializers.initDashboard();
+    } else if (currentPage === '/details') {
+        PageInitializers.initDetailsPage();
+    }
+
+    // Hide loading screen
+    setTimeout(() => {
+        Utils.hideLoadingScreen();
+    }, 1000);
+}
+
+// Initialize homepage specifically
+function initializeHomepage() {
+    initializeApp();
+}
+
+// Global error handler
+window.addEventListener('error', (event) => {
+    console.error('Global error:', event.error);
+    Utils.showToast('An unexpected error occurred', 'error');
 });
+
+// Unhandled promise rejection handler
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled promise rejection:', event.reason);
+    Utils.showToast('An unexpected error occurred', 'error');
+});
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeApp);
