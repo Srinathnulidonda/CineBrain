@@ -1,74 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Discover your next favorite movie, TV show, or anime with AI-powered recommendations">
-    <meta name="keywords" content="movies, tv shows, anime, recommendations, streaming, entertainment">
-    <meta name="author" content="CineScope">
-    
-    <!-- Open Graph -->
-    <meta property="og:title" content="CineScope - AI-Powered Movie Recommendations">
-    <meta property="og:description" content="Discover your next favorite movie, TV show, or anime with AI-powered recommendations">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://cinescope.app">
-    <meta property="og:image" content="/assets/images/og-image.jpg">
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="CineScope - AI-Powered Movie Recommendations">
-    <meta name="twitter:description" content="Discover your next favorite movie, TV show, or anime with AI-powered recommendations">
-    <meta name="twitter:image" content="/assets/images/og-image.jpg">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
-    <link rel="manifest" href="/assets/icons/site.webmanifest">
-    
-    <!-- Theme -->
-    <meta name="theme-color" content="#1e40af">
-    <meta name="msapplication-TileColor" content="#1e40af">
-    
-    <title>CineScope - AI-Powered Movie Recommendations</title>
-    
-    <!-- Preload Critical Resources -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="/css/main.css" as="style">
-    <link rel="preload" href="/js/main.js" as="script">
-    
-    <!-- CSS -->
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/responsive.css">
+    <title>CineScope - Your Personal Cinema Guide</title>
+    <div data-include="head"></div>
 </head>
 <body>
-    <!-- Preloader -->
-    <div id="preloader" class="preloader">
-        <div class="cinema-loader">
-            <div class="loader-text">Loading CineScope...</div>
+    <!-- Global Loader -->
+    <div class="global-loader">
+        <div class="cinematic-loader">
+            <div class="film-strip"></div>
+            <div class="loading-text">Loading Cinema...</div>
         </div>
     </div>
-    
-    <!-- Page Loader -->
-    <div id="page-loader" class="page-loader" style="display: none;">
-        <div id="page-loader-bar" class="page-loader-bar"></div>
-    </div>
-    
-    <!-- Header -->
-    <div id="header-container"></div>
-    
-    <!-- Main Content -->
-    <main id="main-content" role="main">
-        <!-- Content will be loaded here by JavaScript -->
+
+    <div data-include="header"></div>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero" id="hero-section">
+            <div class="hero-background"></div>
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-info">
+                    <h1 class="hero-title">Discover Your Next Favorite</h1>
+                    <p class="hero-description">
+                        Experience the rarest gem in entertainment discovery. Our AI-powered recommendations bring you 
+                        movies, TV shows, and anime that perfectly match your taste, creating a serene journey through cinema.
+                    </p>
+                    <div class="hero-actions">
+                        <button class="btn btn-primary" onclick="exploreContent()">
+                            🎬 Start Exploring
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.location.href='/login'">
+                            👤 Create Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features">
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3 class="feature-title">AI-Powered Recommendations</h3>
+                    <p class="feature-description">
+                        Our advanced machine learning algorithms analyze your preferences to suggest content you'll love.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3 class="feature-title">Global Content Library</h3>
+                    <p class="feature-description">
+                        Explore movies, TV shows, and anime from around the world in multiple languages.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3 class="feature-title">Mobile First Experience</h3>
+                    <p class="feature-description">
+                        Enjoy a seamless experience across all devices with our responsive design.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Content Sections -->
+        <div id="content-sections">
+            <!-- Trending content will be loaded here -->
+        </div>
     </main>
-    
-    <!-- Footer -->
-    <div id="footer-container"></div>
-    
-    <!-- JavaScript -->
+
+    <div data-include="footer"></div>
+
+    <!-- Scripts -->
+    <script src="/js/include.js"></script>
     <script src="/js/main.js"></script>
+    
+    <script>
+        // Homepage specific functionality
+        class Homepage {
+            static async init() {
+                try {
+                    UIComponents.showLoader();
+                    await this.loadHeroContent();
+                    await this.loadHomepageRecommendations();
+                } catch (error) {
+                    console.error('Homepage initialization failed:', error);
+                    UIComponents.showToast('Failed to load content', 'error');
+                } finally {
+                    UIComponents.hideLoader();
+                }
+            }
+
+            static async loadHeroContent() {
+                try {
+                    // Get trending content for hero background
+                    const trending = await ApiService.getTrending('movie', 1);
+                    if (trending.recommendations && trending.recommendations.length > 0) {
+                        const heroContent = trending.recommendations[0];
+                        const heroSection = document.getElementById('hero-section');
+                        const heroBackground = heroSection.querySelector('.hero-background');
+                        
+                        if (heroContent.backdrop_path) {
+                            heroBackground.style.backgroundImage = `url(${heroContent.backdrop_path})`;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load hero content:', error);
+                }
+            }
+
+            static async loadHomepageRecommendations() {
+                const contentSections = document.getElementById('content-sections');
+                let sectionsHTML = '';
+
+                try {
+                    // Load different recommendation categories
+                    const [trending, popular, newReleases, criticsChoice, anime] = await Promise.all([
+                        ApiService.getTrending('all', 20),
+                        ApiService.getAnonymousRecommendations(),
+                        ApiService.getNewReleases(null, 'movie', 15),
+                        ApiService.getCriticsChoice('movie', 15),
+                        ApiService.getAnimeRecommendations(null, 15)
+                    ]);
+
+                    // Create sections for each category
+                    if (trending.recommendations && trending.recommendations.length > 0) {
+                        sectionsHTML += UIComponents.createCarousel(
+                            '🔥 Trending Now',
+                            trending.recommendations,
+                            'trending-section'
+                        );
+                    }
+
+                    if (popular.recommendations && popular.recommendations.length > 0) {
+                        sectionsHTML += UIComponents.createCarousel(
+                            '⭐ Popular Picks',
+                            popular.recommendations,
+                            'popular-section'
+                        );
+                    }
+
+                    if (newReleases.recommendations && newReleases.recommendations.length > 0) {
+                        sectionsHTML += UIComponents.createCarousel(
+                            '🆕 New Releases',
+                            newReleases.recommendations,
+                            'new-releases-section'
+                        );
+                    }
+
+                    if (criticsChoice.recommendations && criticsChoice.recommendations.length > 0) {
+                        sectionsHTML += UIComponents.createCarousel(
+                            '🏆 Critics\' Choice',
+                            criticsChoice.recommendations,
+                            'critics-choice-section'
+                        );
+                    }
+
+                    if (anime.recommendations && anime.recommendations.length > 0) {
+                        sectionsHTML += UIComponents.createCarousel(
+                            '🎌 Anime Collection',
+                            anime.recommendations,
+                            'anime-section'
+                        );
+                    }
+
+                    // Add regional content
+                    const regionalSections = ['hindi', 'telugu', 'tamil'];
+                    for (const language of regionalSections) {
+                        try {
+                            const regional = await ApiService.getRegionalContent(language, 'movie', 10);
+                            if (regional.recommendations && regional.recommendations.length > 0) {
+                                sectionsHTML += UIComponents.createCarousel(
+                                    `🌍 ${language.charAt(0).toUpperCase() + language.slice(1)} Cinema`,
+                                    regional.recommendations,
+                                    `${language}-section`
+                                );
+                            }
+                        } catch (error) {
+                            console.error(`Failed to load ${language} content:`, error);
+                        }
+                    }
+
+                    contentSections.innerHTML = sectionsHTML;
+                } catch (error) {
+                    console.error('Failed to load recommendations:', error);
+                    contentSections.innerHTML = `
+                        <div style="text-align: center; padding: var(--space-3xl);">
+                            <h2>Content is loading...</h2>
+                            <p>Please check your connection and try again.</p>
+                            <button class="btn btn-primary" onclick="Homepage.loadHomepageRecommendations()">
+                                Retry
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Explore content function
+        function exploreContent() {
+            const contentSections = document.getElementById('content-sections');
+            contentSections.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Initialize homepage when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                Homepage.init();
+            }, 100); // Small delay to ensure includes are loaded
+        });
+    </script>
 </body>
 </html>

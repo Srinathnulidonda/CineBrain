@@ -1,90 +1,474 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Sign in to CineScope for personalized movie recommendations">
     <title>Sign In - CineScope</title>
-    
-    <!-- Preload -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <!-- CSS -->
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/responsive.css">
-    
-    <!-- Theme -->
-    <meta name="theme-color" content="#1e40af">
+    <div data-include="head"></div>
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-primary);
+            padding: var(--space-lg);
+        }
+
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--bg-tertiary);
+            border-radius: var(--radius-large);
+            padding: var(--space-2xl);
+            width: 100%;
+            max-width: 400px;
+            box-shadow: var(--shadow-large);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+
+        .auth-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-lg);
+        }
+
+        .auth-logo .logo-icon {
+            width: 48px;
+            height: 48px;
+            font-size: var(--font-size-2xl);
+        }
+
+        .auth-title {
+            font-size: var(--font-size-2xl);
+            margin-bottom: var(--space-sm);
+            background: var(--gradient-primary);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .auth-subtitle {
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .auth-form {
+            margin-bottom: var(--space-lg);
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: var(--space-xl);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-medium);
+            padding: var(--space-xs);
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: var(--space-sm) var(--space-md);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--radius-small);
+            transition: all var(--transition-fast);
+            font-weight: 500;
+        }
+
+        .auth-tab.active {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: var(--shadow-small);
+        }
+
+        .form-row {
+            display: flex;
+            gap: var(--space-md);
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .preferences-section {
+            margin-top: var(--space-lg);
+            padding-top: var(--space-lg);
+            border-top: 1px solid var(--bg-tertiary);
+        }
+
+        .preference-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+        }
+
+        .preference-item {
+            background: var(--bg-secondary);
+            border: 2px solid var(--bg-tertiary);
+            border-radius: var(--radius-medium);
+            padding: var(--space-sm);
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: var(--font-size-sm);
+        }
+
+        .preference-item.selected {
+            border-color: var(--interactive-primary);
+            background: var(--interactive-primary);
+            color: white;
+            box-shadow: var(--glow-blue);
+        }
+
+        .auth-footer {
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .auth-footer a {
+            color: var(--interactive-primary);
+        }
+
+        .error-message {
+            background: rgba(204, 0, 102, 0.1);
+            border: 1px solid #cc0066;
+            color: #ff6699;
+            padding: var(--space-md);
+            border-radius: var(--radius-medium);
+            margin-bottom: var(--space-lg);
+            font-size: var(--font-size-sm);
+        }
+
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: var(--space-lg);
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .preference-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Preloader -->
-    <div id="preloader" class="preloader">
-        <div class="cinema-loader">
-            <div class="loader-text">Loading...</div>
+    <!-- Global Loader -->
+    <div class="global-loader">
+        <div class="cinematic-loader">
+            <div class="film-strip"></div>
+            <div class="loading-text">Authenticating...</div>
         </div>
     </div>
-    
-    <!-- Page Loader -->
-    <div id="page-loader" class="page-loader" style="display: none;">
-        <div id="page-loader-bar" class="page-loader-bar"></div>
-    </div>
-    
-    <!-- Header -->
-    <div id="header-container"></div>
-    
-    <!-- Main Content -->
-    <main id="main-content" role="main">
-        <div class="min-h-screen flex items-center justify-center py-12 px-4">
-            <div class="max-w-md w-full">
-                <div class="card">
-                    <div class="text-center mb-8">
-                        <h1 class="title-primary text-3xl mb-2">Welcome Back</h1>
-                        <p class="text-gray-400">Sign in to your account</p>
+
+    <main class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <div class="logo-icon">🎬</div>
+                    <span style="font-size: var(--font-size-xl); font-weight: 700;">CineScope</span>
+                </div>
+                <h1 class="auth-title">Welcome Back</h1>
+                <p class="auth-subtitle">Sign in to your account to continue</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="signin">Sign In</button>
+                <button class="auth-tab" data-tab="signup">Sign Up</button>
+            </div>
+
+            <div id="error-container"></div>
+
+            <!-- Sign In Form -->
+            <form id="signin-form" class="auth-form">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" name="username" placeholder="Enter your username" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" name="password" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Sign In
+                </button>
+            </form>
+
+            <!-- Sign Up Form -->
+            <form id="signup-form" class="auth-form" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" name="username" placeholder="Choose username" required>
                     </div>
-
-                    <form id="login-form" class="space-y-6">
-                        <div class="form-group">
-                            <label class="form-label" for="username">Username</label>
-                            <input type="text" id="username" name="username" class="form-input" required autocomplete="username">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="password">Password</label>
-                            <input type="password" id="password" name="password" class="form-input" required autocomplete="current-password">
-                        </div>
-
-                        <div class="flex items-center justify-between">
-                            <label class="flex items-center">
-                                <input type="checkbox" class="rounded border-gray-600 text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm text-gray-400">Remember me</span>
-                            </label>
-                            <a href="/forgot-password" class="text-sm text-blue-400 hover:text-blue-300">Forgot password?</a>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-full">
-                            Sign In
-                        </button>
-                    </form>
-
-                    <div class="text-center mt-6">
-                        <p class="text-gray-400">
-                            Don't have an account? 
-                            <a href="/register" class="text-blue-400 hover:text-blue-300" data-navigate="/register">
-                                Sign up
-                            </a>
-                        </p>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" name="email" placeholder="Enter your email" required>
                     </div>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" name="password" placeholder="Create password" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-input" name="confirmPassword" placeholder="Confirm password" required>
+                </div>
+
+                <div class="preferences-section">
+                    <h3 style="margin-bottom: var(--space-md); color: var(--text-primary);">Preferred Languages</h3>
+                    <div class="preference-grid" id="language-preferences">
+                        <div class="preference-item" data-value="english">English</div>
+                        <div class="preference-item" data-value="hindi">Hindi</div>
+                        <div class="preference-item" data-value="telugu">Telugu</div>
+                        <div class="preference-item" data-value="tamil">Tamil</div>
+                        <div class="preference-item" data-value="kannada">Kannada</div>
+                        <div class="preference-item" data-value="malayalam">Malayalam</div>
+                    </div>
+
+                    <h3 style="margin: var(--space-lg) 0 var(--space-md); color: var(--text-primary);">Favorite Genres</h3>
+                    <div class="preference-grid" id="genre-preferences">
+                        <div class="preference-item" data-value="action">Action</div>
+                        <div class="preference-item" data-value="comedy">Comedy</div>
+                        <div class="preference-item" data-value="drama">Drama</div>
+                        <div class="preference-item" data-value="thriller">Thriller</div>
+                        <div class="preference-item" data-value="romance">Romance</div>
+                        <div class="preference-item" data-value="horror">Horror</div>
+                        <div class="preference-item" data-value="sci-fi">Sci-Fi</div>
+                        <div class="preference-item" data-value="fantasy">Fantasy</div>
+                        <div class="preference-item" data-value="animation">Animation</div>
+                        <div class="preference-item" data-value="documentary">Documentary</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: var(--space-lg);">
+                    Create Account
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p id="auth-switch-text">
+                    Don't have an account? <a href="#" id="auth-switch-link">Sign up here</a>
+                </p>
             </div>
         </div>
     </main>
-    
-    <!-- Footer -->
-    <div id="footer-container"></div>
-    
-    <!-- JavaScript -->
+
+    <script src="/js/include.js"></script>
     <script src="/js/main.js"></script>
+    
+    <script>
+        class AuthPage {
+            constructor() {
+                this.currentTab = 'signin';
+                this.selectedLanguages = [];
+                this.selectedGenres = [];
+                this.init();
+            }
+
+            init() {
+                this.setupTabs();
+                this.setupPreferences();
+                this.setupForms();
+                this.checkExistingAuth();
+            }
+
+            checkExistingAuth() {
+                const token = localStorage.getItem('auth_token');
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                
+                if (token && user) {
+                    AppState.setUser(user, token);
+                    Navigation.redirectBasedOnAuth();
+                }
+            }
+
+            setupTabs() {
+                const tabs = document.querySelectorAll('.auth-tab');
+                const signinForm = document.getElementById('signin-form');
+                const signupForm = document.getElementById('signup-form');
+                const switchText = document.getElementById('auth-switch-text');
+                const switchLink = document.getElementById('auth-switch-link');
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+                        
+                        this.currentTab = tab.dataset.tab;
+                        
+                        if (this.currentTab === 'signin') {
+                            signinForm.style.display = 'block';
+                            signupForm.style.display = 'none';
+                            switchText.innerHTML = 'Don\'t have an account? <a href="#" id="auth-switch-link">Sign up here</a>';
+                        } else {
+                            signinForm.style.display = 'none';
+                            signupForm.style.display = 'block';
+                            switchText.innerHTML = 'Already have an account? <a href="#" id="auth-switch-link">Sign in here</a>';
+                        }
+                        
+                        // Re-attach event listener
+                        document.getElementById('auth-switch-link').onclick = (e) => {
+                            e.preventDefault();
+                            const otherTab = document.querySelector(`.auth-tab[data-tab="${this.currentTab === 'signin' ? 'signup' : 'signin'}"]`);
+                            otherTab.click();
+                        };
+                    });
+                });
+
+                // Initial switch link
+                switchLink.onclick = (e) => {
+                    e.preventDefault();
+                    const signupTab = document.querySelector('.auth-tab[data-tab="signup"]');
+                    signupTab.click();
+                };
+            }
+
+            setupPreferences() {
+                const languageItems = document.querySelectorAll('#language-preferences .preference-item');
+                const genreItems = document.querySelectorAll('#genre-preferences .preference-item');
+
+                languageItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const value = item.dataset.value;
+                        if (this.selectedLanguages.includes(value)) {
+                            this.selectedLanguages = this.selectedLanguages.filter(l => l !== value);
+                            item.classList.remove('selected');
+                        } else {
+                            this.selectedLanguages.push(value);
+                            item.classList.add('selected');
+                        }
+                    });
+                });
+
+                genreItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const value = item.dataset.value;
+                        if (this.selectedGenres.includes(value)) {
+                            this.selectedGenres = this.selectedGenres.filter(g => g !== value);
+                            item.classList.remove('selected');
+                        } else {
+                            this.selectedGenres.push(value);
+                            item.classList.add('selected');
+                        }
+                    });
+                });
+            }
+
+            setupForms() {
+                const signinForm = document.getElementById('signin-form');
+                const signupForm = document.getElementById('signup-form');
+
+                signinForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleSignIn(new FormData(signinForm));
+                });
+
+                signupForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleSignUp(new FormData(signupForm));
+                });
+            }
+
+            async handleSignIn(formData) {
+                try {
+                    UIComponents.showLoader();
+                    this.clearError();
+
+                    const response = await ApiService.login(
+                        formData.get('username'),
+                        formData.get('password')
+                    );
+
+                    // Store auth data
+                    localStorage.setItem('auth_token', response.token);
+                    localStorage.setItem('user', JSON.stringify(response.user));
+                    
+                    AppState.setUser(response.user, response.token);
+                    
+                    UIComponents.showToast('Welcome back!', 'success');
+                    
+                    // Redirect based on user role
+                    setTimeout(() => {
+                        if (response.user.is_admin) {
+                            window.location.href = '/admin/dashboard';
+                        } else {
+                            window.location.href = '/dashboard';
+                        }
+                    }, 1000);
+
+                } catch (error) {
+                    this.showError(error.message || 'Sign in failed');
+                } finally {
+                    UIComponents.hideLoader();
+                }
+            }
+
+            async handleSignUp(formData) {
+                try {
+                    UIComponents.showLoader();
+                    this.clearError();
+
+                    // Validate passwords match
+                    if (formData.get('password') !== formData.get('confirmPassword')) {
+                        throw new Error('Passwords do not match');
+                    }
+
+                    const userData = {
+                        username: formData.get('username'),
+                        email: formData.get('email'),
+                        password: formData.get('password'),
+                        preferred_languages: this.selectedLanguages,
+                        preferred_genres: this.selectedGenres
+                    };
+
+                    const response = await ApiService.register(userData);
+
+                    // Store auth data
+                    localStorage.setItem('auth_token', response.token);
+                    localStorage.setItem('user', JSON.stringify(response.user));
+                    
+                    AppState.setUser(response.user, response.token);
+                    
+                    UIComponents.showToast('Account created successfully!', 'success');
+                    
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
+
+                } catch (error) {
+                    this.showError(error.message || 'Account creation failed');
+                } finally {
+                    UIComponents.hideLoader();
+                }
+            }
+
+            showError(message) {
+                const errorContainer = document.getElementById('error-container');
+                errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+            }
+
+            clearError() {
+                const errorContainer = document.getElementById('error-container');
+                errorContainer.innerHTML = '';
+            }
+        }
+
+        // Initialize auth page when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                new AuthPage();
+            }, 100);
+        });
+    </script>
 </body>
 </html>
