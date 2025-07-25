@@ -1,216 +1,482 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>CineScope - Your Personal Cinema Guide</title>
-    <div data-include="head"></div>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineScope - Discover Amazing Movies, TV Shows & Anime</title>
+    <meta name="description" content="Discover trending movies, TV shows, and anime with personalized recommendations powered by AI. Your cinematic journey starts here.">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    
+    <!-- PWA Meta -->
+    <meta name="theme-color" content="#0066ff">
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="CineScope - Discover Movies & TV Shows">
+    <meta property="og:description" content="Discover trending movies, TV shows, and anime with personalized recommendations">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://cinescope.vercel.app">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" as="style" href="/css/main.css">
+    <link rel="preload" as="script" href="/js/main.js">
 </head>
 <body>
-    <!-- Global Loader -->
-    <div class="global-loader">
-        <div class="cinematic-loader">
-            <div class="film-strip"></div>
-            <div class="loading-text">Loading Cinema...</div>
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand" onclick="event.preventDefault(); appState?.navigateTo('')">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <circle cx="16" cy="16" r="16" fill="url(#gradient)"/>
+                    <path d="M12 8v16l8-8-8-8z" fill="white"/>
+                    <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#0066ff"/>
+                            <stop offset="100%" stop-color="#6b46c1"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                CineScope
+            </a>
+            
+            <ul class="navbar-menu">
+                <li class="navbar-item">
+                    <a href="/" class="navbar-link active" onclick="event.preventDefault(); appState?.navigateTo('')">Home</a>
+                </li>
+                <li class="navbar-item dropdown">
+                    <a href="#" class="navbar-link">Categories ▼</a>
+                    <div class="dropdown-menu">
+                        <a href="/categories/trending" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('categories/trending')">Trending</a>
+                        <a href="/categories/popular" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('categories/popular')">Popular</a>
+                        <a href="/categories/new-releases" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('categories/new-releases')">New Releases</a>
+                        <a href="/categories/critic-choices" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('categories/critic-choices')">Critics' Choice</a>
+                        <a href="/categories/movies" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('categories/movies')">Movies</a>
+                        <a href="/categories/tv-shows" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('categories/tv-shows')">TV Shows</a>
+                        <a href="/categories/anime" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('categories/anime')">Anime</a>
+                    </div>
+                </li>
+                <li class="navbar-item dropdown">
+                    <a href="#" class="navbar-link">Languages ▼</a>
+                    <div class="dropdown-menu">
+                        <a href="/languages/english" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('languages/english')">English</a>
+                        <a href="/languages/hindi" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('languages/hindi')">Hindi</a>
+                        <a href="/languages/telugu" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('languages/telugu')">Telugu</a>
+                        <a href="/languages/tamil" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('languages/tamil')">Tamil</a>
+                        <a href="/languages/kannada" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('languages/kannada')">Kannada</a>
+                        <a href="/languages/malayalam" class="dropdown-item" onclick="event.preventDefault(); appState?.navigateTo('languages/malayalam')">Malayalam</a>
+                    </div>
+                </li>
+            </ul>
+            
+            <div class="navbar-search">
+                <input 
+                    type="text" 
+                    class="navbar-search-input" 
+                    placeholder="Search movies, TV shows, anime..."
+                    autocomplete="off"
+                >
+                <svg class="navbar-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
+            </div>
+            
+            <div class="navbar-actions">
+                <!-- Auth buttons will be inserted here by JavaScript -->
+            </div>
+            
+            <button class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <ul class="mobile-menu-list">
+            <li class="mobile-menu-item">
+                <a href="/" class="mobile-menu-link" onclick="event.preventDefault(); appState?.navigateTo(''); toggleMobileMenu()">Home</a>
+            </li>
+            <li class="mobile-menu-item">
+                <a href="/categories/trending" class="mobile-menu-link" onclick="event.preventDefault(); appState?.navigateTo('categories/trending'); toggleMobileMenu()">Trending</a>
+            </li>
+            <li class="mobile-menu-item">
+                <a href="/categories/movies" class="mobile-menu-link" onclick="event.preventDefault(); appState?.navigateTo('categories/movies'); toggleMobileMenu()">Movies</a>
+            </li>
+            <li class="mobile-menu-item">
+                <a href="/categories/tv-shows" class="mobile-menu-link" onclick="event.preventDefault(); appState?.navigateTo('categories/tv-shows'); toggleMobileMenu()">TV Shows</a>
+            </li>
+            <li class="mobile-menu-item">
+                <a href="/categories/anime" class="mobile-menu-link" onclick="event.preventDefault(); appState?.navigateTo('categories/anime'); toggleMobileMenu()">Anime</a>
+            </li>
+        </ul>
+        
+        <div class="mobile-menu-search">
+            <input 
+                type="text" 
+                class="form-input" 
+                placeholder="Search..."
+                id="mobileSearchInput"
+            >
         </div>
     </div>
-
-    <div data-include="header"></div>
-
-    <main>
+    
+    <!-- Main Content -->
+    <main id="mainContent">
         <!-- Hero Section -->
-        <section class="hero" id="hero-section">
-            <div class="hero-background"></div>
+        <section class="hero" id="heroSection">
             <div class="hero-overlay"></div>
             <div class="hero-content">
-                <div class="hero-info">
-                    <h1 class="hero-title">Discover Your Next Favorite</h1>
-                    <p class="hero-description">
-                        Experience the rarest gem in entertainment discovery. Our AI-powered recommendations bring you 
-                        movies, TV shows, and anime that perfectly match your taste, creating a serene journey through cinema.
-                    </p>
-                    <div class="hero-actions">
-                        <button class="btn btn-primary" onclick="exploreContent()">
-                            🎬 Start Exploring
-                        </button>
-                        <button class="btn btn-secondary" onclick="window.location.href='/login'">
-                            👤 Create Account
-                        </button>
+                <h1 class="hero-title fade-in">Discover Your Next Favorite</h1>
+                <p class="hero-description fade-in">Explore trending movies, binge-worthy TV shows, and amazing anime with personalized recommendations powered by AI.</p>
+                <div class="hero-actions fade-in">
+                    <button class="btn btn-primary btn-lg" onclick="scrollToTrending()">
+                        ✨ Explore Trending
+                    </button>
+                    <button class="btn btn-outline btn-lg" onclick="showDiscoverModal()">
+                        🎯 Get Recommendations
+                    </button>
+                </div>
+            </div>
+            <div class="hero-background" id="heroBackground"></div>
+        </section>
+        
+        <!-- Content Sections -->
+        <div class="container">
+            <!-- Quick Actions -->
+            <section class="quick-actions fade-in" style="margin: 2rem 0;">
+                <div class="flex gap-4 justify-center flex-wrap">
+                    <button class="btn btn-secondary" onclick="appState?.navigateTo('categories/trending')">
+                        🔥 Trending Now
+                    </button>
+                    <button class="btn btn-secondary" onclick="appState?.navigateTo('categories/new-releases')">
+                        🆕 New Releases
+                    </button>
+                    <button class="btn btn-secondary" onclick="appState?.navigateTo('categories/critic-choices')">
+                        🏆 Critics' Choice
+                    </button>
+                    <button class="btn btn-secondary" onclick="appState?.navigateTo('categories/anime')">
+                        🎌 Anime
+                    </button>
+                </div>
+            </section>
+            
+            <!-- Content Carousels -->
+            <div id="contentCarousels">
+                <!-- Carousels will be loaded here -->
+            </div>
+            
+            <!-- Genre Showcase -->
+            <section class="genre-showcase" style="margin: 3rem 0;">
+                <h2 class="text-center" style="margin-bottom: 2rem;">Explore by Genre</h2>
+                <div class="genre-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="genre-card card" onclick="appState?.navigateTo('categories/movies?genre=action')">
+                        <h3>🎬 Action</h3>
+                        <p class="text-muted">Explosive thrills and adventures</p>
+                    </div>
+                    <div class="genre-card card" onclick="appState?.navigateTo('categories/movies?genre=comedy')">
+                        <h3>😂 Comedy</h3>
+                        <p class="text-muted">Laugh-out-loud entertainment</p>
+                    </div>
+                    <div class="genre-card card" onclick="appState?.navigateTo('categories/movies?genre=drama')">
+                        <h3>🎭 Drama</h3>
+                        <p class="text-muted">Emotional storytelling</p>
+                    </div>
+                    <div class="genre-card card" onclick="appState?.navigateTo('categories/movies?genre=horror')">
+                        <h3>👻 Horror</h3>
+                        <p class="text-muted">Spine-chilling experiences</p>
+                    </div>
+                    <div class="genre-card card" onclick="appState?.navigateTo('categories/movies?genre=romance')">
+                        <h3>💕 Romance</h3>
+                        <p class="text-muted">Love stories that warm hearts</p>
+                    </div>
+                    <div class="genre-card card" onclick="appState?.navigateTo('categories/movies?genre=sci-fi')">
+                        <h3>🚀 Sci-Fi</h3>
+                        <p class="text-muted">Future worlds and possibilities</p>
                     </div>
                 </div>
-            </div>
-        </section>
-
-        <!-- Features Section -->
-        <section class="features">
-            <div class="feature-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3 class="feature-title">AI-Powered Recommendations</h3>
-                    <p class="feature-description">
-                        Our advanced machine learning algorithms analyze your preferences to suggest content you'll love.
-                    </p>
+            </section>
+            
+            <!-- Regional Content -->
+            <section class="regional-showcase" style="margin: 3rem 0;">
+                <h2 class="text-center" style="margin-bottom: 2rem;">Regional Cinema</h2>
+                <div class="regional-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div class="regional-card card" onclick="appState?.navigateTo('languages/hindi')">
+                        <h3>🇮🇳 Bollywood</h3>
+                        <p class="text-muted">Latest Hindi movies and classics</p>
+                    </div>
+                    <div class="regional-card card" onclick="appState?.navigateTo('languages/telugu')">
+                        <h3>🎬 Tollywood</h3>
+                        <p class="text-muted">Telugu cinema at its finest</p>
+                    </div>
+                    <div class="regional-card card" onclick="appState?.navigateTo('languages/tamil')">
+                        <h3>🎭 Kollywood</h3>
+                        <p class="text-muted">Tamil movies and entertainment</p>
+                    </div>
+                    <div class="regional-card card" onclick="appState?.navigateTo('languages/english')">
+                        <h3>🌟 Hollywood</h3>
+                        <p class="text-muted">International blockbusters</p>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🌍</div>
-                    <h3 class="feature-title">Global Content Library</h3>
-                    <p class="feature-description">
-                        Explore movies, TV shows, and anime from around the world in multiple languages.
-                    </p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📱</div>
-                    <h3 class="feature-title">Mobile First Experience</h3>
-                    <p class="feature-description">
-                        Enjoy a seamless experience across all devices with our responsive design.
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Content Sections -->
-        <div id="content-sections">
-            <!-- Trending content will be loaded here -->
+            </section>
         </div>
     </main>
-
-    <div data-include="footer"></div>
-
-    <!-- Scripts -->
-    <script src="/js/include.js"></script>
-    <script src="/js/main.js"></script>
     
+    <!-- Footer -->
+    <footer class="footer" style="background: var(--bg-secondary); padding: 3rem 0; margin-top: 4rem; border-top: 1px solid var(--bg-hover);">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
+                <div>
+                    <h4 style="color: var(--text-primary); margin-bottom: 1rem;">CineScope</h4>
+                    <p class="text-muted">Your ultimate destination for discovering movies, TV shows, and anime with personalized AI recommendations.</p>
+                </div>
+                <div>
+                    <h5 style="color: var(--text-primary); margin-bottom: 1rem;">Categories</h5>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><a href="/categories/trending" class="text-muted" style="text-decoration: none;" onclick="event.preventDefault(); appState?.navigateTo('categories/trending')">Trending</a></li>
+                        <li><a href="/categories/movies" class="text-muted" style="text-decoration: none;" onclick="event.preventDefault(); appState?.navigateTo('categories/movies')">Movies</a></li>
+                        <li><a href="/categories/tv-shows" class="text-muted" style="text-decoration: none;" onclick="event.preventDefault(); appState?.navigateTo('categories/tv-shows')">TV Shows</a></li>
+                        <li><a href="/categories/anime" class="text-muted" style="text-decoration: none;" onclick="event.preventDefault(); appState?.navigateTo('categories/anime')">Anime</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 style="color: var(--text-primary); margin-bottom: 1rem;">Support</h5>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><a href="/help" class="text-muted" style="text-decoration: none;">Help Center</a></li>
+                        <li><a href="/privacy" class="text-muted" style="text-decoration: none;">Privacy Policy</a></li>
+                        <li><a href="/terms" class="text-muted" style="text-decoration: none;">Terms of Service</a></li>
+                        <li><a href="/contact" class="text-muted" style="text-decoration: none;">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div style="text-align: center; padding-top: 2rem; border-top: 1px solid var(--bg-hover);">
+                <p class="text-muted">&copy; 2024 CineScope. All rights reserved. Powered by TMDB, Jikan, and AI.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Scripts -->
+    <script src="/js/main.js"></script>
     <script>
         // Homepage specific functionality
-        class Homepage {
-            static async init() {
+        class HomePage {
+            constructor() {
+                this.init();
+            }
+            
+            async init() {
+                await this.loadHeroContent();
+                await this.loadCarousels();
+                this.setupEventListeners();
+            }
+            
+            async loadHeroContent() {
                 try {
-                    UIComponents.showLoader();
-                    await this.loadHeroContent();
-                    await this.loadHomepageRecommendations();
+                    // Get a trending movie for hero
+                    const trending = await apiService.getTrending('movie', 1);
+                    if (trending.recommendations && trending.recommendations.length > 0) {
+                        const heroMovie = trending.recommendations[0];
+                        this.updateHeroContent(heroMovie);
+                    }
                 } catch (error) {
-                    console.error('Homepage initialization failed:', error);
-                    UIComponents.showToast('Failed to load content', 'error');
-                } finally {
-                    UIComponents.hideLoader();
+                    console.error('Error loading hero content:', error);
                 }
             }
-
-            static async loadHeroContent() {
-                try {
-                    // Get trending content for hero background
-                    const trending = await ApiService.getTrending('movie', 1);
-                    if (trending.recommendations && trending.recommendations.length > 0) {
-                        const heroContent = trending.recommendations[0];
-                        const heroSection = document.getElementById('hero-section');
-                        const heroBackground = heroSection.querySelector('.hero-background');
-                        
-                        if (heroContent.backdrop_path) {
-                            heroBackground.style.backgroundImage = `url(${heroContent.backdrop_path})`;
+            
+            updateHeroContent(movie) {
+                const heroSection = document.getElementById('heroSection');
+                const heroBackground = document.getElementById('heroBackground');
+                
+                if (movie.backdrop_path || movie.poster_path) {
+                    const imageUrl = movie.backdrop_path 
+                        ? ComponentFactory.getImageUrl(movie.backdrop_path.replace('w500', 'w1280'))
+                        : ComponentFactory.getImageUrl(movie.poster_path);
+                    
+                    heroBackground.style.backgroundImage = `url('${imageUrl}')`;
+                    heroBackground.style.backgroundSize = 'cover';
+                    heroBackground.style.backgroundPosition = 'center';
+                }
+                
+                // Update hero content with movie details
+                const heroContent = heroSection.querySelector('.hero-content');
+                heroContent.innerHTML = `
+                    <h1 class="hero-title fade-in">${movie.title}</h1>
+                    <p class="hero-description fade-in">${movie.overview || 'Discover amazing content with personalized recommendations.'}</p>
+                    <div class="hero-actions fade-in">
+                        ${movie.youtube_trailer ? 
+                            `<button class="btn btn-primary btn-lg" onclick="playTrailer('${movie.youtube_trailer}')">
+                                ▶ Watch Trailer
+                            </button>` : 
+                            `<button class="btn btn-primary btn-lg" onclick="scrollToTrending()">
+                                ✨ Explore Trending
+                            </button>`
                         }
-                    }
-                } catch (error) {
-                    console.error('Failed to load hero content:', error);
-                }
+                        <button class="btn btn-outline btn-lg" onclick="navigateToDetails(${movie.id})">
+                            More Info
+                        </button>
+                    </div>
+                `;
             }
-
-            static async loadHomepageRecommendations() {
-                const contentSections = document.getElementById('content-sections');
-                let sectionsHTML = '';
-
+            
+            async loadCarousels() {
+                const container = document.getElementById('contentCarousels');
+                container.innerHTML = UIUtils.createLoadingSpinner();
+                
                 try {
-                    // Load different recommendation categories
-                    const [trending, popular, newReleases, criticsChoice, anime] = await Promise.all([
-                        ApiService.getTrending('all', 20),
-                        ApiService.getAnonymousRecommendations(),
-                        ApiService.getNewReleases(null, 'movie', 15),
-                        ApiService.getCriticsChoice('movie', 15),
-                        ApiService.getAnimeRecommendations(null, 15)
+                    const [trending, newReleases, criticsChoice, anime] = await Promise.all([
+                        apiService.getTrending('all', 20),
+                        apiService.getNewReleases(null, 'movie', 20),
+                        apiService.getCriticsChoice('movie', 20),
+                        apiService.getAnimeRecommendations(null, 20)
                     ]);
-
-                    // Create sections for each category
-                    if (trending.recommendations && trending.recommendations.length > 0) {
-                        sectionsHTML += UIComponents.createCarousel(
-                            '🔥 Trending Now',
-                            trending.recommendations,
-                            'trending-section'
-                        );
+                    
+                    let carouselsHTML = '';
+                    
+                    if (trending.recommendations) {
+                        carouselsHTML += ComponentFactory.createCarousel('🔥 Trending Now', trending.recommendations);
                     }
-
-                    if (popular.recommendations && popular.recommendations.length > 0) {
-                        sectionsHTML += UIComponents.createCarousel(
-                            '⭐ Popular Picks',
-                            popular.recommendations,
-                            'popular-section'
-                        );
+                    
+                    if (newReleases.recommendations) {
+                        carouselsHTML += ComponentFactory.createCarousel('🆕 New Releases', newReleases.recommendations);
                     }
-
-                    if (newReleases.recommendations && newReleases.recommendations.length > 0) {
-                        sectionsHTML += UIComponents.createCarousel(
-                            '🆕 New Releases',
-                            newReleases.recommendations,
-                            'new-releases-section'
-                        );
+                    
+                    if (criticsChoice.recommendations) {
+                        carouselsHTML += ComponentFactory.createCarousel('🏆 Critics\' Choice', criticsChoice.recommendations);
                     }
-
-                    if (criticsChoice.recommendations && criticsChoice.recommendations.length > 0) {
-                        sectionsHTML += UIComponents.createCarousel(
-                            '🏆 Critics\' Choice',
-                            criticsChoice.recommendations,
-                            'critics-choice-section'
-                        );
+                    
+                    if (anime.recommendations) {
+                        carouselsHTML += ComponentFactory.createCarousel('🎌 Popular Anime', anime.recommendations);
                     }
-
-                    if (anime.recommendations && anime.recommendations.length > 0) {
-                        sectionsHTML += UIComponents.createCarousel(
-                            '🎌 Anime Collection',
-                            anime.recommendations,
-                            'anime-section'
-                        );
-                    }
-
-                    // Add regional content
-                    const regionalSections = ['hindi', 'telugu', 'tamil'];
-                    for (const language of regionalSections) {
+                    
+                    // Add anonymous recommendations if user is not logged in
+                    if (!appState.user) {
                         try {
-                            const regional = await ApiService.getRegionalContent(language, 'movie', 10);
-                            if (regional.recommendations && regional.recommendations.length > 0) {
-                                sectionsHTML += UIComponents.createCarousel(
-                                    `🌍 ${language.charAt(0).toUpperCase() + language.slice(1)} Cinema`,
-                                    regional.recommendations,
-                                    `${language}-section`
-                                );
+                            const anonymous = await apiService.getAnonymousRecommendations(20);
+                            if (anonymous.recommendations) {
+                                carouselsHTML += ComponentFactory.createCarousel('🎯 Recommended For You', anonymous.recommendations);
                             }
                         } catch (error) {
-                            console.error(`Failed to load ${language} content:`, error);
+                            console.log('Anonymous recommendations not available');
+                        }
+                    } else {
+                        // Add personalized recommendations for logged-in users
+                        try {
+                            const personalized = await apiService.getPersonalizedRecommendations(20);
+                            if (personalized.recommendations) {
+                                carouselsHTML = ComponentFactory.createCarousel('🎯 Recommended For You', personalized.recommendations) + carouselsHTML;
+                            }
+                        } catch (error) {
+                            console.log('Personalized recommendations not available');
                         }
                     }
-
-                    contentSections.innerHTML = sectionsHTML;
+                    
+                    container.innerHTML = carouselsHTML;
+                    
+                    // Reinitialize carousels
+                    carouselManager.initializeCarousels();
+                    
+                    // Initialize lazy loading for new images
+                    UIUtils.lazyLoadImages();
+                    
                 } catch (error) {
-                    console.error('Failed to load recommendations:', error);
-                    contentSections.innerHTML = `
-                        <div style="text-align: center; padding: var(--space-3xl);">
-                            <h2>Content is loading...</h2>
-                            <p>Please check your connection and try again.</p>
-                            <button class="btn btn-primary" onclick="Homepage.loadHomepageRecommendations()">
-                                Retry
-                            </button>
+                    console.error('Error loading carousels:', error);
+                    container.innerHTML = `
+                        <div class="text-center" style="padding: 2rem;">
+                            <p class="text-muted">Unable to load content. Please try again later.</p>
+                            <button class="btn btn-primary" onclick="location.reload()">Retry</button>
                         </div>
                     `;
                 }
             }
+            
+            setupEventListeners() {
+                // Mobile menu toggle
+                const hamburger = document.getElementById('hamburger');
+                const mobileMenu = document.getElementById('mobileMenu');
+                
+                if (hamburger && mobileMenu) {
+                    hamburger.addEventListener('click', () => {
+                        hamburger.classList.toggle('active');
+                        mobileMenu.classList.toggle('active');
+                    });
+                }
+                
+                // Mobile search
+                const mobileSearchInput = document.getElementById('mobileSearchInput');
+                if (mobileSearchInput) {
+                    mobileSearchInput.addEventListener('input', UIUtils.debounce((e) => {
+                        // Handle mobile search
+                        console.log('Mobile search:', e.target.value);
+                    }, 300));
+                }
+            }
         }
-
-        // Explore content function
-        function exploreContent() {
-            const contentSections = document.getElementById('content-sections');
-            contentSections.scrollIntoView({ behavior: 'smooth' });
+        
+        // Global functions for homepage
+        function scrollToTrending() {
+            const trendingSection = document.querySelector('.carousel');
+            if (trendingSection) {
+                trendingSection.scrollIntoView({ behavior: 'smooth' });
+            }
         }
-
+        
+        function showDiscoverModal() {
+            if (!appState.user) {
+                showLoginModal();
+                return;
+            }
+            
+            const discoverHTML = `
+                <div class="text-center">
+                    <h3 style="margin-bottom: 1rem;">🎯 Get Personalized Recommendations</h3>
+                    <p class="text-muted" style="margin-bottom: 2rem;">Based on your viewing history and preferences</p>
+                    <div class="flex gap-3 justify-center flex-wrap">
+                        <button class="btn btn-primary" onclick="appState?.navigateTo('dashboard'); document.querySelector('.modal').remove()">
+                            View Dashboard
+                        </button>
+                        <button class="btn btn-outline" onclick="appState?.navigateTo('categories/trending'); document.querySelector('.modal').remove()">
+                            Explore Trending
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            UIUtils.showModal(discoverHTML, { title: 'Discover Content' });
+        }
+        
+        function toggleMobileMenu() {
+            const hamburger = document.getElementById('hamburger');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (hamburger && mobileMenu) {
+                hamburger.classList.remove('active');
+                mobileMenu.classList.remove('active');
+            }
+        }
+        
         // Initialize homepage when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
+            // Wait for global services to be ready
             setTimeout(() => {
-                Homepage.init();
-            }, 100); // Small delay to ensure includes are loaded
+                if (typeof appState !== 'undefined') {
+                    window.homePage = new HomePage();
+                }
+            }, 100);
         });
     </script>
 </body>
