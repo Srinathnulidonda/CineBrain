@@ -3,154 +3,968 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Releases - CineScope</title>
-    <!-- Performance Optimizations -->
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://backend-app-970m.onrender.com">
+    <title>New Releases - Live Updates | CineScope</title>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        /* Real-time specific styles */
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #ef4444;
+            animation: pulse 2s infinite;
+        }
 
-    <!-- Additional CSS -->
-    <link rel="stylesheet" href="/css/animations.css">
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: livePulse 1.5s infinite;
+        }
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico">
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://cinescope.vercel.app/">
-    <meta property="og:title" content="CineScope - Discover Movies, TV Shows & Anime">
-    <meta property="og:description" content="Discover your next favorite movie, TV show, or anime with personalized recommendations and trending content.">
-    <meta property="og:image" content="https://cinescope.vercel.app/assets/images/og-image.jpg">
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://cinescope.vercel.app/">
-    <meta property="twitter:title" content="CineScope - Discover Movies, TV Shows & Anime">
-    <meta property="twitter:description" content="Discover your next favorite movie, TV show, or anime with personalized recommendations and trending content.">
-    <meta property="twitter:image" content="https://cinescope.vercel.app/assets/images/og-image.jpg">    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="../css/main.css">
-    <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/responsive.css">
-    
+        .new-release-notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--accent-blue);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            max-width: 350px;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .new-release-notification.show {
+            transform: translateX(0);
+        }
+
+        .countdown-timer {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .countdown-segment {
+            background: var(--bg-tertiary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            min-width: 2.5rem;
+            text-align: center;
+        }
+
+        .language-tab {
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid transparent;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .language-tab.active {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .language-tab .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.625rem;
+            padding: 0.125rem 0.375rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            min-width: 1.25rem;
+            text-align: center;
+        }
+
+        .release-timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .release-timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0.5rem;
+            bottom: 0.5rem;
+            width: 2px;
+            background: var(--border-color);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2rem;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.5rem;
+            top: 0.5rem;
+            width: 1rem;
+            height: 1rem;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            border: 3px solid var(--bg-primary);
+        }
+
+        .timeline-item.live::before {
+            background: #ef4444;
+            animation: livePulse 1.5s infinite;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .release-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .release-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent-blue);
+        }
+
+        .release-card.new {
+            border-color: #10b981;
+            animation: newItemGlow 2s ease-out;
+        }
+
+        @keyframes newItemGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+            50% { box-shadow: 0 0 20px 5px rgba(16, 185, 129, 0.3); }
+        }
+
+        .live-update-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #10b981;
+            color: white;
+            font-size: 0.625rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            animation: fadeInScale 0.3s ease-out;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div data-include="/includes/header.html"></div>
+
+    <!-- Real-time Notification -->
+    <div id="new-release-notification" class="new-release-notification">
+        <div class="flex items-start gap-3">
+            <div class="text-2xl">🎬</div>
+            <div class="flex-1">
+                <h4 class="font-semibold mb-1">New Release Alert!</h4>
+                <p class="text-sm text-gray-400 mb-2" id="notification-content"></p>
+                <button onclick="dismissNotification()" class="text-xs text-gray-400 hover:text-white">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="container py-8">
+        <!-- Page Header with Live Indicator -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <div class="flex items-center gap-4 mb-2">
+                    <h1 class="text-4xl font-bold">✨ New Releases</h1>
+                    <div class="live-indicator">
+                        <div class="live-dot"></div>
+                        <span>LIVE</span>
+                    </div>
+                </div>
+                <p class="text-gray-400">Real-time updates of latest movies, TV shows, and anime</p>
+            </div>
+            
+            <!-- Auto-refresh Toggle -->
+            <div class="flex items-center gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="auto-refresh" checked class="form-checkbox">
+                    <span class="text-sm">Auto-refresh</span>
+                </label>
+                <select id="refresh-interval" class="form-select">
+                    <option value="30">30 seconds</option>
+                    <option value="60" selected>1 minute</option>
+                    <option value="300">5 minutes</option>
+                </select>
+                <button id="manual-refresh" class="btn btn-outline btn-sm">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="animate-spin-slow">
+                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                    Refresh Now
+                </button>
+            </div>
+        </div>
+
+        <!-- Language Tabs with Count Badges -->
+        <div class="flex flex-wrap gap-2 mb-8">
+            <button class="language-tab active" data-language="all">
+                All Languages
+                <span class="badge" id="count-all">0</span>
+            </button>
+            <button class="language-tab" data-language="english">
+                English
+                <span class="badge" id="count-english" style="display: none;">0</span>
+            </button>
+            <button class="language-tab" data-language="hindi">
+                Hindi
+                <span class="badge" id="count-hindi" style="display: none;">0</span>
+            </button>
+            <button class="language-tab" data-language="telugu">
+                Telugu
+                <span class="badge" id="count-telugu" style="display: none;">0</span>
+            </button>
+            <button class="language-tab" data-language="tamil">
+                Tamil
+                <span class="badge" id="count-tamil" style="display: none;">0</span>
+            </button>
+            <button class="language-tab" data-language="kannada">
+                Kannada
+                <span class="badge" id="count-kannada" style="display: none;">0</span>
+            </button>
+            <button class="language-tab" data-language="malayalam">
+                Malayalam
+                <span class="badge" id="count-malayalam" style="display: none;">0</span>
+            </button>
+            <button class="language-tab" data-language="korean">
+                Korean
+                <span class="badge" id="count-korean" style="display: none;">0</span>
+            </button>
+            <button class="language-tab" data-language="japanese">
+                Japanese
+                <span class="badge" id="count-japanese" style="display: none;">0</span>
+            </button>
+        </div>
+
+        <!-- Live Release Calendar -->
+        <div class="card p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold">📅 Today's Releases</h2>
+                <div class="text-sm text-gray-400" id="current-time"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="today-releases">
+                <!-- Today's releases will be populated here -->
+            </div>
+        </div>
+
+        <!-- Upcoming Releases with Countdown -->
+        <div class="card p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">⏰ Releasing Soon</h2>
+            <div class="release-timeline" id="upcoming-releases">
+                <!-- Upcoming releases will be populated here -->
+            </div>
+        </div>
+
+        <!-- Real-time New Releases by Language -->
+        <div id="language-sections">
+            <!-- All Languages Section -->
+            <section id="section-all" class="mb-12">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">All New Releases</h2>
+                    <span class="text-sm text-gray-400">Last updated: <span id="last-update-all">Never</span></span>
+                </div>
+                <div id="content-all" class="grid-responsive">
+                    <!-- Loading skeletons -->
+                    <div class="skeleton h-80 rounded-lg"></div>
+                    <div class="skeleton h-80 rounded-lg"></div>
+                    <div class="skeleton h-80 rounded-lg"></div>
+                    <div class="skeleton h-80 rounded-lg"></div>
+                    <div class="skeleton h-80 rounded-lg"></div>
+                </div>
+            </section>
+
+            <!-- Language-specific sections (hidden by default) -->
+            <section id="section-english" class="mb-12 hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">🇺🇸 English Releases</h2>
+                    <span class="text-sm text-gray-400">Last updated: <span id="last-update-english">Never</span></span>
+                </div>
+                <div id="content-english" class="grid-responsive"></div>
+            </section>
+
+            <section id="section-hindi" class="mb-12 hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">🇮🇳 Hindi Releases</h2>
+                    <span class="text-sm text-gray-400">Last updated: <span id="last-update-hindi">Never</span></span>
+                </div>
+                <div id="content-hindi" class="grid-responsive"></div>
+            </section>
+
+            <section id="section-telugu" class="mb-12 hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">🎭 Telugu Releases</h2>
+                    <span class="text-sm text-gray-400">Last updated: <span id="last-update-telugu">Never</span></span>
+                </div>
+                <div id="content-telugu" class="grid-responsive"></div>
+            </section>
+
+            <section id="section-tamil" class="mb-12 hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">🎪 Tamil Releases</h2>
+                    <span class="text-sm text-gray-400">Last updated: <span id="last-update-tamil">Never</span></span>
+                </div>
+                <div id="content-tamil" class="grid-responsive"></div>
+            </section>
+
+            <section id="section-kannada" class="mb-12 hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">🎨 Kannada Releases</h2>
+                    <span class="text-sm text-gray-400">Last updated: <span id="last-update-kannada">Never</span></span>
+                </div>
+                <div id="content-kannada" class="grid-responsive"></div>
+            </section>
+
+            <section id="section-malayalam" class="mb-12 hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">🌴 Malayalam Releases</h2>
+                    <span class="text-sm text-gray-400">Last updated: <span id="last-update-malayalam">Never</span></span>
+                </div>
+                <div id="content-malayalam" class="grid-responsive"></div>
+            </section>
+
+            <section id="section-korean" class="mb-12 hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">🇰🇷 Korean Releases</h2>
+                    <span class="text-sm text-gray-400">Last updated: <span id="last-update-korean">Never</span></span>
+                </div>
+                <div id="content-korean" class="grid-responsive"></div>
+            </section>
+
+            <section id="section-japanese" class="mb-12 hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">🇯🇵 Japanese Releases</h2>
+                    <span class="text-sm text-gray-400">Last updated: <span id="last-update-japanese">Never</span></span>
+                </div>
+                <div id="content-japanese" class="grid-responsive"></div>
+            </section>
+        </div>
+
+        <!-- Load More Button -->
+        <div class="text-center mt-12">
+            <button id="load-more-btn" class="btn btn-outline btn-lg">
+                Load More New Releases
+            </button>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <div data-include="/includes/footer.html"></div>
+
+    <script src="/js/main.js"></script>
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: { 50: '#eff6ff', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' },
-                        secondary: { 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9' }
+        // Real-time update configuration
+        let currentLanguage = 'all';
+        let autoRefresh = true;
+        let refreshInterval = 60; // seconds
+        let refreshTimer = null;
+        let lastUpdateTime = {};
+        let contentCache = {};
+        let newReleasesCount = {};
+        let isLoading = false;
+        let currentPage = 1;
+        
+        // WebSocket simulation (replace with actual WebSocket in production)
+        let wsSimulation = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupLanguageTabs();
+            setupRefreshControls();
+            initializeRealTime();
+            updateCurrentTime();
+            loadNewReleases();
+            
+            // Update time every second
+            setInterval(updateCurrentTime, 1000);
+        });
+
+        function setupLanguageTabs() {
+            const tabs = document.querySelectorAll('.language-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Update current language
+                    currentLanguage = tab.dataset.language;
+                    
+                    // Show/hide sections
+                    showLanguageSection(currentLanguage);
+                    
+                    // Load content for selected language if not cached
+                    if (!contentCache[currentLanguage]) {
+                        loadNewReleases(currentLanguage);
+                    }
+                });
+            });
+        }
+
+        function setupRefreshControls() {
+            const autoRefreshCheckbox = document.getElementById('auto-refresh');
+            const refreshIntervalSelect = document.getElementById('refresh-interval');
+            const manualRefreshBtn = document.getElementById('manual-refresh');
+
+            autoRefreshCheckbox.addEventListener('change', (e) => {
+                autoRefresh = e.target.checked;
+                if (autoRefresh) {
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+
+            refreshIntervalSelect.addEventListener('change', (e) => {
+                refreshInterval = parseInt(e.target.value);
+                if (autoRefresh) {
+                    stopAutoRefresh();
+                    startAutoRefresh();
+                }
+            });
+
+            manualRefreshBtn.addEventListener('click', () => {
+                loadNewReleases(currentLanguage, true);
+            });
+
+            document.getElementById('load-more-btn').addEventListener('click', () => {
+                currentPage++;
+                loadNewReleases(currentLanguage, false, true);
+            });
+        }
+
+        function initializeRealTime() {
+            // Start auto-refresh
+            if (autoRefresh) {
+                startAutoRefresh();
+            }
+
+            // Simulate WebSocket connection for real-time updates
+            simulateWebSocket();
+        }
+
+        function startAutoRefresh() {
+            refreshTimer = setInterval(() => {
+                loadNewReleases(currentLanguage, true);
+            }, refreshInterval * 1000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+                refreshTimer = null;
+            }
+        }
+
+        function simulateWebSocket() {
+            // Simulate real-time updates every 10-30 seconds
+            wsSimulation = setInterval(() => {
+                if (Math.random() > 0.7) { // 30% chance of new content
+                    simulateNewRelease();
+                }
+            }, Math.random() * 20000 + 10000);
+        }
+
+        function simulateNewRelease() {
+            const languages = ['english', 'hindi', 'telugu', 'tamil', 'korean', 'japanese'];
+            const randomLang = languages[Math.floor(Math.random() * languages.length)];
+            
+            // Show notification
+            const titles = [
+                'New Movie: The Amazing Adventure',
+                'New Series: Mystery Chronicles S2',
+                'New Anime: Cyber Samurai',
+                'New Film: Dreams of Tomorrow',
+                'New Show: Reality Unfolded'
+            ];
+            
+            const randomTitle = titles[Math.floor(Math.random() * titles.length)];
+            showNewReleaseNotification(`${randomTitle} (${randomLang.charAt(0).toUpperCase() + randomLang.slice(1)})`);
+            
+            // Update count badge
+            updateLanguageCount(randomLang, 1);
+            updateLanguageCount('all', 1);
+            
+            // Reload content for that language if it's currently selected
+            if (currentLanguage === randomLang || currentLanguage === 'all') {
+                loadNewReleases(currentLanguage, true);
+            }
+        }
+
+        async function loadNewReleases(language = 'all', forceRefresh = false, append = false) {
+            if (isLoading) return;
+            isLoading = true;
+
+            const container = document.getElementById(`content-${language}`);
+            if (!container) return;
+
+            try {
+                if (!append) {
+                    // Show loading state
+                    container.innerHTML = Array(5).fill(0).map(() => 
+                        '<div class="skeleton h-80 rounded-lg"></div>'
+                    ).join('');
+                }
+
+                // Load content based on language
+                let content = [];
+                
+                if (language === 'all') {
+                    // Load from all languages
+                    const [movies, tv, anime] = await Promise.all([
+                        apiClient.getNewReleases('', 'movie', 10),
+                        apiClient.getNewReleases('', 'tv', 10),
+                        apiClient.getAnimeRecommendations('', 10)
+                    ]);
+                    content = [...movies, ...tv, ...anime];
+                } else {
+                    // Load language-specific content
+                    const [movies, tv] = await Promise.all([
+                        apiClient.getNewReleases(language, 'movie', 10),
+                        apiClient.getNewReleases(language, 'tv', 10)
+                    ]);
+                    content = [...movies, ...tv];
+                    
+                    // Add anime for Japanese and Korean
+                    if (language === 'japanese' || language === 'korean') {
+                        const anime = await apiClient.getAnimeRecommendations('', 10);
+                        content = [...content, ...anime];
+                    }
+                }
+
+                // Sort by release date (newest first)
+                content.sort((a, b) => {
+                    const dateA = new Date(a.release_date || 0);
+                    const dateB = new Date(b.release_date || 0);
+                    return dateB - dateA;
+                });
+
+                // Cache content
+                if (!append) {
+                    contentCache[language] = content;
+                } else {
+                    contentCache[language] = [...(contentCache[language] || []), ...content];
+                }
+
+                // Update counts
+                newReleasesCount[language] = content.length;
+                updateLanguageCount(language, 0);
+
+                // Display content
+                displayNewReleases(language, content, append);
+                
+                // Update last update time
+                lastUpdateTime[language] = new Date();
+                updateLastUpdateTime(language);
+
+                // Load today's releases and upcoming
+                if (!append && language === 'all') {
+                    loadTodayReleases();
+                    loadUpcomingReleases();
+                }
+
+            } catch (error) {
+                console.error(`Failed to load new releases for ${language}:`, error);
+                container.innerHTML = '<div class="col-span-full text-center py-8 text-red-400">Failed to load content</div>';
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        function displayNewReleases(language, content, append = false) {
+            const container = document.getElementById(`content-${language}`);
+            if (!container) return;
+
+            if (content.length === 0) {
+                if (!append) {
+                    container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400">No new releases available</div>';
+                }
+                return;
+            }
+
+            const html = content.map((item, index) => {
+                const isNew = index < 3 && !append; // Mark first 3 as new
+                return createReleaseCard(item, isNew);
+            }).join('');
+
+            if (append) {
+                container.insertAdjacentHTML('beforeend', html);
+            } else {
+                container.innerHTML = html;
+            }
+
+            // Animate new items
+            if (!append) {
+                setTimeout(() => {
+                    container.querySelectorAll('.content-card').forEach((card, index) => {
+                        setTimeout(() => {
+                            card.style.opacity = '1';
+                            card.style.transform = 'translateY(0)';
+                        }, index * 50);
+                    });
+                }, 100);
+            }
+        }
+
+        function createReleaseCard(item, isNew = false) {
+            const releaseDate = new Date(item.release_date);
+            const isToday = isReleaseToday(releaseDate);
+            const daysAgo = getDaysAgo(releaseDate);
+            
+            let card = UIComponents.createContentCard(item);
+            
+            // Add new badge if applicable
+            if (isNew || isToday) {
+                const badge = isToday ? 
+                    '<div class="live-update-badge">TODAY</div>' : 
+                    '<div class="live-update-badge">NEW</div>';
+                
+                card = card.replace(
+                    '<div class="content-card"',
+                    `<div class="content-card ${isNew ? 'new' : ''}" style="opacity: 0; transform: translateY(20px); transition: all 0.5s ease;"`
+                );
+                
+                card = card.replace(
+                    '<div class="content-card-actions">',
+                    badge + '<div class="content-card-actions">'
+                );
+            }
+            
+            // Add release info
+            const releaseInfo = `
+                <div class="absolute bottom-2 left-2 text-xs bg-black bg-opacity-70 px-2 py-1 rounded">
+                    ${daysAgo === 0 ? 'Released Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`}
+                </div>
+            `;
+            
+            card = card.replace(
+                '</div></div>',
+                releaseInfo + '</div></div>'
+            );
+            
+            return card;
+        }
+
+        function loadTodayReleases() {
+            const container = document.getElementById('today-releases');
+            const today = new Date();
+            
+            // Simulate today's releases (in production, filter from actual data)
+            const todayReleases = [
+                {
+                    title: 'The Quantum Paradox',
+                    type: 'movie',
+                    language: 'English',
+                    time: '12:00 AM EST',
+                    platform: 'Theaters'
+                },
+                {
+                    title: 'Mumbai Nights S2',
+                    type: 'series',
+                    language: 'Hindi',
+                    time: '6:00 AM IST',
+                    platform: 'Streaming'
+                },
+                {
+                    title: 'Cyber Warriors: Reborn',
+                    type: 'anime',
+                    language: 'Japanese',
+                    time: '8:00 PM JST',
+                    platform: 'Streaming'
+                }
+            ];
+
+            const html = todayReleases.map(release => `
+                <div class="release-card">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-semibold">${release.title}</h4>
+                        <span class="text-xs px-2 py-1 bg-blue-600 rounded">${release.type.toUpperCase()}</span>
+                    </div>
+                    <div class="text-sm text-gray-400 space-y-1">
+                        <div class="flex items-center gap-2">
+                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+                            </svg>
+                            <span>${release.time}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8.5 5.5a.5.5 0 0 0-1 0v3.362l-1.429 2.38a.5.5 0 1 0 .858.515l1.5-2.5A.5.5 0 0 0 8.5 9V5.5z"/>
+                                <path d="M6.5 0a.5.5 0 0 0 0 1H7v1.07a7.001 7.001 0 0 0-3.273 12.474l-.602.602a.5.5 0 0 0 .707.708l.746-.746A6.97 6.97 0 0 0 8 16a6.97 6.97 0 0 0 3.422-.892l.746.746a.5.5 0 0 0 .707-.708l-.601-.602A7.001 7.001 0 0 0 9 2.07V1h.5a.5.5 0 0 0 0-1h-3zm1.038 3.018a6.093 6.093 0 0 1 .924 0 6 6 0 1 1-.924 0zM0 3.5c0 .753.333 1.429.86 1.887A8.035 8.035 0 0 1 4.387 1.86 2.5 2.5 0 0 0 0 3.5zM13.5 1c-.753 0-1.429.333-1.887.86a8.035 8.035 0 0 1 3.527 3.527A2.5 2.5 0 0 0 13.5 1z"/>
+                            </svg>
+                            <span>${release.language}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M2.5 4a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm2 0a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm2 0a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                                <path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H2zm13 2v2H1V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1z"/>
+                            </svg>
+                            <span>${release.platform}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html || '<div class="text-center text-gray-400 py-4">No releases scheduled for today</div>';
+        }
+
+        function loadUpcomingReleases() {
+            const container = document.getElementById('upcoming-releases');
+            
+            // Simulate upcoming releases
+            const upcomingReleases = [
+                {
+                    title: 'Avatar: The Last Journey',
+                    type: 'movie',
+                    language: 'English',
+                    releaseDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days
+                    isLive: false
+                },
+                {
+                    title: 'The Crown Season 7',
+                    type: 'series',
+                    language: 'English',
+                    releaseDate: new Date(Date.now() + 5 * 60 * 60 * 1000), // 5 hours
+                    isLive: true
+                },
+                {
+                    title: 'RRR 2',
+                    type: 'movie',
+                    language: 'Telugu',
+                    releaseDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+                    isLive: false
+                }
+            ];
+
+            const html = upcomingReleases.map(release => {
+                const countdown = getCountdown(release.releaseDate);
+                
+                return `
+                    <div class="timeline-item ${release.isLive ? 'live' : ''}">
+                        <div class="release-card">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h4 class="font-semibold">${release.title}</h4>
+                                    <p class="text-sm text-gray-400">${release.language} • ${release.type}</p>
+                                </div>
+                                ${release.isLive ? '<div class="live-indicator"><div class="live-dot"></div><span>SOON</span></div>' : ''}
+                            </div>
+                            <div class="countdown-timer text-sm">
+                                <span class="text-gray-400">Releases in:</span>
+                                <span class="countdown-segment">${countdown.days}d</span>
+                                <span class="countdown-segment">${countdown.hours}h</span>
+                                <span class="countdown-segment">${countdown.minutes}m</span>
+                                ${countdown.days === 0 ? `<span class="countdown-segment">${countdown.seconds}s</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+
+            // Update countdown every second
+            setInterval(() => updateCountdowns(), 1000);
+        }
+
+        function updateCountdowns() {
+            const timelineItems = document.querySelectorAll('.timeline-item');
+            // Update countdown logic here
+        }
+
+        function getCountdown(targetDate) {
+            const now = new Date();
+            const diff = targetDate - now;
+            
+            if (diff <= 0) {
+                return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            return { days, hours, minutes, seconds };
+        }
+
+        function showLanguageSection(language) {
+            // Hide all sections
+            document.querySelectorAll('[id^="section-"]').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            const selectedSection = document.getElementById(`section-${language}`);
+            if (selectedSection) {
+                selectedSection.classList.remove('hidden');
+            }
+        }
+
+        function updateLanguageCount(language, increment) {
+            const badge = document.getElementById(`count-${language}`);
+            if (badge) {
+                const currentCount = parseInt(badge.textContent) || 0;
+                const newCount = increment === 0 ? newReleasesCount[language] || 0 : currentCount + increment;
+                badge.textContent = newCount;
+                
+                if (newCount > 0) {
+                    badge.style.display = 'block';
+                    
+                    // Animate badge on increment
+                    if (increment > 0) {
+                        badge.style.animation = 'none';
+                        setTimeout(() => {
+                            badge.style.animation = 'fadeInScale 0.3s ease-out';
+                        }, 10);
                     }
                 }
             }
         }
-    </script>
-</head>
-<body class="bg-gray-900 text-white">
-    <!-- Header -->
-    <div id="header-placeholder"></div>
 
-    <!-- Main Content -->
-    <main class="pt-20">
-        <!-- Page Header -->
-        <section class="bg-gradient-to-r from-green-600 to-teal-600 py-12">
-            <div class="container mx-auto px-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-3xl md:text-4xl font-bold flex items-center">
-                            <i class="bi bi-calendar text-green-300 mr-4"></i>
-                            New Releases
-                        </h1>
-                        <p class="text-green-100 mt-2">Latest movies, shows and anime</p>
-                    </div>
-                    
-                    <!-- Filter Options -->
-                    <div class="hidden md:flex items-center space-x-4">
-                        <select id="contentTypeFilter" class="form-input bg-teal-700 border-teal-600">
-                            <option value="all">All Content</option>
-                            <option value="movie">Movies</option>
-                            <option value="tv">TV Shows</option>
-                            <option value="anime">Anime</option>
-                        </select>
-                        <select id="languageFilter" class="form-input bg-teal-700 border-teal-600">
-                            <option value="all">All Languages</option>
-                            <option value="english">English</option>
-                            <option value="hindi">Hindi</option>
-                            <option value="telugu">Telugu</option>
-                            <option value="tamil">Tamil</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </section>
+        function updateLastUpdateTime(language) {
+            const element = document.getElementById(`last-update-${language}`);
+            if (element && lastUpdateTime[language]) {
+                element.textContent = formatTime(lastUpdateTime[language]);
+            }
+        }
 
-        <!-- Content Section -->
-        <section class="py-12">
-            <div class="container mx-auto px-4">
-                <!-- Mobile Filters -->
-                <div class="md:hidden mb-6">
-                    <div class="grid grid-cols-2 gap-4">
-                        <select id="mobileContentTypeFilter" class="form-input">
-                            <option value="all">All Content</option>
-                            <option value="movie">Movies</option>
-                            <option value="tv">TV Shows</option>
-                            <option value="anime">Anime</option>
-                        </select>
-                        <select id="mobileLanguageFilter" class="form-input">
-                            <option value="all">All Languages</option>
-                            <option value="english">English</option>
-                            <option value="hindi">Hindi</option>
-                            <option value="telugu">Telugu</option>
-                            <option value="tamil">Tamil</option>
-                        </select>
-                    </div>
-                </div>
+        function updateCurrentTime() {
+            const element = document.getElementById('current-time');
+            if (element) {
+                const now = new Date();
+                element.textContent = now.toLocaleString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            }
+        }
 
-                <!-- Results Info -->
-                <div class="flex items-center justify-between mb-6">
-                    <h2 id="resultsInfo" class="text-xl font-semibold">Latest releases from the past 60 days</h2>
-                    <button id="refreshBtn" class="btn-secondary text-sm">
-                        <i class="bi bi-arrow-clockwise mr-1"></i>
-                        Refresh
-                    </button>
-                </div>
+        function formatTime(date) {
+            const now = new Date();
+            const diff = now - date;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
 
-                <!-- Content Grid -->
-                <div id="newReleasesGrid" class="content-grid loading">
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                        <p class="mt-4">Loading new releases...</p>
-                    </div>
-                </div>
+            if (seconds < 60) return 'Just now';
+            if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+            if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+            return date.toLocaleDateString();
+        }
 
-                <!-- Load More -->
-                <div class="text-center mt-12">
-                    <button id="loadMoreBtn" class="btn-primary hidden">
-                        <i class="bi bi-plus-circle mr-2"></i>
-                        Load More
-                    </button>
-                </div>
-            </div>
-        </section>
-    </main>
+        function isReleaseToday(date) {
+            const today = new Date();
+            return date.toDateString() === today.toDateString();
+        }
 
-    <!-- Footer -->
-    <div id="footer-placeholder"></div>
+        function getDaysAgo(date) {
+            const today = new Date();
+            const diffTime = today - date;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            return Math.max(0, diffDays);
+        }
 
-    <!-- Scripts -->
-    <script src="../js/include.js"></script>
-    <script src="../js/main.js"></script>
-    <!-- Additional Scripts -->
-    <script src="/js/animations.js"></script>
-    <script src="/js/accessibility.js"></script>
-    <script src="/js/performance.js"></script>
-    <script src="/js/utils.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeIncludes();
-            initializeNewReleasesPage();
+        function showNewReleaseNotification(title) {
+            const notification = document.getElementById('new-release-notification');
+            const contentElement = document.getElementById('notification-content');
+            
+            contentElement.textContent = title;
+            notification.classList.add('show');
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                dismissNotification();
+            }, 5000);
+        }
+
+        function dismissNotification() {
+            const notification = document.getElementById('new-release-notification');
+            notification.classList.remove('show');
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopAutoRefresh();
+            if (wsSimulation) {
+                clearInterval(wsSimulation);
+            }
         });
+
+        // CSS animation for spin
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes animate-spin-slow {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            .animate-spin-slow {
+                animation: animate-spin-slow 2s linear infinite;
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>

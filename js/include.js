@@ -1,376 +1,466 @@
-// CineScope - Include Management
-function initializeIncludes() {
-    loadIncludes();
-}
+// Include.js - Frontend HTML includes system for CineScope
+// Loads reusable HTML components dynamically
 
-async function loadIncludes() {
-    // Load header
-    const headerPlaceholder = document.getElementById('header-placeholder');
-    if (headerPlaceholder) {
-        try {
-            const headerResponse = await fetch('/includes/header.html');
-            if (headerResponse.ok) {
-                const headerHTML = await headerResponse.text();
-                headerPlaceholder.innerHTML = headerHTML;
-                initializeHeader();
-            } else {
-                // Fallback header
-                headerPlaceholder.innerHTML = createFallbackHeader();
-                initializeHeader();
-            }
-        } catch (error) {
-            console.warn('Could not load header include, using fallback');
-            headerPlaceholder.innerHTML = createFallbackHeader();
-            initializeHeader();
-        }
+class IncludeManager {
+    constructor() {
+        this.cache = new Map();
+        this.loading = new Set();
+        this.retryAttempts = 3;
+        this.retryDelay = 1000;
     }
 
-    // Load footer
-    const footerPlaceholder = document.getElementById('footer-placeholder');
-    if (footerPlaceholder) {
-        try {
-            const footerResponse = await fetch('/includes/footer.html');
-            if (footerResponse.ok) {
-                const footerHTML = await footerResponse.text();
-                footerPlaceholder.innerHTML = footerHTML;
-            } else {
-                footerPlaceholder.innerHTML = createFallbackFooter();
-            }
-        } catch (error) {
-            console.warn('Could not load footer include, using fallback');
-            footerPlaceholder.innerHTML = createFallbackFooter();
-        }
+    /**
+     * Initialize includes on page load
+     */
+    async init() {
+        await this.processIncludes();
+        this.setupObserver();
     }
-}
 
-function createFallbackHeader() {
-    const isAuthenticated = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    
-    return `
-        <nav class="navbar">
-            <div class="container mx-auto px-4">
-                <div class="flex items-center justify-between h-16">
-                    <!-- Logo -->
-                    <div class="flex items-center">
-                        <a href="/" class="text-2xl font-bold gradient-text">
-                            CineScope
-                        </a>
-                    </div>
+    /**
+     * Process all includes on the page
+     */
+    async processIncludes() {
+        const includeElements = document.querySelectorAll('[data-include]');
+        const promises = Array.from(includeElements).map(element => 
+            this.loadInclude(element)
+        );
+        
+        await Promise.allSettled(promises);
+    }
 
-                    <!-- Desktop Navigation -->
-                    <div class="hidden md:flex items-center space-x-8">
-                        <a href="/" class="nav-link">Home</a>
-                        <a href="/categories/movies" class="nav-link">Movies</a>
-                        <a href="/categories/tv-shows" class="nav-link">TV Shows</a>
-                        <a href="/categories/anime" class="nav-link">Anime</a>
-                        <a href="/categories/trending" class="nav-link">Trending</a>
-                    </div>
-
-                    <!-- Search and User -->
-                    <div class="flex items-center space-x-4">
-                        <!-- Search -->
-                        <div class="search-container hidden md:block">
-                            <input type="text" id="searchInput" class="search-input" placeholder="Search movies, shows, anime...">
-                            <i class="bi bi-search search-icon"></i>
-                            <div id="searchResults" class="search-results hidden"></div>
-                        </div>
-
-                        <!-- User Menu -->
-                        ${isAuthenticated ? `
-                            <div class="dropdown">
-                                <button id="userMenuBtn" class="flex items-center space-x-2 text-gray-300 hover:text-white">
-                                    <i class="bi bi-person-circle text-2xl"></i>
-                                    <span class="hidden lg:block">${user.username || 'User'}</span>
-                                    <i class="bi bi-chevron-down"></i>
-                                </button>
-                                <div class="dropdown-content">
-                                    ${user.is_admin ? '<a href="/admin/dashboard" class="dropdown-item"><i class="bi bi-shield-check mr-2"></i>Admin Dashboard</a>' : ''}
-                                    <a href="/dashboard" class="dropdown-item"><i class="bi bi-speedometer2 mr-2"></i>Dashboard</a>
-                                    <a href="/user/watchlist" class="dropdown-item"><i class="bi bi-bookmark mr-2"></i>Watchlist</a>
-                                    <a href="/user/favorites" class="dropdown-item"><i class="bi bi-heart mr-2"></i>Favorites</a>
-                                    <a href="/profile" class="dropdown-item"><i class="bi bi-person mr-2"></i>Profile</a>
-                                    <button onclick="logout()" class="dropdown-item w-full text-left"><i class="bi bi-box-arrow-right mr-2"></i>Logout</button>
-                                </div>
-                            </div>
-                        ` : `
-                            <a href="/login" class="btn-primary text-sm">
-                                <i class="bi bi-person-circle mr-1"></i>
-                                Sign In
-                            </a>
-                        `}
-
-                        <!-- Mobile Menu Button -->
-                        <button id="mobileMenuBtn" class="md:hidden text-2xl">
-                            <i class="bi bi-list"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Mobile Menu -->
-            <div id="mobileMenu" class="mobile-menu">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xl font-bold gradient-text">CineScope</h2>
-                    <button id="closeMobileMenu" class="text-2xl">
-                        <i class="bi bi-x"></i>
-                    </button>
-                </div>
-                
-                <!-- Mobile Search -->
-                <div class="search-container mb-6">
-                    <input type="text" id="mobileSearchInput" class="search-input" placeholder="Search...">
-                    <i class="bi bi-search search-icon"></i>
-                </div>
-
-                <div class="space-y-4">
-                    <a href="/" class="nav-link block">Home</a>
-                    <a href="/categories/movies" class="nav-link block">Movies</a>
-                    <a href="/categories/tv-shows" class="nav-link block">TV Shows</a>
-                    <a href="/categories/anime" class="nav-link block">Anime</a>
-                    <a href="/categories/trending" class="nav-link block">Trending</a>
-                    
-                    ${isAuthenticated ? `
-                        <hr class="border-gray-600 my-4">
-                        ${user.is_admin ? '<a href="/admin/dashboard" class="nav-link block"><i class="bi bi-shield-check mr-2"></i>Admin Dashboard</a>' : ''}
-                        <a href="/dashboard" class="nav-link block"><i class="bi bi-speedometer2 mr-2"></i>Dashboard</a>
-                        <a href="/user/watchlist" class="nav-link block"><i class="bi bi-bookmark mr-2"></i>Watchlist</a>
-                        <a href="/user/favorites" class="nav-link block"><i class="bi bi-heart mr-2"></i>Favorites</a>
-                        <a href="/profile" class="nav-link block"><i class="bi bi-person mr-2"></i>Profile</a>
-                        <button onclick="logout()" class="nav-link block w-full text-left"><i class="bi bi-box-arrow-right mr-2"></i>Logout</button>
-                    ` : `
-                        <hr class="border-gray-600 my-4">
-                        <a href="/login" class="btn-primary block text-center">Sign In</a>
-                    `}
-                </div>
-            </div>
-            <div id="mobileMenuOverlay" class="mobile-menu-overlay"></div>
-        </nav>
-    `;
-}
-
-function createFallbackFooter() {
-    return `
-        <footer class="bg-gray-800 border-t border-gray-700 py-12">
-            <div class="container mx-auto px-4">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <div class="col-span-1 md:col-span-2">
-                        <h3 class="text-2xl font-bold gradient-text mb-4">CineScope</h3>
-                        <p class="text-gray-400 mb-4">
-                            Discover your next favorite movie, TV show, or anime with personalized recommendations and trending content.
-                        </p>
-                        <div class="flex space-x-4">
-                            <a href="#" class="text-gray-400 hover:text-primary-400 transition-colors">
-                                <i class="bi bi-facebook text-xl"></i>
-                            </a>
-                            <a href="#" class="text-gray-400 hover:text-primary-400 transition-colors">
-                                <i class="bi bi-twitter text-xl"></i>
-                            </a>
-                            <a href="#" class="text-gray-400 hover:text-primary-400 transition-colors">
-                                <i class="bi bi-instagram text-xl"></i>
-                            </a>
-                            <a href="#" class="text-gray-400 hover:text-primary-400 transition-colors">
-                                <i class="bi bi-youtube text-xl"></i>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <h4 class="font-bold text-lg mb-4">Categories</h4>
-                        <ul class="space-y-2">
-                            <li><a href="/categories/movies" class="text-gray-400 hover:text-white transition-colors">Movies</a></li>
-                            <li><a href="/categories/tv-shows" class="text-gray-400 hover:text-white transition-colors">TV Shows</a></li>
-                            <li><a href="/categories/anime" class="text-gray-400 hover:text-white transition-colors">Anime</a></li>
-                            <li><a href="/categories/trending" class="text-gray-400 hover:text-white transition-colors">Trending</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div>
-                        <h4 class="font-bold text-lg mb-4">Languages</h4>
-                        <ul class="space-y-2">
-                            <li><a href="/languages/english" class="text-gray-400 hover:text-white transition-colors">English</a></li>
-                            <li><a href="/languages/hindi" class="text-gray-400 hover:text-white transition-colors">Hindi</a></li>
-                            <li><a href="/languages/telugu" class="text-gray-400 hover:text-white transition-colors">Telugu</a></li>
-                            <li><a href="/languages/tamil" class="text-gray-400 hover:text-white transition-colors">Tamil</a></li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <hr class="border-gray-700 my-8">
-                
-                <div class="flex flex-col md:flex-row items-center justify-between">
-                    <p class="text-gray-400 mb-4 md:mb-0">
-                        © 2024 CineScope. All rights reserved.
-                    </p>
-                    <div class="flex space-x-6">
-                        <a href="#" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
-                        <a href="#" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a>
-                        <a href="#" class="text-gray-400 hover:text-white transition-colors">Contact</a>
-                    </div>
-                </div>
-            </div>
-        </footer>
-    `;
-}
-
-function initializeHeader() {
-    // Initialize search functionality
-    initializeSearch();
-    
-    // Initialize mobile menu
-    initializeMobileMenu();
-    
-    // Initialize user dropdown
-    initializeUserDropdown();
-    
-    // Initialize scroll effect
-    initializeScrollEffect();
-}
-
-function initializeSearch() {
-    const searchInput = document.getElementById('searchInput');
-    const mobileSearchInput = document.getElementById('mobileSearchInput');
-    const searchResults = document.getElementById('searchResults');
-    
-    let searchTimeout;
-    
-    function performSearch(query) {
-        if (query.length < 2) {
-            hideSearchResults();
+    /**
+     * Load a single include element
+     */
+    async loadInclude(element, attempt = 1) {
+        const src = element.getAttribute('data-include');
+        const loading = element.getAttribute('data-loading');
+        const fallback = element.getAttribute('data-fallback');
+        
+        if (!src) {
+            console.warn('Include element missing data-include attribute:', element);
             return;
         }
+
+        // Prevent duplicate loading
+        const loadingKey = `${src}-${element.outerHTML}`;
+        if (this.loading.has(loadingKey)) {
+            return;
+        }
+
+        this.loading.add(loadingKey);
+
+        try {
+            // Show loading state
+            if (loading) {
+                element.innerHTML = loading;
+            } else {
+                element.innerHTML = this.getDefaultLoadingHTML();
+            }
+
+            // Load content
+            const content = await this.fetchInclude(src);
+            
+            // Replace element content
+            element.innerHTML = content;
+            
+            // Process nested includes
+            const nestedIncludes = element.querySelectorAll('[data-include]');
+            if (nestedIncludes.length > 0) {
+                await Promise.allSettled(
+                    Array.from(nestedIncludes).map(nested => this.loadInclude(nested))
+                );
+            }
+
+            // Execute any scripts in the included content
+            this.executeScripts(element);
+            
+            // Trigger custom event
+            element.dispatchEvent(new CustomEvent('include:loaded', {
+                detail: { src, element }
+            }));
+
+        } catch (error) {
+            console.error(`Failed to load include: ${src}`, error);
+            
+            // Retry logic
+            if (attempt < this.retryAttempts) {
+                setTimeout(() => {
+                    this.loadInclude(element, attempt + 1);
+                }, this.retryDelay * attempt);
+                return;
+            }
+            
+            // Show fallback or error
+            if (fallback) {
+                element.innerHTML = fallback;
+            } else {
+                element.innerHTML = this.getErrorHTML(src);
+            }
+            
+            // Trigger error event
+            element.dispatchEvent(new CustomEvent('include:error', {
+                detail: { src, element, error }
+            }));
+        } finally {
+            this.loading.delete(loadingKey);
+        }
+    }
+
+    /**
+     * Fetch include content with caching
+     */
+    async fetchInclude(src) {
+        // Check cache first
+        if (this.cache.has(src)) {
+            return this.cache.get(src);
+        }
+
+        // Fetch from server
+        const response = await fetch(src, {
+            method: 'GET',
+            headers: {
+                'Accept': 'text/html',
+                'Cache-Control': 'no-cache'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const content = await response.text();
         
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(async () => {
-            try {
-                const response = await fetch(`${API_BASE}/search?query=${encodeURIComponent(query)}&limit=5`);
-                if (response.ok) {
-                    const data = await response.json();
-                    displaySearchResults(data.results || []);
+        // Cache the content
+        this.cache.set(src, content);
+        
+        return content;
+    }
+
+    /**
+     * Execute scripts in included content
+     */
+    executeScripts(container) {
+        const scripts = container.querySelectorAll('script');
+        scripts.forEach(script => {
+            const newScript = document.createElement('script');
+            
+            // Copy attributes
+            Array.from(script.attributes).forEach(attr => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+            
+            // Copy content
+            newScript.textContent = script.textContent;
+            
+            // Replace old script with new one
+            script.parentNode.replaceChild(newScript, script);
+        });
+    }
+
+    /**
+     * Setup mutation observer for dynamic includes
+     */
+    setupObserver() {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check if the node itself has data-include
+                        if (node.hasAttribute && node.hasAttribute('data-include')) {
+                            this.loadInclude(node);
+                        }
+                        
+                        // Check for child elements with data-include
+                        const includes = node.querySelectorAll && node.querySelectorAll('[data-include]');
+                        if (includes && includes.length > 0) {
+                            includes.forEach(element => this.loadInclude(element));
+                        }
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    /**
+     * Reload a specific include
+     */
+    async reloadInclude(selector) {
+        const elements = document.querySelectorAll(selector);
+        const promises = Array.from(elements).map(element => {
+            // Clear cache for this include
+            const src = element.getAttribute('data-include');
+            if (src) {
+                this.cache.delete(src);
+            }
+            return this.loadInclude(element);
+        });
+        
+        await Promise.allSettled(promises);
+    }
+
+    /**
+     * Clear all cached includes
+     */
+    clearCache() {
+        this.cache.clear();
+    }
+
+    /**
+     * Preload includes for faster loading
+     */
+    async preloadIncludes(sources) {
+        const promises = sources.map(src => this.fetchInclude(src));
+        await Promise.allSettled(promises);
+    }
+
+    /**
+     * Get default loading HTML
+     */
+    getDefaultLoadingHTML() {
+        return `
+            <div class="include-loading" style="padding: 1rem; text-align: center;">
+                <div class="spinner" style="
+                    width: 1.5rem; 
+                    height: 1.5rem; 
+                    border: 2px solid #374151; 
+                    border-top: 2px solid #3b82f6; 
+                    border-radius: 50%; 
+                    animation: spin 1s linear infinite; 
+                    margin: 0 auto;
+                "></div>
+                <div style="margin-top: 0.5rem; color: #9ca3af; font-size: 0.875rem;">
+                    Loading...
+                </div>
+            </div>
+            <style>
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
                 }
-            } catch (error) {
-                console.error('Search error:', error);
-            }
-        }, 300);
+            </style>
+        `;
     }
-    
-    function displaySearchResults(results) {
-        if (!searchResults) return;
-        
-        if (results.length === 0) {
-            hideSearchResults();
-            return;
-        }
-        
-        const resultsHTML = results.map(item => `
-            <div class="search-result-item" onclick="goToDetails(${item.id})">
-                <img src="${item.poster_path || '/assets/images/placeholder.jpg'}" 
-                     alt="${item.title}" class="search-result-poster">
-                <div>
-                    <div class="font-semibold">${item.title}</div>
-                    <div class="text-sm text-gray-400">
-                        ${item.content_type.toUpperCase()} 
-                        ${item.rating ? `• ${item.rating}/10` : ''}
-                    </div>
+
+    /**
+     * Get error HTML
+     */
+    getErrorHTML(src) {
+        return `
+            <div class="include-error" style="
+                padding: 1rem; 
+                text-align: center; 
+                color: #ef4444; 
+                background: rgba(239, 68, 68, 0.1); 
+                border: 1px solid rgba(239, 68, 68, 0.2); 
+                border-radius: 0.5rem;
+            ">
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">
+                    Failed to load component
                 </div>
+                <div style="font-size: 0.75rem; color: #9ca3af;">
+                    ${src}
+                </div>
+                <button onclick="includeManager.reloadInclude('[data-include=&quot;${src}&quot;]')" 
+                        style="
+                            margin-top: 0.5rem; 
+                            padding: 0.25rem 0.75rem; 
+                            background: #ef4444; 
+                            color: white; 
+                            border: none; 
+                            border-radius: 0.25rem; 
+                            cursor: pointer; 
+                            font-size: 0.75rem;
+                        ">
+                    Retry
+                </button>
             </div>
-        `).join('');
+        `;
+    }
+}
+
+// Template helpers for common includes
+class IncludeTemplates {
+    /**
+     * Create header include with dynamic content
+     */
+    static createHeader(options = {}) {
+        const {
+            title = 'CineScope',
+            showSearch = true,
+            showAuth = true,
+            activeLink = '',
+            customClass = ''
+        } = options;
+
+        return `
+            <header class="header ${customClass}" data-include="/includes/header.html" 
+                    data-title="${title}"
+                    data-show-search="${showSearch}"
+                    data-show-auth="${showAuth}"
+                    data-active-link="${activeLink}">
+            </header>
+        `;
+    }
+
+    /**
+     * Create footer include
+     */
+    static createFooter(options = {}) {
+        const { customClass = '' } = options;
         
-        searchResults.innerHTML = resultsHTML;
-        searchResults.classList.remove('hidden');
+        return `
+            <footer class="footer ${customClass}" data-include="/includes/footer.html">
+            </footer>
+        `;
     }
-    
-    function hideSearchResults() {
-        if (searchResults) {
-            searchResults.classList.add('hidden');
-        }
-    }
-    
-    // Event listeners
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => performSearch(e.target.value));
-        searchInput.addEventListener('blur', () => setTimeout(hideSearchResults, 200));
-    }
-    
-    if (mobileSearchInput) {
-        mobileSearchInput.addEventListener('input', (e) => performSearch(e.target.value));
-    }
-    
-    // Click outside to hide results
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.search-container')) {
-            hideSearchResults();
-        }
-    });
-}
 
-function initializeMobileMenu() {
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const mobileMenu = document.getElementById('mobileMenu');
-    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
-    const closeMobileMenu = document.getElementById('closeMobileMenu');
-    
-    function showMobileMenu() {
-        mobileMenu?.classList.add('active');
-        mobileMenuOverlay?.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
-    
-    function hideMobileMenu() {
-        mobileMenu?.classList.remove('active');
-        mobileMenuOverlay?.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-    
-    mobileMenuBtn?.addEventListener('click', showMobileMenu);
-    closeMobileMenu?.addEventListener('click', hideMobileMenu);
-    mobileMenuOverlay?.addEventListener('click', hideMobileMenu);
-    
-    // Close on escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            hideMobileMenu();
-        }
-    });
-}
-
-function initializeUserDropdown() {
-    const userMenuBtn = document.getElementById('userMenuBtn');
-    const dropdown = userMenuBtn?.closest('.dropdown');
-    
-    if (userMenuBtn && dropdown) {
-        userMenuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            dropdown.classList.toggle('active');
-        });
+    /**
+     * Create sidebar include
+     */
+    static createSidebar(options = {}) {
+        const { 
+            type = 'default',
+            customClass = ''
+        } = options;
         
-        document.addEventListener('click', () => {
-            dropdown.classList.remove('active');
+        return `
+            <aside class="sidebar ${customClass}" 
+                   data-include="/includes/sidebar.html"
+                   data-sidebar-type="${type}">
+            </aside>
+        `;
+    }
+}
+
+// Conditional includes based on authentication state
+class ConditionalIncludes {
+    /**
+     * Load different includes based on auth state
+     */
+    static setupAuthConditionals() {
+        document.addEventListener('DOMContentLoaded', () => {
+            const authElements = document.querySelectorAll('[data-include-auth]');
+            
+            authElements.forEach(element => {
+                const authRequired = element.getAttribute('data-include-auth') === 'true';
+                const authSrc = element.getAttribute('data-include-auth-src');
+                const noAuthSrc = element.getAttribute('data-include-no-auth-src');
+                
+                if (window.app && window.app.isAuthenticated()) {
+                    if (authRequired && authSrc) {
+                        element.setAttribute('data-include', authSrc);
+                    }
+                } else {
+                    if (!authRequired && noAuthSrc) {
+                        element.setAttribute('data-include', noAuthSrc);
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * Load different includes based on user role
+     */
+    static setupRoleConditionals() {
+        document.addEventListener('DOMContentLoaded', () => {
+            const roleElements = document.querySelectorAll('[data-include-role]');
+            
+            roleElements.forEach(element => {
+                const requiredRole = element.getAttribute('data-include-role');
+                const roleSrc = element.getAttribute('data-include-role-src');
+                const defaultSrc = element.getAttribute('data-include-default-src');
+                
+                if (window.app && window.app.user && window.app.user.is_admin && requiredRole === 'admin') {
+                    if (roleSrc) {
+                        element.setAttribute('data-include', roleSrc);
+                    }
+                } else if (defaultSrc) {
+                    element.setAttribute('data-include', defaultSrc);
+                }
+            });
         });
     }
 }
 
-function initializeScrollEffect() {
-    const navbar = document.querySelector('.navbar');
-    
-    if (navbar) {
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 100) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
+// Performance optimization for includes
+class IncludePerformance {
+    /**
+     * Lazy load includes when they come into viewport
+     */
+    static setupLazyLoading() {
+        const lazyIncludes = document.querySelectorAll('[data-include-lazy]');
+        
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const element = entry.target;
+                        const src = element.getAttribute('data-include-lazy');
+                        
+                        element.setAttribute('data-include', src);
+                        element.removeAttribute('data-include-lazy');
+                        
+                        includeManager.loadInclude(element);
+                        observer.unobserve(element);
+                    }
+                });
+            });
+            
+            lazyIncludes.forEach(element => observer.observe(element));
+        } else {
+            // Fallback for older browsers
+            lazyIncludes.forEach(element => {
+                const src = element.getAttribute('data-include-lazy');
+                element.setAttribute('data-include', src);
+                element.removeAttribute('data-include-lazy');
+            });
+        }
+    }
+
+    /**
+     * Prefetch includes on hover
+     */
+    static setupHoverPrefetch() {
+        document.addEventListener('mouseover', (e) => {
+            const target = e.target.closest('[data-include-hover]');
+            if (target) {
+                const src = target.getAttribute('data-include-hover');
+                includeManager.fetchInclude(src).catch(() => {
+                    // Silent fail for prefetch
+                });
             }
         });
     }
 }
 
-// Global navigation functions
-function goToDetails(contentId) {
-    window.location.href = `/details?id=${contentId}`;
+// Initialize the include manager
+const includeManager = new IncludeManager();
+
+// Setup event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    includeManager.init();
+    ConditionalIncludes.setupAuthConditionals();
+    ConditionalIncludes.setupRoleConditionals();
+    IncludePerformance.setupLazyLoading();
+    IncludePerformance.setupHoverPrefetch();
+});
+
+// Export for use in other scripts
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        IncludeManager,
+        IncludeTemplates,
+        ConditionalIncludes,
+        IncludePerformance
+    };
 }
 
-function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/';
-}
+// Global access
+window.includeManager = includeManager;
+window.IncludeTemplates = IncludeTemplates;

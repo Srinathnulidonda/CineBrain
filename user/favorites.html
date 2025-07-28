@@ -4,147 +4,360 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Favorites - CineScope</title>
-    <!-- Performance Optimizations -->
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://backend-app-970m.onrender.com">
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav container">
+            <a href="/" class="nav-brand">CineScope</a>
+            <div class="search-container">
+                <svg class="search-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                </svg>
+                <input type="text" placeholder="Search..." class="search-input" data-search-input>
+                <div class="search-results" style="display: none;"></div>
+            </div>
+            <div class="nav-menu">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/user/watchlist" class="nav-link">Watchlist</a>
+                <a href="/user/favorites" class="nav-link active">Favorites</a>
+                <button onclick="app.logout()" class="btn btn-outline btn-sm">Logout</button>
+            </div>
+            <button class="btn btn-secondary md:hidden" data-mobile-menu-toggle>☰</button>
+        </nav>
+    </header>
 
-    <!-- Additional CSS -->
-    <link rel="stylesheet" href="/css/animations.css">
+    <main class="container py-8">
+        <!-- Page Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-4xl font-bold mb-2">❤️ My Favorites</h1>
+                <p class="text-gray-400">Your most loved movies, shows, and anime</p>
+            </div>
+            
+            <!-- Sort Options -->
+            <div class="flex gap-4">
+                <select id="sort-filter" class="form-select">
+                    <option value="added_date">Recently Added</option>
+                    <option value="title">Title A-Z</option>
+                    <option value="rating">Highest Rated</option>
+                    <option value="release_date">Release Date</option>
+                </select>
+                
+                <select id="filter-type" class="form-select">
+                    <option value="all">All</option>
+                    <option value="movie">Movies</option>
+                    <option value="tv">TV Shows</option>
+                    <option value="anime">Anime</option>
+                </select>
+            </div>
+        </div>
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico">
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="card p-4 text-center">
+                <div class="text-2xl font-bold text-red-400" id="total-count">0</div>
+                <div class="text-sm text-gray-400">Total Favorites</div>
+            </div>
+            <div class="card p-4 text-center">
+                <div class="text-2xl font-bold text-green-400" id="movies-count">0</div>
+                <div class="text-sm text-gray-400">Movies</div>
+            </div>
+            <div class="card p-4 text-center">
+                <div class="text-2xl font-bold text-purple-400" id="shows-count">0</div>
+                <div class="text-sm text-gray-400">TV Shows</div>
+            </div>
+            <div class="card p-4 text-center">
+                <div class="text-2xl font-bold text-orange-400" id="anime-count">0</div>
+                <div class="text-sm text-gray-400">Anime</div>
+            </div>
+        </div>
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://cinescope.vercel.app/">
-    <meta property="og:title" content="CineScope - Discover Movies, TV Shows & Anime">
-    <meta property="og:description" content="Discover your next favorite movie, TV show, or anime with personalized recommendations and trending content.">
-    <meta property="og:image" content="https://cinescope.vercel.app/assets/images/og-image.jpg">
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-16 hidden">
+            <div class="text-6xl mb-4">💔</div>
+            <h2 class="text-2xl font-bold mb-2">No favorites yet</h2>
+            <p class="text-gray-400 mb-6">Start adding content to your favorites!</p>
+            <a href="/categories/popular" class="btn btn-primary">Explore Popular Content</a>
+        </div>
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://cinescope.vercel.app/">
-    <meta property="twitter:title" content="CineScope - Discover Movies, TV Shows & Anime">
-    <meta property="twitter:description" content="Discover your next favorite movie, TV show, or anime with personalized recommendations and trending content.">
-    <meta property="twitter:image" content="https://cinescope.vercel.app/assets/images/og-image.jpg">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="../css/main.css">
-    <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/responsive.css">
-    
+        <!-- Favorites Content -->
+        <div id="favorites-content" class="space-y-6">
+            <!-- Loading state -->
+            <div id="loading-state">
+                <div class="grid-responsive">
+                    <div class="skeleton h-80 rounded-lg"></div>
+                    <div class="skeleton h-80 rounded-lg"></div>
+                    <div class="skeleton h-80 rounded-lg"></div>
+                    <div class="skeleton h-80 rounded-lg"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/main.js"></script>
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: { 50: '#eff6ff', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' },
-                        secondary: { 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9' }
-                    }
-                }
+        let favoritesData = [];
+        let filteredData = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!app.isAuthenticated()) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            setupFilters();
+            loadFavorites();
+        });
+
+        function setupFilters() {
+            const sortFilter = document.getElementById('sort-filter');
+            const typeFilter = document.getElementById('filter-type');
+
+            sortFilter.addEventListener('change', applyFilters);
+            typeFilter.addEventListener('change', applyFilters);
+        }
+
+        async function loadFavorites() {
+            try {
+                favoritesData = await apiClient.getFavorites();
+                updateStats();
+                applyFilters();
+            } catch (error) {
+                console.error('Failed to load favorites:', error);
+                app.showToast('Failed to load favorites', 'error');
+                showEmptyState();
             }
         }
-    </script>
-</head>
-<body class="bg-gray-900 text-white">
-    <!-- Header -->
-    <div id="header-placeholder"></div>
 
-    <!-- Main Content -->
-    <main class="pt-20">
-        <!-- Page Header -->
-        <section class="bg-gradient-to-r from-red-600 to-pink-600 py-12">
-            <div class="container mx-auto px-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-3xl md:text-4xl font-bold flex items-center">
-                            <i class="bi bi-heart text-red-300 mr-4"></i>
-                            My Favorites
-                        </h1>
-                        <p class="text-red-100 mt-2">Movies and shows you absolutely love</p>
+        function updateStats() {
+            const stats = {
+                total: favoritesData.length,
+                movies: favoritesData.filter(item => item.content_type === 'movie').length,
+                shows: favoritesData.filter(item => item.content_type === 'tv').length,
+                anime: favoritesData.filter(item => item.content_type === 'anime').length
+            };
+
+            document.getElementById('total-count').textContent = stats.total;
+            document.getElementById('movies-count').textContent = stats.movies;
+            document.getElementById('shows-count').textContent = stats.shows;
+            document.getElementById('anime-count').textContent = stats.anime;
+        }
+
+        function applyFilters() {
+            const sortBy = document.getElementById('sort-filter').value;
+            const filterType = document.getElementById('filter-type').value;
+
+            // Filter by type
+            filteredData = filterType === 'all' 
+                ? [...favoritesData]
+                : favoritesData.filter(item => item.content_type === filterType);
+
+            // Sort data
+            filteredData.sort((a, b) => {
+                switch (sortBy) {
+                    case 'title':
+                        return a.title.localeCompare(b.title);
+                    case 'rating':
+                        return (b.rating || 0) - (a.rating || 0);
+                    case 'release_date':
+                        return new Date(b.release_date || 0) - new Date(a.release_date || 0);
+                    default: // added_date
+                        return -1; // Assuming API returns in recently added order
+                }
+            });
+
+            displayFavorites();
+        }
+
+        function displayFavorites() {
+            const container = document.getElementById('favorites-content');
+            const emptyState = document.getElementById('empty-state');
+            const loadingState = document.getElementById('loading-state');
+
+            loadingState.style.display = 'none';
+
+            if (filteredData.length === 0) {
+                container.style.display = 'none';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.style.display = 'block';
+
+            // Enhanced card layout for favorites with heart animation
+            const html = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    ${filteredData.map(item => createFavoriteCard(item)).join('')}
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function createFavoriteCard(item) {
+            const youtubeUrl = item.youtube_trailer ? `https://www.youtube.com/watch?v=${item.youtube_trailer}` : null;
+            
+            return `
+                <div class="card overflow-hidden hover:transform hover:scale-105 transition-all duration-300 border-red-500/20">
+                    <div class="relative aspect-w-2 aspect-h-3 cursor-pointer" onclick="app.goToDetails(${item.id})">
+                        <img src="${app.getImageUrl(item.poster_path)}" 
+                             alt="${item.title}" 
+                             class="w-full h-64 object-cover"
+                             onerror="this.src='${app.getPlaceholderImage()}'" />
+                        
+                        <!-- Favorite Heart Badge -->
+                        <div class="absolute top-2 left-2">
+                            <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center animate-pulse">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="text-white">
+                                    <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <!-- Content Type Badge -->
+                        <div class="absolute top-2 right-2">
+                            <span class="px-2 py-1 bg-black bg-opacity-70 rounded text-xs font-medium uppercase">
+                                ${item.content_type}
+                            </span>
+                        </div>
+                        
+                        <!-- Remove Button -->
+                        <button class="absolute bottom-2 right-2 w-8 h-8 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                                onclick="event.stopPropagation(); removeFromFavorites(${item.id})"
+                                title="Remove from favorites">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                            </svg>
+                        </button>
                     </div>
                     
-                    <div class="flex items-center space-x-4">
-                        <div class="stat-card">
-                            <div class="text-center">
-                                <div class="text-2xl font-bold" id="favoritesCount">0</div>
-                                <div class="text-sm text-red-200">Favorites</div>
+                    <div class="p-4">
+                        <h3 class="font-semibold mb-2 line-clamp-2" title="${item.title}">${item.title}</h3>
+                        
+                        <div class="flex items-center justify-between text-sm text-gray-400 mb-3">
+                            ${item.rating ? `
+                                <div class="flex items-center gap-1">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" class="text-yellow-400">
+                                        <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
+                                    </svg>
+                                    <span>${item.rating.toFixed(1)}</span>
+                                </div>
+                            ` : '<span>No rating</span>'}
+                            
+                            <span>${item.release_date ? new Date(item.release_date).getFullYear() : 'Unknown'}</span>
+                        </div>
+                        
+                        <!-- Genres -->
+                        ${item.genres ? `
+                            <div class="flex flex-wrap gap-1 mb-3">
+                                ${JSON.parse(item.genres).slice(0, 2).map(genre => 
+                                    `<span class="px-2 py-1 bg-gray-700 rounded text-xs">${genre}</span>`
+                                ).join('')}
                             </div>
+                        ` : ''}
+                        
+                        <div class="flex gap-2">
+                            <button onclick="app.goToDetails(${item.id})" 
+                                    class="btn btn-primary btn-sm flex-1">
+                                View Details
+                            </button>
+                            
+                            ${youtubeUrl ? `
+                                <button onclick="window.open('${youtubeUrl}', '_blank')" 
+                                        class="btn btn-outline btn-sm">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
+                                    </svg>
+                                </button>
+                            ` : ''}
+                            
+                            <button onclick="userActions.addToWatchlist(${item.id})" 
+                                    class="btn btn-outline btn-sm"
+                                    title="Add to watchlist">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M2 2v13.5a.5.5 0 0 0 .74.439L8 13.069l5.26 2.87A.5.5 0 0 0 14 15.5V2a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            `;
+        }
 
-        <!-- Controls -->
-        <section class="bg-gray-800 py-6">
-            <div class="container mx-auto px-4">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div class="flex items-center space-x-4">
-                        <select id="filterType" class="form-input bg-gray-700 border-gray-600">
-                            <option value="all">All Content</option>
-                            <option value="movie">Movies</option>
-                            <option value="tv">TV Shows</option>
-                            <option value="anime">Anime</option>
-                        </select>
-                        <select id="sortBy" class="form-input bg-gray-700 border-gray-600">
-                            <option value="date_added">Recently Added</option>
-                            <option value="title">Title A-Z</option>
-                            <option value="rating">Highest Rated</option>
-                            <option value="release_date">Release Date</option>
-                        </select>
-                    </div>
-                    
-                    <button id="refreshBtn" class="btn-secondary text-sm">
-                        <i class="bi bi-arrow-clockwise mr-1"></i>
-                        Refresh
-                    </button>
-                </div>
-            </div>
-        </section>
+        async function removeFromFavorites(contentId) {
+            try {
+                // Remove from local data
+                favoritesData = favoritesData.filter(item => item.id !== contentId);
+                
+                // Update display
+                updateStats();
+                applyFilters();
+                
+                app.showToast('Removed from favorites', 'success');
+                
+                // Note: You might need to implement a remove endpoint in your API
+                // await apiClient.removeFromFavorites(contentId);
+                
+            } catch (error) {
+                console.error('Failed to remove from favorites:', error);
+                app.showToast('Failed to remove from favorites', 'error');
+            }
+        }
 
-        <!-- Content Section -->
-        <section class="py-12">
-            <div class="container mx-auto px-4">
-                <!-- Empty State -->
-                <div id="emptyState" class="text-center py-16 hidden">
-                    <i class="bi bi-heart text-6xl text-gray-600 mb-4"></i>
-                    <h3 class="text-xl font-semibold mb-2">No favorites yet</h3>
-                    <p class="text-gray-400 mb-6">Start favoriting content you love to see it here</p>
-                    <a href="/categories/trending" class="btn-primary">
-                        <i class="bi bi-fire mr-2"></i>
-                        Discover Content
-                    </a>
-                </div>
-
-                <!-- Favorites Grid -->
-                <div id="favoritesGrid" class="loading">
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                        <p class="mt-4">Loading your favorites...</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <div id="footer-placeholder"></div>
-
-    <!-- Scripts -->
-    <script src="../js/include.js"></script>
-    <script src="../js/main.js"></script>
-    <!-- Additional Scripts -->
-    <script src="/js/animations.js"></script>
-    <script src="/js/accessibility.js"></script>
-    <script src="/js/performance.js"></script>
-    <script src="/js/utils.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeIncludes();
-            initializeFavoritesPage();
-        });
+        function showEmptyState() {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('favorites-content').style.display = 'none';
+            document.getElementById('empty-state').classList.remove('hidden');
+        }
     </script>
+
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .aspect-w-2 {
+            position: relative;
+            width: 100%;
+        }
+        
+        .aspect-h-3 {
+            padding-bottom: 150%; /* 2:3 aspect ratio */
+        }
+        
+        .aspect-w-2 img {
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
+        
+        .card:hover .opacity-0 {
+            opacity: 1;
+        }
+        
+        @keyframes heartBeat {
+            0% { transform: scale(1); }
+            14% { transform: scale(1.3); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.3); }
+            70% { transform: scale(1); }
+        }
+        
+        .animate-heartbeat {
+            animation: heartBeat 1.5s ease-in-out infinite;
+        }
+    </style>
 </body>
 </html>

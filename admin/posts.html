@@ -4,223 +4,557 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Recommendations - CineScope</title>
-    <!-- Performance Optimizations -->
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://backend-app-970m.onrender.com">
-
-    <!-- Additional CSS -->
-    <link rel="stylesheet" href="/css/animations.css">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico">
-
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://cinescope.vercel.app/">
-    <meta property="og:title" content="CineScope - Discover Movies, TV Shows & Anime">
-    <meta property="og:description" content="Discover your next favorite movie, TV show, or anime with personalized recommendations and trending content.">
-    <meta property="og:image" content="https://cinescope.vercel.app/assets/images/og-image.jpg">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://cinescope.vercel.app/">
-    <meta property="twitter:title" content="CineScope - Discover Movies, TV Shows & Anime">
-    <meta property="twitter:description" content="Discover your next favorite movie, TV show, or anime with personalized recommendations and trending content.">
-    <meta property="twitter:image" content="https://cinescope.vercel.app/assets/images/og-image.jpg">    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="../css/main.css">
-    <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/responsive.css">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: { 50: '#eff6ff', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' },
-                        secondary: { 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9' }
-                    }
-                }
-            }
-        }
-    </script>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
 </head>
-<body class="bg-gray-900 text-white">
+<body>
     <!-- Header -->
-    <div id="header-placeholder"></div>
+    <header class="header">
+        <nav class="nav container">
+            <a href="/admin/dashboard" class="nav-brand">CineScope Admin</a>
+            <div class="nav-menu">
+                <a href="/admin/dashboard" class="nav-link">Dashboard</a>
+                <a href="/admin/content-browser" class="nav-link">Content</a>
+                <a href="/admin/posts" class="nav-link active">Recommendations</a>
+                <a href="/admin/analytics" class="nav-link">Analytics</a>
+                <button onclick="app.logout()" class="btn btn-outline btn-sm">Logout</button>
+            </div>
+            <button class="btn btn-secondary md:hidden" data-mobile-menu-toggle>☰</button>
+        </nav>
+    </header>
 
-    <!-- Main Content -->
-    <main class="pt-20">
+    <main class="container py-8">
         <!-- Page Header -->
-        <section class="bg-gradient-to-r from-yellow-600 to-orange-600 py-8">
-            <div class="container mx-auto px-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-2xl md:text-3xl font-bold flex items-center">
-                            <i class="bi bi-megaphone text-yellow-300 mr-3"></i>
-                            Admin Recommendations
-                        </h1>
-                        <p class="text-yellow-100 mt-1">Create and manage content recommendations</p>
-                    </div>
-                    
-                    <div class="flex items-center space-x-4">
-                        <button id="createRecommendationBtn" class="btn-primary">
-                            <i class="bi bi-plus-circle mr-2"></i>
-                            New Recommendation
-                        </button>
-                        <a href="/admin/dashboard" class="btn-secondary text-sm">
-                            <i class="bi bi-arrow-left mr-1"></i>
-                            Back
-                        </a>
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-4xl font-bold mb-2">✨ Admin Recommendations</h1>
+                <p class="text-gray-400">Create and manage content recommendations for users</p>
+            </div>
+            <button id="create-recommendation-btn" class="btn btn-primary">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="mr-2">
+                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                </svg>
+                Create Recommendation
+            </button>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="card p-4 text-center">
+                <div class="text-2xl font-bold text-blue-400" id="total-recommendations">0</div>
+                <div class="text-sm text-gray-400">Total Recommendations</div>
+            </div>
+            <div class="card p-4 text-center">
+                <div class="text-2xl font-bold text-green-400" id="active-recommendations">0</div>
+                <div class="text-sm text-gray-400">Active</div>
+            </div>
+            <div class="card p-4 text-center">
+                <div class="text-2xl font-bold text-purple-400" id="this-month">0</div>
+                <div class="text-sm text-gray-400">This Month</div>
+            </div>
+            <div class="card p-4 text-center">
+                <div class="text-2xl font-bold text-orange-400" id="telegram-sent">0</div>
+                <div class="text-sm text-gray-400">Sent to Telegram</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex gap-4 mb-6">
+            <select id="type-filter" class="form-select">
+                <option value="">All Types</option>
+                <option value="trending">Trending</option>
+                <option value="popular">Popular</option>
+                <option value="critics_choice">Critics Choice</option>
+                <option value="admin_choice">Admin Choice</option>
+                <option value="featured">Featured</option>
+            </select>
+            
+            <select id="status-filter" class="form-select">
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+            
+            <button id="refresh-data" class="btn btn-outline">Refresh</button>
+        </div>
+
+        <!-- Recommendations List -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-xl font-bold">Recommendations</h2>
+            </div>
+            <div class="card-body p-0">
+                <div id="recommendations-table" class="table-container">
+                    <!-- Loading state -->
+                    <div class="p-8 text-center">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <!-- Recommendations List -->
-        <section class="py-8">
-            <div class="container mx-auto px-4">
-                <!-- Filters -->
-                <div class="bg-gray-800 rounded-xl p-6 mb-8">
-                    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div class="flex items-center space-x-4">
-                            <select id="typeFilter" class="form-input bg-gray-700 border-gray-600">
-                                <option value="all">All Types</option>
-                                <option value="admin_choice">Admin Choice</option>
+        <!-- Pagination -->
+        <div class="flex justify-center mt-8">
+            <div class="pagination">
+                <button id="prev-page" class="pagination-item" disabled>
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                    </svg>
+                </button>
+                <span id="page-info" class="pagination-item active">1</span>
+                <button id="next-page" class="pagination-item">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Create/Edit Recommendation Modal -->
+    <div id="recommendation-modal" class="modal-overlay">
+        <div class="modal max-w-4xl">
+            <div class="modal-header">
+                <h3 class="modal-title">Create Recommendation</h3>
+                <button class="modal-close" onclick="closeRecommendationModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- Content Search -->
+                <div class="mb-6">
+                    <label class="form-label">Search Content</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="content-search" class="form-input flex-1" placeholder="Search for movies, TV shows, or anime...">
+                        <button id="search-content-btn" class="btn btn-outline">Search</button>
+                    </div>
+                    <div id="content-search-results" class="mt-4 hidden">
+                        <!-- Search results will appear here -->
+                    </div>
+                </div>
+
+                <!-- Selected Content -->
+                <div id="selected-content" class="mb-6 hidden">
+                    <label class="form-label">Selected Content</label>
+                    <div id="selected-content-display" class="p-4 bg-gray-800 rounded-lg">
+                        <!-- Selected content will appear here -->
+                    </div>
+                </div>
+
+                <!-- Recommendation Form -->
+                <form id="recommendation-form">
+                    <input type="hidden" id="selected-content-id" value="">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="form-label">Recommendation Type</label>
+                            <select id="recommendation-type" class="form-select" required>
+                                <option value="">Select Type</option>
                                 <option value="trending">Trending</option>
+                                <option value="popular">Popular</option>
                                 <option value="critics_choice">Critics Choice</option>
-                            </select>
-                            <select id="statusFilter" class="form-input bg-gray-700 border-gray-600">
-                                <option value="all">All Status</option>
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
+                                <option value="admin_choice">Admin Choice</option>
+                                <option value="featured">Featured</option>
+                                <option value="hidden_gem">Hidden Gem</option>
                             </select>
                         </div>
                         
-                        <div class="flex items-center space-x-2">
-                            <button id="refreshBtn" class="btn-ghost">
-                                <i class="bi bi-arrow-clockwise mr-1"></i>
-                                Refresh
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recommendations Grid -->
-                <div id="recommendationsGrid" class="space-y-6">
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                        <p class="mt-4">Loading recommendations...</p>
-                    </div>
-                </div>
-
-                <!-- Empty State -->
-                <div id="emptyState" class="text-center py-16 hidden">
-                    <i class="bi bi-megaphone text-6xl text-gray-600 mb-4"></i>
-                    <h3 class="text-xl font-semibold mb-2">No recommendations yet</h3>
-                    <p class="text-gray-400 mb-6">Create your first admin recommendation</p>
-                    <button onclick="openCreateRecommendationModal()" class="btn-primary">
-                        <i class="bi bi-plus-circle mr-2"></i>
-                        Create Recommendation
-                    </button>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Create Recommendation Modal -->
-    <div id="createRecommendationModal" class="modal hidden">
-        <div class="modal-overlay" onclick="closeCreateRecommendationModal()"></div>
-        <div class="modal-content max-w-2xl">
-            <div class="modal-header">
-                <h3 class="text-xl font-bold">Create Admin Recommendation</h3>
-                <button onclick="closeCreateRecommendationModal()" class="text-2xl hover:text-gray-300">
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="createRecommendationForm" class="space-y-6">
-                    <!-- Content Search -->
-                    <div class="form-group">
-                        <label class="form-label">Search Content</label>
-                        <div class="flex space-x-2">
-                            <input type="text" id="contentSearch" class="form-input flex-1" 
-                                   placeholder="Search for content to recommend...">
-                            <button type="button" id="searchContentBtn" class="btn-secondary">
-                                <i class="bi bi-search"></i>
-                            </button>
-                        </div>
-                        <div id="contentSearchResults" class="mt-2 hidden"></div>
-                    </div>
-
-                    <!-- Selected Content -->
-                    <div id="selectedContent" class="hidden">
-                        <label class="form-label">Selected Content</label>
-                        <div id="selectedContentPreview" class="bg-gray-700 rounded-lg p-4">
-                            <!-- Content preview will be shown here -->
+                        <div>
+                            <label class="form-label">Priority</label>
+                            <select id="priority" class="form-select">
+                                <option value="normal">Normal</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
                         </div>
                     </div>
 
-                    <!-- Recommendation Type -->
-                    <div class="form-group">
-                        <label for="recommendationType" class="form-label">Recommendation Type</label>
-                        <select id="recommendationType" class="form-input" required>
-                            <option value="">Select type...</option>
-                            <option value="admin_choice">Admin's Choice</option>
-                            <option value="trending">Trending Pick</option>
-                            <option value="critics_choice">Critics' Choice</option>
-                            <option value="hidden_gem">Hidden Gem</option>
-                        </select>
+                    <div class="mt-6">
+                        <label class="form-label">Description/Review</label>
+                        <textarea id="recommendation-description" 
+                                  class="form-input" 
+                                  rows="4" 
+                                  placeholder="Write why you recommend this content. This will be shared with users and on Telegram..."
+                                  required></textarea>
+                        <div class="text-sm text-gray-400 mt-1">
+                            This description will be posted to the Telegram channel and shown to users.
+                        </div>
                     </div>
 
-                    <!-- Description -->
-                    <div class="form-group">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea id="description" class="form-input" rows="4" required
-                                  placeholder="Why are you recommending this content? Share your thoughts..."></textarea>
-                    </div>
-
-                    <!-- Telegram Notification -->
-                    <div class="form-group">
-                        <label class="flex items-center">
-                            <input type="checkbox" id="sendToTelegram" class="mr-2" checked>
-                            <span>Send notification to Telegram channel</span>
-                        </label>
-                    </div>
-
-                    <!-- Buttons -->
-                    <div class="flex space-x-4">
-                        <button type="submit" class="btn-primary flex-1">
-                            <i class="bi bi-megaphone mr-2"></i>
-                            Create Recommendation
-                        </button>
-                        <button type="button" onclick="closeCreateRecommendationModal()" class="btn-ghost flex-1">
-                            Cancel
-                        </button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                        <div>
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="send-to-telegram" checked>
+                                <span>Send to Telegram Channel</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="mark-as-featured">
+                                <span>Mark as Featured</span>
+                            </label>
+                        </div>
                     </div>
                 </form>
+            </div>
+            <div class="modal-footer flex justify-end gap-4 p-6 border-t border-gray-700">
+                <button onclick="closeRecommendationModal()" class="btn btn-secondary">Cancel</button>
+                <button onclick="saveRecommendation()" class="btn btn-primary">Create Recommendation</button>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <div id="footer-placeholder"></div>
-
-    <!-- Scripts -->
-    <script src="../js/include.js"></script>
-    <script src="../js/main.js"></script>
-    <!-- Additional Scripts -->
-    <script src="/js/animations.js"></script>
-    <script src="/js/accessibility.js"></script>
-    <script src="/js/performance.js"></script>
-    <script src="/js/utils.js"></script>
+    <script src="/js/main.js"></script>
     <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let recommendations = [];
+        let selectedContent = null;
+
         document.addEventListener('DOMContentLoaded', function() {
-            initializeIncludes();
-            initializeAdminPosts();
+            if (!app.isAdmin()) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            setupEventListeners();
+            loadRecommendations();
+            
+            // Check for content_id in URL params
+            const urlParams = new URLSearchParams(window.location.search);
+            const contentId = urlParams.get('content_id');
+            if (contentId) {
+                document.getElementById('create-recommendation-btn').click();
+                // Auto-select the content if provided
+                setTimeout(() => {
+                    document.getElementById('selected-content-id').value = contentId;
+                    loadContentById(contentId);
+                }, 500);
+            }
         });
+
+        function setupEventListeners() {
+            document.getElementById('create-recommendation-btn').addEventListener('click', openRecommendationModal);
+            document.getElementById('search-content-btn').addEventListener('click', searchContent);
+            document.getElementById('content-search').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchContent();
+                }
+            });
+            document.getElementById('type-filter').addEventListener('change', loadRecommendations);
+            document.getElementById('status-filter').addEventListener('change', loadRecommendations);
+            document.getElementById('refresh-data').addEventListener('click', loadRecommendations);
+            document.getElementById('prev-page').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadRecommendations();
+                }
+            });
+            document.getElementById('next-page').addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadRecommendations();
+                }
+            });
+        }
+
+        async function loadRecommendations() {
+            const tableContainer = document.getElementById('recommendations-table');
+            const typeFilter = document.getElementById('type-filter').value;
+            const statusFilter = document.getElementById('status-filter').value;
+
+            try {
+                tableContainer.innerHTML = '<div class="p-8 text-center"><div class="loading"><div class="spinner"></div></div></div>';
+
+                const params = new URLSearchParams({
+                    page: currentPage,
+                    per_page: 10
+                });
+
+                if (typeFilter) params.append('type', typeFilter);
+                if (statusFilter) params.append('status', statusFilter);
+
+                const response = await apiClient.request(`/admin/recommendations?${params}`);
+                
+                recommendations = response.recommendations || [];
+                totalPages = response.pages || 1;
+                
+                updateStats(response);
+                displayRecommendations(recommendations);
+                updatePagination();
+
+            } catch (error) {
+                console.error('Failed to load recommendations:', error);
+                tableContainer.innerHTML = '<div class="p-8 text-center text-red-400">Failed to load recommendations</div>';
+            }
+        }
+
+        function updateStats(data) {
+            document.getElementById('total-recommendations').textContent = data.total || 0;
+            document.getElementById('active-recommendations').textContent = recommendations.filter(r => r.is_active).length;
+            // These would come from the API in a real implementation
+            document.getElementById('this-month').textContent = '12';
+            document.getElementById('telegram-sent').textContent = '8';
+        }
+
+        function displayRecommendations(recommendations) {
+            const tableContainer = document.getElementById('recommendations-table');
+            
+            if (!recommendations || recommendations.length === 0) {
+                tableContainer.innerHTML = `
+                    <div class="p-8 text-center">
+                        <div class="text-4xl mb-4">📝</div>
+                        <h3 class="text-lg font-semibold mb-2">No recommendations yet</h3>
+                        <p class="text-gray-400 mb-4">Create your first recommendation to get started</p>
+                        <button onclick="openRecommendationModal()" class="btn btn-primary">Create Recommendation</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Content</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Admin</th>
+                            <th>Created</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${recommendations.map(rec => `
+                            <tr>
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <img src="${app.getImageUrl(rec.content.poster_path, 'w92')}" 
+                                             alt="${rec.content.title}" 
+                                             class="w-12 h-18 object-cover rounded"
+                                             onerror="this.src='${app.getPlaceholderImage(92, 138)}'">
+                                        <div>
+                                            <div class="font-medium">${rec.content.title}</div>
+                                            <div class="text-sm text-gray-400">${rec.content.content_type.toUpperCase()}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-${getTypeBadgeColor(rec.recommendation_type)}">
+                                        ${rec.recommendation_type.replace('_', ' ')}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="max-w-xs">
+                                        <p class="text-sm line-clamp-2">${rec.description}</p>
+                                    </div>
+                                </td>
+                                <td>${rec.admin_name}</td>
+                                <td>
+                                    <div class="text-sm">
+                                        ${new Date(rec.created_at).toLocaleDateString()}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge ${rec.is_active ? 'badge-success' : 'badge-secondary'}">
+                                        ${rec.is_active ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="flex gap-2">
+                                        <button onclick="editRecommendation(${rec.id})" 
+                                                class="btn btn-outline btn-sm" 
+                                                title="Edit">
+                                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708L14.5 5.207l-3-3L12.146.146ZM11.207 1.5 13.5 3.793 14.207 3.086a.25.25 0 0 0 0-.354L13.854 2.379a.25.25 0 0 0-.354 0L11.207 1.5Zm1.586 3L10.5 6.793 8.854 5.146a.5.5 0 0 0-.708 0L.146 13.146a.5.5 0 0 0 0 .708l2 2a.5.5 0 0 0 .708 0L10.854 7.854a.5.5 0 0 0 0-.708L9.207 5.5Z"/>
+                                            </svg>
+                                        </button>
+                                        <button onclick="toggleRecommendation(${rec.id})" 
+                                                class="btn btn-outline btn-sm" 
+                                                title="${rec.is_active ? 'Deactivate' : 'Activate'}">
+                                            ${rec.is_active ? '⏸️' : '▶️'}
+                                        </button>
+                                        <button onclick="deleteRecommendation(${rec.id})" 
+                                                class="btn btn-outline btn-sm text-red-400" 
+                                                title="Delete">
+                                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84L13.962 3.5H14.5a.5.5 0 0 0 0-1h-1.006a.58.58 0 0 0-.01 0H11Z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            tableContainer.innerHTML = html;
+        }
+
+        function getTypeBadgeColor(type) {
+            const colors = {
+                'trending': 'warning',
+                'popular': 'success',
+                'critics_choice': 'primary',
+                'admin_choice': 'secondary',
+                'featured': 'primary'
+            };
+            return colors[type] || 'secondary';
+        }
+
+        function updatePagination() {
+            document.getElementById('page-info').textContent = `${currentPage} of ${totalPages}`;
+            document.getElementById('prev-page').disabled = currentPage === 1;
+            document.getElementById('next-page').disabled = currentPage === totalPages;
+        }
+
+        function openRecommendationModal() {
+            document.getElementById('recommendation-modal').classList.add('active');
+            resetForm();
+        }
+
+        function closeRecommendationModal() {
+            document.getElementById('recommendation-modal').classList.remove('active');
+            resetForm();
+        }
+
+        function resetForm() {
+            document.getElementById('recommendation-form').reset();
+            document.getElementById('selected-content-id').value = '';
+            document.getElementById('content-search').value = '';
+            document.getElementById('content-search-results').classList.add('hidden');
+            document.getElementById('selected-content').classList.add('hidden');
+            selectedContent = null;
+        }
+
+        async function searchContent() {
+            const query = document.getElementById('content-search').value.trim();
+            if (!query) return;
+
+            const resultsContainer = document.getElementById('content-search-results');
+            resultsContainer.innerHTML = '<div class="text-center py-4"><div class="loading"><div class="spinner"></div></div></div>';
+            resultsContainer.classList.remove('hidden');
+
+            try {
+                const results = await apiClient.search(query, 'multi', 1);
+                
+                if (results && results.length > 0) {
+                    const html = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-64 overflow-y-auto">
+                            ${results.slice(0, 6).map(item => `
+                                <div class="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700"
+                                     onclick="selectContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                    <img src="${app.getImageUrl(item.poster_path, 'w92')}" 
+                                         alt="${item.title}" 
+                                         class="w-12 h-18 object-cover rounded"
+                                         onerror="this.src='${app.getPlaceholderImage(92, 138)}'">
+                                    <div class="flex-1">
+                                        <h4 class="font-medium">${item.title}</h4>
+                                        <p class="text-sm text-gray-400">${item.content_type.toUpperCase()}</p>
+                                        <p class="text-sm text-gray-400">${item.rating ? `⭐ ${item.rating.toFixed(1)}` : 'No rating'}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    resultsContainer.innerHTML = html;
+                } else {
+                    resultsContainer.innerHTML = '<div class="text-center py-4 text-gray-400">No content found</div>';
+                }
+
+            } catch (error) {
+                console.error('Search failed:', error);
+                resultsContainer.innerHTML = '<div class="text-center py-4 text-red-400">Search failed</div>';
+            }
+        }
+
+        function selectContent(content) {
+            selectedContent = content;
+            document.getElementById('selected-content-id').value = content.id;
+            
+            const selectedContainer = document.getElementById('selected-content');
+            const display = document.getElementById('selected-content-display');
+            
+            display.innerHTML = `
+                <div class="flex items-center gap-4">
+                    <img src="${app.getImageUrl(content.poster_path, 'w92')}" 
+                         alt="${content.title}" 
+                         class="w-16 h-24 object-cover rounded"
+                         onerror="this.src='${app.getPlaceholderImage(92, 138)}'">
+                    <div>
+                        <h4 class="font-medium text-lg">${content.title}</h4>
+                        <p class="text-gray-400">${content.content_type.toUpperCase()}</p>
+                        <p class="text-gray-400">${content.rating ? `⭐ ${content.rating.toFixed(1)}` : 'No rating'}</p>
+                        <p class="text-sm text-gray-400 mt-2 max-w-md">${content.overview ? content.overview.substring(0, 100) + '...' : 'No description'}</p>
+                    </div>
+                </div>
+            `;
+            
+            selectedContainer.classList.remove('hidden');
+            document.getElementById('content-search-results').classList.add('hidden');
+        }
+
+        async function saveRecommendation() {
+            const contentId = document.getElementById('selected-content-id').value;
+            const type = document.getElementById('recommendation-type').value;
+            const description = document.getElementById('recommendation-description').value;
+
+            if (!contentId || !type || !description) {
+                app.showToast('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            try {
+                await apiClient.createAdminRecommendation(contentId, type, description);
+                app.showToast('Recommendation created successfully!', 'success');
+                closeRecommendationModal();
+                loadRecommendations();
+            } catch (error) {
+                console.error('Failed to create recommendation:', error);
+                app.showToast(error.message || 'Failed to create recommendation', 'error');
+            }
+        }
+
+        async function loadContentById(contentId) {
+            try {
+                const content = await apiClient.getContentDetails(contentId);
+                selectContent(content);
+            } catch (error) {
+                console.error('Failed to load content:', error);
+            }
+        }
+
+        // Additional functions for edit, toggle, delete would be implemented here
+        function editRecommendation(id) {
+            // Implementation for editing
+            app.showToast('Edit functionality coming soon', 'info');
+        }
+
+        function toggleRecommendation(id) {
+            // Implementation for toggling active status
+            app.showToast('Toggle functionality coming soon', 'info');
+        }
+
+        function deleteRecommendation(id) {
+            if (confirm('Are you sure you want to delete this recommendation?')) {
+                // Implementation for deletion
+                app.showToast('Delete functionality coming soon', 'info');
+            }
+        }
     </script>
+
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
 </body>
 </html>
