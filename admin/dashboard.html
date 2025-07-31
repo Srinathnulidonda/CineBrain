@@ -1,430 +1,339 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - CineScope</title>
-    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CSS Files -->
     <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
-    <!-- Header -->
-    <header class="header">
-        <nav class="nav container">
-            <a href="/" class="nav-brand">CineScope Admin</a>
-            <div class="nav-menu">
-                <a href="/admin/dashboard" class="nav-link active">Dashboard</a>
-                <a href="/admin/content-browser" class="nav-link">Content</a>
-                <a href="/admin/posts" class="nav-link">Recommendations</a>
-                <a href="/admin/analytics" class="nav-link">Analytics</a>
-                <a href="/dashboard" class="nav-link">User View</a>
-                <button onclick="app.logout()" class="btn btn-outline btn-sm">Logout</button>
+    <!-- Admin Header -->
+    <header class="header bg-bg-secondary">
+        <nav class="container">
+            <div class="nav">
+                <div class="nav-brand">
+                    <a href="/admin/dashboard">CineScope Admin</a>
+                </div>
+
+                <ul class="nav-menu">
+                    <li><a href="/admin/dashboard" class="nav-link active">Dashboard</a></li>
+                    <li><a href="/admin/content-browser" class="nav-link">Content</a></li>
+                    <li><a href="/admin/posts" class="nav-link">Posts</a></li>
+                    <li><a href="/admin/analytics" class="nav-link">Analytics</a></li>
+                    <li><a href="/" class="nav-link">View Site</a></li>
+                </ul>
+
+                <div class="nav-actions">
+                    <div id="user-menu" class="dropdown">
+                        <button class="btn btn-secondary">
+                            <span id="admin-name">Admin</span>
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="/profile" class="dropdown-item">Profile</a>
+                            <button onclick="AuthManager.logout()" class="dropdown-item">Logout</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button class="btn btn-secondary md:hidden" data-mobile-menu-toggle>☰</button>
         </nav>
     </header>
 
-    <main class="container py-8">
-        <!-- Page Header -->
-        <div class="flex items-center justify-between mb-8">
-            <div>
-                <h1 class="text-4xl font-bold mb-2">⚡ Admin Dashboard</h1>
-                <p class="text-gray-400">Manage content and monitor platform performance</p>
-            </div>
-            <div class="flex gap-4">
-                <button id="ml-service-check" class="btn btn-outline">ML Service Status</button>
-                <button id="refresh-data" class="btn btn-primary">Refresh Data</button>
-            </div>
-        </div>
+    <!-- Main Content -->
+    <main style="padding-top: 80px;">
+        <div class="container py-8">
+            <!-- Dashboard Header -->
+            <section class="mb-8">
+                <h1 class="text-3xl font-bold mb-2">Admin Dashboard</h1>
+                <p class="text-secondary">Manage content, users, and platform analytics</p>
+            </section>
 
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="card p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">Total Users</h3>
-                    <div class="text-3xl">👥</div>
-                </div>
-                <div class="text-3xl font-bold text-blue-400" id="total-users">-</div>
-                <p class="text-sm text-gray-400 mt-2">
-                    <span id="active-users">-</span> active this week
-                </p>
-            </div>
-
-            <div class="card p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">Content Library</h3>
-                    <div class="text-3xl">🎬</div>
-                </div>
-                <div class="text-3xl font-bold text-purple-400" id="total-content">-</div>
-                <p class="text-sm text-gray-400 mt-2">
-                    Movies, TV shows & anime
-                </p>
-            </div>
-
-            <div class="card p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">User Interactions</h3>
-                    <div class="text-3xl">📊</div>
-                </div>
-                <div class="text-3xl font-bold text-green-400" id="total-interactions">-</div>
-                <p class="text-sm text-gray-400 mt-2">
-                    Views, ratings & saves
-                </p>
-            </div>
-
-            <div class="card p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">ML Service</h3>
-                    <div class="text-3xl">🤖</div>
-                </div>
-                <div class="text-3xl font-bold" id="ml-status">-</div>
-                <p class="text-sm text-gray-400 mt-2">
-                    AI recommendation engine
-                </p>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div class="card p-6 hover:bg-gray-800 cursor-pointer" onclick="window.location.href='/admin/content-browser'">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="text-4xl">🔍</div>
-                    <div>
-                        <h3 class="text-lg font-semibold">Browse Content</h3>
-                        <p class="text-sm text-gray-400">Search and add new content</p>
+            <!-- Real-time Stats -->
+            <section class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="card p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-sm font-medium text-muted">Total Users</h3>
+                            <p class="text-2xl font-bold text-primary-blue" id="total-users">0</p>
+                        </div>
+                        <div class="w-8 h-8 bg-primary-blue/20 rounded-full flex items-center justify-center">
+                            👥
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-success">↗️ +12%</span>
+                        <span class="text-muted">vs last month</span>
                     </div>
                 </div>
-                <div class="text-blue-400 text-sm font-medium">→ Open Content Browser</div>
-            </div>
 
-            <div class="card p-6 hover:bg-gray-800 cursor-pointer" onclick="window.location.href='/admin/posts'">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="text-4xl">✨</div>
-                    <div>
-                        <h3 class="text-lg font-semibold">Create Recommendation</h3>
-                        <p class="text-sm text-gray-400">Feature content to users</p>
+                <div class="card p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-sm font-medium text-muted">Total Content</h3>
+                            <p class="text-2xl font-bold text-primary-purple" id="total-content">0</p>
+                        </div>
+                        <div class="w-8 h-8 bg-primary-purple/20 rounded-full flex items-center justify-center">
+                            🎬
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-success">↗️ +8%</span>
+                        <span class="text-muted">vs last month</span>
                     </div>
                 </div>
-                <div class="text-purple-400 text-sm font-medium">→ Create New Post</div>
-            </div>
 
-            <div class="card p-6 hover:bg-gray-800 cursor-pointer" onclick="window.location.href='/admin/analytics'">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="text-4xl">📈</div>
-                    <div>
-                        <h3 class="text-lg font-semibold">View Analytics</h3>
-                        <p class="text-sm text-gray-400">Platform insights & metrics</p>
+                <div class="card p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-sm font-medium text-muted">Active Today</h3>
+                            <p class="text-2xl font-bold text-success" id="active-today">0</p>
+                        </div>
+                        <div class="w-8 h-8 bg-success/20 rounded-full flex items-center justify-center">
+                            📊
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-success">↗️ +5%</span>
+                        <span class="text-muted">vs yesterday</span>
                     </div>
                 </div>
-                <div class="text-green-400 text-sm font-medium">→ Open Analytics</div>
-            </div>
-        </div>
 
-        <!-- Recent Activity -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <!-- Popular Content -->
-            <div class="card p-6">
-                <h3 class="text-xl font-bold mb-4">Popular Content</h3>
-                <div id="popular-content-list" class="space-y-3">
-                    <!-- Loading state -->
-                    <div class="skeleton h-16 rounded"></div>
-                    <div class="skeleton h-16 rounded"></div>
-                    <div class="skeleton h-16 rounded"></div>
+                <div class="card p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-sm font-medium text-muted">ML Service</h3>
+                            <p class="text-lg font-bold" id="ml-status">
+                                <span class="text-success">Healthy</span>
+                            </p>
+                        </div>
+                        <div class="w-8 h-8 bg-success/20 rounded-full flex items-center justify-center">
+                            🤖
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <div class="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+                        <span class="text-muted">Last check: <span id="ml-last-check">now</span></span>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Popular Genres -->
-            <div class="card p-6">
-                <h3 class="text-xl font-bold mb-4">Popular Genres</h3>
-                <div id="popular-genres-list" class="space-y-3">
-                    <!-- Loading state -->
-                    <div class="skeleton h-8 rounded"></div>
-                    <div class="skeleton h-8 rounded"></div>
-                    <div class="skeleton h-8 rounded"></div>
+            <!-- Quick Actions -->
+            <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="card p-6">
+                    <h3 class="font-semibold mb-4">Content Management</h3>
+                    <div class="space-y-3">
+                        <button onclick="AdminManager.showAddContentModal()" class="btn btn-primary w-full">
+                            ➕ Add New Content
+                        </button>
+                        <button onclick="AdminManager.syncExternalContent()" class="btn btn-secondary w-full">
+                            🔄 Sync External APIs
+                        </button>
+                        <a href="/admin/content-browser" class="btn btn-ghost w-full">
+                            📚 Browse Content
+                        </a>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- ML Service Status Detail -->
-        <div id="ml-service-detail" class="card p-6 hidden">
-            <h3 class="text-xl font-bold mb-4">ML Service Detailed Status</h3>
-            <div id="ml-service-info" class="space-y-4">
-                <!-- ML service details will be populated here -->
-            </div>
-        </div>
+                <div class="card p-6">
+                    <h3 class="font-semibold mb-4">Recommendations</h3>
+                    <div class="space-y-3">
+                        <button onclick="AdminManager.showRecommendationModal()" class="btn btn-primary w-full">
+                            ⭐ Create Recommendation
+                        </button>
+                        <button onclick="AdminManager.updateMLModels()" class="btn btn-secondary w-full">
+                            🤖 Update ML Models
+                        </button>
+                        <a href="/admin/analytics" class="btn btn-ghost w-full">
+                            📊 View Analytics
+                        </a>
+                    </div>
+                </div>
 
-        <!-- Recent Admin Recommendations -->
-        <div class="card p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-xl font-bold">Recent Recommendations</h3>
-                <a href="/admin/posts" class="btn btn-outline btn-sm">View All</a>
-            </div>
-            <div id="recent-recommendations" class="space-y-4">
-                <!-- Loading state -->
-                <div class="skeleton h-20 rounded"></div>
-                <div class="skeleton h-20 rounded"></div>
-                <div class="skeleton h-20 rounded"></div>
-            </div>
+                <div class="card p-6">
+                    <h3 class="font-semibold mb-4">System Status</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">API Status</span>
+                            <span class="text-success text-sm">✅ Online</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Database</span>
+                            <span class="text-success text-sm">✅ Connected</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">ML Service</span>
+                            <span class="text-success text-sm" id="ml-service-status">✅ Running</span>
+                        </div>
+                        <button onclick="AdminManager.runSystemCheck()" class="btn btn-ghost w-full">
+                            🔍 Full System Check
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Activity -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold">Recent User Activity</h3>
+                        <button onclick="AdminManager.refreshActivity()" class="btn btn-ghost btn-sm">🔄</button>
+                    </div>
+                    <div id="recent-activity" class="space-y-3">
+                        <!-- Activity items will be populated -->
+                    </div>
+                </div>
+
+                <div class="card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold">System Alerts</h3>
+                        <button onclick="AdminManager.clearAlerts()" class="btn btn-ghost btn-sm">Clear All</button>
+                    </div>
+                    <div id="system-alerts" class="space-y-3">
+                        <!-- Alerts will be populated -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Content Performance -->
+            <section class="mt-8">
+                <div class="card p-6">
+                    <h3 class="font-semibold mb-4">Top Performing Content</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-white/10">
+                                    <th class="text-left p-3">Title</th>
+                                    <th class="text-left p-3">Type</th>
+                                    <th class="text-left p-3">Views</th>
+                                    <th class="text-left p-3">Rating</th>
+                                    <th class="text-left p-3">Interactions</th>
+                                    <th class="text-left p-3">Trend</th>
+                                </tr>
+                            </thead>
+                            <tbody id="top-content-table">
+                                <!-- Table rows will be populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
 
+    <!-- Modals -->
+    <!-- Add Content Modal -->
+    <div id="add-content-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Add New Content</h3>
+                <button class="modal-close" onclick="UIComponents.closeModal('add-content-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-content-form" class="space-y-4">
+                    <div class="form-group">
+                        <label class="form-label">Content Source</label>
+                        <select id="content-source" class="form-input">
+                            <option value="tmdb">TMDB (Movies & TV)</option>
+                            <option value="anime">Jikan (Anime)</option>
+                            <option value="manual">Manual Entry</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Search Query or ID</label>
+                        <input type="text" id="content-query" class="form-input"
+                            placeholder="Enter title or external ID">
+                    </div>
+
+                    <div id="search-results-modal" class="hidden">
+                        <h4 class="font-medium mb-3">Search Results</h4>
+                        <div id="modal-search-results" class="space-y-2 max-h-60 overflow-y-auto">
+                            <!-- Search results will be populated -->
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button onclick="AdminManager.searchContent()" class="btn btn-secondary">Search</button>
+                <button onclick="AdminManager.addSelectedContent()" class="btn btn-primary">Add Content</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Recommendation Modal -->
+    <div id="recommendation-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Create Admin Recommendation</h3>
+                <button class="modal-close" onclick="UIComponents.closeModal('recommendation-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="recommendation-form" class="space-y-4">
+                    <div class="form-group">
+                        <label class="form-label">Content</label>
+                        <input type="text" id="rec-content-search" class="form-input"
+                            placeholder="Search for content...">
+                        <div id="rec-content-results" class="mt-2"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Recommendation Type</label>
+                        <select id="rec-type" class="form-input">
+                            <option value="admin_choice">Admin's Choice</option>
+                            <option value="trending">Trending</option>
+                            <option value="critics_choice">Critics' Choice</option>
+                            <option value="featured">Featured</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea id="rec-description" class="form-input" rows="3"
+                            placeholder="Why are you recommending this?"></textarea>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="send-telegram" checked>
+                        <label for="send-telegram" class="text-sm">Send to Telegram channel</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button onclick="UIComponents.closeModal('recommendation-modal')"
+                    class="btn btn-secondary">Cancel</button>
+                <button onclick="AdminManager.createRecommendation()" class="btn btn-primary">Create
+                    Recommendation</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
     <script src="/js/main.js"></script>
+    <script src="/js/admin.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            if (!app.isAdmin()) {
+        // Check admin access
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!appState.user || !appState.user.is_admin) {
                 window.location.href = '/login';
                 return;
             }
-            
-            setupAdminDashboard();
-            loadDashboardData();
+
+            // Initialize admin dashboard
+            new AdminDashboard();
         });
-
-        function setupAdminDashboard() {
-            document.getElementById('ml-service-check').addEventListener('click', checkMLService);
-            document.getElementById('refresh-data').addEventListener('click', loadDashboardData);
-        }
-
-        async function loadDashboardData() {
-            try {
-                // Load analytics data
-                const analytics = await apiClient.getAnalytics();
-                updateDashboardStats(analytics);
-                updatePopularContent(analytics.popular_content || []);
-                updatePopularGenres(analytics.popular_genres || []);
-                
-                // Load recent admin recommendations
-                await loadRecentRecommendations();
-                
-                // Check ML service status
-                await checkMLServiceStatus();
-                
-            } catch (error) {
-                console.error('Failed to load dashboard data:', error);
-                app.showToast('Some dashboard data failed to load', 'warning');
-            }
-        }
-
-        function updateDashboardStats(analytics) {
-            document.getElementById('total-users').textContent = analytics.total_users || 0;
-            document.getElementById('active-users').textContent = analytics.active_users_last_week || 0;
-            document.getElementById('total-content').textContent = analytics.total_content || 0;
-            document.getElementById('total-interactions').textContent = analytics.total_interactions || 0;
-        }
-
-        function updatePopularContent(popularContent) {
-            const container = document.getElementById('popular-content-list');
-            
-            if (!popularContent || popularContent.length === 0) {
-                container.innerHTML = '<p class="text-gray-400 text-center py-4">No data available</p>';
-                return;
-            }
-
-            const html = popularContent.slice(0, 5).map((item, index) => `
-                <div class="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
-                    <div class="text-lg font-bold text-blue-400">#${index + 1}</div>
-                    <div class="flex-1">
-                        <h4 class="font-medium">${item.title}</h4>
-                        <p class="text-sm text-gray-400">${item.interactions} interactions</p>
-                    </div>
-                </div>
-            `).join('');
-
-            container.innerHTML = html;
-        }
-
-        function updatePopularGenres(popularGenres) {
-            const container = document.getElementById('popular-genres-list');
-            
-            if (!popularGenres || popularGenres.length === 0) {
-                container.innerHTML = '<p class="text-gray-400 text-center py-4">No data available</p>';
-                return;
-            }
-
-            const maxCount = Math.max(...popularGenres.map(g => g.count));
-            
-            const html = popularGenres.slice(0, 8).map(genre => {
-                const percentage = (genre.count / maxCount) * 100;
-                return `
-                    <div class="flex items-center justify-between">
-                        <span class="font-medium">${genre.genre}</span>
-                        <div class="flex items-center gap-2">
-                            <div class="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
-                                <div class="h-full bg-purple-400 rounded-full" style="width: ${percentage}%"></div>
-                            </div>
-                            <span class="text-sm text-gray-400 w-8">${genre.count}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            container.innerHTML = html;
-        }
-
-        async function loadRecentRecommendations() {
-            try {
-                const recommendations = await apiClient.request('/admin/recommendations?per_page=5');
-                const container = document.getElementById('recent-recommendations');
-                
-                if (!recommendations.recommendations || recommendations.recommendations.length === 0) {
-                    container.innerHTML = '<p class="text-gray-400 text-center py-4">No recommendations yet</p>';
-                    return;
-                }
-
-                const html = recommendations.recommendations.map(rec => `
-                    <div class="flex items-center gap-4 p-4 bg-gray-800 rounded-lg">
-                        <img src="${app.getImageUrl(rec.content.poster_path, 'w92')}" 
-                             alt="${rec.content.title}" 
-                             class="w-12 h-18 object-cover rounded"
-                             onerror="this.src='${app.getPlaceholderImage(92, 138)}'" />
-                        <div class="flex-1">
-                            <h4 class="font-medium">${rec.content.title}</h4>
-                            <p class="text-sm text-gray-400 mb-1">${rec.description}</p>
-                            <div class="flex items-center gap-4 text-xs text-gray-500">
-                                <span>By ${rec.admin_name}</span>
-                                <span>${new Date(rec.created_at).toLocaleDateString()}</span>
-                                <span class="px-2 py-1 bg-blue-600 rounded">${rec.recommendation_type}</span>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-
-                container.innerHTML = html;
-
-            } catch (error) {
-                console.error('Failed to load recent recommendations:', error);
-                document.getElementById('recent-recommendations').innerHTML = 
-                    '<p class="text-red-400 text-center py-4">Failed to load recommendations</p>';
-            }
-        }
-
-        async function checkMLServiceStatus() {
-            try {
-                const response = await apiClient.request('/admin/ml-service-check');
-                const statusElement = document.getElementById('ml-status');
-                
-                if (response.status === 'healthy') {
-                    statusElement.textContent = '✅ Healthy';
-                    statusElement.className = 'text-3xl font-bold text-green-400';
-                } else if (response.status === 'partial') {
-                    statusElement.textContent = '⚠️ Partial';
-                    statusElement.className = 'text-3xl font-bold text-yellow-400';
-                } else {
-                    statusElement.textContent = '❌ Down';
-                    statusElement.className = 'text-3xl font-bold text-red-400';
-                }
-
-            } catch (error) {
-                console.error('Failed to check ML service:', error);
-                const statusElement = document.getElementById('ml-status');
-                statusElement.textContent = '❓ Unknown';
-                statusElement.className = 'text-3xl font-bold text-gray-400';
-            }
-        }
-
-        async function checkMLService() {
-            const detailContainer = document.getElementById('ml-service-detail');
-            const infoContainer = document.getElementById('ml-service-info');
-            
-            detailContainer.classList.remove('hidden');
-            infoContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-
-            try {
-                const response = await apiClient.request('/admin/ml-service-check');
-                
-                const html = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h4 class="font-semibold mb-3">Service Status</h4>
-                            <div class="space-y-2">
-                                <div class="flex justify-between">
-                                    <span>Overall Status:</span>
-                                    <span class="font-medium ${getStatusColor(response.status)}">${response.status}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Service URL:</span>
-                                    <span class="text-sm text-gray-400">${response.ml_service_url || 'Not configured'}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Last Check:</span>
-                                    <span class="text-sm text-gray-400">${new Date(response.timestamp).toLocaleString()}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <h4 class="font-semibold mb-3">Health Checks</h4>
-                            <div class="space-y-2">
-                                ${Object.entries(response.checks || {}).map(([check, result]) => `
-                                    <div class="flex justify-between">
-                                        <span>${check.replace(/_/g, ' ')}:</span>
-                                        <span class="font-medium ${result.status === 'pass' ? 'text-green-400' : 'text-red-400'}">
-                                            ${result.status === 'pass' ? '✅' : '❌'} ${result.status}
-                                        </span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-
-                    ${response.summary ? `
-                        <div class="mt-6 p-4 bg-gray-800 rounded-lg">
-                            <h4 class="font-semibold mb-2">Summary</h4>
-                            <div class="grid grid-cols-3 gap-4 text-sm">
-                                <div class="text-center">
-                                    <div class="text-lg font-bold text-green-400">${response.summary.passed}</div>
-                                    <div class="text-gray-400">Passed</div>
-                                </div>
-                                <div class="text-center">
-                                    <div class="text-lg font-bold text-red-400">${response.summary.failed}</div>
-                                    <div class="text-gray-400">Failed</div>
-                                </div>
-                                <div class="text-center">
-                                    <div class="text-lg font-bold text-blue-400">${response.summary.total_checks}</div>
-                                    <div class="text-gray-400">Total</div>
-                                </div>
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <div class="flex gap-4 mt-6">
-                        <button onclick="forceMLUpdate()" class="btn btn-outline btn-sm">Force Update Models</button>
-                        <button onclick="checkMLService()" class="btn btn-outline btn-sm">Refresh Status</button>
-                    </div>
-                `;
-
-                infoContainer.innerHTML = html;
-
-            } catch (error) {
-                console.error('Failed to get ML service details:', error);
-                infoContainer.innerHTML = '<p class="text-red-400">Failed to get ML service status</p>';
-            }
-        }
-
-        function getStatusColor(status) {
-            switch (status) {
-                case 'healthy': return 'text-green-400';
-                case 'partial': return 'text-yellow-400';
-                case 'unhealthy': return 'text-red-400';
-                default: return 'text-gray-400';
-            }
-        }
-
-        async function forceMLUpdate() {
-            try {
-                const response = await apiClient.request('/admin/ml-service-update', { method: 'POST' });
-                
-                if (response.success) {
-                    app.showToast('ML model update initiated', 'success');
-                } else {
-                    app.showToast(response.message || 'Update failed', 'error');
-                }
-            } catch (error) {
-                console.error('Failed to update ML models:', error);
-                app.showToast('Failed to update ML models', 'error');
-            }
-        }
     </script>
 </body>
+
 </html>
