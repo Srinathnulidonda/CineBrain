@@ -4,74 +4,652 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Details - CineScope</title>
+    <title>Content Details - CineScope</title>
 
-    <!-- CSS Files -->
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/responsive.css">
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+    <style>
+        .details-container {
+            margin-top: 64px;
+            min-height: calc(100vh - 64px);
+        }
+
+        .content-header {
+            position: relative;
+            height: 70vh;
+            min-height: 500px;
+            overflow: hidden;
+        }
+
+        .content-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            filter: blur(2px);
+        }
+
+        .content-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg,
+                    rgba(15, 23, 42, 0.9) 0%,
+                    rgba(30, 64, 175, 0.4) 50%,
+                    rgba(124, 58, 237, 0.9) 100%);
+            display: flex;
+            align-items: center;
+        }
+
+        .content-info {
+            display: flex;
+            gap: var(--spacing-xl);
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .content-poster {
+            flex: none;
+        }
+
+        .content-poster img {
+            width: 300px;
+            height: 450px;
+            object-fit: cover;
+            border-radius: 1rem;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .content-meta {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .content-title {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 0 0 var(--spacing-md) 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .content-stats {
+            display: flex;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .content-stat {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            background: rgba(255, 255, 255, 0.1);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 0.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .rating {
+            color: #fbbf24;
+        }
+
+        .content-genres {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .content-overview {
+            font-size: 1.125rem;
+            line-height: 1.6;
+            margin-bottom: var(--spacing-xl);
+            max-width: 600px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .content-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .action-btn-large {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md) var(--spacing-xl);
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all var(--transition-fast);
+            min-height: 52px;
+        }
+
+        .play-btn {
+            background: linear-gradient(135deg, var(--accent-blue), var(--primary-blue));
+            color: white;
+            text-decoration: none;
+        }
+
+        .play-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .content-section {
+            padding: var(--spacing-2xl) 0;
+        }
+
+        .content-section h2 {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-xl);
+            color: var(--text-primary);
+        }
+
+        .cast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .cast-member {
+            text-align: center;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: var(--spacing-md);
+            transition: transform var(--transition-fast);
+            border: 1px solid var(--border-color);
+        }
+
+        .cast-member:hover {
+            transform: translateY(-4px);
+        }
+
+        .cast-member img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: var(--spacing-md);
+            background: var(--border-color);
+        }
+
+        .cast-member h4 {
+            font-size: 0.875rem;
+            margin: 0 0 var(--spacing-xs) 0;
+            color: var(--text-primary);
+        }
+
+        .cast-member p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .video-section {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+            border: 1px solid var(--border-color);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%;
+            /* 16:9 aspect ratio */
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background: var(--dark-bg);
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .similar-content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 80px;
+            left: var(--spacing-md);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all var(--transition-fast);
+            backdrop-filter: blur(10px);
+        }
+
+        .back-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: scale(1.1);
+        }
+
+        .content-tabs {
+            display: flex;
+            background: var(--card-bg);
+            border-radius: 0.5rem;
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .content-tab {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: var(--spacing-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-weight: 500;
+        }
+
+        .content-tab.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .content-tab:first-child {
+            border-radius: 0.5rem 0 0 0.5rem;
+        }
+
+        .content-tab:last-child {
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .reviews-section {
+            margin-top: var(--spacing-xl);
+        }
+
+        .review-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .review-author {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .review-rating {
+            color: #fbbf24;
+        }
+
+        .review-content {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+    </style>
 </head>
 
 <body>
-    <!-- Header -->
-    <header class="header">
-        <nav class="container">
-            <div class="nav">
-                <div class="nav-brand">
-                    <a href="/">CineScope</a>
-                </div>
+    <div data-include="header"></div>
 
-                <ul class="nav-menu" id="nav-menu">
-                    <li><a href="/" class="nav-link">Home</a></li>
-                    <li><a href="/categories/movies" class="nav-link">Movies</a></li>
-                    <li><a href="/categories/tv-shows" class="nav-link">TV Shows</a></li>
-                    <li><a href="/categories/anime" class="nav-link">Anime</a></li>
-                </ul>
+    <button class="back-btn" onclick="history.back()" aria-label="Go back">
+        ←
+    </button>
 
-                <div class="nav-actions">
-                    <div class="search-container">
-                        <input type="text" id="search-input" class="search-input" placeholder="Search...">
-                        <span class="search-icon">🔍</span>
-                        <div id="search-results" class="search-results" style="display: none;"></div>
-                    </div>
+    <div class="details-container">
+        <div class="content-details">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
 
-                    <a href="/login" id="login-btn" class="btn btn-primary guest-only">Login</a>
+    <div data-include="footer"></div>
 
-                    <div id="user-menu" class="dropdown user-only" style="display: none;">
-                        <button class="btn btn-secondary">Account</button>
-                        <div class="dropdown-menu">
-                            <a href="/dashboard" class="dropdown-item">Dashboard</a>
-                            <a href="/user/watchlist" class="dropdown-item">Watchlist</a>
-                            <a href="/user/favorites" class="dropdown-item">Favorites</a>
-                            <button onclick="AuthManager.logout()" class="dropdown-item">Logout</button>
+    <script src="/js/include.js"></script>
+    <script src="/js/main.js"></script>
+
+    <script>
+        class ContentDetails {
+            constructor() {
+                this.content = null;
+                this.activeTab = 'overview';
+                this.init();
+            }
+
+            async init() {
+                const contentId = app.getContentIdFromUrl();
+                if (contentId) {
+                    await this.loadContentDetails(contentId);
+                } else {
+                    window.location.href = '/';
+                }
+            }
+
+            async loadContentDetails(contentId) {
+                try {
+                    app.showLoading('Loading content details...');
+
+                    const data = await app.apiCall(`/content/${contentId}`);
+                    this.content = data;
+
+                    this.renderContentDetails(data);
+                    this.setupTabs();
+
+                    // Update page title
+                    document.title = `${data.title} - CineScope`;
+
+                } catch (error) {
+                    console.error('Failed to load content details:', error);
+                    app.showNotification('Failed to load content details', 'error');
+                    this.renderErrorState();
+                } finally {
+                    app.hideLoading();
+                }
+            }
+
+            renderContentDetails(content) {
+                const container = document.querySelector('.content-details');
+
+                const trailerVideoId = this.extractYouTubeId(content.youtube_trailer);
+
+                container.innerHTML = `
+                    <div class="content-header">
+                        <div class="content-backdrop" style="background-image: url('${content.backdrop_path || content.poster_path || '/assets/placeholder-backdrop.jpg'}')"></div>
+                        <div class="content-overlay">
+                            <div class="container">
+                                <div class="content-info">
+                                    <div class="content-poster">
+                                        <img src="${content.poster_path || '/assets/placeholder.jpg'}" alt="${content.title}" loading="eager">
+                                    </div>
+                                    <div class="content-meta">
+                                        <h1 class="content-title">${content.title}</h1>
+                                        ${content.original_title && content.original_title !== content.title ? `<p style="color: var(--text-secondary); margin-bottom: var(--spacing-md); font-style: italic;">${content.original_title}</p>` : ''}
+                                        
+                                        <div class="content-stats">
+                                            <div class="content-stat">
+                                                <span class="rating">★</span>
+                                                <span>${content.rating ? content.rating.toFixed(1) : 'N/A'}</span>
+                                            </div>
+                                            <div class="content-stat">
+                                                <span>📅</span>
+                                                <span>${content.release_date ? new Date(content.release_date).getFullYear() : 'N/A'}</span>
+                                            </div>
+                                            <div class="content-stat">
+                                                <span>🎬</span>
+                                                <span>${content.content_type.toUpperCase()}</span>
+                                            </div>
+                                            ${content.runtime ? `
+                                                <div class="content-stat">
+                                                    <span>⏱️</span>
+                                                    <span>${Math.floor(content.runtime / 60)}h ${content.runtime % 60}m</span>
+                                                </div>
+                                            ` : ''}
+                                            ${content.vote_count ? `
+                                                <div class="content-stat">
+                                                    <span>👥</span>
+                                                    <span>${content.vote_count.toLocaleString()} votes</span>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                        
+                                        <div class="content-genres">
+                                            ${(content.genres || []).map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
+                                            ${content.content_type === 'anime' && content.anime_genres ?
+                        (content.anime_genres || []).map(genre => `<span class="genre-tag anime-genre">${genre}</span>`).join('') : ''
+                    }
+                                        </div>
+                                        
+                                        <p class="content-overview">${content.overview || 'No description available.'}</p>
+                                        
+                                        <div class="content-actions">
+                                            ${content.youtube_trailer ? `
+                                                <a href="#trailer" class="btn btn-primary action-btn-large play-btn" onclick="contentDetails.scrollToTrailer()">
+                                                    ▶️ Watch Trailer
+                                                </a>
+                                            ` : ''}
+                                            <button class="btn btn-secondary action-btn-large" onclick="app.addToWatchlist(${content.id})">
+                                                ➕ Add to Watchlist
+                                            </button>
+                                            <button class="btn btn-ghost action-btn-large" onclick="app.addToFavorites(${content.id})">
+                                                ❤️ Favorite
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                    
+                    <div class="container">
+                        <div class="content-tabs">
+                            <button class="content-tab active" data-tab="overview">Overview</button>
+                            ${content.cast && content.cast.length > 0 ? '<button class="content-tab" data-tab="cast">Cast & Crew</button>' : ''}
+                            ${trailerVideoId ? '<button class="content-tab" data-tab="videos">Videos</button>' : ''}
+                            ${content.similar_content && content.similar_content.length > 0 ? '<button class="content-tab" data-tab="similar">Similar</button>' : ''}
+                        </div>
+                        
+                        <div class="tab-content active" id="overview-tab">
+                            <div class="content-section">
+                                <h2>Synopsis</h2>
+                                <p style="font-size: 1.125rem; line-height: 1.7; color: var(--text-secondary);">
+                                    ${content.overview || 'No detailed synopsis available.'}
+                                </p>
+                                
+                                ${content.languages && content.languages.length > 0 ? `
+                                    <div style="margin-top: var(--spacing-xl);">
+                                        <h3>Available Languages</h3>
+                                        <div class="content-genres">
+                                            ${content.languages.map(lang => `<span class="genre-tag">${lang}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${this.renderContentFlags(content)}
+                            </div>
+                        </div>
+                        
+                        ${content.cast && content.cast.length > 0 ? `
+                            <div class="tab-content" id="cast-tab">
+                                <div class="content-section">
+                                    <h2>Cast & Crew</h2>
+                                    <div class="cast-grid">
+                                        ${content.cast.slice(0, 12).map(person => this.renderCastMember(person)).join('')}
+                                    </div>
+                                    
+                                    ${content.crew && content.crew.length > 0 ? `
+                                        <h3 style="margin-top: var(--spacing-2xl); margin-bottom: var(--spacing-lg);">Key Crew</h3>
+                                        <div class="cast-grid">
+                                            ${content.crew.slice(0, 6).map(person => this.renderCrewMember(person)).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${trailerVideoId ? `
+                            <div class="tab-content" id="videos-tab">
+                                <div class="content-section">
+                                    <h2 id="trailer">Trailer</h2>
+                                    <div class="video-section">
+                                        <div class="video-container">
+                                            <iframe src="https://www.youtube.com/embed/${trailerVideoId}?rel=0&modestbranding=1" 
+                                                    frameborder="0" 
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                                    allowfullscreen>
+                                            </iframe>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${content.similar_content && content.similar_content.length > 0 ? `
+                            <div class="tab-content" id="similar-tab">
+                                <div class="content-section">
+                                    <h2>Similar Content</h2>
+                                    <div class="similar-content-grid">
+                                        ${content.similar_content.map(item => app.createMovieCard(item)).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
 
-                <button class="mobile-menu-toggle" id="mobile-menu-toggle">☰</button>
-            </div>
-        </nav>
-    </header>
+                // Setup lazy loading for all images
+                app.setupLazyLoading(container);
+            }
 
-    <!-- Main Content -->
-    <main>
-        <!-- Content Details will be dynamically loaded here -->
-        <div id="content-details">
-            <div class="flex justify-center items-center" style="height: 50vh;">
-                <div class="spinner spinner-lg"></div>
-            </div>
-        </div>
-    </main>
+            renderContentFlags(content) {
+                const flags = [];
 
-    <!-- JavaScript -->
-    <script src="/js/main.js"></script>
+                if (content.is_trending) flags.push('🔥 Trending');
+                if (content.is_new_release) flags.push('🆕 New Release');
+                if (content.is_critics_choice) flags.push('⭐ Critics\' Choice');
+
+                if (flags.length === 0) return '';
+
+                return `
+                    <div style="margin-top: var(--spacing-xl);">
+                        <h3>Highlights</h3>
+                        <div class="content-genres">
+                            ${flags.map(flag => `<span class="genre-tag" style="background: var(--success); color: white;">${flag}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderCastMember(person) {
+                const profileImage = person.profile_path ?
+                    `https://image.tmdb.org/t/p/w200${person.profile_path}` :
+                    '/assets/person-placeholder.jpg';
+
+                return `
+                    <div class="cast-member">
+                        <img src="${profileImage}" alt="${person.name}" loading="lazy">
+                        <h4>${person.name}</h4>
+                        <p>${person.character || ''}</p>
+                    </div>
+                `;
+            }
+
+            renderCrewMember(person) {
+                const profileImage = person.profile_path ?
+                    `https://image.tmdb.org/t/p/w200${person.profile_path}` :
+                    '/assets/person-placeholder.jpg';
+
+                return `
+                    <div class="cast-member">
+                        <img src="${profileImage}" alt="${person.name}" loading="lazy">
+                        <h4>${person.name}</h4>
+                        <p>${person.job || person.department || ''}</p>
+                    </div>
+                `;
+            }
+
+            setupTabs() {
+                const tabs = document.querySelectorAll('.content-tab');
+                const tabContents = document.querySelectorAll('.tab-content');
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const targetTab = tab.dataset.tab;
+
+                        // Update active tab
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+
+                        // Show corresponding content
+                        tabContents.forEach(content => {
+                            if (content.id === `${targetTab}-tab`) {
+                                content.classList.add('active');
+                            } else {
+                                content.classList.remove('active');
+                            }
+                        });
+
+                        this.activeTab = targetTab;
+                    });
+                });
+            }
+
+            extractYouTubeId(url) {
+                if (!url) return null;
+
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+                const match = url.match(regExp);
+
+                return (match && match[2].length === 11) ? match[2] : null;
+            }
+
+            scrollToTrailer() {
+                const trailerSection = document.getElementById('trailer');
+                if (trailerSection) {
+                    trailerSection.scrollIntoView({ behavior: 'smooth' });
+
+                    // Switch to videos tab if not already active
+                    const videosTab = document.querySelector('[data-tab="videos"]');
+                    if (videosTab) {
+                        videosTab.click();
+                    }
+                }
+            }
+
+            renderErrorState() {
+                const container = document.querySelector('.content-details');
+                container.innerHTML = `
+                    <div class="content-section">
+                        <div class="container">
+                            ${IncludeManager.generateErrorState('Content not found or failed to load')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize content details
+        let contentDetails;
+        document.addEventListener('DOMContentLoaded', () => {
+            contentDetails = new ContentDetails();
+        });
+    </script>
 </body>
 
 </html>

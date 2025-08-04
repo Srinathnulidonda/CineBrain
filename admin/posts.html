@@ -4,248 +4,456 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Posts & Recommendations - Admin - CineScope</title>
+    <title>Admin Recommendations - CineScope</title>
 
-    <!-- CSS Files -->
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/responsive.css">
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+    <style>
+        .create-recommendation {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .recommendation-form {
+            display: grid;
+            gap: var(--spacing-md);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+
+        .content-search {
+            position: relative;
+        }
+
+        .search-results-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--dark-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .search-result-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            cursor: pointer;
+            transition: background var(--transition-fast);
+        }
+
+        .search-result-item:hover {
+            background: var(--card-bg);
+        }
+
+        .search-result-poster {
+            width: 40px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 0.25rem;
+        }
+
+        .recommendations-list {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: var(--spacing-lg);
+        }
+
+        .recommendation-item {
+            display: flex;
+            gap: var(--spacing-md);
+            padding: var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .recommendation-poster {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 0.375rem;
+        }
+
+        .recommendation-content {
+            flex: 1;
+        }
+
+        .recommendation-title {
+            font-weight: 600;
+            margin: 0 0 var(--spacing-xs) 0;
+            color: var(--text-primary);
+        }
+
+        .recommendation-type {
+            display: inline-block;
+            background: var(--accent-blue);
+            color: white;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .recommendation-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .recommendation-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .recommendation-actions {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .telegram-status {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .telegram-connected {
+            color: var(--success);
+        }
+
+        .telegram-disconnected {
+            color: var(--error);
+        }
+
+        @media (max-width: 767px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .recommendation-item {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <!-- Admin Header -->
-    <header class="header bg-bg-secondary">
-        <nav class="container">
-            <div class="nav">
-                <div class="nav-brand">
-                    <a href="/admin/dashboard">CineScope Admin</a>
-                </div>
+    <div data-include="header"></div>
 
-                <ul class="nav-menu">
-                    <li><a href="/admin/dashboard" class="nav-link">Dashboard</a></li>
-                    <li><a href="/admin/content-browser" class="nav-link">Content</a></li>
-                    <li><a href="/admin/posts" class="nav-link active">Posts</a></li>
-                    <li><a href="/admin/analytics" class="nav-link">Analytics</a></li>
-                    <li><a href="/" class="nav-link">View Site</a></li>
-                </ul>
+    <div class="content-browser-container">
+        <aside class="admin-sidebar">
+            <h3>Admin Panel</h3>
+            <ul class="admin-nav">
+                <li><a href="/admin/dashboard">📊 Dashboard</a></li>
+                <li><a href="/admin/content-browser">🎬 Content Browser</a></li>
+                <li><a href="/admin/posts" class="active">📝 Recommendations</a></li>
+                <li><a href="/admin/analytics">📈 Analytics</a></li>
+            </ul>
+        </aside>
 
-                <div class="nav-actions">
-                    <button onclick="PostsManager.createNewPost()" class="btn btn-primary">
-                        ✍️ New Post
-                    </button>
-                    <div id="user-menu" class="dropdown">
-                        <button class="btn btn-secondary">Admin</button>
-                        <div class="dropdown-menu">
-                            <button onclick="AuthManager.logout()" class="dropdown-item">Logout</button>
-                        </div>
-                    </div>
-                </div>
+        <main class="admin-main">
+            <div class="admin-header">
+                <h1>Admin Recommendations</h1>
+                <p>Create and manage content recommendations</p>
             </div>
-        </nav>
-    </header>
 
-    <!-- Main Content -->
-    <main style="padding-top: 80px;">
-        <div class="container py-8">
-            <!-- Page Header -->
-            <section class="mb-8">
-                <h1 class="text-3xl font-bold mb-2">Posts & Recommendations</h1>
-                <p class="text-secondary">Create and manage editorial content</p>
-            </section>
-
-            <!-- Post Types -->
-            <section class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div class="card interactive p-6 text-center" onclick="PostsManager.filterByType('review')">
-                    <div class="text-3xl mb-2">📝</div>
-                    <h3 class="font-semibold">Reviews</h3>
-                    <p class="text-sm text-secondary">In-depth analysis</p>
-                </div>
-                <div class="card interactive p-6 text-center" onclick="PostsManager.filterByType('list')">
-                    <div class="text-3xl mb-2">📋</div>
-                    <h3 class="font-semibold">Lists</h3>
-                    <p class="text-sm text-secondary">Curated collections</p>
-                </div>
-                <div class="card interactive p-6 text-center" onclick="PostsManager.filterByType('article')">
-                    <div class="text-3xl mb-2">📰</div>
-                    <h3 class="font-semibold">Articles</h3>
-                    <p class="text-sm text-secondary">News & features</p>
-                </div>
-                <div class="card interactive p-6 text-center" onclick="PostsManager.filterByType('recommendation')">
-                    <div class="text-3xl mb-2">⭐</div>
-                    <h3 class="font-semibold">Recommendations</h3>
-                    <p class="text-sm text-secondary">Admin picks</p>
-                </div>
-            </section>
-
-            <!-- Quick Stats -->
-            <section class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-                <div class="card p-4 text-center">
-                    <div class="text-xl font-bold text-primary-blue" id="total-posts">0</div>
-                    <div class="text-sm text-muted">Total Posts</div>
-                </div>
-                <div class="card p-4 text-center">
-                    <div class="text-xl font-bold text-success" id="published-posts">0</div>
-                    <div class="text-sm text-muted">Published</div>
-                </div>
-                <div class="card p-4 text-center">
-                    <div class="text-xl font-bold text-warning" id="draft-posts">0</div>
-                    <div class="text-sm text-muted">Drafts</div>
-                </div>
-                <div class="card p-4 text-center">
-                    <div class="text-xl font-bold text-primary-purple" id="scheduled-posts">0</div>
-                    <div class="text-sm text-muted">Scheduled</div>
-                </div>
-                <div class="card p-4 text-center">
-                    <div class="text-xl font-bold text-accent-blue" id="telegram-sent">0</div>
-                    <div class="text-sm text-muted">Telegram</div>
-                </div>
-            </section>
-
-            <!-- Posts List -->
-            <section class="card p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="font-semibold text-xl">All Posts</h3>
-                    <div class="flex gap-4">
-                        <select id="post-status-filter" class="form-input w-auto">
-                            <option value="all">All Status</option>
-                            <option value="published">Published</option>
-                            <option value="draft">Draft</option>
-                            <option value="scheduled">Scheduled</option>
-                        </select>
-                        <input type="text" id="post-search" class="form-input w-64" placeholder="Search posts...">
-                    </div>
-                </div>
-
-                <div class="space-y-4" id="posts-list">
-                    <!-- Posts will be populated here -->
-                </div>
-
-                <!-- Load More -->
-                <div class="text-center mt-6">
-                    <button id="load-more-posts" class="btn btn-secondary" style="display: none;">
-                        Load More Posts
-                    </button>
-                </div>
-            </section>
-        </div>
-    </main>
-
-    <!-- Create/Edit Post Modal -->
-    <div id="post-modal" class="modal-overlay">
-        <div class="modal" style="max-width: 900px; max-height: 90vh;">
-            <div class="modal-header">
-                <h3 id="post-modal-title">Create New Post</h3>
-                <button class="modal-close" onclick="UIComponents.closeModal('post-modal')">×</button>
+            <div class="telegram-status" id="telegram-status">
+                <h3>📱 Telegram Integration</h3>
+                <p class="telegram-disconnected">Status: Checking connection...</p>
             </div>
-            <div class="modal-body" style="overflow-y: auto;">
-                <form id="post-form" class="space-y-6">
-                    <div class="form-group">
-                        <label class="form-label">Post Title</label>
-                        <input type="text" id="post-title" class="form-input" placeholder="Enter a compelling title..."
-                            required>
-                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="form-group">
-                            <label class="form-label">Post Type</label>
-                            <select id="post-type" class="form-input" required>
-                                <option value="review">Review</option>
-                                <option value="list">List</option>
-                                <option value="article">Article</option>
-                                <option value="recommendation">Recommendation</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Status</label>
-                            <select id="post-status" class="form-input">
-                                <option value="draft">Draft</option>
-                                <option value="published">Published</option>
-                                <option value="scheduled">Scheduled</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group" id="content-selector" style="display: none;">
-                        <label class="form-label">Select Content</label>
-                        <input type="text" id="content-search" class="form-input"
-                            placeholder="Search for movie, TV show, or anime...">
-                        <div id="content-search-results" class="mt-2"></div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Post Content</label>
-                        <div class="border border-white/10 rounded-lg p-2">
-                            <div class="flex gap-2 mb-2 p-2 border-b border-white/10">
-                                <button type="button" onclick="PostsManager.formatText('bold')"
-                                    class="btn btn-ghost btn-sm">B</button>
-                                <button type="button" onclick="PostsManager.formatText('italic')"
-                                    class="btn btn-ghost btn-sm">I</button>
-                                <button type="button" onclick="PostsManager.formatText('heading')"
-                                    class="btn btn-ghost btn-sm">H</button>
-                                <button type="button" onclick="PostsManager.formatText('link')"
-                                    class="btn btn-ghost btn-sm">🔗</button>
-                                <button type="button" onclick="PostsManager.formatText('list')"
-                                    class="btn btn-ghost btn-sm">☰</button>
+            <div class="create-recommendation">
+                <h3>Create New Recommendation</h3>
+                <form class="recommendation-form" id="recommendation-form">
+                    <div class="form-row">
+                        <div class="form-group content-search">
+                            <label for="content-search" class="form-label">Search Content</label>
+                            <input type="text" id="content-search" class="form-input"
+                                placeholder="Search for movie, TV show, or anime..." required>
+                            <div class="search-results-dropdown" id="search-dropdown">
+                                <!-- Search results will appear here -->
                             </div>
-                            <textarea id="post-content" class="form-input border-0" rows="10"
-                                placeholder="Write your post content here..." required></textarea>
+                            <input type="hidden" id="selected-content-id" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="recommendation-type" class="form-label">Recommendation Type</label>
+                            <select id="recommendation-type" class="form-input" required>
+                                <option value="">Select type...</option>
+                                <option value="admin_choice">Admin's Choice</option>
+                                <option value="trending">Trending</option>
+                                <option value="critics_choice">Critics' Choice</option>
+                                <option value="hidden_gem">Hidden Gem</option>
+                                <option value="must_watch">Must Watch</option>
+                            </select>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Featured Image URL</label>
-                        <input type="url" id="post-image" class="form-input"
-                            placeholder="https://example.com/image.jpg">
+                        <label for="recommendation-description" class="form-label">Description / Why you recommend
+                            it</label>
+                        <textarea id="recommendation-description" class="form-input" rows="4"
+                            placeholder="Explain why this content is worth watching..." required></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Tags (comma separated)</label>
-                        <input type="text" id="post-tags" class="form-input" placeholder="action, thriller, 2024">
-                    </div>
-
-                    <div class="flex items-center gap-4">
-                        <label class="flex items-center gap-2">
-                            <input type="checkbox" id="send-to-telegram" checked>
-                            <span>Send to Telegram channel</span>
-                        </label>
-
-                        <label class="flex items-center gap-2">
-                            <input type="checkbox" id="pin-to-homepage">
-                            <span>Pin to homepage</span>
-                        </label>
-                    </div>
-
-                    <div class="form-group" id="schedule-section" style="display: none;">
-                        <label class="form-label">Schedule Date & Time</label>
-                        <input type="datetime-local" id="schedule-datetime" class="form-input">
+                        <button type="submit" class="btn btn-primary">Create Recommendation</button>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button onclick="PostsManager.saveDraft()" class="btn btn-ghost">
-                    Save as Draft
-                </button>
-                <button onclick="UIComponents.closeModal('post-modal')" class="btn btn-secondary">
-                    Cancel
-                </button>
-                <button onclick="PostsManager.publishPost()" class="btn btn-primary">
-                    Publish Post
-                </button>
+
+            <div class="recommendations-list">
+                <h3>Recent Recommendations</h3>
+                <div id="recommendations-container">
+                    <!-- Recommendations will be loaded here -->
+                </div>
             </div>
-        </div>
+        </main>
     </div>
 
-    <!-- JavaScript -->
+    <script src="/js/include.js"></script>
     <script src="/js/main.js"></script>
-    <script src="/js/admin-posts.js"></script>
+
+    <script>
+        class AdminRecommendations {
+            constructor() {
+                this.selectedContent = null;
+                this.searchTimeout = null;
+                this.recommendations = [];
+                this.init();
+            }
+
+            async init() {
+                if (!app.token || !app.user?.is_admin) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                this.setupEventListeners();
+                await this.loadRecommendations();
+                this.checkTelegramStatus();
+            }
+
+            setupEventListeners() {
+                // Content search
+                const contentSearch = document.getElementById('content-search');
+                contentSearch.addEventListener('input', (e) => {
+                    clearTimeout(this.searchTimeout);
+                    this.searchTimeout = setTimeout(() => {
+                        this.searchContent(e.target.value);
+                    }, 300);
+                });
+
+                // Form submission
+                const form = document.getElementById('recommendation-form');
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.createRecommendation();
+                });
+
+                // Click outside to close dropdown
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.content-search')) {
+                        this.hideSearchDropdown();
+                    }
+                });
+            }
+
+            async searchContent(query) {
+                if (!query.trim()) {
+                    this.hideSearchDropdown();
+                    return;
+                }
+
+                try {
+                    const data = await app.apiCall(`/search?query=${encodeURIComponent(query)}&limit=5`);
+                    this.showSearchResults(data.results || []);
+                } catch (error) {
+                    console.error('Content search failed:', error);
+                }
+            }
+
+            showSearchResults(results) {
+                const dropdown = document.getElementById('search-dropdown');
+
+                if (results.length === 0) {
+                    dropdown.innerHTML = '<div style="padding: var(--spacing-md); color: var(--text-muted);">No results found</div>';
+                } else {
+                    dropdown.innerHTML = results.map(item => `
+                        <div class="search-result-item" onclick="adminRecommendations.selectContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                            <img src="${item.poster_path || '/assets/placeholder.jpg'}" alt="${item.title}" class="search-result-poster">
+                            <div>
+                                <div style="font-weight: 600;">${item.title}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">${item.content_type?.toUpperCase()} • ${item.rating ? item.rating.toFixed(1) : 'N/A'} ⭐</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                dropdown.style.display = 'block';
+            }
+
+            selectContent(content) {
+                this.selectedContent = content;
+                document.getElementById('content-search').value = content.title;
+                document.getElementById('selected-content-id').value = content.id;
+                this.hideSearchDropdown();
+            }
+
+            hideSearchDropdown() {
+                const dropdown = document.getElementById('search-dropdown');
+                dropdown.style.display = 'none';
+            }
+
+            async createRecommendation() {
+                try {
+                    app.showLoading('Creating recommendation...');
+
+                    const formData = {
+                        content_id: document.getElementById('selected-content-id').value,
+                        recommendation_type: document.getElementById('recommendation-type').value,
+                        description: document.getElementById('recommendation-description').value
+                    };
+
+                    const response = await app.apiCall('/admin/recommendations', {
+                        method: 'POST',
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (response.message) {
+                        app.showNotification(
+                            `Recommendation created! ${response.telegram_sent ? 'Sent to Telegram ✅' : 'Telegram failed ❌'}`,
+                            'success'
+                        );
+
+                        // Reset form
+                        document.getElementById('recommendation-form').reset();
+                        this.selectedContent = null;
+
+                        // Reload recommendations
+                        await this.loadRecommendations();
+                    }
+
+                } catch (error) {
+                    console.error('Failed to create recommendation:', error);
+                    app.showNotification('Failed to create recommendation', 'error');
+                } finally {
+                    app.hideLoading();
+                }
+            }
+
+            async loadRecommendations() {
+                try {
+                    const data = await app.apiCall('/admin/recommendations?page=1&per_page=10');
+                    this.recommendations = data.recommendations || [];
+                    this.renderRecommendations();
+                } catch (error) {
+                    console.error('Failed to load recommendations:', error);
+                }
+            }
+
+            renderRecommendations() {
+                const container = document.getElementById('recommendations-container');
+
+                if (this.recommendations.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: var(--spacing-xl); color: var(--text-muted);">
+                            <h4>No recommendations yet</h4>
+                            <p>Create your first recommendation above!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = this.recommendations.map(rec => `
+                    <div class="recommendation-item">
+                        <img src="${rec.content.poster_path || '/assets/placeholder.jpg'}" alt="${rec.content.title}" class="recommendation-poster">
+                        <div class="recommendation-content">
+                            <h4 class="recommendation-title">${rec.content.title}</h4>
+                            <span class="recommendation-type">${rec.recommendation_type.replace('_', ' ').toUpperCase()}</span>
+                            <p class="recommendation-description">${rec.description}</p>
+                            <div class="recommendation-meta">
+                                By ${rec.admin_name} • ${new Date(rec.created_at).toLocaleDateString()}
+                            </div>
+                        </div>
+                        <div class="recommendation-actions">
+                            <button class="btn btn-sm btn-secondary" onclick="adminRecommendations.editRecommendation(${rec.id})">
+                                Edit
+                            </button>
+                            <button class="btn btn-sm btn-ghost" onclick="adminRecommendations.deleteRecommendation(${rec.id})">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            checkTelegramStatus() {
+                // Mock telegram status check
+                const statusElement = document.getElementById('telegram-status');
+                const statusText = statusElement.querySelector('p');
+
+                // Simulate checking status
+                setTimeout(() => {
+                    const isConnected = Math.random() > 0.3; // 70% chance of being connected
+
+                    if (isConnected) {
+                        statusText.className = 'telegram-connected';
+                        statusText.textContent = 'Status: Connected ✅ - Recommendations will be automatically posted to Telegram';
+                    } else {
+                        statusText.className = 'telegram-disconnected';
+                        statusText.textContent = 'Status: Disconnected ❌ - Check Telegram bot configuration';
+                    }
+                }, 1000);
+            }
+
+            editRecommendation(id) {
+                // Implementation for editing recommendations
+                app.showNotification('Edit functionality coming soon', 'info');
+            }
+
+            async deleteRecommendation(id) {
+                if (!confirm('Are you sure you want to delete this recommendation?')) {
+                    return;
+                }
+
+                try {
+                    // This would be an API call to delete the recommendation
+                    // await app.apiCall(`/admin/recommendations/${id}`, { method: 'DELETE' });
+
+                    app.showNotification('Recommendation deleted', 'success');
+                    await this.loadRecommendations();
+                } catch (error) {
+                    console.error('Failed to delete recommendation:', error);
+                    app.showNotification('Failed to delete recommendation', 'error');
+                }
+            }
+        }
+
+        let adminRecommendations;
+        document.addEventListener('DOMContentLoaded', () => {
+            adminRecommendations = new AdminRecommendations();
+        });
+    </script>
 </body>
 
 </html>

@@ -1,174 +1,151 @@
+// Service Worker for CineScope PWA
 const CACHE_NAME = 'cinescope-v1.0.0';
-const STATIC_CACHE = 'cinescope-static-v1.0.0';
-const DYNAMIC_CACHE = 'cinescope-dynamic-v1.0.0';
+const RUNTIME_CACHE = 'cinescope-runtime';
 
-// Files to cache immediately
-const STATIC_FILES = [
+// Assets to cache on install
+const STATIC_ASSETS = [
   '/',
   '/css/main.css',
   '/css/components.css',
   '/css/responsive.css',
   '/js/main.js',
   '/js/include.js',
-  '/login',
-  '/dashboard',
-  '/search',
-  '/manifest.json',
+  '/includes/header.html',
+  '/includes/footer.html',
   '/assets/icons/icon-192x192.png',
-  '/assets/icons/icon-512x512.png'
+  '/assets/icons/icon-512x512.png',
+  '/assets/placeholder.jpg',
+  '/assets/person-placeholder.jpg',
+  '/manifest.json'
 ];
 
-// API endpoints to cache
-const API_CACHE_PATTERNS = [
-  /\/api\/recommendations\//,
-  /\/api\/content\//,
-  /\/api\/search/
-];
-
-// Install event - cache static files
-self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
-
+// Install event - cache static assets
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log('Service Worker: Caching static files');
-        return cache.addAll(STATIC_FILES);
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('Caching static assets');
+        return cache.addAll(STATIC_ASSETS);
       })
       .then(() => {
-        console.log('Service Worker: Static files cached');
-        return self.skipWaiting();
+        console.log('Static assets cached successfully');
+        self.skipWaiting();
       })
-      .catch((error) => {
-        console.error('Service Worker: Cache failed', error);
+      .catch(error => {
+        console.error('Error caching static assets:', error);
       })
   );
 });
 
 // Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
-
+self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then((cacheNames) => {
+      .then(cacheNames => {
         return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-              console.log('Service Worker: Deleting old cache', cacheName);
+          cacheNames.map(cacheName => {
+            if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
+              console.log('Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
           })
         );
       })
       .then(() => {
-        console.log('Service Worker: Activated');
-        return self.clients.claim();
+        console.log('Old caches cleaned up');
+        self.clients.claim();
       })
   );
 });
 
-// Fetch event - serve cached content when offline
-self.addEventListener('fetch', (event) => {
+// Fetch event - serve from cache with network fallback
+self.addEventListener('fetch', event => {
   const { request } = event;
+  const url = new URL(request.url);
 
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
   }
 
-  // Handle API requests
-  if (request.url.includes('/api/')) {
-    event.respondWith(handleApiRequest(request));
+  // Skip external requests (except for images)
+  if (url.origin !== location.origin && !isImageRequest(request)) {
     return;
   }
 
-  // Handle navigation requests
-  if (request.mode === 'navigate') {
+  // Handle different types of requests
+  if (isAPIRequest(request)) {
+    event.respondWith(handleAPIRequest(request));
+  } else if (isImageRequest(request)) {
+    event.respondWith(handleImageRequest(request));
+  } else if (isNavigationRequest(request)) {
     event.respondWith(handleNavigationRequest(request));
-    return;
+  } else {
+    event.respondWith(handleStaticAssetRequest(request));
   }
-
-  // Handle asset requests
-  event.respondWith(handleAssetRequest(request));
 });
 
-// Handle API requests with network-first strategy
-async function handleApiRequest(request) {
+// Check if request is for API
+function isAPIRequest(request) {
+  return request.url.includes('/api/');
+}
+
+// Check if request is for an image
+function isImageRequest(request) {
+  return request.destination === 'image' ||
+    /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(request.url);
+}
+
+// Check if request is a navigation request
+function isNavigationRequest(request) {
+  return request.mode === 'navigate';
+}
+
+// Handle API requests - network first, cache fallback
+async function handleAPIRequest(request) {
+  const cache = await caches.open(RUNTIME_CACHE);
+
   try {
     // Try network first
     const networkResponse = await fetch(request);
 
     if (networkResponse.ok) {
-      // Cache successful API responses
-      const shouldCache = API_CACHE_PATTERNS.some(pattern =>
-        pattern.test(request.url)
-      );
-
-      if (shouldCache) {
-        const cache = await caches.open(DYNAMIC_CACHE);
-        cache.put(request, networkResponse.clone());
-      }
+      // Cache successful responses
+      cache.put(request, networkResponse.clone());
+      return networkResponse;
     }
 
-    return networkResponse;
+    throw new Error('Network response not ok');
   } catch (error) {
-    // Network failed, try cache
-    const cachedResponse = await caches.match(request);
+    console.log('Network failed, trying cache for:', request.url);
 
+    // Try cache
+    const cachedResponse = await cache.match(request);
     if (cachedResponse) {
-      console.log('Service Worker: Serving API from cache', request.url);
       return cachedResponse;
     }
 
-    // Return offline API response
+    // Return offline response for API requests
     return new Response(
       JSON.stringify({
         error: 'Offline',
-        message: 'This feature is not available offline',
-        cached: false
+        message: 'You are currently offline. Please check your connection.'
       }),
       {
         status: 503,
         statusText: 'Service Unavailable',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       }
     );
   }
 }
 
-// Handle navigation requests
-async function handleNavigationRequest(request) {
-  try {
-    // Try network first
-    const networkResponse = await fetch(request);
-    return networkResponse;
-  } catch (error) {
-    // Network failed, serve cached page or offline page
-    const cachedResponse = await caches.match(request);
+// Handle image requests - cache first, network fallback
+async function handleImageRequest(request) {
+  const cache = await caches.open(RUNTIME_CACHE);
 
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    // Serve offline page
-    const offlineResponse = await caches.match('/');
-    return offlineResponse || new Response(
-      '<!DOCTYPE html><html><head><title>Offline</title></head><body><h1>You are offline</h1><p>Please check your internet connection.</p></body></html>',
-      {
-        headers: { 'Content-Type': 'text/html' }
-      }
-    );
-  }
-}
-
-// Handle asset requests with cache-first strategy
-async function handleAssetRequest(request) {
   // Try cache first
-  const cachedResponse = await caches.match(request);
-
+  const cachedResponse = await cache.match(request);
   if (cachedResponse) {
     return cachedResponse;
   }
@@ -178,146 +155,213 @@ async function handleAssetRequest(request) {
     const networkResponse = await fetch(request);
 
     if (networkResponse.ok) {
-      // Cache the response
-      const cache = await caches.open(DYNAMIC_CACHE);
+      // Cache successful responses
       cache.put(request, networkResponse.clone());
+      return networkResponse;
     }
 
-    return networkResponse;
+    throw new Error('Network response not ok');
   } catch (error) {
-    // Return placeholder for images
-    if (request.destination === 'image') {
-      return new Response(
-        '<svg width="300" height="450" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#1a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="16" fill="#666" text-anchor="middle">Image not available offline</text></svg>',
-        {
-          headers: {
-            'Content-Type': 'image/svg+xml'
-          }
-        }
-      );
-    }
+    console.log('Failed to load image:', request.url);
 
-    throw error;
+    // Return placeholder image
+    return caches.match('/assets/placeholder.jpg');
   }
 }
 
-// Background sync for offline actions
-self.addEventListener('sync', (event) => {
-  console.log('Service Worker: Background sync', event.tag);
+// Handle navigation requests - cache first, network fallback
+async function handleNavigationRequest(request) {
+  const cache = await caches.open(CACHE_NAME);
 
-  switch (event.tag) {
-    case 'sync-user-interactions':
-      event.waitUntil(syncUserInteractions());
-      break;
-    case 'sync-search-queries':
-      event.waitUntil(syncSearchQueries());
-      break;
+  try {
+    // Try network first
+    const networkResponse = await fetch(request);
+
+    if (networkResponse.ok) {
+      return networkResponse;
+    }
+
+    throw new Error('Network response not ok');
+  } catch (error) {
+    console.log('Network failed for navigation, trying cache');
+
+    // Try cache
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // Fallback to index.html for SPA routing
+    const indexResponse = await cache.match('/');
+    if (indexResponse) {
+      return indexResponse;
+    }
+
+    // Return offline page
+    return new Response(
+      generateOfflinePage(),
+      {
+        headers: { 'Content-Type': 'text/html' }
+      }
+    );
+  }
+}
+
+// Handle static asset requests - cache first, network fallback
+async function handleStaticAssetRequest(request) {
+  const cache = await caches.open(CACHE_NAME);
+
+  // Try cache first
+  const cachedResponse = await cache.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  try {
+    // Try network
+    const networkResponse = await fetch(request);
+
+    if (networkResponse.ok) {
+      // Cache successful responses
+      cache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
+
+    throw new Error('Network response not ok');
+  } catch (error) {
+    console.log('Failed to load static asset:', request.url);
+
+    // Return a generic error response
+    return new Response('Asset not available offline', {
+      status: 404,
+      statusText: 'Not Found'
+    });
+  }
+}
+
+// Generate offline page HTML
+function generateOfflinePage() {
+  return `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Offline - CineScope</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+                    color: #f8fafc;
+                    margin: 0;
+                    padding: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    text-align: center;
+                }
+                .offline-container {
+                    max-width: 400px;
+                    padding: 2rem;
+                }
+                .offline-icon {
+                    font-size: 4rem;
+                    margin-bottom: 1rem;
+                }
+                h1 {
+                    margin: 0 0 1rem 0;
+                    color: #3b82f6;
+                }
+                p {
+                    color: #cbd5e1;
+                    margin-bottom: 2rem;
+                }
+                .retry-btn {
+                    background: #3b82f6;
+                    color: white;
+                    border: none;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 0.5rem;
+                    cursor: pointer;
+                    font-size: 1rem;
+                }
+                .retry-btn:hover {
+                    background: #2563eb;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="offline-container">
+                <div class="offline-icon">📱</div>
+                <h1>You're Offline</h1>
+                <p>It looks like you've lost your internet connection. Some content may not be available.</p>
+                <button class="retry-btn" onclick="window.location.reload()">
+                    Try Again
+                </button>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+// Background sync for offline actions
+self.addEventListener('sync', event => {
+  if (event.tag === 'background-sync') {
+    event.waitUntil(doBackgroundSync());
   }
 });
 
-// Push notifications
-self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push received', event);
+async function doBackgroundSync() {
+  // Handle any offline actions that need to be synced
+  console.log('Background sync triggered');
+}
 
-  const options = {
-    body: event.data ? event.data.text() : 'New content available!',
-    icon: '/assets/icons/icon-192x192.png',
-    badge: '/assets/icons/badge.png',
-    vibrate: [100, 50, 100],
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1
-    },
-    actions: [
-      {
-        action: 'explore',
-        title: 'Explore',
-        icon: '/assets/icons/explore.png'
-      },
-      {
-        action: 'close',
-        title: 'Close',
-        icon: '/assets/icons/close.png'
-      }
-    ]
-  };
+// Push notification handling
+self.addEventListener('push', event => {
+  if (event.data) {
+    const data = event.data.json();
 
-  event.waitUntil(
-    self.registration.showNotification('CineScope', options)
-  );
-});
+    const options = {
+      body: data.body,
+      icon: '/assets/icons/icon-192x192.png',
+      badge: '/assets/icons/icon-96x96.png',
+      data: data.data,
+      actions: [
+        {
+          action: 'view',
+          title: 'View',
+          icon: '/assets/icons/view-icon.png'
+        },
+        {
+          action: 'dismiss',
+          title: 'Dismiss'
+        }
+      ]
+    };
 
-// Notification click
-self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Notification click', event);
-
-  event.notification.close();
-
-  if (event.action === 'explore') {
     event.waitUntil(
-      clients.openWindow('/')
+      self.registration.showNotification(data.title, options)
     );
   }
 });
 
-// Sync offline user interactions
-async function syncUserInteractions() {
-  try {
-    // Get stored interactions from IndexedDB
-    const interactions = await getStoredInteractions();
+// Notification click handling
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
 
-    for (const interaction of interactions) {
-      try {
-        await fetch('/api/interactions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${interaction.token}`
-          },
-          body: JSON.stringify(interaction.data)
-        });
-
-        // Remove synced interaction
-        await removeStoredInteraction(interaction.id);
-      } catch (error) {
-        console.error('Failed to sync interaction:', error);
-      }
-    }
-  } catch (error) {
-    console.error('Background sync failed:', error);
-  }
-}
-
-// Sync offline search queries
-async function syncSearchQueries() {
-  // Implementation for syncing search analytics
-  console.log('Syncing search queries...');
-}
-
-// IndexedDB helpers (simplified)
-async function getStoredInteractions() {
-  // Implementation would use IndexedDB
-  return [];
-}
-
-async function removeStoredInteraction(id) {
-  // Implementation would use IndexedDB
-  console.log('Removing interaction:', id);
-}
-
-// Message handling
-self.addEventListener('message', (event) => {
-  console.log('Service Worker: Message received', event.data);
-
-  switch (event.data.type) {
-    case 'SKIP_WAITING':
-      self.skipWaiting();
-      break;
-    case 'CACHE_URLS':
-      event.waitUntil(
-        caches.open(DYNAMIC_CACHE)
-          .then(cache => cache.addAll(event.data.payload))
-      );
-      break;
+  if (event.action === 'view') {
+    event.waitUntil(
+      clients.openWindow(event.notification.data.url || '/')
+    );
   }
 });
+
+// Message handling from main thread
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+console.log('Service Worker loaded successfully');
