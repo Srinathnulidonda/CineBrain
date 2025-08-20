@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Search - CineScope</title>
+
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/base.css" rel="stylesheet">
+    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
+    <link href="/css/tailwind.css" rel="stylesheet">
+    <link href="/css/animation.css" rel="stylesheet">
+    <link href="/css/responsive.css" rel="stylesheet">
+    <link href="/css/utilities.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Desktop Sidebar -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container-fluid">
+                <!-- Search Header -->
+                <div class="mb-4">
+                    <h1 class="tw-text-3xl tw-font-bold mb-4">Search</h1>
+
+                    <!-- Search Bar -->
+                    <div class="search-bar mb-4">
+                        <i class="bi bi-search search-icon"></i>
+                        <input type="text" class="search-input" id="searchInput"
+                            placeholder="Search movies, TV shows, anime..." autocomplete="off">
+                    </div>
+
+                    <!-- Filter Options -->
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="text-muted">Type:</span>
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="contentType" id="type-all" value="multi"
+                                checked>
+                            <label class="btn btn-outline-secondary" for="type-all">All</label>
+
+                            <input type="radio" class="btn-check" name="contentType" id="type-movie" value="movie">
+                            <label class="btn btn-outline-secondary" for="type-movie">Movies</label>
+
+                            <input type="radio" class="btn-check" name="contentType" id="type-tv" value="tv">
+                            <label class="btn btn-outline-secondary" for="type-tv">TV Shows</label>
+
+                            <input type="radio" class="btn-check" name="contentType" id="type-anime" value="anime">
+                            <label class="btn btn-outline-secondary" for="type-anime">Anime</label>
+                        </div>
+
+                        <!-- Mobile filter button -->
+                        <button class="btn btn-outline-primary ms-auto d-lg-none" data-bs-toggle="offcanvas"
+                            data-bs-target="#filtersOffcanvas">
+                            <i class="bi bi-funnel"></i> Filters
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search Results -->
+                <div id="searchResults">
+                    <!-- Initial State -->
+                    <div class="empty-state" id="emptyState">
+                        <i class="bi bi-search"></i>
+                        <h5>Start searching</h5>
+                        <p>Type in the search bar to find movies, TV shows, or anime</p>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div class="d-none" id="loadingState">
+                        <div class="loading-spinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Searching...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Grid -->
+                    <div class="d-none" id="resultsContainer">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">
+                                <span id="resultCount">0</span> Results for "<span id="searchQuery"></span>"
+                            </h5>
+                        </div>
+                        <div class="row g-4" id="resultsGrid"></div>
+                        <div id="paginationContainer" class="mt-4"></div>
+                    </div>
+
+                    <!-- No Results State -->
+                    <div class="empty-state d-none" id="noResultsState">
+                        <i class="bi bi-emoji-frown"></i>
+                        <h5>No results found</h5>
+                        <p>Try adjusting your search or filters</p>
+                    </div>
+                </div>
+
+                <!-- Recent Searches (for logged-in users) -->
+                <div class="mt-5 d-none" id="recentSearches" data-auth="user">
+                    <h5 class="mb-3">Recent Searches</h5>
+                    <div class="d-flex flex-wrap gap-2" id="recentSearchesList"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Mobile Navigation -->
+        <div id="mobile-nav-container"></div>
+
+        <!-- Filters Offcanvas -->
+        <div data-layout="offcanvas-filters"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/storage.js"></script>
+    <script src="/js/http.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Page specific JS -->
+    <script>
+        let currentPage = 1;
+        let currentQuery = '';
+        let currentType = 'multi';
+        let totalPages = 0;
+        let searchTimeout = null;
+
+        // Initialize page
+        function pageInit() {
+            // Get URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('q');
+            const category = urlParams.get('category');
+
+            // Set up search input
+            const searchInput = document.getElementById('searchInput');
+            if (query) {
+                searchInput.value = query;
+                performSearch(query);
+            }
+
+            // Handle category parameter
+            if (category) {
+                handleCategorySearch(category);
+            }
+
+            // Set up event listeners
+            setupEventListeners();
+
+            // Load recent searches if user is logged in
+            if (Storage.getUser()) {
+                loadRecentSearches();
+            }
+        }
+
+        function setupEventListeners() {
+            // Search input with debounce
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value.trim();
+
+                if (query.length === 0) {
+                    showEmptyState();
+                    return;
+                }
+
+                if (query.length >= 2) {
+                    searchTimeout = setTimeout(() => {
+                        currentPage = 1;
+                        performSearch(query);
+                    }, CONFIG.DEBOUNCE_DELAY);
+                }
+            });
+
+            // Enter key to search immediately
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    clearTimeout(searchTimeout);
+                    const query = e.target.value.trim();
+                    if (query) {
+                        currentPage = 1;
+                        performSearch(query);
+                    }
+                }
+            });
+
+            // Content type filters
+            document.querySelectorAll('input[name="contentType"]').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    currentType = e.target.value;
+                    if (currentQuery) {
+                        currentPage = 1;
+                        performSearch(currentQuery);
+                    }
+                });
+            });
+        }
+
+        async function performSearch(query) {
+            currentQuery = query;
+
+            // Update UI
+            showLoadingState();
+            document.getElementById('searchQuery').textContent = query;
+
+            try {
+                const data = await api.content.search(query, currentType, currentPage);
+
+                if (data.results && data.results.length > 0) {
+                    displayResults(data);
+                    saveRecentSearch(query);
+                } else {
+                    showNoResultsState();
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                UI.showToast('Search failed. Please try again.', 'error');
+                showEmptyState();
+            }
+        }
+
+        function displayResults(data) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsGrid = document.getElementById('resultsGrid');
+            const resultCount = document.getElementById('resultCount');
+            const paginationContainer = document.getElementById('paginationContainer');
+
+            // Update result count
+            resultCount.textContent = data.total_results || data.results.length;
+            totalPages = data.total_pages || 1;
+
+            // Display results
+            resultsGrid.innerHTML = UI.createContentGrid(data.results);
+
+            // Add pagination
+            if (totalPages > 1) {
+                paginationContainer.innerHTML = UI.createPagination(currentPage, totalPages, (page) => {
+                    currentPage = page;
+                    performSearch(currentQuery);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            } else {
+                paginationContainer.innerHTML = '';
+            }
+
+            // Show results
+            hideAllStates();
+            resultsContainer.classList.remove('d-none');
+        }
+
+        async function handleCategorySearch(category) {
+            showLoadingState();
+
+            try {
+                let data;
+                switch (category) {
+                    case 'trending':
+                        data = await api.content.getTrending('all', 20);
+                        document.getElementById('searchQuery').textContent = 'Trending';
+                        break;
+                    case 'new':
+                        data = await api.content.getNewReleases(null, 'movie', 20);
+                        document.getElementById('searchQuery').textContent = 'New Releases';
+                        break;
+                    case 'critics':
+                        data = await api.content.getCriticsChoice('movie', 20);
+                        document.getElementById('searchQuery').textContent = "Critics' Choice";
+                        break;
+                    default:
+                        showEmptyState();
+                        return;
+                }
+
+                if (data.recommendations && data.recommendations.length > 0) {
+                    displayResults({ results: data.recommendations, total_results: data.recommendations.length, total_pages: 1 });
+                } else {
+                    showNoResultsState();
+                }
+            } catch (error) {
+                console.error('Category search error:', error);
+                UI.showToast('Failed to load content', 'error');
+                showEmptyState();
+            }
+        }
+
+        function saveRecentSearch(query) {
+            if (!Storage.getUser()) return;
+
+            let recentSearches = JSON.parse(localStorage.getItem('recent_searches') || '[]');
+
+            // Remove if already exists
+            recentSearches = recentSearches.filter(q => q !== query);
+
+            // Add to beginning
+            recentSearches.unshift(query);
+
+            // Keep only last 10
+            recentSearches = recentSearches.slice(0, 10);
+
+            localStorage.setItem('recent_searches', JSON.stringify(recentSearches));
+            loadRecentSearches();
+        }
+
+        function loadRecentSearches() {
+            const container = document.getElementById('recentSearches');
+            const list = document.getElementById('recentSearchesList');
+
+            const recentSearches = JSON.parse(localStorage.getItem('recent_searches') || '[]');
+
+            if (recentSearches.length > 0) {
+                list.innerHTML = recentSearches.map(query => `
+                    <button class="chip" onclick="performRecentSearch('${query.replace(/'/g, "\\'")}')">${query}</button>
+                `).join('');
+                container.classList.remove('d-none');
+            } else {
+                container.classList.add('d-none');
+            }
+        }
+
+        function performRecentSearch(query) {
+            document.getElementById('searchInput').value = query;
+            currentPage = 1;
+            performSearch(query);
+        }
+
+        function showEmptyState() {
+            hideAllStates();
+            document.getElementById('emptyState').classList.remove('d-none');
+        }
+
+        function showLoadingState() {
+            hideAllStates();
+            document.getElementById('loadingState').classList.remove('d-none');
+        }
+
+        function showNoResultsState() {
+            hideAllStates();
+            document.getElementById('noResultsState').classList.remove('d-none');
+        }
+
+        function hideAllStates() {
+            document.getElementById('emptyState').classList.add('d-none');
+            document.getElementById('loadingState').classList.add('d-none');
+            document.getElementById('resultsContainer').classList.add('d-none');
+            document.getElementById('noResultsState').classList.add('d-none');
+        }
+
+        // Set pageInit for App.js
+        window.pageInit = pageInit;
+    </script>
+</body>
+
+</html>

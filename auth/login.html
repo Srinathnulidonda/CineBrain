@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Login - CineScope</title>
+
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/base.css" rel="stylesheet">
+    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
+    <link href="/css/tailwind.css" rel="stylesheet">
+    <link href="/css/animation.css" rel="stylesheet">
+    <link href="/css/responsive.css" rel="stylesheet">
+    <link href="/css/utilities.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="min-vh-100 d-flex align-items-center justify-content-center p-4"
+        style="background: var(--color-accent-gradient);">
+        <div class="card shadow-lg animate-scale-in" style="max-width: 400px; width: 100%;">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <a href="/" class="text-decoration-none">
+                        <i class="bi bi-film text-primary" style="font-size: 3rem;"></i>
+                        <h2 class="text-gradient fw-bold">CineScope</h2>
+                    </a>
+                    <p class="text-muted">Welcome back! Sign in to continue.</p>
+                </div>
+
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" id="username" name="username" required
+                                autocomplete="username">
+                        </div>
+                        <div class="invalid-feedback">Please enter your username</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password" required
+                                autocomplete="current-password">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword()">
+                                <i class="bi bi-eye" id="passwordToggle"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Please enter your password</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="rememberMe">
+                            <label class="form-check-label" for="rememberMe">
+                                Remember me
+                            </label>
+                        </div>
+                        <a href="#" class="text-primary text-decoration-none">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mb-3" id="loginBtn">
+                        <span id="loginText">Sign In</span>
+                        <span id="loginSpinner" class="d-none">
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            Signing in...
+                        </span>
+                    </button>
+
+                    <div class="text-center">
+                        <p class="mb-0">Don't have an account? <a href="/auth/register" class="text-primary">Sign up</a>
+                        </p>
+                    </div>
+                </form>
+
+                <div class="mt-4 pt-4 border-top">
+                    <p class="text-center text-muted small mb-3">Or continue with</p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-secondary"
+                            onclick="UI.showToast('Social login coming soon!', 'info')">
+                            <i class="bi bi-google me-2"></i> Google
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/storage.js"></script>
+    <script src="/js/http.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Page specific JS -->
+    <script>
+        // Check if already logged in
+        if (Storage.getToken()) {
+            window.location.href = CONFIG.ROUTES.HOME;
+        }
+
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('passwordToggle');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!UI.validateForm(e.target)) {
+                return;
+            }
+
+            const loginBtn = document.getElementById('loginBtn');
+            const loginText = document.getElementById('loginText');
+            const loginSpinner = document.getElementById('loginSpinner');
+
+            // Show loading state
+            loginBtn.disabled = true;
+            loginText.classList.add('d-none');
+            loginSpinner.classList.remove('d-none');
+
+            try {
+                const formData = new FormData(e.target);
+                const response = await api.auth.login(
+                    formData.get('username'),
+                    formData.get('password')
+                );
+
+                UI.showToast('Login successful! Redirecting...', 'success');
+
+                // Redirect based on user role
+                setTimeout(() => {
+                    const user = Storage.getUser();
+                    if (user && user.is_admin) {
+                        window.location.href = CONFIG.ROUTES.ADMIN;
+                    } else {
+                        window.location.href = CONFIG.ROUTES.HOME;
+                    }
+                }, 1000);
+
+            } catch (error) {
+                UI.showToast(error.message || 'Login failed. Please try again.', 'error');
+
+                // Reset button state
+                loginBtn.disabled = false;
+                loginText.classList.remove('d-none');
+                loginSpinner.classList.add('d-none');
+            }
+        });
+
+        // Clear validation on input
+        document.querySelectorAll('.form-control').forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.remove('is-invalid');
+            });
+        });
+    </script>
+</body>
+
+</html>

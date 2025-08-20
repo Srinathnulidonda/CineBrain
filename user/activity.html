@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Activity - CineScope</title>
+
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/base.css" rel="stylesheet">
+    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
+    <link href="/css/tailwind.css" rel="stylesheet">
+    <link href="/css/animation.css" rel="stylesheet">
+    <link href="/css/responsive.css" rel="stylesheet">
+    <link href="/css/utilities.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Desktop Sidebar -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container-fluid">
+                <!-- Header -->
+                <div class="mb-4">
+                    <h1 class="tw-text-3xl tw-font-bold mb-3">
+                        <i class="bi bi-clock-history text-primary"></i> Activity
+                    </h1>
+                    <p class="text-muted">Your recent viewing history and interactions</p>
+                </div>
+
+                <!-- Activity Stats -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Today</h6>
+                                <h3 class="mb-0" id="todayCount">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">This Week</h6>
+                                <h3 class="mb-0" id="weekCount">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">This Month</h6>
+                                <h3 class="mb-0" id="monthCount">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body">
+                                <h6 class="card-title">Total Views</h6>
+                                <h3 class="mb-0" id="totalCount">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Options -->
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    <select class="form-select" style="width: auto;" id="filterType">
+                        <option value="all">All Activities</option>
+                        <option value="view">Views</option>
+                        <option value="watchlist">Watchlist</option>
+                        <option value="favorite">Favorites</option>
+                        <option value="search">Searches</option>
+                    </select>
+
+                    <select class="form-select" style="width: auto;" id="filterPeriod">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+
+                    <button class="btn btn-outline-danger ms-auto" onclick="clearActivity()">
+                        <i class="bi bi-trash"></i> Clear Activity
+                    </button>
+                </div>
+
+                <!-- Activity Timeline -->
+                <div id="activityTimeline">
+                    <!-- Loading State -->
+                    <div id="loadingState">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity List -->
+                    <div class="d-none" id="activityList"></div>
+
+                    <!-- Empty State -->
+                    <div class="empty-state d-none" id="emptyState">
+                        <i class="bi bi-clock-history"></i>
+                        <h5>No activity yet</h5>
+                        <p>Your viewing history will appear here</p>
+                        <a href="/content/search" class="btn btn-primary">Start Exploring</a>
+                    </div>
+                </div>
+
+                <!-- Watch Time Chart -->
+                <div class="card mt-5 d-none" id="watchTimeChart">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">Watch Time Distribution</h5>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <h6>By Genre</h6>
+                                <div id="genreChart"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>By Type</h6>
+                                <div id="typeChart"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>By Language</h6>
+                                <div id="languageChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Mobile Navigation -->
+        <div id="mobile-nav-container"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/storage.js"></script>
+    <script src="/js/http.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Page specific JS -->
+    <script>
+        let activityData = [];
+        let filteredData = [];
+
+        // Initialize page
+        async function pageInit() {
+            const user = Storage.getUser();
+
+            if (!user) {
+                window.location.href = CONFIG.ROUTES.LOGIN;
+                return;
+            }
+
+            // Set up event listeners
+            setupEventListeners();
+
+            // Load activity data
+            await loadActivity();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('filterType').addEventListener('change', applyFilters);
+            document.getElementById('filterPeriod').addEventListener('change', applyFilters);
+        }
+
+        async function loadActivity() {
+            // In a real app, this would fetch from the backend
+            // For demo, we'll generate some sample activity data
+            const user = Storage.getUser();
+
+            try {
+                // Generate mock activity data
+                activityData = generateMockActivity();
+
+                // Update stats
+                updateStats();
+
+                // Apply filters and display
+                applyFilters();
+
+                // Show charts if has data
+                if (activityData.length > 0) {
+                    document.getElementById('watchTimeChart').classList.remove('d-none');
+                    renderCharts();
+                }
+
+            } catch (error) {
+                console.error('Error loading activity:', error);
+                showEmptyState();
+            }
+        }
+
+        function generateMockActivity() {
+            // Generate some realistic mock activity data
+            const activities = [];
+            const contentTitles = [
+                'Inception', 'The Dark Knight', 'Interstellar', 'The Matrix',
+                'Breaking Bad', 'Game of Thrones', 'Stranger Things', 'The Crown',
+                'Attack on Titan', 'Death Note', 'One Piece', 'Naruto'
+            ];
+            const types = ['view', 'watchlist', 'favorite', 'search'];
+            const contentTypes = ['movie', 'tv', 'anime'];
+
+            // Generate activities for the past 30 days
+            for (let i = 0; i < 50; i++) {
+                const daysAgo = Math.floor(Math.random() * 30);
+                const timestamp = new Date();
+                timestamp.setDate(timestamp.getDate() - daysAgo);
+                timestamp.setHours(Math.floor(Math.random() * 24));
+                timestamp.setMinutes(Math.floor(Math.random() * 60));
+
+                activities.push({
+                    id: i + 1,
+                    title: contentTitles[Math.floor(Math.random() * contentTitles.length)],
+                    content_type: contentTypes[Math.floor(Math.random() * contentTypes.length)],
+                    interaction_type: types[Math.floor(Math.random() * types.length)],
+                    timestamp: timestamp.toISOString(),
+                    poster_path: `https://via.placeholder.com/200x300/1a1a1d/666?text=${encodeURIComponent(contentTitles[i % contentTitles.length])}`
+                });
+            }
+
+            // Sort by timestamp descending
+            activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            return activities;
+        }
+
+        function updateStats() {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            const monthAgo = new Date(today);
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+            let todayCount = 0;
+            let weekCount = 0;
+            let monthCount = 0;
+
+            activityData.forEach(activity => {
+                const activityDate = new Date(activity.timestamp);
+
+                if (activityDate >= today) {
+                    todayCount++;
+                }
+                if (activityDate >= weekAgo) {
+                    weekCount++;
+                }
+                if (activityDate >= monthAgo) {
+                    monthCount++;
+                }
+            });
+
+            document.getElementById('todayCount').textContent = todayCount;
+            document.getElementById('weekCount').textContent = weekCount;
+            document.getElementById('monthCount').textContent = monthCount;
+            document.getElementById('totalCount').textContent = activityData.length;
+        }
+
+        function applyFilters() {
+            const filterType = document.getElementById('filterType').value;
+            const filterPeriod = document.getElementById('filterPeriod').value;
+
+            filteredData = activityData;
+
+            // Filter by type
+            if (filterType !== 'all') {
+                filteredData = filteredData.filter(activity => activity.interaction_type === filterType);
+            }
+
+            // Filter by period
+            if (filterPeriod !== 'all') {
+                const now = new Date();
+                let startDate;
+
+                switch (filterPeriod) {
+                    case 'today':
+                        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        break;
+                    case 'week':
+                        startDate = new Date(now);
+                        startDate.setDate(startDate.getDate() - 7);
+                        break;
+                    case 'month':
+                        startDate = new Date(now);
+                        startDate.setMonth(startDate.getMonth() - 1);
+                        break;
+                }
+
+                if (startDate) {
+                    filteredData = filteredData.filter(activity =>
+                        new Date(activity.timestamp) >= startDate
+                    );
+                }
+            }
+
+            displayActivity();
+        }
+
+        function displayActivity() {
+            const loadingState = document.getElementById('loadingState');
+            const activityList = document.getElementById('activityList');
+            const emptyState = document.getElementById('emptyState');
+
+            // Hide loading
+            loadingState.classList.add('d-none');
+
+            if (filteredData.length === 0) {
+                activityList.classList.add('d-none');
+                emptyState.classList.remove('d-none');
+            } else {
+                emptyState.classList.add('d-none');
+                activityList.classList.remove('d-none');
+
+                // Group activities by date
+                const groupedActivities = groupActivitiesByDate(filteredData);
+
+                let html = '';
+                for (const [date, activities] of Object.entries(groupedActivities)) {
+                    html += `
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">${formatDateHeader(date)}</h6>
+                            <div class="list-group">
+                                ${activities.map(activity => createActivityItem(activity)).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                activityList.innerHTML = html;
+            }
+        }
+
+        function groupActivitiesByDate(activities) {
+            const grouped = {};
+
+            activities.forEach(activity => {
+                const date = new Date(activity.timestamp).toDateString();
+                if (!grouped[date]) {
+                    grouped[date] = [];
+                }
+                grouped[date].push(activity);
+            });
+
+            return grouped;
+        }
+
+        function formatDateHeader(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            if (date.toDateString() === today.toDateString()) {
+                return 'Today';
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                return 'Yesterday';
+            } else {
+                return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            }
+        }
+
+        function createActivityItem(activity) {
+            const time = new Date(activity.timestamp).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+
+            const icons = {
+                view: 'bi-eye',
+                watchlist: 'bi-bookmark',
+                favorite: 'bi-heart',
+                search: 'bi-search'
+            };
+
+            const verbs = {
+                view: 'Viewed',
+                watchlist: 'Added to watchlist',
+                favorite: 'Added to favorites',
+                search: 'Searched for'
+            };
+
+            return `
+                <div class="list-group-item">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <img src="${activity.poster_path}" alt="${activity.title}" 
+                                 style="width: 50px; height: 75px; object-fit: cover; border-radius: 4px;">
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi ${icons[activity.interaction_type]} text-primary me-2"></i>
+                                <span>${verbs[activity.interaction_type]}</span>
+                            </div>
+                            <h6 class="mb-0">
+                                <a href="/content/details?id=${activity.id}" class="text-decoration-none">
+                                    ${activity.title}
+                                </a>
+                            </h6>
+                            <small class="text-muted">${activity.content_type} • ${time}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCharts() {
+            // Simple text-based charts (in production, use a charting library)
+
+            // Genre distribution
+            const genreData = calculateGenreDistribution();
+            const genreChart = document.getElementById('genreChart');
+            genreChart.innerHTML = createSimpleBarChart(genreData);
+
+            // Type distribution
+            const typeData = calculateTypeDistribution();
+            const typeChart = document.getElementById('typeChart');
+            typeChart.innerHTML = createSimpleBarChart(typeData);
+
+            // Language distribution (mock)
+            const languageData = [
+                { label: 'English', value: 60 },
+                { label: 'Hindi', value: 25 },
+                { label: 'Japanese', value: 15 }
+            ];
+            const languageChart = document.getElementById('languageChart');
+            languageChart.innerHTML = createSimpleBarChart(languageData);
+        }
+
+        function calculateGenreDistribution() {
+            // Mock genre distribution
+            return [
+                { label: 'Action', value: 35 },
+                { label: 'Drama', value: 25 },
+                { label: 'Comedy', value: 20 },
+                { label: 'Thriller', value: 20 }
+            ];
+        }
+
+        function calculateTypeDistribution() {
+            const typeCounts = {};
+            activityData.forEach(activity => {
+                if (activity.interaction_type === 'view') {
+                    typeCounts[activity.content_type] = (typeCounts[activity.content_type] || 0) + 1;
+                }
+            });
+
+            const total = Object.values(typeCounts).reduce((sum, count) => sum + count, 0) || 1;
+
+            return Object.entries(typeCounts).map(([type, count]) => ({
+                label: type.charAt(0).toUpperCase() + type.slice(1),
+                value: Math.round((count / total) * 100)
+            }));
+        }
+
+        function createSimpleBarChart(data) {
+            return data.map(item => `
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>${item.label}</small>
+                        <small>${item.value}%</small>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-gradient" style="width: ${item.value}%"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearActivity() {
+            if (!confirm('Are you sure you want to clear all your activity history?')) {
+                return;
+            }
+
+            // This would normally clear via API
+            activityData = [];
+            filteredData = [];
+            updateStats();
+            displayActivity();
+            document.getElementById('watchTimeChart').classList.add('d-none');
+
+            UI.showToast('Activity history cleared', 'success');
+        }
+
+        function showEmptyState() {
+            document.getElementById('loadingState').classList.add('d-none');
+            document.getElementById('activityList').classList.add('d-none');
+            document.getElementById('emptyState').classList.remove('d-none');
+            document.getElementById('watchTimeChart').classList.add('d-none');
+        }
+
+        // Set pageInit for App.js
+        window.pageInit = pageInit;
+    </script>
+</body>
+
+</html>

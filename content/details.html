@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Details - CineScope</title>
+
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/base.css" rel="stylesheet">
+    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
+    <link href="/css/tailwind.css" rel="stylesheet">
+    <link href="/css/animation.css" rel="stylesheet">
+    <link href="/css/responsive.css" rel="stylesheet">
+    <link href="/css/utilities.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Desktop Sidebar -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container-fluid">
+                <!-- Loading State -->
+                <div id="loadingState">
+                    <div class="skeleton-shimmer" style="height: 500px; border-radius: 12px; margin-bottom: 2rem;">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="skeleton-shimmer" style="height: 200px; border-radius: 8px;"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="skeleton-shimmer" style="height: 300px; border-radius: 8px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Details -->
+                <div id="contentDetails" class="d-none">
+                    <!-- Hero Section with Backdrop -->
+                    <div class="hero-section mb-4" id="heroSection">
+                        <div class="hero-backdrop" id="heroBackdrop"></div>
+                        <div class="hero-content">
+                            <div class="row align-items-end">
+                                <div class="col-md-8">
+                                    <h1 class="hero-title" id="contentTitle"></h1>
+                                    <div class="hero-meta" id="contentMeta">
+                                        <span class="badge-rating">
+                                            <i class="bi bi-star-fill"></i>
+                                            <span id="contentRating"></span>
+                                        </span>
+                                        <span id="contentYear"></span>
+                                        <span id="contentRuntime"></span>
+                                        <span class="badge badge-secondary" id="contentType"></span>
+                                    </div>
+                                    <div class="hero-description" id="contentOverview"></div>
+                                    <div class="d-flex gap-3 flex-wrap">
+                                        <button class="btn btn-primary btn-lg" id="playTrailerBtn"
+                                            onclick="playTrailer()">
+                                            <i class="bi bi-play-circle"></i> Watch Trailer
+                                        </button>
+                                        <button class="btn btn-secondary btn-lg" id="addWatchlistBtn"
+                                            onclick="toggleWatchlist()">
+                                            <i class="bi bi-bookmark"></i> <span id="watchlistText">Add to
+                                                Watchlist</span>
+                                        </button>
+                                        <button class="btn btn-secondary btn-lg" id="addFavoriteBtn"
+                                            onclick="toggleFavorite()">
+                                            <i class="bi bi-heart"></i> <span id="favoriteText">Add to Favorites</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-end d-none d-md-block">
+                                    <img id="contentPoster" src="" alt="" class="img-fluid rounded shadow-lg"
+                                        style="max-height: 400px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content Information -->
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <!-- Genres -->
+                            <div class="mb-4">
+                                <h5 class="mb-3">Genres</h5>
+                                <div class="d-flex flex-wrap gap-2" id="genresList"></div>
+                            </div>
+
+                            <!-- Cast -->
+                            <div class="mb-4" id="castSection">
+                                <h5 class="mb-3">Cast</h5>
+                                <div class="row g-3" id="castList"></div>
+                            </div>
+
+                            <!-- Similar Content -->
+                            <div class="mb-4">
+                                <h5 class="mb-3">Similar Content</h5>
+                                <div class="row g-4" id="similarGrid"></div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <!-- Additional Info -->
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title mb-3">Information</h5>
+                                    <div class="mb-3">
+                                        <small class="text-muted">Original Title</small>
+                                        <p class="mb-0" id="originalTitle">-</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted">Release Date</small>
+                                        <p class="mb-0" id="releaseDate">-</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted">Languages</small>
+                                        <p class="mb-0" id="languages">-</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted">Vote Count</small>
+                                        <p class="mb-0" id="voteCount">-</p>
+                                    </div>
+                                    <div class="mb-0" id="badgesContainer">
+                                        <div class="d-flex gap-2 flex-wrap"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Share -->
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title mb-3">Share</h5>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-outline-secondary btn-icon"
+                                            onclick="shareContent('twitter')">
+                                            <i class="bi bi-twitter"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-icon"
+                                            onclick="shareContent('facebook')">
+                                            <i class="bi bi-facebook"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-icon"
+                                            onclick="shareContent('whatsapp')">
+                                            <i class="bi bi-whatsapp"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-icon" onclick="copyLink()">
+                                            <i class="bi bi-link-45deg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error State -->
+                <div class="empty-state d-none" id="errorState">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <h5>Content not found</h5>
+                    <p>The content you're looking for doesn't exist or has been removed</p>
+                    <a href="/" class="btn btn-primary">Go to Home</a>
+                </div>
+            </div>
+        </main>
+
+        <!-- Mobile Navigation -->
+        <div id="mobile-nav-container"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/storage.js"></script>
+    <script src="/js/http.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Page specific JS -->
+    <script>
+        let currentContent = null;
+        let contentId = null;
+        let isInWatchlist = false;
+        let isInFavorites = false;
+
+        // Initialize page
+        async function pageInit() {
+            // Get content ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            contentId = urlParams.get('id');
+
+            if (!contentId) {
+                showError();
+                return;
+            }
+
+            await loadContentDetails();
+        }
+
+        async function loadContentDetails() {
+            try {
+                const data = await api.content.getDetails(contentId);
+                currentContent = data;
+
+                // Update page title
+                document.title = `${data.title} - CineScope`;
+
+                // Display content
+                displayContent(data);
+
+                // Check watchlist/favorites status
+                checkUserLists();
+
+                // Record view interaction if user is logged in
+                if (Storage.getUser()) {
+                    api.user.recordInteraction(contentId, 'view').catch(console.error);
+                }
+
+                // Hide loading, show content
+                document.getElementById('loadingState').classList.add('d-none');
+                document.getElementById('contentDetails').classList.remove('d-none');
+
+            } catch (error) {
+                console.error('Error loading content:', error);
+                showError();
+            }
+        }
+
+        function displayContent(data) {
+            // Hero section
+            if (data.backdrop_path) {
+                document.getElementById('heroBackdrop').style.backgroundImage = `url(${data.backdrop_path})`;
+            }
+
+            // Basic info
+            document.getElementById('contentTitle').textContent = data.title;
+            document.getElementById('contentRating').textContent = data.rating ? data.rating.toFixed(1) : 'N/A';
+            document.getElementById('contentYear').textContent = data.release_date ? new Date(data.release_date).getFullYear() : '';
+            document.getElementById('contentRuntime').textContent = data.runtime ? `${data.runtime} min` : '';
+            document.getElementById('contentType').textContent = data.content_type.toUpperCase();
+            document.getElementById('contentOverview').textContent = data.overview || 'No overview available.';
+
+            // Poster
+            if (data.poster_path) {
+                document.getElementById('contentPoster').src = data.poster_path;
+                document.getElementById('contentPoster').alt = data.title;
+            }
+
+            // Trailer button
+            if (!data.youtube_trailer) {
+                document.getElementById('playTrailerBtn').disabled = true;
+                document.getElementById('playTrailerBtn').innerHTML = '<i class="bi bi-play-circle"></i> No Trailer';
+            }
+
+            // Genres
+            const genresList = document.getElementById('genresList');
+            genresList.innerHTML = data.genres.map(genre =>
+                `<span class="chip">${genre}</span>`
+            ).join('');
+
+            // Cast
+            if (data.cast && data.cast.length > 0) {
+                const castList = document.getElementById('castList');
+                castList.innerHTML = data.cast.slice(0, 6).map(person => `
+                    <div class="col-6 col-md-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-secondary" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">${person.name || person.original_name || 'Unknown'}</div>
+                                <small class="text-muted">${person.character || person.job || ''}</small>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('castSection').classList.add('d-none');
+            }
+
+            // Additional info
+            document.getElementById('originalTitle').textContent = data.original_title || data.title;
+            document.getElementById('releaseDate').textContent = data.release_date ? new Date(data.release_date).toLocaleDateString() : '-';
+            document.getElementById('languages').textContent = data.languages ? data.languages.join(', ') : '-';
+            document.getElementById('voteCount').textContent = data.vote_count ? data.vote_count.toLocaleString() : '-';
+
+            // Badges
+            const badges = [];
+            if (data.is_trending) badges.push('<span class="badge bg-danger">Trending</span>');
+            if (data.is_new_release) badges.push('<span class="badge bg-primary">New Release</span>');
+            if (data.is_critics_choice) badges.push('<span class="badge bg-warning">Critics Choice</span>');
+
+            if (badges.length > 0) {
+                document.querySelector('#badgesContainer .d-flex').innerHTML = badges.join(' ');
+            } else {
+                document.getElementById('badgesContainer').classList.add('d-none');
+            }
+
+            // Similar content
+            if (data.similar_content && data.similar_content.length > 0) {
+                const similarGrid = document.getElementById('similarGrid');
+                similarGrid.innerHTML = UI.createContentGrid(data.similar_content.slice(0, 4));
+            } else {
+                // Load similar content from API
+                loadSimilarContent();
+            }
+        }
+
+        async function loadSimilarContent() {
+            try {
+                const data = await api.content.getSimilar(contentId, 4);
+                const similarGrid = document.getElementById('similarGrid');
+                if (data.recommendations && data.recommendations.length > 0) {
+                    similarGrid.innerHTML = UI.createContentGrid(data.recommendations);
+                } else {
+                    similarGrid.innerHTML = '<div class="col-12 text-center text-muted">No similar content found</div>';
+                }
+            } catch (error) {
+                console.error('Error loading similar content:', error);
+            }
+        }
+
+        function checkUserLists() {
+            const user = Storage.getUser();
+
+            if (user) {
+                // Check if content is in user's watchlist/favorites
+                // This would normally be done via API, but for now we'll use local storage
+                const watchlist = JSON.parse(localStorage.getItem(`user_${user.id}_watchlist`) || '[]');
+                const favorites = JSON.parse(localStorage.getItem(`user_${user.id}_favorites`) || '[]');
+
+                isInWatchlist = watchlist.includes(parseInt(contentId));
+                isInFavorites = favorites.includes(parseInt(contentId));
+            } else {
+                // Check local storage for anonymous users
+                isInWatchlist = Storage.getLocalWatchlist().includes(parseInt(contentId));
+                isInFavorites = Storage.getLocalFavorites().includes(parseInt(contentId));
+            }
+
+            updateButtonStates();
+        }
+
+        function updateButtonStates() {
+            // Watchlist button
+            const watchlistBtn = document.getElementById('addWatchlistBtn');
+            const watchlistText = document.getElementById('watchlistText');
+            if (isInWatchlist) {
+                watchlistBtn.classList.remove('btn-secondary');
+                watchlistBtn.classList.add('btn-primary');
+                watchlistText.textContent = 'In Watchlist';
+            } else {
+                watchlistBtn.classList.remove('btn-primary');
+                watchlistBtn.classList.add('btn-secondary');
+                watchlistText.textContent = 'Add to Watchlist';
+            }
+
+            // Favorite button
+            const favoriteBtn = document.getElementById('addFavoriteBtn');
+            const favoriteText = document.getElementById('favoriteText');
+            if (isInFavorites) {
+                favoriteBtn.classList.remove('btn-secondary');
+                favoriteBtn.classList.add('btn-primary');
+                favoriteText.textContent = 'Favorited';
+            } else {
+                favoriteBtn.classList.remove('btn-primary');
+                favoriteBtn.classList.add('btn-secondary');
+                favoriteText.textContent = 'Add to Favorites';
+            }
+        }
+
+        async function toggleWatchlist() {
+            const user = Storage.getUser();
+
+            if (user) {
+                try {
+                    await api.user.recordInteraction(contentId, isInWatchlist ? 'remove_watchlist' : 'watchlist');
+
+                    // Update local storage
+                    const watchlist = JSON.parse(localStorage.getItem(`user_${user.id}_watchlist`) || '[]');
+                    if (isInWatchlist) {
+                        const index = watchlist.indexOf(parseInt(contentId));
+                        if (index > -1) watchlist.splice(index, 1);
+                    } else {
+                        watchlist.push(parseInt(contentId));
+                    }
+                    localStorage.setItem(`user_${user.id}_watchlist`, JSON.stringify(watchlist));
+
+                } catch (error) {
+                    console.error('Error updating watchlist:', error);
+                }
+            } else {
+                // Handle for anonymous users
+                if (isInWatchlist) {
+                    Storage.removeFromLocalWatchlist(parseInt(contentId));
+                } else {
+                    Storage.addToLocalWatchlist(parseInt(contentId));
+                }
+            }
+
+            isInWatchlist = !isInWatchlist;
+            updateButtonStates();
+            UI.showToast(isInWatchlist ? 'Added to watchlist' : 'Removed from watchlist', 'success');
+        }
+
+        async function toggleFavorite() {
+            const user = Storage.getUser();
+
+            if (user) {
+                try {
+                    await api.user.recordInteraction(contentId, isInFavorites ? 'remove_favorite' : 'favorite');
+
+                    // Update local storage
+                    const favorites = JSON.parse(localStorage.getItem(`user_${user.id}_favorites`) || '[]');
+                    if (isInFavorites) {
+                        const index = favorites.indexOf(parseInt(contentId));
+                        if (index > -1) favorites.splice(index, 1);
+                    } else {
+                        favorites.push(parseInt(contentId));
+                    }
+                    localStorage.setItem(`user_${user.id}_favorites`, JSON.stringify(favorites));
+
+                } catch (error) {
+                    console.error('Error updating favorites:', error);
+                }
+            } else {
+                // Handle for anonymous users
+                if (isInFavorites) {
+                    Storage.removeFromLocalFavorites(parseInt(contentId));
+                } else {
+                    Storage.addToLocalFavorites(parseInt(contentId));
+                }
+            }
+
+            isInFavorites = !isInFavorites;
+            updateButtonStates();
+            UI.showToast(isInFavorites ? 'Added to favorites' : 'Removed from favorites', 'success');
+        }
+
+        function playTrailer() {
+            if (currentContent && currentContent.youtube_trailer) {
+                UI.playTrailer(currentContent.youtube_trailer, currentContent.title);
+            }
+        }
+
+        function shareContent(platform) {
+            const url = window.location.href;
+            const title = currentContent ? currentContent.title : 'Check out this content on CineScope';
+
+            let shareUrl;
+            switch (platform) {
+                case 'twitter':
+                    shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`;
+                    break;
+                case 'facebook':
+                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                    break;
+                case 'whatsapp':
+                    shareUrl = `https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`;
+                    break;
+            }
+
+            if (shareUrl) {
+                window.open(shareUrl, '_blank', 'width=600,height=400');
+            }
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                UI.showToast('Link copied to clipboard', 'success');
+            }).catch(() => {
+                UI.showToast('Failed to copy link', 'error');
+            });
+        }
+
+        function showError() {
+            document.getElementById('loadingState').classList.add('d-none');
+            document.getElementById('contentDetails').classList.add('d-none');
+            document.getElementById('errorState').classList.remove('d-none');
+        }
+
+        // Set pageInit for App.js
+        window.pageInit = pageInit;
+    </script>
+</body>
+
+</html>
