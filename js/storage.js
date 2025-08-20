@@ -1,132 +1,143 @@
-// Storage utilities for token and user management
-const Storage = {
-    // Keys
-    KEYS: {
-        TOKEN: 'cinescope_token',
-        USER: 'cinescope_user',
-        THEME: 'cinescope_theme',
-        CACHE_PREFIX: 'cinescope_cache_',
-        WATCHLIST: 'cinescope_watchlist',
-        FAVORITES: 'cinescope_favorites'
-    },
+// Storage Management
+class StorageManager {
+    constructor() {
+        this.cache = new Map();
+    }
 
-    // Token management
-    setToken(token) {
-        if (token) {
-            localStorage.setItem(this.KEYS.TOKEN, token);
-        }
-    },
-
+    // Token Management
     getToken() {
-        return localStorage.getItem(this.KEYS.TOKEN);
-    },
+        return localStorage.getItem(CONFIG.TOKEN_KEY);
+    }
+
+    setToken(token) {
+        localStorage.setItem(CONFIG.TOKEN_KEY, token);
+    }
 
     removeToken() {
-        localStorage.removeItem(this.KEYS.TOKEN);
-    },
+        localStorage.removeItem(CONFIG.TOKEN_KEY);
+    }
 
-    // User management
-    setUser(user) {
-        if (user) {
-            localStorage.setItem(this.KEYS.USER, JSON.stringify(user));
-        }
-    },
-
+    // User Management
     getUser() {
-        const userStr = localStorage.getItem(this.KEYS.USER);
+        const userStr = localStorage.getItem(CONFIG.USER_KEY);
         return userStr ? JSON.parse(userStr) : null;
-    },
+    }
+
+    setUser(user) {
+        localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(user));
+    }
 
     removeUser() {
-        localStorage.removeItem(this.KEYS.USER);
-    },
+        localStorage.removeItem(CONFIG.USER_KEY);
+    }
 
-    // Theme management
-    setTheme(theme) {
-        localStorage.setItem(this.KEYS.THEME, theme);
-    },
+    // Session Storage
+    getSessionData(key) {
+        const data = sessionStorage.getItem(key);
+        return data ? JSON.parse(data) : null;
+    }
 
-    getTheme() {
-        return localStorage.getItem(this.KEYS.THEME) || 'dark';
-    },
+    setSessionData(key, value) {
+        sessionStorage.setItem(key, JSON.stringify(value));
+    }
 
-    // Cache management
-    setCache(key, data, duration = CONFIG.CACHE_DURATION) {
-        const cacheData = {
-            data,
-            timestamp: Date.now(),
-            duration
-        };
-        sessionStorage.setItem(this.KEYS.CACHE_PREFIX + key, JSON.stringify(cacheData));
-    },
+    removeSessionData(key) {
+        sessionStorage.removeItem(key);
+    }
 
-    getCache(key) {
-        const cacheStr = sessionStorage.getItem(this.KEYS.CACHE_PREFIX + key);
-        if (!cacheStr) return null;
-
-        const cache = JSON.parse(cacheStr);
-        if (Date.now() - cache.timestamp > cache.duration) {
-            sessionStorage.removeItem(this.KEYS.CACHE_PREFIX + key);
-            return null;
+    // Cache Management
+    getCachedData(key) {
+        const cached = this.cache.get(key);
+        if (cached && Date.now() - cached.timestamp < CONFIG.CACHE_TTL) {
+            return cached.data;
         }
+        this.cache.delete(key);
+        return null;
+    }
 
-        return cache.data;
-    },
+    setCachedData(key, data) {
+        this.cache.set(key, {
+            data: data,
+            timestamp: Date.now()
+        });
+    }
 
     clearCache() {
-        const keys = Object.keys(sessionStorage);
-        keys.forEach(key => {
-            if (key.startsWith(this.KEYS.CACHE_PREFIX)) {
-                sessionStorage.removeItem(key);
-            }
-        });
-    },
+        this.cache.clear();
+    }
 
-    // Local watchlist/favorites for anonymous users
+    // Preferences
+    getPreferences() {
+        const prefs = localStorage.getItem('cinescope_preferences');
+        return prefs ? JSON.parse(prefs) : {
+            theme: 'dark',
+            language: 'en',
+            autoplay: true,
+            notifications: true
+        };
+    }
+
+    setPreferences(preferences) {
+        localStorage.setItem('cinescope_preferences', JSON.stringify(preferences));
+    }
+
+    // Recent Searches
+    getRecentSearches() {
+        const searches = localStorage.getItem('cinescope_recent_searches');
+        return searches ? JSON.parse(searches) : [];
+    }
+
+    addRecentSearch(query) {
+        let searches = this.getRecentSearches();
+        // Remove if exists and add to beginning
+        searches = searches.filter(s => s !== query);
+        searches.unshift(query);
+        // Keep only last 10
+        searches = searches.slice(0, 10);
+        localStorage.setItem('cinescope_recent_searches', JSON.stringify(searches));
+    }
+
+    clearRecentSearches() {
+        localStorage.removeItem('cinescope_recent_searches');
+    }
+
+    // Watchlist & Favorites (local cache)
     getLocalWatchlist() {
-        const data = localStorage.getItem(this.KEYS.WATCHLIST);
-        return data ? JSON.parse(data) : [];
-    },
+        const watchlist = localStorage.getItem('cinescope_watchlist');
+        return watchlist ? JSON.parse(watchlist) : [];
+    }
 
-    addToLocalWatchlist(contentId) {
-        const watchlist = this.getLocalWatchlist();
-        if (!watchlist.includes(contentId)) {
-            watchlist.push(contentId);
-            localStorage.setItem(this.KEYS.WATCHLIST, JSON.stringify(watchlist));
-        }
-    },
-
-    removeFromLocalWatchlist(contentId) {
-        let watchlist = this.getLocalWatchlist();
-        watchlist = watchlist.filter(id => id !== contentId);
-        localStorage.setItem(this.KEYS.WATCHLIST, JSON.stringify(watchlist));
-    },
+    setLocalWatchlist(items) {
+        localStorage.setItem('cinescope_watchlist', JSON.stringify(items));
+    }
 
     getLocalFavorites() {
-        const data = localStorage.getItem(this.KEYS.FAVORITES);
-        return data ? JSON.parse(data) : [];
-    },
-
-    addToLocalFavorites(contentId) {
-        const favorites = this.getLocalFavorites();
-        if (!favorites.includes(contentId)) {
-            favorites.push(contentId);
-            localStorage.setItem(this.KEYS.FAVORITES, JSON.stringify(favorites));
-        }
-    },
-
-    removeFromLocalFavorites(contentId) {
-        let favorites = this.getLocalFavorites();
-        favorites = favorites.filter(id => id !== contentId);
-        localStorage.setItem(this.KEYS.FAVORITES, JSON.stringify(favorites));
-    },
-
-    // Clear all data
-    clearAll() {
-        this.removeToken();
-        this.removeUser();
-        this.clearCache();
-        localStorage.removeItem(this.KEYS.WATCHLIST);
-        localStorage.removeItem(this.KEYS.FAVORITES);
+        const favorites = localStorage.getItem('cinescope_favorites');
+        return favorites ? JSON.parse(favorites) : [];
     }
-};
+
+    setLocalFavorites(items) {
+        localStorage.setItem('cinescope_favorites', JSON.stringify(items));
+    }
+
+    // Clear All Data
+    clearAll() {
+        localStorage.clear();
+        sessionStorage.clear();
+        this.cache.clear();
+    }
+
+    // Check if user is logged in
+    isLoggedIn() {
+        return !!this.getToken() && !!this.getUser();
+    }
+
+    // Check if user is admin
+    isAdmin() {
+        const user = this.getUser();
+        return user && user.is_admin === true;
+    }
+}
+
+// Create global instance
+window.storage = new StorageManager();

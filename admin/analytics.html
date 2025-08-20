@@ -1,1 +1,357 @@
-<!-- analytics.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Analytics - CineScope Admin</title>
+
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/base.css" rel="stylesheet">
+    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
+    <link href="/css/tailwind.css" rel="stylesheet">
+    <link href="/css/animation.css" rel="stylesheet">
+    <link href="/css/responsive.css" rel="stylesheet">
+    <link href="/css/utilities.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Topbar -->
+    <div id="topbar-container"></div>
+
+    <!-- Main Content -->
+    <main class="container-fluid py-4">
+        <div class="row">
+            <div class="col-lg-3 mb-4">
+                <!-- Admin Sidebar -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="mb-3">Admin Panel</h5>
+
+                        <div class="list-group">
+                            <a href="/admin/" class="list-group-item list-group-item-action">
+                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                            </a>
+                            <a href="/admin/search" class="list-group-item list-group-item-action">
+                                <i class="bi bi-search me-2"></i> Content Search
+                            </a>
+                            <a href="/admin/recommendations" class="list-group-item list-group-item-action">
+                                <i class="bi bi-star me-2"></i> Recommendations
+                            </a>
+                            <a href="/admin/analytics" class="list-group-item list-group-item-action active">
+                                <i class="bi bi-graph-up me-2"></i> Analytics
+                            </a>
+                            <a href="/admin/ml" class="list-group-item list-group-item-action">
+                                <i class="bi bi-cpu me-2"></i> ML Service
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-9">
+                <h1 class="h3 mb-4">Analytics</h1>
+
+                <!-- Key Metrics -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-people display-4 text-primary mb-2"></i>
+                                <h3 id="total-users">-</h3>
+                                <p class="text-muted mb-0">Total Users</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-film display-4 text-success mb-2"></i>
+                                <h3 id="total-content">-</h3>
+                                <p class="text-muted mb-0">Total Content</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-activity display-4 text-warning mb-2"></i>
+                                <h3 id="active-users">-</h3>
+                                <p class="text-muted mb-0">Active This Week</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-cursor-fill display-4 text-info mb-2"></i>
+                                <h3 id="total-interactions">-</h3>
+                                <p class="text-muted mb-0">Total Interactions</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row g-3 mb-4">
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Popular Content</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="popular-content-chart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Genre Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="genre-chart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tables -->
+                <div class="row g-3">
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Top Content by Interactions</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Title</th>
+                                                <th>Type</th>
+                                                <th>Interactions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="top-content-table">
+                                            <tr>
+                                                <td colspan="3" class="text-center">
+                                                    <div class="spinner-border spinner-border-sm"></div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Popular Genres</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="genre-list">
+                                    <div class="text-center">
+                                        <div class="spinner-border spinner-border-sm"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Navigation -->
+    <div id="mobile-nav-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/storage.js"></script>
+    <script src="/js/http.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Page Specific Script -->
+    <script>
+        let popularContentChart, genreChart;
+
+        async function loadAnalytics() {
+            try {
+                const analytics = await api.getAnalytics();
+
+                // Update metrics
+                document.getElementById('total-users').textContent = analytics.total_users || 0;
+                document.getElementById('total-content').textContent = analytics.total_content || 0;
+                document.getElementById('active-users').textContent = analytics.active_users_last_week || 0;
+                document.getElementById('total-interactions').textContent = analytics.total_interactions || 0;
+
+                // Update tables
+                updateTopContentTable(analytics.popular_content);
+                updateGenreList(analytics.popular_genres);
+
+                // Create charts
+                createPopularContentChart(analytics.popular_content);
+                createGenreChart(analytics.popular_genres);
+
+            } catch (error) {
+                ui.showToast('Failed to load analytics', 'error');
+            }
+        }
+
+        function updateTopContentTable(popularContent) {
+            const tbody = document.getElementById('top-content-table');
+
+            if (!popularContent || popularContent.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No data</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            popularContent.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+          <td>${item.title}</td>
+          <td><span class="badge badge-purple">Movie</span></td>
+          <td>${item.interactions}</td>
+        `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateGenreList(genres) {
+            const container = document.getElementById('genre-list');
+
+            if (!genres || genres.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No data</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            const list = document.createElement('div');
+            list.className = 'd-flex flex-column gap-2';
+
+            genres.forEach(genre => {
+                const item = document.createElement('div');
+                item.className = 'd-flex justify-content-between align-items-center';
+                item.innerHTML = `
+          <span>${genre.genre}</span>
+          <span class="badge badge-blue">${genre.count}</span>
+        `;
+                list.appendChild(item);
+            });
+
+            container.appendChild(list);
+        }
+
+        function createPopularContentChart(data) {
+            const ctx = document.getElementById('popular-content-chart').getContext('2d');
+
+            if (popularContentChart) {
+                popularContentChart.destroy();
+            }
+
+            const chartData = data ? data.slice(0, 5) : [];
+
+            popularContentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.map(item => item.title.substring(0, 20) + '...'),
+                    datasets: [{
+                        label: 'Interactions',
+                        data: chartData.map(item => item.interactions),
+                        backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                        borderColor: 'rgba(37, 99, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#b3b3b3'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#b3b3b3'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createGenreChart(data) {
+            const ctx = document.getElementById('genre-chart').getContext('2d');
+
+            if (genreChart) {
+                genreChart.destroy();
+            }
+
+            const chartData = data ? data.slice(0, 8) : [];
+
+            genreChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.map(item => item.genre),
+                    datasets: [{
+                        data: chartData.map(item => item.count),
+                        backgroundColor: [
+                            'rgba(37, 99, 235, 0.8)',
+                            'rgba(147, 51, 234, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(79, 70, 229, 0.8)',
+                            'rgba(124, 58, 237, 0.8)',
+                            'rgba(99, 102, 241, 0.8)',
+                            'rgba(167, 139, 250, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#b3b3b3'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize
+        loadAnalytics();
+    </script>
+</body>
+
+</html>

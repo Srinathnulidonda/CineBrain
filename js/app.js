@@ -1,304 +1,322 @@
-// Main application initialization and layout management
-const App = {
-    // Initialize app
-    async init() {
-        // Set up viewport
-        this.setupViewport();
+// Main Application Logic
+class CineScopeApp {
+  constructor() {
+    this.currentPage = null;
+    this.isInitialized = false;
+  }
 
-        // Initialize theme
-        this.initTheme();
+  // Initialize app
+  async init() {
+    if (this.isInitialized) return;
 
-        // Set up auth state
-        this.checkAuth();
+    // Initialize UI components
+    ui.init();
 
-        // Inject layout components
-        await this.injectLayouts();
+    // Set up navigation
+    this.setupNavigation();
 
-        // Set up navigation
-        this.setupNavigation();
+    // Set up auth guards
+    this.setupAuthGuards();
 
-        // Initialize page-specific features
-        this.initCurrentPage();
+    // Inject layouts
+    await this.injectLayouts();
 
-        // Set up global event listeners
-        this.setupEventListeners();
-    },
+    // Mark as initialized
+    this.isInitialized = true;
 
-    setupViewport() {
-        // Prevent zoom on mobile
-        document.addEventListener('gesturestart', (e) => e.preventDefault());
-        document.addEventListener('touchmove', (e) => {
-            if (e.scale !== 1) e.preventDefault();
-        }, { passive: false });
-    },
+    // Initialize page-specific logic
+    this.initPageLogic();
+  }
 
-    initTheme() {
-        const theme = Storage.getTheme();
-        document.documentElement.setAttribute('data-theme', theme);
-    },
+  // Setup navigation
+  setupNavigation() {
+    // Handle clean URLs without .html
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('a');
+      if (link && link.href && link.href.includes('.html')) {
+        e.preventDefault();
+        const cleanUrl = link.href.replace('.html', '');
+        window.location.href = cleanUrl;
+      }
+    });
+  }
 
-    checkAuth() {
-        const user = Storage.getUser();
-        const token = Storage.getToken();
-        const currentPath = window.location.pathname;
+  // Setup auth guards
+  setupAuthGuards() {
+    const path = window.location.pathname;
+    const isLoggedIn = storage.isLoggedIn();
+    const isAdmin = storage.isAdmin();
 
-        // Redirect to login if accessing protected routes without auth
-        const protectedRoutes = ['/user/', '/admin/'];
-        const isProtected = protectedRoutes.some(route => currentPath.startsWith(route));
+    // Protected routes
+    const protectedRoutes = [
+      '/user/watchlist',
+      '/user/favorites',
+      '/user/settings',
+      '/user/activity',
+      '/user/profile'
+    ];
 
-        if (isProtected && !token) {
-            window.location.href = CONFIG.ROUTES.LOGIN;
-            return;
-        }
+    // Admin routes
+    const adminRoutes = [
+      '/admin/',
+      '/admin/search',
+      '/admin/recommendations',
+      '/admin/analytics',
+      '/admin/ml'
+    ];
 
-        // Redirect admin routes if not admin
-        if (currentPath.startsWith('/admin/') && (!user || !user.is_admin)) {
-            window.location.href = CONFIG.ROUTES.HOME;
-            return;
-        }
+    // Check auth
+    if (protectedRoutes.some(route => path.startsWith(route)) && !isLoggedIn) {
+      window.location.href = CONFIG.ROUTES.LOGIN;
+      return;
+    }
 
-        // Update UI based on auth state
-        this.updateAuthUI(user);
-    },
+    if (adminRoutes.some(route => path.startsWith(route)) && !isAdmin) {
+      window.location.href = CONFIG.ROUTES.HOME;
+      return;
+    }
 
-    updateAuthUI(user) {
-        const authElements = document.querySelectorAll('[data-auth]');
-        authElements.forEach(el => {
-            const authType = el.dataset.auth;
-            if (authType === 'guest' && user) {
-                el.style.display = 'none';
-            } else if (authType === 'user' && !user) {
-                el.style.display = 'none';
-            } else if (authType === 'admin' && (!user || !user.is_admin)) {
-                el.style.display = 'none';
-            }
-        });
+    // Redirect logged-in users from auth pages
+    if ((path === CONFIG.ROUTES.LOGIN || path === CONFIG.ROUTES.REGISTER) && isLoggedIn) {
+      window.location.href = CONFIG.ROUTES.HOME;
+      return;
+    }
+  }
 
-        // Update user info
-        const userNameElements = document.querySelectorAll('[data-user-name]');
-        userNameElements.forEach(el => {
-            el.textContent = user ? user.username : 'Guest';
-        });
-    },
+  // Inject common layouts
+  async injectLayouts() {
+    // Inject topbar for desktop
+    const topbarContainer = document.getElementById('topbar-container');
+    if (topbarContainer) {
+      topbarContainer.innerHTML = this.getTopbarHTML();
+      this.setupTopbar();
+    }
 
-    async injectLayouts() {
-        // Inject sidebar for desktop
-        const sidebarContainer = document.getElementById('sidebar-container');
-        if (sidebarContainer && !UI.isMobile()) {
-            sidebarContainer.innerHTML = await this.loadLayout('sidebar');
-        }
+    // Inject mobile nav
+    const mobileNavContainer = document.getElementById('mobile-nav-container');
+    if (mobileNavContainer) {
+      mobileNavContainer.innerHTML = this.getMobileNavHTML();
+      this.setupMobileNav();
+    }
+  }
 
-        // Inject mobile nav
-        const mobileNavContainer = document.getElementById('mobile-nav-container');
-        if (mobileNavContainer && UI.isMobile()) {
-            mobileNavContainer.innerHTML = await this.loadLayout('mobile-nav');
-        }
+  // Topbar HTML
+  getTopbarHTML() {
+    const user = storage.getUser();
+    const isAdmin = storage.isAdmin();
 
-        // Inject other common layouts
-        const containerLayouts = document.querySelectorAll('[data-layout]');
-        for (const container of containerLayouts) {
-            const layoutName = container.dataset.layout;
-            container.innerHTML = await this.loadLayout(layoutName);
-        }
-    },
-
-    async loadLayout(name) {
-        try {
-            // For production, these would be bundled, but for development we'll return the HTML directly
-            const layouts = {
-                'sidebar': this.getSidebarHTML(),
-                'mobile-nav': this.getMobileNavHTML(),
-                'offcanvas-filters': this.getOffcanvasFiltersHTML()
-            };
-            return layouts[name] || '';
-        } catch (error) {
-            console.error(`Failed to load layout ${name}:`, error);
-            return '';
-        }
-    },
-
-    getSidebarHTML() {
-        const user = Storage.getUser();
-        return `
-      <nav class="sidebar">
-        <div class="sidebar-header">
-          <a href="/" class="logo">
-            <i class="bi bi-film"></i>
-            <span>CineScope</span>
-          </a>
-        </div>
-        
-        <div class="sidebar-menu">
-          <div class="menu-section">
-            <h6 class="menu-title">Discover</h6>
-            <ul class="menu-list">
-              <li><a href="/" class="${this.isActive('/')}"><i class="bi bi-house"></i> Home</a></li>
-              <li><a href="/content/search" class="${this.isActive('/content/search')}"><i class="bi bi-search"></i> Search</a></li>
-              <li><a href="/content/genre" class="${this.isActive('/content/genre')}"><i class="bi bi-grid"></i> Genres</a></li>
-              <li><a href="/content/regional" class="${this.isActive('/content/regional')}"><i class="bi bi-globe"></i> Regional</a></li>
-              <li><a href="/content/anime" class="${this.isActive('/content/anime')}"><i class="bi bi-stars"></i> Anime</a></li>
-            </ul>
+    return `
+      <nav class="navbar navbar-expand-lg navbar-dark fixed-top topbar">
+        <div class="container-fluid">
+          <a class="navbar-brand fw-bold text-gradient-animated" href="/">CineScope</a>
+          
+          <div class="d-flex align-items-center gap-3">
+            <form class="d-flex" id="topbar-search">
+              <input class="form-control me-2" type="search" placeholder="Search..." aria-label="Search">
+              <button class="btn btn-outline-primary" type="submit">
+                <i class="bi bi-search"></i>
+              </button>
+            </form>
+            
+            <div class="dropdown">
+              <button class="btn btn-link text-white dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                Browse
+              </button>
+              <ul class="dropdown-menu dropdown-menu-dark">
+                <li><a class="dropdown-item" href="/content/search">All Content</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/content/anime">Anime</a></li>
+                <li><a class="dropdown-item" href="/content/genre">By Genre</a></li>
+                <li><a class="dropdown-item" href="/content/regional">Regional</a></li>
+              </ul>
+            </div>
+            
+            ${user ? `
+              <div class="dropdown">
+                <button class="btn btn-link text-white dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                  <i class="bi bi-person-circle"></i> ${user.username}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                  <li><a class="dropdown-item" href="/user/profile">Profile</a></li>
+                  <li><a class="dropdown-item" href="/user/watchlist">Watchlist</a></li>
+                  <li><a class="dropdown-item" href="/user/favorites">Favorites</a></li>
+                  <li><a class="dropdown-item" href="/user/settings">Settings</a></li>
+                  ${isAdmin ? '<li><a class="dropdown-item" href="/admin/">Admin Panel</a></li>' : ''}
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="#" id="logout-btn">Logout</a></li>
+                </ul>
+              </div>
+            ` : `
+              <a href="/auth/login" class="btn btn-primary">Login</a>
+            `}
           </div>
-          
-          ${user ? `
-            <div class="menu-section">
-              <h6 class="menu-title">My Library</h6>
-              <ul class="menu-list">
-                <li><a href="/user/watchlist" class="${this.isActive('/user/watchlist')}"><i class="bi bi-bookmark"></i> Watchlist</a></li>
-                <li><a href="/user/favorites" class="${this.isActive('/user/favorites')}"><i class="bi bi-heart"></i> Favorites</a></li>
-                <li><a href="/user/activity" class="${this.isActive('/user/activity')}"><i class="bi bi-clock-history"></i> Activity</a></li>
-              </ul>
-            </div>
-          ` : ''}
-          
-          ${user && user.is_admin ? `
-            <div class="menu-section">
-              <h6 class="menu-title">Admin</h6>
-              <ul class="menu-list">
-                <li><a href="/admin/" class="${this.isActive('/admin/')}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-                <li><a href="/admin/search" class="${this.isActive('/admin/search')}"><i class="bi bi-database"></i> Content</a></li>
-                <li><a href="/admin/recommendations" class="${this.isActive('/admin/recommendations')}"><i class="bi bi-megaphone"></i> Recommendations</a></li>
-                <li><a href="/admin/analytics" class="${this.isActive('/admin/analytics')}"><i class="bi bi-graph-up"></i> Analytics</a></li>
-                <li><a href="/admin/ml" class="${this.isActive('/admin/ml')}"><i class="bi bi-cpu"></i> ML Service</a></li>
-              </ul>
-            </div>
-          ` : ''}
-        </div>
-        
-        <div class="sidebar-footer">
-          ${user ? `
-            <div class="user-menu">
-              <a href="/user/profile" class="user-info">
-                <i class="bi bi-person-circle"></i>
-                <span>${user.username}</span>
-              </a>
-              <a href="/user/settings"><i class="bi bi-gear"></i></a>
-              <a href="#" onclick="App.logout()"><i class="bi bi-box-arrow-right"></i></a>
-            </div>
-          ` : `
-            <a href="/auth/login" class="btn btn-primary w-100">Sign In</a>
-          `}
         </div>
       </nav>
     `;
-    },
+  }
 
-    getMobileNavHTML() {
-        const user = Storage.getUser();
-        return `
-      <nav class="mobile-nav">
-        <a href="/" class="${this.isActive('/')}">
-          <i class="bi bi-house"></i>
-          <span>Home</span>
+  // Mobile Nav HTML
+  getMobileNavHTML() {
+    const user = storage.getUser();
+
+    return `
+      <nav class="bottom-nav">
+        <a href="/" class="bottom-nav-item ${window.location.pathname === '/' ? 'active' : ''}">
+          <i class="bi bi-house-fill"></i>
+          <div class="small">Home</div>
         </a>
-        <a href="/content/search" class="${this.isActive('/content/search')}">
+        <a href="/content/search" class="bottom-nav-item ${window.location.pathname.includes('/content/search') ? 'active' : ''}">
           <i class="bi bi-search"></i>
-          <span>Search</span>
+          <div class="small">Search</div>
         </a>
-        <a href="/content/genre" class="${this.isActive('/content/genre')}">
-          <i class="bi bi-grid"></i>
-          <span>Browse</span>
+        <a href="/content/anime" class="bottom-nav-item ${window.location.pathname.includes('/content/anime') ? 'active' : ''}">
+          <i class="bi bi-tv-fill"></i>
+          <div class="small">Anime</div>
         </a>
         ${user ? `
-          <a href="/user/watchlist" class="${this.isActive('/user/watchlist')}">
-            <i class="bi bi-bookmark"></i>
-            <span>Watchlist</span>
-          </a>
-          <a href="/user/profile" class="${this.isActive('/user/profile')}">
-            <i class="bi bi-person"></i>
-            <span>Profile</span>
+          <a href="/user/watchlist" class="bottom-nav-item ${window.location.pathname.includes('/user/') ? 'active' : ''}">
+            <i class="bi bi-person-fill"></i>
+            <div class="small">Profile</div>
           </a>
         ` : `
-          <a href="/auth/login" class="${this.isActive('/auth/login')}">
-            <i class="bi bi-person"></i>
-            <span>Sign In</span>
+          <a href="/auth/login" class="bottom-nav-item">
+            <i class="bi bi-box-arrow-in-right"></i>
+            <div class="small">Login</div>
           </a>
         `}
       </nav>
     `;
-    },
+  }
 
-    getOffcanvasFiltersHTML() {
-        return `
-      <div class="offcanvas offcanvas-end" tabindex="-1" id="filtersOffcanvas">
-        <div class="offcanvas-header">
-          <h5 class="offcanvas-title">Filters</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
-        </div>
-        <div class="offcanvas-body">
-          <!-- Filter content will be injected by page-specific code -->
-        </div>
-      </div>
-    `;
-    },
-
-    isActive(path) {
-        return window.location.pathname === path ? 'active' : '';
-    },
-
-    setupNavigation() {
-        // Handle active states
-        const currentPath = window.location.pathname;
-        document.querySelectorAll('.sidebar a, .mobile-nav a').forEach(link => {
-            if (link.getAttribute('href') === currentPath) {
-                link.classList.add('active');
-            }
-        });
-    },
-
-    initCurrentPage() {
-        // This will be called by page-specific inline scripts
-        const pageInit = window.pageInit;
-        if (pageInit && typeof pageInit === 'function') {
-            pageInit();
+  // Setup topbar interactions
+  setupTopbar() {
+    // Search form
+    const searchForm = document.getElementById('topbar-search');
+    if (searchForm) {
+      searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const query = e.target.querySelector('input').value.trim();
+        if (query) {
+          window.location.href = `/content/search?q=${encodeURIComponent(query)}`;
         }
-    },
-
-    setupEventListeners() {
-        // Handle window resize
-        let resizeTimeout;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                this.handleResize();
-            }, 250);
-        });
-
-        // Handle online/offline
-        window.addEventListener('online', () => {
-            UI.showToast('Connection restored', 'success');
-        });
-
-        window.addEventListener('offline', () => {
-            UI.showToast('No internet connection', 'error');
-        });
-
-        // Handle back button
-        window.addEventListener('popstate', (e) => {
-            if (e.state && e.state.modal) {
-                // Close any open modals
-                const modals = document.querySelectorAll('.modal.show');
-                modals.forEach(modal => {
-                    const bsModal = bootstrap.Modal.getInstance(modal);
-                    if (bsModal) bsModal.hide();
-                });
-            }
-        });
-    },
-
-    handleResize() {
-        // Re-inject layouts if switching between mobile/desktop
-        this.injectLayouts();
-    },
-
-    async logout() {
-        if (confirm('Are you sure you want to logout?')) {
-            api.auth.logout();
-        }
+      });
     }
-};
+
+    // Logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        api.logout();
+      });
+    }
+  }
+
+  // Setup mobile nav interactions
+  setupMobileNav() {
+    // Mobile nav is mostly handled by links
+  }
+
+  // Initialize page-specific logic
+  initPageLogic() {
+    // This will be called after inline scripts run
+    // Page-specific initialization can hook into this
+  }
+
+  // Utility methods for pages
+  async loadTrendingContent(containerId) {
+    try {
+      ui.showSkeletonGrid(containerId);
+      const data = await api.getTrending();
+      ui.createContentGrid(data.recommendations || [], containerId);
+    } catch (error) {
+      const container = document.getElementById(containerId);
+      if (container) {
+        container.innerHTML = '';
+        container.appendChild(ui.createErrorState('Failed to load content', () => {
+          this.loadTrendingContent(containerId);
+        }));
+      }
+    }
+  }
+
+  async loadNewReleases(containerId, language = null) {
+    try {
+      ui.showSkeletonGrid(containerId);
+      const params = language ? { language } : {};
+      const data = await api.getNewReleases(params);
+      ui.createContentGrid(data.recommendations || [], containerId);
+    } catch (error) {
+      const container = document.getElementById(containerId);
+      if (container) {
+        container.innerHTML = '';
+        container.appendChild(ui.createErrorState('Failed to load new releases'));
+      }
+    }
+  }
+
+  async loadCriticsChoice(containerId) {
+    try {
+      ui.showSkeletonGrid(containerId);
+      const data = await api.getCriticsChoice();
+      ui.createContentGrid(data.recommendations || [], containerId);
+    } catch (error) {
+      const container = document.getElementById(containerId);
+      if (container) {
+        container.innerHTML = '';
+        container.appendChild(ui.createErrorState('Failed to load critics choice'));
+      }
+    }
+  }
+
+  async loadGenreContent(genre, containerId) {
+    try {
+      ui.showSkeletonGrid(containerId);
+      const data = await api.getGenreRecommendations(genre);
+      ui.createContentGrid(data.recommendations || [], containerId);
+    } catch (error) {
+      const container = document.getElementById(containerId);
+      if (container) {
+        container.innerHTML = '';
+        container.appendChild(ui.createErrorState('Failed to load genre content'));
+      }
+    }
+  }
+
+  // Helper to check if element is in viewport
+  isInViewport(element) {
+    const rect = element.getBoundingClientRect();
+    return (
+      rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+      rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+  }
+
+  // Setup infinite scroll
+  setupInfiniteScroll(loadMoreFunction) {
+    let isLoading = false;
+
+    window.addEventListener('scroll', ui.debounce(async () => {
+      if (isLoading) return;
+
+      const scrollPosition = window.scrollY + window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+
+      if (scrollPosition >= documentHeight - 500) {
+        isLoading = true;
+        await loadMoreFunction();
+        isLoading = false;
+      }
+    }, 200));
+  }
+}
+
+// Create global app instance and initialize
+window.app = new CineScopeApp();
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    App.init();
+  app.init();
 });

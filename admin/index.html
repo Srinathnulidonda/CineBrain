@@ -1,1 +1,206 @@
-<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin Dashboard - CineScope</title>
+
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/base.css" rel="stylesheet">
+    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
+    <link href="/css/tailwind.css" rel="stylesheet">
+    <link href="/css/animation.css" rel="stylesheet">
+    <link href="/css/responsive.css" rel="stylesheet">
+    <link href="/css/utilities.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Topbar -->
+    <div id="topbar-container"></div>
+
+    <!-- Main Content -->
+    <main class="container-fluid py-4">
+        <div class="row">
+            <div class="col-lg-3 mb-4">
+                <!-- Admin Sidebar -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="mb-3">Admin Panel</h5>
+
+                        <div class="list-group">
+                            <a href="/admin/" class="list-group-item list-group-item-action active">
+                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                            </a>
+                            <a href="/admin/search" class="list-group-item list-group-item-action">
+                                <i class="bi bi-search me-2"></i> Content Search
+                            </a>
+                            <a href="/admin/recommendations" class="list-group-item list-group-item-action">
+                                <i class="bi bi-star me-2"></i> Recommendations
+                            </a>
+                            <a href="/admin/analytics" class="list-group-item list-group-item-action">
+                                <i class="bi bi-graph-up me-2"></i> Analytics
+                            </a>
+                            <a href="/admin/ml" class="list-group-item list-group-item-action">
+                                <i class="bi bi-cpu me-2"></i> ML Service
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-9">
+                <h1 class="h3 mb-4">Admin Dashboard</h1>
+
+                <!-- Quick Stats -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-muted mb-2">Total Users</h6>
+                                <h3 class="mb-0" id="total-users">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-muted mb-2">Total Content</h6>
+                                <h3 class="mb-0" id="total-content">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-muted mb-2">Active Users</h6>
+                                <h3 class="mb-0" id="active-users">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-muted mb-2">Total Interactions</h6>
+                                <h3 class="mb-0" id="total-interactions">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Popular Content -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Popular Content</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Interactions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="popular-content-table">
+                                    <tr>
+                                        <td colspan="2" class="text-center">
+                                            <div class="spinner-border spinner-border-sm"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Popular Genres -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Popular Genres</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="popular-genres">
+                            <div class="text-center">
+                                <div class="spinner-border spinner-border-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Navigation -->
+    <div id="mobile-nav-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/storage.js"></script>
+    <script src="/js/http.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Page Specific Script -->
+    <script>
+        async function loadDashboardData() {
+            try {
+                const analytics = await api.getAnalytics();
+
+                // Update stats
+                document.getElementById('total-users').textContent = analytics.total_users || 0;
+                document.getElementById('total-content').textContent = analytics.total_content || 0;
+                document.getElementById('active-users').textContent = analytics.active_users_last_week || 0;
+                document.getElementById('total-interactions').textContent = analytics.total_interactions || 0;
+
+                // Popular content table
+                const popularTable = document.getElementById('popular-content-table');
+                popularTable.innerHTML = '';
+
+                if (analytics.popular_content && analytics.popular_content.length > 0) {
+                    analytics.popular_content.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+              <td>${item.title}</td>
+              <td>${item.interactions}</td>
+            `;
+                        popularTable.appendChild(row);
+                    });
+                } else {
+                    popularTable.innerHTML = '<tr><td colspan="2" class="text-center text-muted">No data</td></tr>';
+                }
+
+                // Popular genres
+                const genresContainer = document.getElementById('popular-genres');
+                genresContainer.innerHTML = '';
+
+                if (analytics.popular_genres && analytics.popular_genres.length > 0) {
+                    const genresList = document.createElement('div');
+                    genresList.className = 'd-flex flex-wrap gap-2';
+
+                    analytics.popular_genres.forEach(item => {
+                        const badge = document.createElement('span');
+                        badge.className = 'badge badge-blue';
+                        badge.textContent = `${item.genre} (${item.count})`;
+                        genresList.appendChild(badge);
+                    });
+
+                    genresContainer.appendChild(genresList);
+                } else {
+                    genresContainer.innerHTML = '<p class="text-muted mb-0">No genre data available</p>';
+                }
+
+            } catch (error) {
+                ui.showToast('Failed to load analytics', 'error');
+            }
+        }
+
+        // Initialize
+        loadDashboardData();
+    </script>
+</body>
+
+</html>

@@ -1,12 +1,14 @@
-// Global configuration
+// Configuration
 const CONFIG = {
     API_BASE: 'https://backend-app-970m.onrender.com/api',
     TMDB_IMAGE_BASE: 'https://image.tmdb.org/t/p',
-    TW_PREFIX: 'tw-',
+    TAILWIND_PREFIX: 'tw-',
+    TOKEN_KEY: 'cinescope_token',
+    USER_KEY: 'cinescope_user',
     TOAST_DURATION: 3000,
-    DEBOUNCE_DELAY: 300,
+    DEBOUNCE_DELAY: 500,
     PAGE_SIZE: 20,
-    CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
+    CACHE_TTL: 300000, // 5 minutes
     ROUTES: {
         HOME: '/',
         LOGIN: '/auth/login',
@@ -21,12 +23,34 @@ const CONFIG = {
         SETTINGS: '/user/settings',
         ACTIVITY: '/user/activity',
         PROFILE: '/user/profile',
-        ADMIN: '/admin/'
-    }
+        ADMIN: '/admin/',
+        ADMIN_SEARCH: '/admin/search',
+        ADMIN_RECOMMENDATIONS: '/admin/recommendations',
+        ADMIN_ANALYTICS: '/admin/analytics',
+        ADMIN_ML: '/admin/ml'
+    },
+    GENRES: {
+        movie: [
+            'Action', 'Adventure', 'Animation', 'Biography', 'Comedy', 'Crime',
+            'Documentary', 'Drama', 'Fantasy', 'Horror', 'Musical', 'Mystery',
+            'Romance', 'Sci-Fi', 'Thriller', 'Western'
+        ],
+        tv: [
+            'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary',
+            'Drama', 'Fantasy', 'Horror', 'Mystery', 'Reality', 'Romance',
+            'Sci-Fi', 'Thriller'
+        ],
+        anime: ['Shonen', 'Shojo', 'Seinen', 'Josei', 'Kodomomuke']
+    },
+    LANGUAGES: [
+        { code: 'en', name: 'English' },
+        { code: 'hi', name: 'Hindi' },
+        { code: 'te', name: 'Telugu' },
+        { code: 'ta', name: 'Tamil' },
+        { code: 'kn', name: 'Kannada' },
+        { code: 'ml', name: 'Malayalam' }
+    ]
 };
 
-// Safe area CSS variables
-document.documentElement.style.setProperty('--safe-area-top', 'env(safe-area-inset-top)');
-document.documentElement.style.setProperty('--safe-area-right', 'env(safe-area-inset-right)');
-document.documentElement.style.setProperty('--safe-area-bottom', 'env(safe-area-inset-bottom)');
-document.documentElement.style.setProperty('--safe-area-left', 'env(safe-area-inset-left)');
+// Make CONFIG globally available
+window.CONFIG = CONFIG;
