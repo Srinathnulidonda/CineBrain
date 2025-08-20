@@ -1,127 +1,436 @@
-<!-- Search Bar Widget -->
-<!-- Reusable search input with suggestions -->
-<div class="search-bar-container">
-    <div class="search-bar position-relative">
-        <input type="text" class="form-control search-input" placeholder="Search movies, TV shows, anime..."
-            autocomplete="off">
+<!-- CineScope Search Bar Widget -->
+<div class="search-bar-widget">
+    <div class="position-relative">
+        <div class="input-group input-group-lg">
+            <span class="input-group-text bg-dark border-secondary">
+                <i class="bi bi-search text-muted"></i>
+            </span>
+            <input type="search" class="form-control form-control-lg bg-dark border-secondary text-white search-input"
+                placeholder="Search movies, TV shows, anime..." autocomplete="off">
+            <button class="btn btn-primary search-btn" type="button">
+                <span class="search-btn-text">Search</span>
+                <div class="spinner-border spinner-border-sm d-none" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </button>
+        </div>
 
-        <button class="search-btn" type="button">
-            <i class="bi bi-search"></i>
-        </button>
-
-        <!-- Search suggestions dropdown -->
-        <div class="search-suggestions" style="display: none;">
-            <!-- Recent searches -->
-            <div class="suggestions-section">
-                <h6 class="suggestions-header">Recent Searches</h6>
-                <a href="#" class="suggestion-item">
-                    <i class="bi bi-clock-history"></i>
-                    <span>Inception</span>
-                </a>
-                <a href="#" class="suggestion-item">
-                    <i class="bi bi-clock-history"></i>
-                    <span>Attack on Titan</span>
-                </a>
+        <!-- Search Results Dropdown -->
+        <div class="search-results-dropdown position-absolute w-100 bg-dark border border-secondary rounded-bottom shadow-lg mt-1 d-none"
+            style="z-index: 1050;">
+            <div class="search-results-content">
+                <!-- Results will be populated here -->
             </div>
+        </div>
 
-            <!-- Quick suggestions -->
-            <div class="suggestions-section">
-                <h6 class="suggestions-header">Suggestions</h6>
-                <a href="#" class="suggestion-item">
-                    <i class="bi bi-fire"></i>
-                    <span>Trending Now</span>
-                </a>
-                <a href="#" class="suggestion-item">
-                    <i class="bi bi-star"></i>
-                    <span>Top Rated</span>
-                </a>
+        <!-- Search Suggestions -->
+        <div class="search-suggestions-dropdown position-absolute w-100 bg-dark border border-secondary rounded-bottom shadow-lg mt-1 d-none"
+            style="z-index: 1050;">
+            <div class="p-3">
+                <h6 class="text-white mb-3">
+                    <i class="bi bi-lightbulb me-2"></i>Search Suggestions
+                </h6>
+                <div class="search-suggestions-content">
+                    <!-- Suggestions will be populated here -->
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Compact variant -->
-<div class="search-bar-compact">
-    <input type="text" class="form-control" placeholder="Search...">
-    <i class="bi bi-search search-icon"></i>
-</div>
-
 <style>
-    .search-bar {
-        position: relative;
-        max-width: 600px;
+    .search-bar-widget .search-input::placeholder {
+        color: var(--cs-text-muted);
     }
 
-    .search-input {
-        padding-right: 50px;
-        background: var(--bg-surface);
-        border-color: var(--border-color);
-        color: var(--text-primary);
+    .search-bar-widget .search-input:focus {
+        border-color: var(--cs-premium-blue);
+        box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25);
     }
 
-    .search-input:focus {
-        border-color: var(--accent-blue);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    .search-results-dropdown,
+    .search-suggestions-dropdown {
+        max-height: 400px;
+        overflow-y: auto;
     }
 
-    .search-btn {
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: var(--accent-blue);
-        padding: 8px;
+    .search-result-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--cs-border);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .search-result-item:hover {
+        background-color: var(--cs-surface-light);
+    }
+
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+
+    .search-suggestion-item {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        margin: 0.25rem 0.25rem 0.25rem 0;
+        background: var(--cs-surface-light);
+        border: 1px solid var(--cs-border);
+        border-radius: 1rem;
+        color: var(--cs-text-secondary);
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
         cursor: pointer;
     }
 
-    .search-suggestions {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        margin-top: 4px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        z-index: 1000;
-    }
-
-    .suggestions-header {
-        padding: 8px 16px;
-        margin: 0;
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .suggestion-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 16px;
-        color: var(--text-primary);
+    .search-suggestion-item:hover {
+        background: var(--cs-premium-blue);
+        color: white;
         text-decoration: none;
-        transition: background 0.2s;
     }
 
-    .suggestion-item:hover {
-        background: var(--bg-surface-hover);
+    .search-history-item {
+        padding: 0.5rem 1rem;
+        color: var(--cs-text-muted);
+        text-decoration: none;
+        display: block;
+        border-bottom: 1px solid var(--cs-border);
+        transition: background-color 0.2s ease;
     }
 
-    .search-bar-compact {
-        position: relative;
+    .search-history-item:hover {
+        background-color: var(--cs-surface-light);
+        color: var(--cs-text-primary);
+        text-decoration: none;
     }
 
-    .search-bar-compact .search-icon {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-muted);
-        pointer-events: none;
+    .search-history-item:last-child {
+        border-bottom: none;
     }
 </style>
+
+<script>
+    // Search Bar Widget
+    window.CineScope = window.CineScope || {};
+    window.CineScope.Widgets = window.CineScope.Widgets || {};
+
+    window.CineScope.Widgets.SearchBar = {
+        // Initialize search bar
+        init(container, options = {}) {
+            const {
+                onSearch = null,
+                onResultSelect = null,
+                showSuggestions = true,
+                showHistory = true,
+                placeholder = "Search movies, TV shows, anime...",
+                autoSearch = true,
+                debounceDelay = 300
+            } = options;
+
+            const searchBar = container.querySelector('.search-bar-widget');
+            if (!searchBar) return;
+
+            const searchInput = searchBar.querySelector('.search-input');
+            const searchBtn = searchBar.querySelector('.search-btn');
+            const resultsDropdown = searchBar.querySelector('.search-results-dropdown');
+            const suggestionsDropdown = searchBar.querySelector('.search-suggestions-dropdown');
+
+            // Set placeholder
+            if (searchInput) {
+                searchInput.placeholder = placeholder;
+            }
+
+            // Debounced search function
+            const debouncedSearch = CineScope.utils.debounce(async (query) => {
+                if (query.length < 2) {
+                    this.hideResults(resultsDropdown);
+                    return;
+                }
+
+                try {
+                    this.showLoading(searchBtn);
+                    const results = await CineScope.HTTP.content.search(query, { limit: 8 });
+                    this.showResults(resultsDropdown, results.results || [], query, onResultSelect);
+                    this.hideSuggestions(suggestionsDropdown);
+                } catch (error) {
+                    console.error('Search error:', error);
+                    CineScope.UI.toast.error('Search failed');
+                } finally {
+                    this.hideLoading(searchBtn);
+                }
+            }, debounceDelay);
+
+            // Input event listener
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.trim();
+
+                    if (autoSearch && query.length >= 2) {
+                        debouncedSearch(query);
+                    } else if (query.length === 0) {
+                        this.hideResults(resultsDropdown);
+                        if (showSuggestions) {
+                            this.showSuggestions(suggestionsDropdown);
+                        }
+                    }
+                });
+
+                // Focus event listener
+                searchInput.addEventListener('focus', () => {
+                    const query = searchInput.value.trim();
+                    if (query.length === 0 && showSuggestions) {
+                        this.showSuggestions(suggestionsDropdown);
+                    }
+                });
+
+                // Keydown event listener
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.performSearch(searchInput.value.trim(), onSearch);
+                    } else if (e.key === 'Escape') {
+                        this.hideAllDropdowns(searchBar);
+                        searchInput.blur();
+                    }
+                });
+            }
+
+            // Search button click
+            if (searchBtn) {
+                searchBtn.addEventListener('click', () => {
+                    this.performSearch(searchInput.value.trim(), onSearch);
+                });
+            }
+
+            // Click outside to close dropdowns
+            document.addEventListener('click', (e) => {
+                if (!searchBar.contains(e.target)) {
+                    this.hideAllDropdowns(searchBar);
+                }
+            });
+
+            return searchBar;
+        },
+
+        // Perform search
+        performSearch(query, onSearch) {
+            if (!query) return;
+
+            // Hide dropdowns
+            this.hideAllDropdowns(document.querySelector('.search-bar-widget'));
+
+            // Add to search history
+            CineScope.Storage.searchHistory.add(query);
+
+            // Call custom search handler or navigate to search page
+            if (onSearch) {
+                onSearch(query);
+            } else {
+                const currentUser = CineScope.Storage.user.get();
+                const searchUrl = currentUser ?
+                    `/${currentUser.username}/search?query=${encodeURIComponent(query)}` :
+                    `/search?query=${encodeURIComponent(query)}`;
+
+                window.location.href = searchUrl;
+            }
+        },
+
+        // Show search results
+        showResults(dropdown, results, query, onResultSelect) {
+            if (!dropdown) return;
+
+            const content = dropdown.querySelector('.search-results-content');
+            if (!content) return;
+
+            if (results.length === 0) {
+                content.innerHTML = `
+        <div class="p-3 text-center">
+          <i class="bi bi-search text-muted mb-2 d-block" style="font-size: 2rem;"></i>
+          <p class="text-muted mb-0">No results found for "${query}"</p>
+        </div>
+      `;
+            } else {
+                content.innerHTML = results.map(item => `
+        <div class="search-result-item" data-content-id="${item.id}">
+          <div class="d-flex align-items-center">
+            <img src="${this.getPosterUrl(item.poster_path)}" 
+                 class="rounded me-3" 
+                 style="width: 50px; height: 75px; object-fit: cover;"
+                 alt="${item.title}">
+            <div class="flex-grow-1">
+              <h6 class="text-white mb-1">${item.title}</h6>
+              <p class="text-muted small mb-1">
+                ${(item.content_type || 'movie').toUpperCase()}
+                ${item.release_date ? ` • ${new Date(item.release_date).getFullYear()}` : ''}
+              </p>
+              ${item.genres && item.genres.length > 0 ? `
+                <p class="text-muted small mb-0">${item.genres.slice(0, 2).join(', ')}</p>
+              ` : ''}
+            </div>
+            ${item.rating ? `
+              <div class="text-end">
+                <span class="badge bg-primary">
+                  <i class="bi bi-star-fill me-1"></i>${CineScope.utils.formatRating(item.rating)}
+                </span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+
+                // Add click listeners to result items
+                content.querySelectorAll('.search-result-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const contentId = item.dataset.contentId;
+                        const result = results.find(r => r.id == contentId);
+
+                        if (onResultSelect) {
+                            onResultSelect(result);
+                        } else {
+                            this.navigateToContent(result);
+                        }
+
+                        this.hideAllDropdowns(dropdown.closest('.search-bar-widget'));
+                    });
+                });
+            }
+
+            dropdown.classList.remove('d-none');
+        },
+
+        // Show search suggestions
+        showSuggestions(dropdown) {
+            if (!dropdown) return;
+
+            const content = dropdown.querySelector('.search-suggestions-content');
+            if (!content) return;
+
+            // Get search history
+            const history = CineScope.Storage.searchHistory.get();
+
+            // Popular search suggestions
+            const popularSuggestions = [
+                'Marvel', 'Batman', 'Star Wars', 'Harry Potter', 'Lord of the Rings',
+                'Avengers', 'Spider-Man', 'Dragon Ball', 'Naruto', 'One Piece',
+                'Action Movies', 'Comedy Movies', 'Horror Movies', 'Sci-Fi Movies'
+            ];
+
+            let suggestionsHtml = '';
+
+            // Show search history if available
+            if (history.length > 0) {
+                suggestionsHtml += `
+        <h6 class="text-white mb-2">
+          <i class="bi bi-clock-history me-2"></i>Recent Searches
+        </h6>
+        <div class="mb-3">
+          ${history.slice(0, 5).map(item => `
+            <div class="search-history-item" data-query="${item}">
+              <i class="bi bi-clock-history me-2"></i>${item}
+            </div>
+          `).join('')}
+        </div>
+      `;
+            }
+
+            // Show popular suggestions
+            suggestionsHtml += `
+      <h6 class="text-white mb-2">
+        <i class="bi bi-fire me-2"></i>Popular Searches
+      </h6>
+      <div>
+        ${popularSuggestions.map(suggestion => `
+          <span class="search-suggestion-item" data-query="${suggestion}">${suggestion}</span>
+        `).join('')}
+      </div>
+    `;
+
+            content.innerHTML = suggestionsHtml;
+
+            // Add click listeners
+            content.querySelectorAll('[data-query]').forEach(item => {
+                item.addEventListener('click', () => {
+                    const query = item.dataset.query;
+                    const searchInput = dropdown.closest('.search-bar-widget').querySelector('.search-input');
+                    if (searchInput) {
+                        searchInput.value = query;
+                        this.performSearch(query);
+                    }
+                });
+            });
+
+            dropdown.classList.remove('d-none');
+        },
+
+        // Get poster URL
+        getPosterUrl(posterPath) {
+            if (!posterPath) return '/assets/placeholder-poster.jpg';
+            if (posterPath.startsWith('http')) return posterPath;
+            return `https://image.tmdb.org/t/p/w200${posterPath}`;
+        },
+
+        // Navigate to content
+        navigateToContent(content) {
+            const currentUser = CineScope.Storage.user.get();
+            let detailsUrl;
+
+            if (currentUser) {
+                detailsUrl = `/${currentUser.username}/details/${content.id}`;
+            } else {
+                detailsUrl = `/content/details?id=${content.id}`;
+            }
+
+            window.location.href = detailsUrl;
+        },
+
+        // Show loading state
+        showLoading(button) {
+            if (!button) return;
+
+            const text = button.querySelector('.search-btn-text');
+            const spinner = button.querySelector('.spinner-border');
+
+            if (text) text.classList.add('d-none');
+            if (spinner) spinner.classList.remove('d-none');
+
+            button.disabled = true;
+        },
+
+        // Hide loading state
+        hideLoading(button) {
+            if (!button) return;
+
+            const text = button.querySelector('.search-btn-text');
+            const spinner = button.querySelector('.spinner-border');
+
+            if (text) text.classList.remove('d-none');
+            if (spinner) spinner.classList.add('d-none');
+
+            button.disabled = false;
+        },
+
+        // Hide results dropdown
+        hideResults(dropdown) {
+            if (dropdown) {
+                dropdown.classList.add('d-none');
+            }
+        },
+
+        // Hide suggestions dropdown
+        hideSuggestions(dropdown) {
+            if (dropdown) {
+                dropdown.classList.add('d-none');
+            }
+        },
+
+        // Hide all dropdowns
+        hideAllDropdowns(searchBar) {
+            if (!searchBar) return;
+
+            const dropdowns = searchBar.querySelectorAll('.search-results-dropdown, .search-suggestions-dropdown');
+            dropdowns.forEach(dropdown => {
+                dropdown.classList.add('d-none');
+            });
+        }
+    };
+</script>

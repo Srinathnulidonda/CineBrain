@@ -1,300 +1,353 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Manage recommendations on CineScope admin">
+
     <title>Admin Recommendations - CineScope</title>
 
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="/css/base.css" rel="stylesheet">
-    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
-    <link href="/css/tailwind.css" rel="stylesheet">
-    <link href="/css/animation.css" rel="stylesheet">
-    <link href="/css/responsive.css" rel="stylesheet">
-    <link href="/css/utilities.css" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/bootstrap-overrides.css">
+    <link rel="stylesheet" href="/css/animation.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+
+    <style>
+        .recommendation-card {
+            background: var(--cs-surface-light);
+            border: 1px solid var(--cs-border);
+            transition: all 0.2s ease;
+        }
+
+        .recommendation-card:hover {
+            border-color: var(--cs-premium-blue);
+            transform: translateY(-2px);
+        }
+
+        .recommendation-type {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+        }
+    </style>
 </head>
 
-<body>
-    <!-- Topbar -->
-    <div id="topbar-container"></div>
+<body class="bg-black">
+    <!-- Layout Container -->
+    <div id="app-container">
+        <!-- Top Bar Container (Desktop) -->
+        <div id="topbar-container" class="d-none d-lg-block"></div>
 
-    <!-- Main Content -->
-    <main class="container-fluid py-4">
-        <div class="row">
-            <div class="col-lg-3 mb-4">
-                <!-- Admin Sidebar -->
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="mb-3">Admin Panel</h5>
-
-                        <div class="list-group">
-                            <a href="/admin/" class="list-group-item list-group-item-action">
-                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                            </a>
-                            <a href="/admin/search" class="list-group-item list-group-item-action">
-                                <i class="bi bi-search me-2"></i> Content Search
-                            </a>
-                            <a href="/admin/recommendations" class="list-group-item list-group-item-action active">
-                                <i class="bi bi-star me-2"></i> Recommendations
-                            </a>
-                            <a href="/admin/analytics" class="list-group-item list-group-item-action">
-                                <i class="bi bi-graph-up me-2"></i> Analytics
-                            </a>
-                            <a href="/admin/ml" class="list-group-item list-group-item-action">
-                                <i class="bi bi-cpu me-2"></i> ML Service
-                            </a>
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container-fluid">
+                <!-- Admin Recommendations Header -->
+                <div class="admin-recommendations-header py-4 border-bottom border-secondary mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h1 class="text-white mb-2">
+                                <i class="bi bi-stars text-warning me-3"></i>Recommendations Management
+                            </h1>
+                            <p class="text-muted mb-0">Create and manage featured content</p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <button class="btn btn-primary" data-bs-toggle="modal"
+                                data-bs-target="#addRecommendationModal">
+                                <i class="bi bi-plus-circle me-2"></i>Add New Recommendation
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-lg-9">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 class="h3 mb-0">Admin Recommendations</h1>
-                    <button class="btn btn-primary" data-bs-toggle="modal"
-                        data-bs-target="#create-recommendation-modal">
-                        <i class="bi bi-plus-circle"></i> Create Recommendation
-                    </button>
+                <!-- Recommendations List -->
+                <div class="row g-4" id="recommendations-list">
+                    <!-- Recommendations will be populated here -->
                 </div>
 
-                <!-- Current Recommendations -->
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Current Recommendations</h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="recommendations-list">
-                            <div class="text-center">
-                                <div class="spinner-border"></div>
-                            </div>
-                        </div>
+                <!-- No Recommendations -->
+                <div id="no-recommendations" class="text-center py-5 d-none">
+                    <i class="bi bi-stars display-1 text-muted mb-3"></i>
+                    <h5 class="text-muted">No Recommendations Yet</h5>
+                    <p class="text-muted">Add your first recommendation</p>
+                </div>
+
+                <!-- Loading -->
+                <div id="loading" class="d-flex justify-content-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
-            </div>
-        </div>
-    </main>
 
-    <!-- Create Recommendation Modal -->
-    <div class="modal fade" id="create-recommendation-modal" tabindex="-1">
+                <!-- Pagination -->
+                <div class="d-flex justify-content-center mt-4" id="pagination-container">
+                    <nav aria-label="Recommendations pagination">
+                        <ul class="pagination">
+                            <li class="page-item disabled" id="prev-page">
+                                <a class="page-link" href="#" tabindex="-1">Previous</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item" id="next-page">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </main>
+
+        <!-- Mobile Navigation Container -->
+        <div id="mobile-nav-container" class="d-lg-none"></div>
+    </div>
+
+    <!-- Add Recommendation Modal -->
+    <div class="modal fade" id="addRecommendationModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Create Admin Recommendation</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-content bg-dark border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-white">
+                        <i class="bi bi-plus-circle me-2"></i>Add Recommendation
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="recommendation-form">
+                    <form id="add-recommendation-form">
                         <div class="mb-3">
-                            <label class="form-label">Search Content</label>
-                            <input type="text" class="form-control" id="content-search"
-                                placeholder="Search for a movie, TV show, or anime...">
-                            <div id="search-suggestions" class="list-group mt-2" style="display: none;">
-                                <!-- Search suggestions will appear here -->
-                            </div>
+                            <label for="content-id" class="form-label text-white">Content ID</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="content-id"
+                                required>
+                            <div class="form-text text-muted">Enter the TMDB or MAL ID of the content</div>
                         </div>
-
-                        <div id="selected-content" class="mb-3" style="display: none;">
-                            <!-- Selected content will be displayed here -->
-                        </div>
-
                         <div class="mb-3">
-                            <label for="recommendation-type" class="form-label">Recommendation Type</label>
-                            <select class="form-select" id="recommendation-type" required>
-                                <option value="admin_choice">Admin's Choice</option>
+                            <label for="recommendation-type" class="form-label text-white">Recommendation Type</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="recommendation-type"
+                                required>
+                                <option value="">Select type</option>
                                 <option value="trending">Trending</option>
-                                <option value="popular">Popular</option>
+                                <option value="new_release">New Release</option>
                                 <option value="critics_choice">Critics' Choice</option>
+                                <option value="admin_choice">Admin's Choice</option>
                             </select>
                         </div>
-
                         <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" id="description" rows="3" required
-                                placeholder="Why are you recommending this content?"></textarea>
+                            <label for="recommendation-description" class="form-label text-white">Description</label>
+                            <textarea class="form-control bg-dark border-secondary text-white"
+                                id="recommendation-description" rows="3" required></textarea>
+                            <div class="form-text text-muted">Provide a short description or reason for recommendation
+                            </div>
                         </div>
-
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="send-telegram" checked>
-                            <label class="form-check-label" for="send-telegram">
-                                Send to Telegram channel
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is-active" checked>
+                            <label class="form-check-label text-white" for="is-active">
+                                Active
                             </label>
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="create-recommendation-btn">
-                        Create Recommendation
+                    <button type="submit" class="btn btn-primary" form="add-recommendation-form">
+                        <i class="bi bi-check me-2"></i>Add Recommendation
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Mobile Navigation -->
-    <div id="mobile-nav-container"></div>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Core JavaScript -->
     <script src="/js/config.js"></script>
     <script src="/js/storage.js"></script>
     <script src="/js/http.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/app.js"></script>
 
-    <!-- Page Specific Script -->
+    <!-- Page Script -->
     <script>
-        let selectedContentId = null;
-        let searchDebounce = null;
+        let currentPage = 1;
+        let totalPages = 1;
 
-        async function loadRecommendations() {
+        document.addEventListener('DOMContentLoaded', async function () {
+            console.log('⭐ Loading Admin Recommendations Page...');
+
+            // Check admin access
+            if (!CineScope.App.getCurrentUser().is_admin) {
+                window.location.href = '/';
+                return;
+            }
+
+            // Set page title
+            CineScope.UI.updatePageTitle('Admin Recommendations');
+
+            // Load recommendations
+            await loadRecommendations(currentPage);
+
+            // Initialize form
+            initializeAddForm();
+
+            // Initialize pagination
+            initializePagination();
+
+            console.log('✅ Admin recommendations page loaded');
+        });
+
+        async function loadRecommendations(page) {
+            const container = document.getElementById('recommendations-list');
+            const loading = document.getElementById('loading');
+            const noRecommendations = document.getElementById('no-recommendations');
+
+            loading.classList.remove('d-none');
+            container.classList.add('d-none');
+            noRecommendations.classList.add('d-none');
+
             try {
-                const response = await api.getAdminRecommendations();
-                displayRecommendations(response.recommendations);
+                const response = await CineScope.HTTP.admin.getRecommendations({ page });
+                const recommendations = response.recommendations || [];
+
+                totalPages = response.pages || 1;
+
+                if (recommendations.length === 0) {
+                    noRecommendations.classList.remove('d-none');
+                } else {
+                    container.classList.remove('d-none');
+                    displayRecommendations(recommendations);
+                }
+
+                updatePagination(page, totalPages);
             } catch (error) {
-                ui.showToast('Failed to load recommendations', 'error');
+                console.error('Failed to load recommendations:', error);
+                CineScope.UI.toast.error('Failed to load recommendations');
+            } finally {
+                loading.classList.add('d-none');
             }
         }
 
         function displayRecommendations(recommendations) {
             const container = document.getElementById('recommendations-list');
+            container.innerHTML = recommendations.map(rec => `
+                <div class="col-md-6 col-lg-4">
+                    <div class="recommendation-card rounded overflow-hidden">
+                        <img src="${rec.content.poster_path || '/assets/placeholder-poster.jpg'}" 
+                             class="img-fluid" 
+                             alt="${rec.content.title}" 
+                             style="height: 300px; object-fit: cover;">
+                        <div class="p-3">
+                            <h6 class="text-white mb-1">${rec.content.title}</h6>
+                            <p class="text-muted small mb-2">${rec.content.content_type.toUpperCase()}</p>
+                            <p class="text-light mb-3">${rec.description}</p>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted small">${new Date(rec.created_at).toLocaleDateString()}</span>
+                                <button class="btn btn-sm btn-outline-danger remove-recommendation-btn" data-id="${rec.id}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <span class="badge bg-primary recommendation-type">${rec.recommendation_type.replace('_', ' ').toUpperCase()}</span>
+                    </div>
+                </div>
+            `).join('');
 
-            if (!recommendations || recommendations.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center">No recommendations yet</p>';
-                return;
-            }
-
-            container.innerHTML = '';
-
-            recommendations.forEach(rec => {
-                const card = document.createElement('div');
-                card.className = 'card mb-3';
-                card.innerHTML = `
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-2">
-                ${rec.content.poster_path ? `
-                  <img src="${rec.content.poster_path}" class="img-fluid rounded">
-                ` : `
-                  <div class="bg-secondary rounded" style="height: 150px;"></div>
-                `}
-              </div>
-              <div class="col-md-10">
-                <h5>${rec.content.title}</h5>
-                <p class="text-muted mb-2">
-                  <span class="badge badge-purple">${rec.recommendation_type.replace('_', ' ')}</span>
-                  ${rec.content.rating ? `<span class="ms-2">⭐ ${rec.content.rating}</span>` : ''}
-                </p>
-                <p>${rec.description}</p>
-                <p class="text-muted small mb-0">
-                  By ${rec.admin_name} • ${new Date(rec.created_at).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        `;
-                container.appendChild(card);
+            // Add remove listeners
+            container.querySelectorAll('.remove-recommendation-btn').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const id = this.dataset.id;
+                    if (confirm('Remove this recommendation?')) {
+                        await removeRecommendation(id);
+                    }
+                });
             });
         }
 
-        // Content search functionality
-        document.getElementById('content-search').addEventListener('input', (e) => {
-            clearTimeout(searchDebounce);
-            const query = e.target.value;
+        function initializeAddForm() {
+            const form = document.getElementById('add-recommendation-form');
 
-            if (query.length < 2) {
-                document.getElementById('search-suggestions').style.display = 'none';
-                return;
-            }
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
 
-            searchDebounce = setTimeout(() => searchForContent(query), 300);
-        });
+                const data = {
+                    content_id: document.getElementById('content-id').value.trim(),
+                    recommendation_type: document.getElementById('recommendation-type').value,
+                    description: document.getElementById('recommendation-description').value.trim(),
+                    is_active: document.getElementById('is-active').checked
+                };
 
-        async function searchForContent(query) {
-            try {
-                const response = await api.search(query);
-                displaySearchSuggestions(response.results);
-            } catch (error) {
-                console.error('Search failed:', error);
-            }
-        }
+                if (!data.content_id || !data.recommendation_type || !data.description) {
+                    CineScope.UI.toast.error('Please fill all required fields');
+                    return;
+                }
 
-        function displaySearchSuggestions(results) {
-            const container = document.getElementById('search-suggestions');
+                try {
+                    await CineScope.HTTP.admin.createRecommendation(data);
 
-            if (!results || results.length === 0) {
-                container.style.display = 'none';
-                return;
-            }
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('addRecommendationModal')).hide();
 
-            container.innerHTML = '';
-            container.style.display = 'block';
+                    // Reload recommendations
+                    await loadRecommendations(currentPage);
 
-            results.slice(0, 5).forEach(content => {
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = 'list-group-item list-group-item-action';
-                item.innerHTML = `
-          <div class="d-flex justify-content-between">
-            <span>${content.title}</span>
-            <small class="text-muted">${content.content_type}</small>
-          </div>
-        `;
-                item.onclick = () => selectContent(content);
-                container.appendChild(item);
+                    CineScope.UI.toast.success('Recommendation added successfully');
+                } catch (error) {
+                    CineScope.UI.toast.error('Failed to add recommendation');
+                }
             });
         }
 
-        function selectContent(content) {
-            selectedContentId = content.id;
+        async function removeRecommendation(id) {
+            try {
+                // In real implementation, call API to remove
+                // await CineScope.HTTP.admin.deleteRecommendation(id);
 
-            document.getElementById('search-suggestions').style.display = 'none';
-            document.getElementById('content-search').value = '';
+                CineScope.UI.toast.success('Recommendation removed');
 
-            const selectedDiv = document.getElementById('selected-content');
-            selectedDiv.style.display = 'block';
-            selectedDiv.innerHTML = `
-        <div class="alert alert-info">
-          <strong>Selected:</strong> ${content.title} (${content.content_type})
-        </div>
-      `;
+                // Reload list
+                await loadRecommendations(currentPage);
+            } catch (error) {
+                CineScope.UI.toast.error('Failed to remove recommendation');
+            }
         }
 
-        // Create recommendation
-        document.getElementById('create-recommendation-btn').addEventListener('click', async () => {
-            if (!selectedContentId) {
-                ui.showToast('Please select content first', 'error');
-                return;
-            }
+        function initializePagination() {
+            document.getElementById('prev-page').addEventListener('click', function (e) {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadRecommendations(currentPage);
+                }
+            });
 
-            const formData = {
-                content_id: selectedContentId,
-                recommendation_type: document.getElementById('recommendation-type').value,
-                description: document.getElementById('description').value
-            };
+            document.getElementById('next-page').addEventListener('click', function (e) {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadRecommendations(currentPage);
+                }
+            });
+        }
 
-            try {
-                await api.createAdminRecommendation(formData);
-                ui.showToast('Recommendation created successfully!', 'success');
+        function updatePagination(page, total) {
+            const prev = document.getElementById('prev-page');
+            const next = document.getElementById('next-page');
 
-                // Close modal and reload
-                bootstrap.Modal.getInstance(document.getElementById('create-recommendation-modal')).hide();
-                loadRecommendations();
-
-                // Reset form
-                document.getElementById('recommendation-form').reset();
-                document.getElementById('selected-content').style.display = 'none';
-                selectedContentId = null;
-            } catch (error) {
-                ui.showToast('Failed to create recommendation', 'error');
-            }
-        });
-
-        // Initialize
-        loadRecommendations();
+            prev.classList.toggle('disabled', page === 1);
+            next.classList.toggle('disabled', page === total);
+        }
     </script>
 </body>
 

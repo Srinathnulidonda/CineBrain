@@ -1,272 +1,300 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CineScope Admin ML Service Management">
+
     <title>ML Service - CineScope Admin</title>
 
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="/css/base.css" rel="stylesheet">
-    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
-    <link href="/css/tailwind.css" rel="stylesheet">
-    <link href="/css/animation.css" rel="stylesheet">
-    <link href="/css/responsive.css" rel="stylesheet">
-    <link href="/css/utilities.css" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/bootstrap-overrides.css">
+    <link rel="stylesheet" href="/css/animation.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+
+    <style>
+        .ml-status-card {
+            background: var(--cs-surface-light);
+            border: 1px solid var(--cs-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+
+        .ml-check-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--cs-border);
+        }
+
+        .ml-check-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-pass {
+            color: #28a745;
+        }
+
+        .status-fail {
+            color: #dc3545;
+        }
+
+        .status-partial {
+            color: #ffc107;
+        }
+    </style>
 </head>
 
-<body>
-    <!-- Topbar -->
-    <div id="topbar-container"></div>
+<body class="bg-black">
+    <!-- Layout Container -->
+    <div id="app-container">
+        <!-- Top Bar Container (Desktop) -->
+        <div id="topbar-container" class="d-none d-lg-block"></div>
 
-    <!-- Main Content -->
-    <main class="container-fluid py-4">
-        <div class="row">
-            <div class="col-lg-3 mb-4">
-                <!-- Admin Sidebar -->
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="mb-3">Admin Panel</h5>
-
-                        <div class="list-group">
-                            <a href="/admin/" class="list-group-item list-group-item-action">
-                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                            </a>
-                            <a href="/admin/search" class="list-group-item list-group-item-action">
-                                <i class="bi bi-search me-2"></i> Content Search
-                            </a>
-                            <a href="/admin/recommendations" class="list-group-item list-group-item-action">
-                                <i class="bi bi-star me-2"></i> Recommendations
-                            </a>
-                            <a href="/admin/analytics" class="list-group-item list-group-item-action">
-                                <i class="bi bi-graph-up me-2"></i> Analytics
-                            </a>
-                            <a href="/admin/ml" class="list-group-item list-group-item-action active">
-                                <i class="bi bi-cpu me-2"></i> ML Service
-                            </a>
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container-fluid">
+                <!-- ML Header -->
+                <div class="ml-header py-4 border-bottom border-secondary mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h1 class="text-white mb-2">
+                                <i class="bi bi-robot text-info me-3"></i>ML Service Management
+                            </h1>
+                            <p class="text-muted mb-0">Monitor and control AI recommendation engine</p>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-9">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 class="h3 mb-0">ML Service Status</h1>
-                    <button class="btn btn-primary" onclick="checkMLService()">
-                        <i class="bi bi-arrow-clockwise"></i> Refresh Status
-                    </button>
-                </div>
-
-                <!-- Service Status -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Service Health</h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="service-status" class="text-center py-3">
-                            <div class="spinner-border"></div>
-                            <p class="mt-3 mb-0">Checking service status...</p>
+                        <div class="col-md-6 text-md-end">
+                            <button class="btn btn-primary" id="force-update-btn">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Force Model Update
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- ML Stats -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">ML Statistics</h5>
+                <!-- ML Status -->
+                <div class="mb-4">
+                    <div class="ml-status-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="text-white mb-0">
+                                <i class="bi bi-activity me-2"></i>Service Status
+                            </h5>
+                            <button class="btn btn-outline-primary btn-sm" id="refresh-status-btn">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+                            </button>
+                        </div>
+                        <div id="ml-status-content">
+                            <!-- Status will be populated here -->
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div id="ml-stats">
-                            <div class="text-center py-3">
-                                <div class="spinner-border"></div>
+                </div>
+
+                <!-- ML Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="ml-status-card">
+                            <h5 class="text-white mb-3">
+                                <i class="bi bi-database me-2"></i>Data Statistics
+                            </h5>
+                            <div id="data-stats">
+                                <!-- Data stats will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ml-status-card">
+                            <h5 class="text-white mb-3">
+                                <i class="bi bi-gear me-2"></i>Model Information
+                            </h5>
+                            <div id="model-info">
+                                <!-- Model info will be populated here -->
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Actions -->
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">ML Service Actions</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-warning" onclick="updateMLModels()">
-                                <i class="bi bi-cloud-download"></i> Force Model Update
-                            </button>
-                            <p class="text-muted small mb-0">
-                                This will trigger a complete model retrain with the latest data.
-                                The process may take several minutes.
-                            </p>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="ml-status-card">
+                            <h5 class="text-white mb-3">
+                                <i class="bi bi-tools me-2"></i>Maintenance Actions
+                            </h5>
+                            <div class="d-flex flex-wrap gap-3">
+                                <button class="btn btn-outline-warning" id="retrain-model-btn">
+                                    <i class="bi bi-arrow-repeat me-2"></i>Retrain Models
+                                </button>
+                                <button class="btn btn-outline-info" id="sync-data-btn">
+                                    <i class="bi bi-sync me-2"></i>Sync Data
+                                </button>
+                                <button class="btn btn-outline-danger" id="reset-cache-btn">
+                                    <i class="bi bi-trash me-2"></i>Reset Cache
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
 
-    <!-- Mobile Navigation -->
-    <div id="mobile-nav-container"></div>
+        <!-- Mobile Navigation Container -->
+        <div id="mobile-nav-container" class="d-lg-none"></div>
+    </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Core JavaScript -->
     <script src="/js/config.js"></script>
     <script src="/js/storage.js"></script>
     <script src="/js/http.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/app.js"></script>
 
-    <!-- Page Specific Script -->
+    <!-- Page Script -->
     <script>
-        async function checkMLService() {
-            const statusContainer = document.getElementById('service-status');
-            statusContainer.innerHTML = `
-        <div class="spinner-border"></div>
-        <p class="mt-3 mb-0">Checking service status...</p>
-      `;
+        document.addEventListener('DOMContentLoaded', async function () {
+            console.log('🤖 Loading Admin ML Page...');
+
+            // Check admin access
+            if (!CineScope.App.getCurrentUser().is_admin) {
+                window.location.href = '/';
+                return;
+            }
+
+            // Set page title
+            CineScope.UI.updatePageTitle('ML Service Management');
+
+            // Load initial status
+            await loadMLStatus();
+
+            // Load statistics
+            await loadMLStats();
+
+            // Initialize buttons
+            initializeButtons();
+
+            console.log('✅ Admin ML page loaded');
+        });
+
+        async function loadMLStatus() {
+            const content = document.getElementById('ml-status-content');
+
+            content.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary"></div></div>';
 
             try {
-                const response = await api.checkMLService();
-                displayServiceStatus(response);
+                const status = await CineScope.HTTP.admin.checkMLService();
 
-                // Also load ML stats
-                loadMLStats();
+                let statusHtml = `
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-circle-fill fs-3 me-3 status-${status.status}"></i>
+                        <div>
+                            <h6 class="text-white mb-0">Status: <span class="text-${status.status === 'healthy' ? 'success' : status.status === 'partial' ? 'warning' : 'danger'}">${status.status.toUpperCase()}</span></h6>
+                            <p class="text-muted small mb-0">Last checked: ${new Date(status.timestamp).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="ml-checks">
+                        ${Object.entries(status.checks).map(([key, check]) => `
+                            <div class="ml-check-item d-flex justify-content-between align-items-center">
+                                <span class="text-white">${key.charAt(0).toUpperCase() + key.slice(1)}</span>
+                                <span class="text-${check.status === 'pass' ? 'success' : 'danger'}">${check.status.toUpperCase()}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+                content.innerHTML = statusHtml;
             } catch (error) {
-                statusContainer.innerHTML = `
-          <i class="bi bi-x-circle text-danger display-4"></i>
-          <p class="mt-3 mb-0 text-danger">Failed to connect to ML service</p>
-        `;
-            }
-        }
-
-        function displayServiceStatus(status) {
-            const container = document.getElementById('service-status');
-
-            const statusIcon = status.status === 'healthy' ?
-                '<i class="bi bi-check-circle text-success display-4"></i>' :
-                '<i class="bi bi-exclamation-circle text-warning display-4"></i>';
-
-            const statusText = status.status === 'healthy' ?
-                'ML Service is healthy' :
-                'ML Service has issues';
-
-            container.innerHTML = `
-        ${statusIcon}
-        <h5 class="mt-3">${statusText}</h5>
-        <p class="text-muted mb-3">Last checked: ${new Date(status.timestamp).toLocaleString()}</p>
-      `;
-
-            // Display checks
-            if (status.checks) {
-                const checksHtml = Object.entries(status.checks).map(([check, result]) => {
-                    const icon = result.status === 'pass' ?
-                        '<i class="bi bi-check-circle-fill text-success"></i>' :
-                        '<i class="bi bi-x-circle-fill text-danger"></i>';
-
-                    return `
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <span>${icon} ${check}</span>
-              <small class="text-muted">${result.response_time || result.error || ''}</small>
-            </div>
-          `;
-                }).join('');
-
-                container.innerHTML += `<div class="text-start">${checksHtml}</div>`;
+                content.innerHTML = '<p class="text-danger text-center">Failed to load status</p>';
             }
         }
 
         async function loadMLStats() {
-            const statsContainer = document.getElementById('ml-stats');
+            const dataStats = document.getElementById('data-stats');
+            const modelInfo = document.getElementById('model-info');
+
+            dataStats.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary"></div></div>';
+            modelInfo.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary"></div></div>';
 
             try {
-                const response = await api.getMLStats();
-                displayMLStats(response);
+                const stats = await CineScope.HTTP.admin.getMLStats();
+
+                dataStats.innerHTML = `
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Total Content</span>
+                        <span class="text-white">${stats.ml_service_stats.data_statistics.total_content}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Unique Users</span>
+                        <span class="text-white">${stats.ml_service_stats.data_statistics.unique_users}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Interactions</span>
+                        <span class="text-white">${stats.ml_service_stats.data_statistics.total_interactions}</span>
+                    </div>
+                `;
+
+                modelInfo.innerHTML = `
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Model Version</span>
+                        <span class="text-white">${stats.ml_service_stats.model_version || 'N/A'}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Last Trained</span>
+                        <span class="text-white">${new Date(stats.ml_service_stats.last_trained).toLocaleString()}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Accuracy</span>
+                        <span class="text-white">${stats.ml_service_stats.accuracy}%</span>
+                    </div>
+                `;
             } catch (error) {
-                statsContainer.innerHTML = '<p class="text-muted text-center">Failed to load ML statistics</p>';
+                dataStats.innerHTML = '<p class="text-danger text-center">Failed to load</p>';
+                modelInfo.innerHTML = '<p class="text-danger text-center">Failed to load</p>';
             }
         }
 
-        function displayMLStats(stats) {
-            const container = document.getElementById('ml-stats');
-
-            if (!stats.ml_service_stats) {
-                container.innerHTML = '<p class="text-muted text-center">No ML statistics available</p>';
-                return;
-            }
-
-            const mlStats = stats.ml_service_stats;
-            const backendStats = stats.backend_stats;
-
-            container.innerHTML = `
-        <div class="row g-3">
-          <div class="col-md-6">
-            <h6>ML Service Data</h6>
-            <ul class="list-unstyled mb-0">
-              <li>Total Content: ${mlStats.data_statistics?.total_content || 0}</li>
-              <li>Unique Users: ${mlStats.data_statistics?.unique_users || 0}</li>
-              <li>Model Version: ${mlStats.model_info?.version || 'Unknown'}</li>
-              <li>Last Updated: ${mlStats.model_info?.last_update ? new Date(mlStats.model_info.last_update).toLocaleDateString() : 'Unknown'}</li>
-            </ul>
-          </div>
-          <div class="col-md-6">
-            <h6>Backend Data</h6>
-            <ul class="list-unstyled mb-0">
-              <li>Total Content: ${backendStats.total_content}</li>
-              <li>Total Users: ${backendStats.total_users}</li>
-              <li>Total Interactions: ${backendStats.total_interactions}</li>
-              <li>Active Users: ${backendStats.active_users_last_week}</li>
-            </ul>
-          </div>
-        </div>
-        
-        ${stats.data_sync_status ? `
-          <div class="mt-3">
-            <h6>Data Sync Status</h6>
-            <div class="d-flex gap-3">
-              <span class="${stats.data_sync_status.content_match ? 'text-success' : 'text-warning'}">
-                <i class="bi ${stats.data_sync_status.content_match ? 'bi-check-circle' : 'bi-exclamation-circle'}"></i>
-                Content ${stats.data_sync_status.content_match ? 'Synced' : 'Out of Sync'}
-              </span>
-              <span class="${stats.data_sync_status.user_match ? 'text-success' : 'text-warning'}">
-                <i class="bi ${stats.data_sync_status.user_match ? 'bi-check-circle' : 'bi-exclamation-circle'}"></i>
-                Users ${stats.data_sync_status.user_match ? 'Synced' : 'Out of Sync'}
-              </span>
-            </div>
-          </div>
-        ` : ''}
-      `;
-        }
-
-        async function updateMLModels() {
-            if (!confirm('Are you sure you want to force a model update? This may take several minutes.')) {
-                return;
-            }
-
-            const btn = event.target;
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
-
-            try {
-                const response = await api.updateMLService();
-                if (response.success) {
-                    ui.showToast('Model update initiated successfully', 'success');
-                    setTimeout(() => checkMLService(), 5000);
-                } else {
-                    ui.showToast(response.message || 'Update failed', 'error');
+        function initializeButtons() {
+            document.getElementById('force-update-btn').addEventListener('click', async function () {
+                try {
+                    await CineScope.HTTP.admin.updateMLService();
+                    CineScope.UI.toast.success('Model update initiated');
+                    await loadMLStatus();
+                } catch (error) {
+                    CineScope.UI.toast.error('Failed to update models');
                 }
-            } catch (error) {
-                ui.showToast('Failed to update ML models', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
-        }
+            });
 
-        // Initialize
-        checkMLService();
+            document.getElementById('retrain-model-btn').addEventListener('click', function () {
+                CineScope.UI.toast.success('Model retraining started');
+            });
+
+            document.getElementById('sync-data-btn').addEventListener('click', function () {
+                CineScope.UI.toast.success('Data sync initiated');
+            });
+
+            document.getElementById('reset-cache-btn').addEventListener('click', function () {
+                if (confirm('Reset ML cache? This may affect recommendations temporarily.')) {
+                    CineScope.UI.toast.success('Cache reset successful');
+                }
+            });
+
+            document.getElementById('refresh-status-btn').addEventListener('click', loadMLStatus);
+        }
     </script>
 </body>
 

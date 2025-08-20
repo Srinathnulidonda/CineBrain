@@ -1,171 +1,533 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Browse by Genre - CineScope</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Browse movies and TV shows by genre on CineScope">
 
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="/css/base.css" rel="stylesheet">
-    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
-    <link href="/css/tailwind.css" rel="stylesheet">
-    <link href="/css/animation.css" rel="stylesheet">
-    <link href="/css/responsive.css" rel="stylesheet">
-    <link href="/css/utilities.css" rel="stylesheet">
+    <title>Genre Browser - CineScope</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/bootstrap-overrides.css">
+    <link rel="stylesheet" href="/css/animation.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+
+    <style>
+        .genre-hero {
+            padding: 4rem 0;
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .genre-hero.action {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .genre-hero.comedy {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        }
+
+        .genre-hero.drama {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+        }
+
+        .genre-hero.horror {
+            background: linear-gradient(135deg, #212529 0%, #dc3545 100%);
+        }
+
+        .genre-hero.romance {
+            background: linear-gradient(135deg, #e83e8c 0%, #fd7e14 100%);
+        }
+
+        .genre-hero.sci-fi {
+            background: linear-gradient(135deg, #0dcaf0 0%, #6f42c1 100%);
+        }
+
+        .genre-hero.thriller {
+            background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
+        }
+
+        .genre-hero.fantasy {
+            background: linear-gradient(135deg, #6f42c1 0%, #0dcaf0 100%);
+        }
+
+        .genre-hero.animation {
+            background: linear-gradient(135deg, #20c997 0%, #0dcaf0 100%);
+        }
+
+        .genre-hero.documentary {
+            background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+        }
+
+        .genre-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            margin-bottom: 1rem;
+        }
+
+        .subgenre-pill {
+            background: var(--cs-surface);
+            border: 1px solid var(--cs-border);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .subgenre-pill:hover,
+        .subgenre-pill.active {
+            background: var(--cs-premium-blue);
+            border-color: var(--cs-premium-blue);
+            color: white;
+        }
+    </style>
 </head>
 
-<body>
-    <!-- Topbar -->
-    <div id="topbar-container"></div>
+<body class="bg-black">
+    <!-- Layout Container -->
+    <div id="app-container">
+        <!-- Top Bar Container (Desktop) -->
+        <div id="topbar-container" class="d-none d-lg-block"></div>
 
-    <!-- Main Content -->
-    <main class="container-fluid py-4">
-        <h1 class="h3 mb-4">Browse by Genre</h1>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Genre Hero Section -->
+            <section class="genre-hero" id="genre-hero">
+                <div class="container-fluid">
+                    <div class="text-center text-white">
+                        <div class="genre-icon">
+                            <i class="bi bi-film display-4"></i>
+                        </div>
+                        <h1 class="display-4 fw-bold mb-3" id="genre-title">Genre</h1>
+                        <p class="lead mb-4" id="genre-description">Discover content in this genre</p>
+                    </div>
+                </div>
+            </section>
 
-        <!-- Genre Selection -->
-        <div class="row mb-4">
-            <div class="col-lg-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h6 class="card-title mb-3">Select Genre</h6>
-                        <div class="list-group" id="genre-list">
-                            <!-- Genre list will be loaded here -->
+            <div class="container-fluid">
+                <!-- Subgenres -->
+                <section class="mb-5" id="subgenres-section">
+                    <h3 class="text-white mb-4">
+                        <i class="bi bi-tags text-primary me-2"></i>Subgenres
+                    </h3>
+                    <div class="d-flex flex-wrap gap-2 mb-4" id="subgenres-container">
+                        <!-- Subgenres will be populated here -->
+                    </div>
+                </section>
+
+                <!-- Content Type Tabs -->
+                <ul class="nav nav-pills mb-4" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="movies-tab" data-bs-toggle="tab" data-bs-target="#movies"
+                            type="button">
+                            <i class="bi bi-film me-2"></i>Movies
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tv-tab" data-bs-toggle="tab" data-bs-target="#tv" type="button">
+                            <i class="bi bi-tv me-2"></i>TV Shows
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Movies Tab -->
+                    <div class="tab-pane fade show active" id="movies" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4 class="text-white mb-0">
+                                <span id="movies-count">0</span> Movies Found
+                            </h4>
+                            <select class="form-select bg-dark border-secondary text-white" style="width: auto;"
+                                id="movies-sort">
+                                <option value="popularity.desc">Most Popular</option>
+                                <option value="vote_average.desc">Highest Rated</option>
+                                <option value="release_date.desc">Newest First</option>
+                                <option value="release_date.asc">Oldest First</option>
+                            </select>
+                        </div>
+
+                        <div id="movies-container">
+                            <!-- Loading state -->
+                            <div class="d-flex justify-content-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading movies...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center py-4 d-none" id="movies-load-more">
+                            <button class="btn btn-outline-primary" onclick="loadMoreMovies()">
+                                <i class="bi bi-arrow-down me-2"></i>Load More Movies
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TV Shows Tab -->
+                    <div class="tab-pane fade" id="tv" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4 class="text-white mb-0">
+                                <span id="tv-count">0</span> TV Shows Found
+                            </h4>
+                            <select class="form-select bg-dark border-secondary text-white" style="width: auto;"
+                                id="tv-sort">
+                                <option value="popularity.desc">Most Popular</option>
+                                <option value="vote_average.desc">Highest Rated</option>
+                                <option value="first_air_date.desc">Newest First</option>
+                                <option value="first_air_date.asc">Oldest First</option>
+                            </select>
+                        </div>
+
+                        <div id="tv-container">
+                            <!-- TV shows will be loaded when tab is activated -->
+                        </div>
+
+                        <div class="text-center py-4 d-none" id="tv-load-more">
+                            <button class="btn btn-outline-primary" onclick="loadMoreTVShows()">
+                                <i class="bi bi-arrow-down me-2"></i>Load More TV Shows
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-lg-9">
-                <!-- Content Type Filter -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="h4 mb-0" id="genre-title">Select a genre</h2>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-outline-primary active" data-type="movie">Movies</button>
-                        <button class="btn btn-sm btn-outline-primary" data-type="tv">TV Shows</button>
+                <!-- Related Genres -->
+                <section class="mt-5 mb-5">
+                    <h3 class="text-white mb-4">
+                        <i class="bi bi-grid text-success me-2"></i>Explore Other Genres
+                    </h3>
+                    <div class="row g-3">
+                        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                            <a href="/content/genre/action"
+                                class="card bg-gradient text-white text-decoration-none h-100 genre-link-card"
+                                style="background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-lightning-fill display-6 mb-2"></i>
+                                    <h6 class="card-title mb-0">Action</h6>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                            <a href="/content/genre/comedy"
+                                class="card bg-gradient text-white text-decoration-none h-100 genre-link-card"
+                                style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-emoji-laughing-fill display-6 mb-2"></i>
+                                    <h6 class="card-title mb-0">Comedy</h6>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                            <a href="/content/genre/drama"
+                                class="card bg-gradient text-white text-decoration-none h-100 genre-link-card"
+                                style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-heart-fill display-6 mb-2"></i>
+                                    <h6 class="card-title mb-0">Drama</h6>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                            <a href="/content/genre/horror"
+                                class="card bg-gradient text-white text-decoration-none h-100 genre-link-card"
+                                style="background: linear-gradient(135deg, #212529 0%, #dc3545 100%);">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-mask display-6 mb-2"></i>
+                                    <h6 class="card-title mb-0">Horror</h6>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                            <a href="/content/genre/sci-fi"
+                                class="card bg-gradient text-white text-decoration-none h-100 genre-link-card"
+                                style="background: linear-gradient(135deg, #0dcaf0 0%, #6f42c1 100%);">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-rocket-takeoff-fill display-6 mb-2"></i>
+                                    <h6 class="card-title mb-0">Sci-Fi</h6>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                            <a href="/content/genre/romance"
+                                class="card bg-gradient text-white text-decoration-none h-100 genre-link-card"
+                                style="background: linear-gradient(135deg, #e83e8c 0%, #fd7e14 100%);">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-heart-eyes-fill display-6 mb-2"></i>
+                                    <h6 class="card-title mb-0">Romance</h6>
+                                </div>
+                            </a>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Genre Content -->
-                <div id="genre-content" class="content-grid">
-                    <div class="text-center py-5 text-muted">
-                        <i class="bi bi-film display-1 mb-3"></i>
-                        <p>Select a genre to browse content</p>
-                    </div>
-                </div>
+                </section>
             </div>
-        </div>
-    </main>
+        </main>
 
-    <!-- Mobile Navigation -->
-    <div id="mobile-nav-container"></div>
+        <!-- Mobile Navigation Container -->
+        <div id="mobile-nav-container" class="d-lg-none"></div>
+    </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Core JavaScript -->
     <script src="/js/config.js"></script>
     <script src="/js/storage.js"></script>
     <script src="/js/http.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/app.js"></script>
 
-    <!-- Page Specific Script -->
+    <!-- Widget Scripts -->
+    <script src="/widgets/content-card.html"></script>
+
+    <!-- Page Script -->
     <script>
-        let currentGenre = null;
-        let currentType = 'movie';
+        let currentGenre = '';
+        let currentSubgenre = '';
+        let moviesPage = 1;
+        let tvPage = 1;
+        let moviesSort = 'popularity.desc';
+        let tvSort = 'popularity.desc';
+        let hasMoreMovies = true;
+        let hasMoreTV = true;
 
-        function initializeGenrePage() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const genre = urlParams.get('g');
+        document.addEventListener('DOMContentLoaded', async function () {
+            console.log('🗂️ Loading Genre Page...');
 
-            loadGenreList();
+            // Get genre from URL
+            currentGenre = getGenreFromUrl();
 
-            if (genre) {
-                loadGenreContent(genre);
+            if (!currentGenre) {
+                showError('Invalid genre');
+                return;
             }
-        }
 
-        function loadGenreList() {
-            const genres = CONFIG.GENRES.movie;
-            const container = document.getElementById('genre-list');
+            // Set page title
+            CineScope.UI.updatePageTitle(`${currentGenre.charAt(0).toUpperCase() + currentGenre.slice(1)} Genre`);
 
-            genres.forEach(genre => {
-                const item = document.createElement('a');
-                item.href = '#';
-                item.className = 'list-group-item list-group-item-action';
-                item.textContent = genre;
-                item.dataset.genre = genre.toLowerCase();
+            // Update hero section
+            updateHeroSection(currentGenre);
 
-                item.addEventListener('click', (e) => {
-                    e.preventDefault();
+            // Populate subgenres
+            populateSubgenres(currentGenre);
 
-                    // Update active state
-                    container.querySelectorAll('.list-group-item').forEach(i => {
-                        i.classList.remove('active');
-                    });
-                    item.classList.add('active');
+            // Initialize tabs
+            initializeTabs();
 
-                    loadGenreContent(genre.toLowerCase());
-                });
+            // Load initial content
+            await loadMovies();
 
-                container.appendChild(item);
-            });
-        }
-
-        async function loadGenreContent(genre) {
-            currentGenre = genre;
-
-            // Update URL
-            const url = new URL(window.location);
-            url.searchParams.set('g', genre);
-            window.history.pushState({}, '', url);
-
-            // Update title
-            document.getElementById('genre-title').textContent = genre.charAt(0).toUpperCase() + genre.slice(1);
-
-            // Highlight genre in list
-            document.querySelectorAll('#genre-list .list-group-item').forEach(item => {
-                item.classList.toggle('active', item.dataset.genre === genre);
-            });
-
-            // Show loading
-            ui.showSkeletonGrid('genre-content');
-
-            try {
-                const response = await api.getGenreRecommendations(genre, { type: currentType });
-
-                if (response.recommendations && response.recommendations.length > 0) {
-                    ui.createContentGrid(response.recommendations, 'genre-content');
-                } else {
-                    document.getElementById('genre-content').innerHTML = '';
-                    document.getElementById('genre-content').appendChild(
-                        ui.createEmptyState(`No ${currentType}s found in this genre`, 'bi-film')
-                    );
-                }
-            } catch (error) {
-                document.getElementById('genre-content').innerHTML = '';
-                document.getElementById('genre-content').appendChild(
-                    ui.createErrorState('Failed to load content', () => loadGenreContent(genre))
-                );
-            }
-        }
-
-        // Content type filter
-        document.querySelectorAll('[data-type]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentType = btn.dataset.type;
-
-                if (currentGenre) {
-                    loadGenreContent(currentGenre);
-                }
-            });
+            console.log('✅ Genre page loaded');
         });
 
-        // Initialize
-        initializeGenrePage();
+        function getGenreFromUrl() {
+            const pathSegments = window.location.pathname.split('/').filter(Boolean);
+            if (pathSegments.length >= 3 && pathSegments[1] === 'genre') {
+                return pathSegments[2].toLowerCase();
+            }
+            return null;
+        }
+
+        function updateHeroSection(genre) {
+            const hero = document.getElementById('genre-hero');
+            const title = document.getElementById('genre-title');
+            const description = document.getElementById('genre-description');
+
+            hero.classList.add(`genre-hero-${genre}`);
+            title.textContent = genre.charAt(0).toUpperCase() + genre.slice(1);
+            description.textContent = `The best ${genre} movies and shows curated for you`;
+        }
+
+        function populateSubgenres(genre) {
+            const container = document.getElementById('subgenres-container');
+            const subgenres = getSubgenresForGenre(genre);
+
+            container.innerHTML = subgenres.map(sub => `
+                <span class="subgenre-pill" data-subgenre="${sub.toLowerCase()}">${sub}</span>
+            `).join('');
+
+            // Add click listeners
+            container.querySelectorAll('.subgenre-pill').forEach(pill => {
+                pill.addEventListener('click', function () {
+                    container.querySelectorAll('.subgenre-pill').forEach(p => p.classList.remove('active'));
+                    this.classList.add('active');
+
+                    currentSubgenre = this.dataset.subgenre;
+
+                    // Reload content
+                    moviesPage = 1;
+                    tvPage = 1;
+                    loadMovies();
+                    loadTVShows();
+                });
+            });
+        }
+
+        function getSubgenresForGenre(genre) {
+            const subgenresMap = {
+                action: ['Superhero', 'Martial Arts', 'Spy', 'War', 'Adventure'],
+                comedy: ['Romantic Comedy', 'Dark Comedy', 'Satire', 'Slapstick', 'Parody'],
+                drama: ['Historical', 'Biographical', 'Crime', 'Family', 'Coming of Age'],
+                horror: ['Supernatural', 'Slasher', 'Psychological', 'Zombie', 'Found Footage'],
+                romance: ['Romantic Comedy', 'Drama', 'Fantasy', 'Historical', 'Teen'],
+                'sci-fi': ['Space Opera', 'Cyberpunk', 'Time Travel', 'Apocalyptic', 'Alien'],
+                thriller: ['Psychological', 'Crime', 'Mystery', 'Spy', 'Legal'],
+                fantasy: ['High Fantasy', 'Urban Fantasy', 'Dark Fantasy', 'Fairy Tale', 'Epic'],
+                animation: ['3D', 'Stop Motion', 'Traditional', 'Adult', 'Kids'],
+                documentary: ['Nature', 'Historical', 'Biographical', 'True Crime', 'Science']
+            };
+
+            return subgenresMap[genre] || [];
+        }
+
+        function initializeTabs() {
+            const tvTab = document.getElementById('tv-tab');
+            tvTab.addEventListener('shown.bs.tab', function () {
+                if (tvPage === 1) {
+                    loadTVShows();
+                }
+            });
+
+            // Load movies by default
+            loadMovies();
+        }
+
+        async function loadMovies(append = false) {
+            try {
+                const container = document.getElementById('movies-container');
+
+                if (!append) {
+                    container.innerHTML = `
+                        <div class="d-flex justify-content-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading movies...</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const params = {
+                    page: moviesPage,
+                    sort_by: moviesSort
+                };
+
+                if (currentSubgenre) {
+                    params.with_genres = currentSubgenre; // Assume subgenre maps to TMDB genre ID
+                }
+
+                const response = await CineScope.HTTP.content.getByGenre(currentGenre, params, 'movie');
+                const movies = response.results || [];
+
+                document.getElementById('movies-count').textContent = response.total_results || 0;
+
+                hasMoreMovies = movies.length === 20; // Assuming page size 20
+
+                if (append) {
+                    CineScope.Widgets.ContentCard.createGrid(movies, container, { append: true });
+                } else {
+                    CineScope.Widgets.ContentCard.createGrid(movies, container);
+                }
+
+                document.getElementById('movies-load-more').classList.toggle('d-none', !hasMoreMovies);
+
+            } catch (error) {
+                console.error('Failed to load movies:', error);
+                document.getElementById('movies-container').innerHTML = '<p class="text-danger text-center">Failed to load movies</p>';
+            }
+        }
+
+        async function loadTVShows(append = false) {
+            try {
+                const container = document.getElementById('tv-container');
+
+                if (!append) {
+                    container.innerHTML = `
+                        <div class="d-flex justify-content-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading TV shows...</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const params = {
+                    page: tvPage,
+                    sort_by: tvSort
+                };
+
+                if (currentSubgenre) {
+                    params.with_genres = currentSubgenre;
+                }
+
+                const response = await CineScope.HTTP.content.getByGenre(currentGenre, params, 'tv');
+                const tvShows = response.results || [];
+
+                document.getElementById('tv-count').textContent = response.total_results || 0;
+
+                hasMoreTV = tvShows.length === 20;
+
+                if (append) {
+                    CineScope.Widgets.ContentCard.createGrid(tvShows, container, { append: true });
+                } else {
+                    CineScope.Widgets.ContentCard.createGrid(tvShows, container);
+                }
+
+                document.getElementById('tv-load-more').classList.toggle('d-none', !hasMoreTV);
+
+            } catch (error) {
+                console.error('Failed to load TV shows:', error);
+                document.getElementById('tv-container').innerHTML = '<p class="text-danger text-center">Failed to load TV shows</p>';
+            }
+        }
+
+        function loadMoreMovies() {
+            moviesPage++;
+            loadMovies(true);
+        }
+
+        function loadMoreTVShows() {
+            tvPage++;
+            loadTVShows(true);
+        }
+
+        function showError(message) {
+            // Implementation for error state
+            console.error(message);
+            CineScope.UI.toast.error(message);
+        }
+
+        // Sort change listeners
+        document.getElementById('movies-sort').addEventListener('change', function () {
+            moviesSort = this.value;
+            moviesPage = 1;
+            loadMovies();
+        });
+
+        document.getElementById('tv-sort').addEventListener('change', function () {
+            tvSort = this.value;
+            tvPage = 1;
+            loadTVShows();
+        });
     </script>
 </body>
 

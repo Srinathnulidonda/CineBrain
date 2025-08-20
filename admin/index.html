@@ -1,205 +1,825 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CineScope Admin Dashboard">
+
     <title>Admin Dashboard - CineScope</title>
 
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="/css/base.css" rel="stylesheet">
-    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
-    <link href="/css/tailwind.css" rel="stylesheet">
-    <link href="/css/animation.css" rel="stylesheet">
-    <link href="/css/responsive.css" rel="stylesheet">
-    <link href="/css/utilities.css" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/bootstrap-overrides.css">
+    <link rel="stylesheet" href="/css/animation.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+
+    <style>
+        .admin-sidebar {
+            background: var(--cs-gradient-surface);
+            border-right: 1px solid var(--cs-border);
+            min-height: calc(100vh - 80px);
+        }
+
+        .admin-nav-link {
+            color: var(--cs-text-secondary);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.25rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .admin-nav-link:hover,
+        .admin-nav-link.active {
+            background: var(--cs-premium-blue);
+            color: white;
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        .stat-card {
+            background: var(--cs-gradient-surface);
+            border: 1px solid var(--cs-border);
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .chart-container {
+            background: var(--cs-surface);
+            border: 1px solid var(--cs-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+    </style>
 </head>
 
-<body>
-    <!-- Topbar -->
-    <div id="topbar-container"></div>
+<body class="bg-black">
+    <!-- Layout Container -->
+    <div id="app-container">
+        <!-- Top Bar Container (Desktop) -->
+        <div id="topbar-container" class="d-none d-lg-block"></div>
 
-    <!-- Main Content -->
-    <main class="container-fluid py-4">
-        <div class="row">
-            <div class="col-lg-3 mb-4">
-                <!-- Admin Sidebar -->
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="mb-3">Admin Panel</h5>
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container-fluid">
+                <!-- Admin Header -->
+                <div class="admin-header py-4 border-bottom border-secondary mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h1 class="text-white mb-2">
+                                <i class="bi bi-shield-check text-warning me-3"></i>Admin Dashboard
+                            </h1>
+                            <p class="text-muted mb-0">Manage your CineScope platform</p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                                <button class="btn btn-outline-primary btn-sm" id="refresh-data-btn">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
+                                </button>
+                                <a href="/" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-house me-2"></i>Back to Site
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                        <div class="list-group">
-                            <a href="/admin/" class="list-group-item list-group-item-action active">
-                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                            </a>
-                            <a href="/admin/search" class="list-group-item list-group-item-action">
-                                <i class="bi bi-search me-2"></i> Content Search
-                            </a>
-                            <a href="/admin/recommendations" class="list-group-item list-group-item-action">
-                                <i class="bi bi-star me-2"></i> Recommendations
-                            </a>
-                            <a href="/admin/analytics" class="list-group-item list-group-item-action">
-                                <i class="bi bi-graph-up me-2"></i> Analytics
-                            </a>
-                            <a href="/admin/ml" class="list-group-item list-group-item-action">
-                                <i class="bi bi-cpu me-2"></i> ML Service
-                            </a>
+                <div class="row">
+                    <!-- Sidebar -->
+                    <div class="col-lg-3 mb-4">
+                        <div class="admin-sidebar p-3 rounded">
+                            <h6 class="text-white mb-3">Navigation</h6>
+                            <nav class="admin-nav">
+                                <a href="/admin" class="admin-nav-link active">
+                                    <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                                </a>
+                                <a href="/admin/search" class="admin-nav-link">
+                                    <i class="bi bi-search me-2"></i>Content Search
+                                </a>
+                                <a href="/admin/recommendations" class="admin-nav-link">
+                                    <i class="bi bi-stars me-2"></i>Recommendations
+                                </a>
+                                <a href="/admin/analytics" class="admin-nav-link">
+                                    <i class="bi bi-graph-up me-2"></i>Analytics
+                                </a>
+                                <a href="/admin/ml" class="admin-nav-link">
+                                    <i class="bi bi-robot me-2"></i>ML Service
+                                </a>
+                            </nav>
+
+                            <hr class="my-4">
+
+                            <h6 class="text-white mb-3">Quick Actions</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#addRecommendationModal">
+                                    <i class="bi bi-plus-circle me-2"></i>Add Recommendation
+                                </button>
+                                <button class="btn btn-outline-info btn-sm"
+                                    onclick="window.open('/admin/ml', '_blank')">
+                                    <i class="bi bi-gear me-2"></i>ML Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Dashboard Content -->
+                    <div class="col-lg-9">
+                        <!-- Statistics Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-people display-4 text-primary mb-2"></i>
+                                        <h5 class="text-white mb-1" id="total-users">0</h5>
+                                        <p class="text-muted small mb-0">Total Users</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-film display-4 text-success mb-2"></i>
+                                        <h5 class="text-white mb-1" id="total-content">0</h5>
+                                        <p class="text-muted small mb-0">Content Items</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-activity display-4 text-warning mb-2"></i>
+                                        <h5 class="text-white mb-1" id="total-interactions">0</h5>
+                                        <p class="text-muted small mb-0">User Interactions</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-person-check display-4 text-info mb-2"></i>
+                                        <h5 class="text-white mb-1" id="active-users">0</h5>
+                                        <p class="text-muted small mb-0">Active This Week</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts Row -->
+                        <div class="row mb-4">
+                            <div class="col-lg-8 mb-4">
+                                <div class="chart-container">
+                                    <h5 class="text-white mb-3">
+                                        <i class="bi bi-graph-up text-primary me-2"></i>Popular Content
+                                    </h5>
+                                    <canvas id="popularContentChart" height="300"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 mb-4">
+                                <div class="chart-container">
+                                    <h5 class="text-white mb-3">
+                                        <i class="bi bi-pie-chart text-success me-2"></i>Genre Distribution
+                                    </h5>
+                                    <canvas id="genreChart" height="300"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity -->
+                        <div class="row">
+                            <div class="col-lg-6 mb-4">
+                                <div class="card bg-dark border-secondary">
+                                    <div class="card-header border-secondary">
+                                        <h6 class="text-white mb-0">
+                                            <i class="bi bi-clock-history me-2"></i>Recent User Activity
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="recent-activity">
+                                            <!-- Recent activity will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 mb-4">
+                                <div class="card bg-dark border-secondary">
+                                    <div class="card-header border-secondary">
+                                        <h6 class="text-white mb-0">
+                                            <i class="bi bi-stars me-2"></i>Latest Admin Recommendations
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="admin-recommendations">
+                                            <!-- Admin recommendations will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ML Service Status -->
+                        <div class="row">
+                            <div class="col-12 mb-4">
+                                <div class="card bg-dark border-secondary">
+                                    <div class="card-header border-secondary">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="text-white mb-0">
+                                                <i class="bi bi-robot me-2"></i>ML Service Status
+                                            </h6>
+                                            <button class="btn btn-outline-primary btn-sm" id="check-ml-service-btn">
+                                                <i class="bi bi-arrow-clockwise me-2"></i>Check Status
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="ml-service-status">
+                                            <!-- ML service status will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </main>
 
-            <div class="col-lg-9">
-                <h1 class="h3 mb-4">Admin Dashboard</h1>
+        <!-- Mobile Navigation Container -->
+        <div id="mobile-nav-container" class="d-lg-none"></div>
+    </div>
 
-                <!-- Quick Stats -->
-                <div class="row g-3 mb-4">
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="text-muted mb-2">Total Users</h6>
-                                <h3 class="mb-0" id="total-users">-</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="text-muted mb-2">Total Content</h6>
-                                <h3 class="mb-0" id="total-content">-</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="text-muted mb-2">Active Users</h6>
-                                <h3 class="mb-0" id="active-users">-</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="text-muted mb-2">Total Interactions</h6>
-                                <h3 class="mb-0" id="total-interactions">-</h3>
-                            </div>
-                        </div>
-                    </div>
+    <!-- Add Recommendation Modal -->
+    <div class="modal fade" id="addRecommendationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content bg-dark border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-white">
+                        <i class="bi bi-plus-circle me-2"></i>Add Admin Recommendation
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-
-                <!-- Popular Content -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Popular Content</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Title</th>
-                                        <th>Interactions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="popular-content-table">
-                                    <tr>
-                                        <td colspan="2" class="text-center">
-                                            <div class="spinner-border spinner-border-sm"></div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                <div class="modal-body">
+                    <form id="add-recommendation-form">
+                        <div class="mb-3">
+                            <label for="content-search" class="form-label text-white">Search Content</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white"
+                                id="content-search" placeholder="Search for movies, TV shows, or anime...">
+                            <div class="form-text text-muted">Start typing to search for content to recommend</div>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Popular Genres -->
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Popular Genres</h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="popular-genres">
-                            <div class="text-center">
-                                <div class="spinner-border spinner-border-sm"></div>
+                        <div class="mb-3 d-none" id="selected-content">
+                            <label class="form-label text-white">Selected Content</label>
+                            <div class="selected-content-display p-3 bg-secondary rounded">
+                                <!-- Selected content will be displayed here -->
                             </div>
                         </div>
-                    </div>
+
+                        <div class="mb-3">
+                            <label for="recommendation-type" class="form-label text-white">Recommendation Type</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="recommendation-type"
+                                required>
+                                <option value="">Select type...</option>
+                                <option value="admin_choice">Admin's Choice</option>
+                                <option value="trending">Mark as Trending</option>
+                                <option value="critics_choice">Critics' Choice</option>
+                                <option value="featured">Featured Content</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="recommendation-description" class="form-label text-white">Description</label>
+                            <textarea class="form-control bg-dark border-secondary text-white"
+                                id="recommendation-description" rows="3"
+                                placeholder="Why are you recommending this content?" required></textarea>
+                            <div class="form-text text-muted">This will be shared with users and on social media</div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="send-to-telegram" checked>
+                            <label class="form-check-label text-muted" for="send-to-telegram">
+                                Share on Telegram channel
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-recommendation-btn">
+                        <i class="bi bi-check me-2"></i>Add Recommendation
+                    </button>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 
-    <!-- Mobile Navigation -->
-    <div id="mobile-nav-container"></div>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Core JavaScript -->
     <script src="/js/config.js"></script>
     <script src="/js/storage.js"></script>
     <script src="/js/http.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/app.js"></script>
 
-    <!-- Page Specific Script -->
+    <!-- Page Script -->
     <script>
+        let selectedContent = null;
+        let popularContentChart = null;
+        let genreChart = null;
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            console.log('🛡️ Loading Admin Dashboard...');
+
+            // Check admin access
+            if (!await checkAdminAccess()) {
+                return;
+            }
+
+            // Set page title
+            CineScope.UI.updatePageTitle('Admin Dashboard');
+
+            // Load dashboard data
+            await loadDashboardData();
+
+            // Initialize charts
+            initializeCharts();
+
+            // Initialize add recommendation functionality
+            initializeAddRecommendation();
+
+            // Setup refresh functionality
+            setupRefreshFunctionality();
+
+            // Load ML service status
+            await loadMLServiceStatus();
+
+            console.log('✅ Admin dashboard loaded');
+        });
+
+        async function checkAdminAccess() {
+            const currentUser = CineScope.App.getCurrentUser();
+
+            if (!currentUser || !currentUser.is_admin) {
+                console.log('🚫 Admin access denied');
+                window.location.href = '/';
+                return false;
+            }
+
+            return true;
+        }
+
         async function loadDashboardData() {
             try {
-                const analytics = await api.getAnalytics();
+                console.log('📊 Loading dashboard analytics...');
 
-                // Update stats
-                document.getElementById('total-users').textContent = analytics.total_users || 0;
-                document.getElementById('total-content').textContent = analytics.total_content || 0;
-                document.getElementById('active-users').textContent = analytics.active_users_last_week || 0;
-                document.getElementById('total-interactions').textContent = analytics.total_interactions || 0;
+                const analytics = await CineScope.HTTP.admin.getAnalytics();
 
-                // Popular content table
-                const popularTable = document.getElementById('popular-content-table');
-                popularTable.innerHTML = '';
+                // Update statistics
+                document.getElementById('total-users').textContent = analytics.total_users.toLocaleString();
+                document.getElementById('total-content').textContent = analytics.total_content.toLocaleString();
+                document.getElementById('total-interactions').textContent = analytics.total_interactions.toLocaleString();
+                document.getElementById('active-users').textContent = analytics.active_users_last_week.toLocaleString();
 
-                if (analytics.popular_content && analytics.popular_content.length > 0) {
-                    analytics.popular_content.forEach(item => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-              <td>${item.title}</td>
-              <td>${item.interactions}</td>
-            `;
-                        popularTable.appendChild(row);
-                    });
-                } else {
-                    popularTable.innerHTML = '<tr><td colspan="2" class="text-center text-muted">No data</td></tr>';
-                }
+                // Update charts data
+                updateCharts(analytics);
 
-                // Popular genres
-                const genresContainer = document.getElementById('popular-genres');
-                genresContainer.innerHTML = '';
+                // Load recent admin recommendations
+                await loadRecentRecommendations();
 
-                if (analytics.popular_genres && analytics.popular_genres.length > 0) {
-                    const genresList = document.createElement('div');
-                    genresList.className = 'd-flex flex-wrap gap-2';
-
-                    analytics.popular_genres.forEach(item => {
-                        const badge = document.createElement('span');
-                        badge.className = 'badge badge-blue';
-                        badge.textContent = `${item.genre} (${item.count})`;
-                        genresList.appendChild(badge);
-                    });
-
-                    genresContainer.appendChild(genresList);
-                } else {
-                    genresContainer.innerHTML = '<p class="text-muted mb-0">No genre data available</p>';
-                }
+                console.log('✅ Dashboard data loaded');
 
             } catch (error) {
-                ui.showToast('Failed to load analytics', 'error');
+                console.error('❌ Failed to load dashboard data:', error);
+                CineScope.UI.toast.error('Failed to load dashboard data');
             }
         }
 
-        // Initialize
-        loadDashboardData();
+        function initializeCharts() {
+            // Popular Content Chart
+            const popularCtx = document.getElementById('popularContentChart').getContext('2d');
+            popularContentChart = new Chart(popularCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Interactions',
+                        data: [],
+                        backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                        borderColor: 'rgba(37, 99, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#e2e8f0'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#94a3b8'
+                            },
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#94a3b8'
+                            },
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Genre Distribution Chart
+            const genreCtx = document.getElementById('genreChart').getContext('2d');
+            genreChart = new Chart(genreCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            'rgba(37, 99, 235, 0.8)',
+                            'rgba(147, 51, 234, 0.8)',
+                            'rgba(245, 101, 101, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(251, 191, 36, 0.8)',
+                            'rgba(168, 85, 247, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#e2e8f0',
+                                padding: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCharts(analytics) {
+            // Update popular content chart
+            if (analytics.popular_content && analytics.popular_content.length > 0) {
+                const labels = analytics.popular_content.map(item => item.title.substring(0, 20) + '...');
+                const data = analytics.popular_content.map(item => item.interactions);
+
+                popularContentChart.data.labels = labels;
+                popularContentChart.data.datasets[0].data = data;
+                popularContentChart.update();
+            }
+
+            // Update genre chart
+            if (analytics.popular_genres && analytics.popular_genres.length > 0) {
+                const labels = analytics.popular_genres.map(item => item.genre);
+                const data = analytics.popular_genres.map(item => item.count);
+
+                genreChart.data.labels = labels;
+                genreChart.data.datasets[0].data = data;
+                genreChart.update();
+            }
+        }
+
+        async function loadRecentRecommendations() {
+            try {
+                const response = await CineScope.HTTP.admin.getRecommendations({ per_page: 5 });
+                const recommendations = response.recommendations || [];
+
+                const container = document.getElementById('admin-recommendations');
+
+                if (recommendations.length > 0) {
+                    const html = recommendations.map(rec => `
+                        <div class="recommendation-item d-flex align-items-center mb-3 pb-3 border-bottom border-secondary">
+                            <img src="${rec.content.poster_path || '/assets/placeholder-poster.jpg'}" 
+                                 class="rounded me-3" 
+                                 style="width: 50px; height: 75px; object-fit: cover;"
+                                 alt="${rec.content.title}">
+                            <div class="flex-grow-1">
+                                <h6 class="text-white mb-1">${rec.content.title}</h6>
+                                <p class="text-muted small mb-1">${rec.description.substring(0, 80)}...</p>
+                                <small class="text-muted">by ${rec.admin_name} • ${new Date(rec.created_at).toLocaleDateString()}</small>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="text-muted">No recommendations yet</p>';
+                }
+
+            } catch (error) {
+                console.error('❌ Failed to load recent recommendations:', error);
+                document.getElementById('admin-recommendations').innerHTML = '<p class="text-danger">Failed to load recommendations</p>';
+            }
+        }
+
+        function initializeAddRecommendation() {
+            const searchInput = document.getElementById('content-search');
+            const saveBtn = document.getElementById('save-recommendation-btn');
+
+            // Content search with debouncing
+            let searchTimeout;
+            searchInput.addEventListener('input', function () {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
+
+                if (query.length >= 3) {
+                    searchTimeout = setTimeout(() => searchContent(query), 300);
+                }
+            });
+
+            // Save recommendation
+            saveBtn.addEventListener('click', async function () {
+                await saveRecommendation();
+            });
+        }
+
+        async function searchContent(query) {
+            try {
+                const results = await CineScope.HTTP.admin.search(query, 'tmdb');
+
+                if (results.results && results.results.length > 0) {
+                    showContentSearchResults(results.results.slice(0, 5));
+                }
+            } catch (error) {
+                console.error('Search failed:', error);
+            }
+        }
+
+        function showContentSearchResults(results) {
+            const searchInput = document.getElementById('content-search');
+
+            // Remove existing dropdown
+            const existingDropdown = document.querySelector('.content-search-dropdown');
+            if (existingDropdown) {
+                existingDropdown.remove();
+            }
+
+            // Create dropdown
+            const dropdown = document.createElement('div');
+            dropdown.className = 'content-search-dropdown position-absolute w-100 bg-dark border border-secondary rounded shadow-lg mt-1';
+            dropdown.style.zIndex = '1050';
+            dropdown.style.maxHeight = '300px';
+            dropdown.style.overflowY = 'auto';
+
+            dropdown.innerHTML = results.map(item => `
+                <div class="content-search-item p-2 border-bottom border-secondary" style="cursor: pointer;" data-content='${JSON.stringify(item)}'>
+                    <div class="d-flex align-items-center">
+                        <img src="${item.poster_path || '/assets/placeholder-poster.jpg'}" 
+                             class="rounded me-2" 
+                             style="width: 40px; height: 60px; object-fit: cover;"
+                             alt="${item.title}">
+                        <div>
+                            <h6 class="text-white mb-1 small">${item.title}</h6>
+                            <p class="text-muted small mb-0">${item.content_type?.toUpperCase() || 'MOVIE'} • ${item.release_date || 'Unknown'}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click listeners
+            dropdown.querySelectorAll('.content-search-item').forEach(item => {
+                item.addEventListener('click', function () {
+                    const content = JSON.parse(this.dataset.content);
+                    selectContent(content);
+                    dropdown.remove();
+                });
+            });
+
+            // Position and show dropdown
+            searchInput.parentNode.style.position = 'relative';
+            searchInput.parentNode.appendChild(dropdown);
+        }
+
+        function selectContent(content) {
+            selectedContent = content;
+
+            document.getElementById('content-search').value = content.title;
+
+            const selectedDiv = document.getElementById('selected-content');
+            selectedDiv.classList.remove('d-none');
+
+            selectedDiv.querySelector('.selected-content-display').innerHTML = `
+                <div class="d-flex align-items-center">
+                    <img src="${content.poster_path || '/assets/placeholder-poster.jpg'}" 
+                         class="rounded me-3" 
+                         style="width: 60px; height: 90px; object-fit: cover;"
+                         alt="${content.title}">
+                    <div>
+                        <h6 class="text-white mb-1">${content.title}</h6>
+                        <p class="text-muted mb-1">${content.content_type?.toUpperCase() || 'MOVIE'}</p>
+                        <p class="text-muted small mb-0">${content.overview?.substring(0, 100) || 'No description available'}...</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function saveRecommendation() {
+            if (!selectedContent) {
+                CineScope.UI.toast.error('Please select content to recommend');
+                return;
+            }
+
+            const type = document.getElementById('recommendation-type').value;
+            const description = document.getElementById('recommendation-description').value.trim();
+
+            if (!type || !description) {
+                CineScope.UI.toast.error('Please fill in all required fields');
+                return;
+            }
+
+            try {
+                const saveBtn = document.getElementById('save-recommendation-btn');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Saving...';
+
+                // First save the content if it doesn't exist
+                await CineScope.HTTP.admin.saveContent(selectedContent);
+
+                // Then create the recommendation
+                await CineScope.HTTP.admin.createRecommendation({
+                    content_id: selectedContent.id,
+                    recommendation_type: type,
+                    description: description
+                });
+
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addRecommendationModal'));
+                modal.hide();
+
+                // Reset form
+                document.getElementById('add-recommendation-form').reset();
+                document.getElementById('selected-content').classList.add('d-none');
+                selectedContent = null;
+
+                // Reload recommendations
+                await loadRecentRecommendations();
+
+                CineScope.UI.toast.success('Recommendation added successfully');
+
+            } catch (error) {
+                console.error('❌ Failed to save recommendation:', error);
+                CineScope.UI.toast.error('Failed to save recommendation: ' + error.message);
+            } finally {
+                const saveBtn = document.getElementById('save-recommendation-btn');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="bi bi-check me-2"></i>Add Recommendation';
+            }
+        }
+
+        async function loadMLServiceStatus() {
+            const container = document.getElementById('ml-service-status');
+
+            try {
+                container.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm text-primary me-3" role="status"></div>
+                        <span class="text-muted">Checking ML service status...</span>
+                    </div>
+                `;
+
+                const status = await CineScope.HTTP.admin.checkMLService();
+
+                let statusColor = 'danger';
+                let statusIcon = 'x-circle';
+                let statusText = 'Offline';
+
+                if (status.status === 'healthy') {
+                    statusColor = 'success';
+                    statusIcon = 'check-circle';
+                    statusText = 'Online';
+                } else if (status.status === 'partial') {
+                    statusColor = 'warning';
+                    statusIcon = 'exclamation-triangle';
+                    statusText = 'Partial';
+                }
+
+                container.innerHTML = `
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-${statusIcon} text-${statusColor} me-3 fs-4"></i>
+                                <div>
+                                    <h6 class="text-white mb-1">Service Status: <span class="text-${statusColor}">${statusText}</span></h6>
+                                    <p class="text-muted small mb-0">Last checked: ${new Date().toLocaleTimeString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                                <button class="btn btn-outline-info btn-sm" onclick="window.open('/admin/ml', '_blank')">
+                                    <i class="bi bi-gear me-2"></i>Manage ML
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="loadMLServiceStatus()">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('❌ Failed to check ML service status:', error);
+                container.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle text-danger me-3 fs-4"></i>
+                            <div>
+                                <h6 class="text-white mb-1">Service Status: <span class="text-danger">Error</span></h6>
+                                <p class="text-muted small mb-0">Failed to check service status</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="loadMLServiceStatus()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function setupRefreshFunctionality() {
+            document.getElementById('refresh-data-btn').addEventListener('click', async function () {
+                this.disabled = true;
+                this.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Refreshing...';
+
+                await loadDashboardData();
+
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Refresh Data';
+
+                CineScope.UI.toast.success('Dashboard data refreshed');
+            });
+
+            document.getElementById('check-ml-service-btn').addEventListener('click', function () {
+                loadMLServiceStatus();
+            });
+        }
+
+        // Auto-refresh functionality
+        let autoRefreshInterval;
+
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(async () => {
+                await loadMLServiceStatus();
+            }, 30000); // Refresh ML status every 30 seconds
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        }
+
+        // Start auto-refresh when page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            startAutoRefresh();
+        });
+
+        // Stop auto-refresh when page unloads
+        window.addEventListener('beforeunload', function () {
+            stopAutoRefresh();
+        });
     </script>
 </body>
 

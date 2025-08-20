@@ -1,36 +1,424 @@
-<!-- Content Card Widget -->
-<!-- Usage: Include this HTML structure for displaying content cards -->
-<div class="content-card hover-lift cursor-pointer" onclick="window.location.href='/content/details?id={CONTENT_ID}'">
-    <div class="position-relative">
-        <!-- Poster Image -->
-        <img src="{POSTER_URL}" alt="{TITLE}" class="poster w-100" loading="lazy">
+<!-- CineScope Content Card Widget Template -->
+<template id="content-card-template">
+    <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+        <div class="card content-card bg-dark border-0 h-100 position-relative" data-content-id="">
 
-        <!-- Rating Badge -->
-        <span class="rating">
-            <i class="bi bi-star-fill"></i> {RATING}
-        </span>
+            <!-- Card Image -->
+            <div class="card-img-wrapper position-relative overflow-hidden">
+                <img src="" class="card-img-top" alt="" loading="lazy"
+                    onerror="this.src='/assets/placeholder-poster.jpg'">
 
-        <!-- Play Trailer Button (optional) -->
-        <button class="btn btn-sm btn-primary position-absolute bottom-0 start-0 m-2"
-            onclick="event.stopPropagation(); ui.showTrailer('{YOUTUBE_ID}')">
-            <i class="bi bi-play-fill"></i>
-        </button>
-    </div>
+                <!-- Overlay on Hover -->
+                <div
+                    class="card-overlay position-absolute w-100 h-100 d-flex align-items-center justify-content-center">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm rounded-circle p-2 play-trailer-btn" title="Play Trailer">
+                            <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button class="btn btn-outline-light btn-sm rounded-circle p-2 quick-view-btn"
+                            title="Quick View">
+                            <i class="bi bi-eye-fill"></i>
+                        </button>
+                    </div>
+                </div>
 
-    <div class="p-2">
-        <h6 class="mb-1 text-truncate">{TITLE}</h6>
-        <div class="d-flex gap-2 flex-wrap">
-            <span class="badge badge-blue">{CONTENT_TYPE}</span>
-            <small class="text-muted">{YEAR}</small>
+                <!-- Rating Badge -->
+                <div class="position-absolute top-0 end-0 m-2 rating-badge">
+                    <span class="badge bg-primary rounded-pill">
+                        <i class="bi bi-star-fill me-1"></i><span class="rating-value">0.0</span>
+                    </span>
+                </div>
+
+                <!-- Content Type Badge -->
+                <div class="position-absolute top-0 start-0 m-2 content-type-badge">
+                    <span class="badge bg-secondary">MOVIE</span>
+                </div>
+
+                <!-- Special Badges -->
+                <div class="position-absolute bottom-0 start-0 m-2 special-badges">
+                    <!-- Trending, New Release, Critics Choice badges will be added here -->
+                </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="card-body p-3">
+                <h6 class="card-title text-white mb-2 text-truncate" title="">
+                    <!-- Title will be inserted here -->
+                </h6>
+
+                <p class="card-text text-muted small mb-2 genres-text">
+                    <!-- Genres will be inserted here -->
+                </p>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted small release-date">
+                        <!-- Release date will be inserted here -->
+                    </span>
+
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-outline-light btn-sm watchlist-btn" title="Add to Watchlist">
+                            <i class="bi bi-bookmark"></i>
+                        </button>
+                        <button class="btn btn-outline-light btn-sm favorite-btn" title="Add to Favorites">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+</template>
 
-<!-- CSS Classes Used:
-- content-card: Main container
-- hover-lift: Lift effect on hover
-- cursor-pointer: Pointer cursor
-- poster: Aspect ratio 2:3
-- rating: Absolute positioned rating
-- badge-blue: Blue accent badge
--->
+<script>
+    // Content Card Widget
+    window.CineScope = window.CineScope || {};
+    window.CineScope.Widgets = window.CineScope.Widgets || {};
+
+    window.CineScope.Widgets.ContentCard = {
+        // Create a content card from data
+        create(content, options = {}) {
+            const {
+                showTrailer = true,
+                showRating = true,
+                showGenres = true,
+                cardSize = 'default',
+                onClick = null
+            } = options;
+
+            // Clone template
+            const template = document.getElementById('content-card-template');
+            if (!template) {
+                console.error('Content card template not found');
+                return null;
+            }
+
+            const cardElement = template.content.cloneNode(true);
+            const card = cardElement.querySelector('.content-card');
+
+            // Set data attributes
+            card.setAttribute('data-content-id', content.id);
+            card.setAttribute('data-content-type', content.content_type || 'movie');
+
+            // Set image
+            const img = card.querySelector('.card-img-top');
+            const posterUrl = this.getPosterUrl(content.poster_path);
+            img.src = posterUrl;
+            img.alt = content.title;
+
+            // Set title
+            const titleElement = card.querySelector('.card-title');
+            titleElement.textContent = content.title;
+            titleElement.title = content.title;
+
+            // Set rating
+            if (showRating && content.rating) {
+                const ratingElement = card.querySelector('.rating-value');
+                ratingElement.textContent = CineScope.utils.formatRating(content.rating);
+            } else {
+                card.querySelector('.rating-badge').style.display = 'none';
+            }
+
+            // Set content type
+            const typeElement = card.querySelector('.content-type-badge .badge');
+            typeElement.textContent = (content.content_type || 'movie').toUpperCase();
+
+            // Set genres
+            if (showGenres && content.genres && content.genres.length > 0) {
+                const genresElement = card.querySelector('.genres-text');
+                genresElement.textContent = content.genres.slice(0, 2).join(', ');
+            } else {
+                card.querySelector('.genres-text').style.display = 'none';
+            }
+
+            // Set release date
+            const releaseDateElement = card.querySelector('.release-date');
+            if (content.release_date) {
+                releaseDateElement.textContent = CineScope.utils.formatDate(content.release_date);
+            } else {
+                releaseDateElement.textContent = 'Unknown';
+            }
+
+            // Add special badges
+            this.addSpecialBadges(card, content);
+
+            // Set up event listeners
+            this.setupEventListeners(card, content, options);
+
+            // Apply card size
+            if (cardSize === 'small') {
+                card.classList.add('content-card-small');
+            }
+
+            return cardElement;
+        },
+
+        // Get poster URL with fallback
+        getPosterUrl(posterPath) {
+            if (!posterPath) return '/assets/placeholder-poster.jpg';
+
+            // If it's already a full URL, return as is
+            if (posterPath.startsWith('http')) return posterPath;
+
+            // TMDB image URL
+            return `https://image.tmdb.org/t/p/w500${posterPath}`;
+        },
+
+        // Add special badges (trending, new release, etc.)
+        addSpecialBadges(card, content) {
+            const badgesContainer = card.querySelector('.special-badges');
+            badgesContainer.innerHTML = '';
+
+            if (content.is_trending) {
+                badgesContainer.innerHTML += '<span class="badge bg-danger me-1 mb-1"><i class="bi bi-fire"></i> Trending</span>';
+            }
+
+            if (content.is_new_release) {
+                badgesContainer.innerHTML += '<span class="badge bg-success me-1 mb-1"><i class="bi bi-star"></i> New</span>';
+            }
+
+            if (content.is_critics_choice) {
+                badgesContainer.innerHTML += '<span class="badge bg-warning me-1 mb-1"><i class="bi bi-award"></i> Critics</span>';
+            }
+
+            // Anime-specific badges
+            if (content.content_type === 'anime' && content.anime_genres) {
+                const animeGenre = content.anime_genres[0];
+                if (animeGenre) {
+                    badgesContainer.innerHTML += `<span class="badge bg-info me-1 mb-1">${animeGenre.toUpperCase()}</span>`;
+                }
+            }
+        },
+
+        // Set up event listeners
+        setupEventListeners(card, content, options) {
+            const contentId = content.id;
+
+            // Card click - navigate to details
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button')) return; // Don't trigger on button clicks
+
+                if (options.onClick) {
+                    options.onClick(content);
+                } else {
+                    this.navigateToDetails(content);
+                }
+            });
+
+            // Play trailer button
+            const playBtn = card.querySelector('.play-trailer-btn');
+            if (playBtn) {
+                if (content.youtube_trailer) {
+                    playBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        CineScope.UI.playTrailer(content.youtube_trailer);
+                    });
+                } else {
+                    playBtn.style.display = 'none';
+                }
+            }
+
+            // Quick view button
+            const quickViewBtn = card.querySelector('.quick-view-btn');
+            if (quickViewBtn) {
+                quickViewBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showQuickView(content);
+                });
+            }
+
+            // Watchlist button
+            const watchlistBtn = card.querySelector('.watchlist-btn');
+            if (watchlistBtn) {
+                watchlistBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleWatchlist(contentId, watchlistBtn);
+                });
+            }
+
+            // Favorite button
+            const favoriteBtn = card.querySelector('.favorite-btn');
+            if (favoriteBtn) {
+                favoriteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleFavorite(contentId, favoriteBtn);
+                });
+            }
+        },
+
+        // Navigate to content details
+        navigateToDetails(content) {
+            const currentUser = CineScope.Storage.user.get();
+            let detailsUrl;
+
+            if (currentUser) {
+                detailsUrl = `/${currentUser.username}/details/${content.id}`;
+            } else {
+                detailsUrl = `/content/details?id=${content.id}`;
+            }
+
+            // Record view interaction
+            if (currentUser) {
+                CineScope.HTTP.user.recordInteraction(content.id, 'view')
+                    .catch(error => console.warn('Failed to record view:', error));
+            }
+
+            window.location.href = detailsUrl;
+        },
+
+        // Show quick view modal
+        showQuickView(content) {
+            const modalId = 'quickViewModal';
+
+            // Remove existing modal
+            const existingModal = document.getElementById(modalId);
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            const modalBody = `
+      <div class="row">
+        <div class="col-md-4">
+          <img src="${this.getPosterUrl(content.poster_path)}" 
+               class="img-fluid rounded" 
+               alt="${content.title}">
+        </div>
+        <div class="col-md-8">
+          <h5 class="text-white mb-3">${content.title}</h5>
+          
+          <div class="mb-3">
+            <span class="badge bg-primary me-2">
+              <i class="bi bi-star-fill me-1"></i>${CineScope.utils.formatRating(content.rating)}
+            </span>
+            <span class="badge bg-secondary me-2">${(content.content_type || 'movie').toUpperCase()}</span>
+            ${content.release_date ? `<span class="badge bg-outline-light">${CineScope.utils.formatDate(content.release_date)}</span>` : ''}
+          </div>
+          
+          ${content.genres && content.genres.length > 0 ? `
+            <p class="text-muted mb-3">
+              <strong>Genres:</strong> ${content.genres.join(', ')}
+            </p>
+          ` : ''}
+          
+          ${content.overview ? `
+            <p class="text-light mb-3">${content.overview.substring(0, 200)}${content.overview.length > 200 ? '...' : ''}</p>
+          ` : ''}
+          
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary" onclick="CineScope.Widgets.ContentCard.navigateToDetails(${JSON.stringify(content).replace(/"/g, '&quot;')})">
+              <i class="bi bi-eye me-2"></i>View Details
+            </button>
+            
+            ${content.youtube_trailer ? `
+              <button class="btn btn-outline-primary" onclick="CineScope.UI.playTrailer('${content.youtube_trailer}')">
+                <i class="bi bi-play me-2"></i>Trailer
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+
+            const modal = CineScope.UI.modal.create(modalId, content.title, modalBody, '', 'lg');
+            CineScope.UI.modal.show(modalId);
+        },
+
+        // Toggle watchlist
+        async toggleWatchlist(contentId, button) {
+            if (!CineScope.Storage.user.isLoggedIn()) {
+                CineScope.UI.toast.warning('Please login to add to watchlist');
+                return;
+            }
+
+            try {
+                button.disabled = true;
+                button.innerHTML = '<div class="spinner-border spinner-border-sm"></div>';
+
+                await CineScope.HTTP.user.recordInteraction(contentId, 'watchlist');
+
+                button.innerHTML = '<i class="bi bi-bookmark-check"></i>';
+                button.classList.remove('btn-outline-light');
+                button.classList.add('btn-primary');
+
+                CineScope.UI.toast.success('Added to watchlist');
+            } catch (error) {
+                CineScope.UI.toast.error('Failed to add to watchlist: ' + error.message);
+                button.innerHTML = '<i class="bi bi-bookmark"></i>';
+            } finally {
+                button.disabled = false;
+            }
+        },
+
+        // Toggle favorite
+        async toggleFavorite(contentId, button) {
+            if (!CineScope.Storage.user.isLoggedIn()) {
+                CineScope.UI.toast.warning('Please login to add to favorites');
+                return;
+            }
+
+            try {
+                button.disabled = true;
+                button.innerHTML = '<div class="spinner-border spinner-border-sm"></div>';
+
+                await CineScope.HTTP.user.recordInteraction(contentId, 'favorite');
+
+                button.innerHTML = '<i class="bi bi-heart-fill"></i>';
+                button.classList.remove('btn-outline-light');
+                button.classList.add('btn-danger');
+
+                CineScope.UI.toast.success('Added to favorites');
+            } catch (error) {
+                CineScope.UI.toast.error('Failed to add to favorites: ' + error.message);
+                button.innerHTML = '<i class="bi bi-heart"></i>';
+            } finally {
+                button.disabled = false;
+            }
+        },
+
+        // Create grid of content cards
+        createGrid(contentList, container, options = {}) {
+            if (!container) return;
+
+            if (!contentList || contentList.length === 0) {
+                container.innerHTML = `
+        <div class="text-center py-5">
+          <i class="bi bi-film display-1 text-muted mb-3"></i>
+          <h5 class="text-muted">No content found</h5>
+          <p class="text-muted">Try adjusting your search or filters</p>
+        </div>
+      `;
+                return;
+            }
+
+            // Clear container
+            container.innerHTML = '';
+
+            // Create row wrapper
+            const row = document.createElement('div');
+            row.className = 'row';
+
+            // Add staggered animation class if specified
+            if (options.staggerAnimation) {
+                row.className += ' stagger-children';
+            }
+
+            // Create cards
+            contentList.forEach((content, index) => {
+                const cardElement = this.create(content, options);
+                if (cardElement) {
+                    // Add animation delay for staggered effect
+                    if (options.staggerAnimation) {
+                        const card = cardElement.querySelector('.content-card');
+                        card.style.animationDelay = `${index * 0.1}s`;
+                    }
+
+                    row.appendChild(cardElement);
+                }
+            });
+
+            container.appendChild(row);
+
+            // Initialize lazy loading
+            CineScope.UI.lazyLoadImages();
+        }
+    };
+</script>

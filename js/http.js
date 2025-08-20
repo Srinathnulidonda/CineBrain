@@ -1,575 +1,299 @@
-// CineScope HTTP Client with Enhanced Error Handling and Caching
-class HTTPClient {
-    constructor() {
-        this.baseURL = CONFIG.API_BASE;
-        this.timeout = CONFIG.API_TIMEOUT;
-        this.retryAttempts = CONFIG.PERFORMANCE.RETRY_ATTEMPTS;
-        this.retryDelay = CONFIG.PERFORMANCE.RETRY_DELAY;
-        this.requestQueue = new Map();
-        this.activeRequests = new Set();
-        this.abortControllers = new Map();
+// CineScope HTTP Client
+window.CineScope.HTTP = {
+    // Default options
+    defaultOptions: {
+        timeout: 15000,
+        retries: 2,
+        retryDelay: 1000
+    },
 
-        // Initialize request interceptors
-        this.initInterceptors();
-    }
-
-    // Initialize request and response interceptors
-    initInterceptors() {
-        // Monitor online/offline status
-        window.addEventListener('online', () => {
-            this.handleOnline();
-        });
-
-        window.addEventListener('offline', () => {
-            this.handleOffline();
-        });
-    }
-
-    // Handle online event
-    handleOnline() {
-        console.log('Connection restored. Retrying failed requests...');
-        // Retry queued requests
-        this.retryQueuedRequests();
-    }
-
-    // Handle offline event
-    handleOffline() {
-        console.log('Connection lost. Requests will be queued.');
-        // Abort active requests
-        this.abortActiveRequests();
-    }
-
-    // Retry queued requests
-    async retryQueuedRequests() {
-        const queuedRequests = Array.from(this.requestQueue.values());
-        this.requestQueue.clear();
-
-        for (const request of queuedRequests) {
-            try {
-                await this.executeRequest(request.config);
-            } catch (error) {
-                console.warn('Failed to retry request:', error);
-            }
-        }
-    }
-
-    // Abort active requests
-    abortActiveRequests() {
-        this.abortControllers.forEach((controller, requestId) => {
-            controller.abort();
-            this.abortControllers.delete(requestId);
-        });
-        this.activeRequests.clear();
-    }
-
-    // Generate request ID
-    generateRequestId() {
-        return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    }
-
-    // Get auth headers
-    getAuthHeaders() {
-        const token = Storage.getAuthToken();
-        if (token) {
-            return {
-                'Authorization': `Bearer ${token}`
-            };
-        }
-        return {};
-    }
-
-    // Get default headers
-    getDefaultHeaders() {
-        return {
+    // Create request headers
+    getHeaders(includeAuth = true) {
+        const headers = {
             'Content-Type': 'application/json',
-            'X-Requested-With': 'CineScope',
-            'X-Client-Version': CONFIG.APP_VERSION,
-            ...this.getAuthHeaders()
-        };
-    }
-
-    // Create abort controller
-    createAbortController(timeout = this.timeout) {
-        const controller = new AbortController();
-
-        // Set timeout
-        const timeoutId = setTimeout(() => {
-            controller.abort();
-        }, timeout);
-
-        // Clean up timeout when request completes
-        controller.signal.addEventListener('abort', () => {
-            clearTimeout(timeoutId);
-        });
-
-        return controller;
-    }
-
-    // Execute HTTP request with retry logic
-    async executeRequest(config, attempt = 1) {
-        const requestId = this.generateRequestId();
-
-        try {
-            // Check if we're offline
-            if (!navigator.onLine) {
-                throw new Error('OFFLINE');
-            }
-
-            // Check cache first for GET requests
-            if (config.method === 'GET' && config.cache !== false) {
-                const cacheKey = this.getCacheKey(config);
-                const cachedData = Storage.getCache(cacheKey);
-                if (cachedData) {
-                    return { data: cachedData, cached: true };
-                }
-            }
-
-            // Create abort controller
-            const controller = this.createAbortController(config.timeout || this.timeout);
-            this.abortControllers.set(requestId, controller);
-            this.activeRequests.add(requestId);
-
-            // Prepare fetch options
-            const fetchOptions = {
-                method: config.method || 'GET',
-                headers: { ...this.getDefaultHeaders(), ...(config.headers || {}) },
-                signal: controller.signal
-            };
-
-            // Add body for non-GET requests
-            if (config.data && fetchOptions.method !== 'GET') {
-                fetchOptions.body = JSON.stringify(config.data);
-            }
-
-            // Build URL with query parameters
-            const url = this.buildURL(config.url, config.params);
-
-            // Execute fetch
-            const response = await fetch(url, fetchOptions);
-
-            // Clean up
-            this.abortControllers.delete(requestId);
-            this.activeRequests.delete(requestId);
-
-            // Handle response
-            const result = await this.handleResponse(response, config);
-
-            // Cache successful GET requests
-            if (config.method === 'GET' && config.cache !== false && result.data) {
-                const cacheKey = this.getCacheKey(config);
-                Storage.setCache(cacheKey, result.data, config.cacheTTL);
-            }
-
-            return result;
-
-        } catch (error) {
-            // Clean up
-            this.abortControllers.delete(requestId);
-            this.activeRequests.delete(requestId);
-
-            // Handle specific errors
-            if (error.name === 'AbortError') {
-                throw new Error('REQUEST_TIMEOUT');
-            }
-
-            if (error.message === 'OFFLINE') {
-                // Queue request for retry when online
-                this.requestQueue.set(requestId, { config, attempt });
-                throw new Error('NETWORK_OFFLINE');
-            }
-
-            // Retry logic for network errors
-            if (this.shouldRetry(error, attempt)) {
-                console.log(`Retrying request (${attempt}/${this.retryAttempts}):`, config.url);
-                await this.delay(this.retryDelay * attempt);
-                return this.executeRequest(config, attempt + 1);
-            }
-
-            throw this.normalizeError(error);
-        }
-    }
-
-    // Handle HTTP response
-    async handleResponse(response, config) {
-        const result = {
-            status: response.status,
-            statusText: response.statusText,
-            headers: this.parseHeaders(response.headers),
-            cached: false
+            'Accept': 'application/json'
         };
 
-        // Handle different response types
-        const contentType = response.headers.get('content-type') || '';
-
-        if (contentType.includes('application/json')) {
-            result.data = await response.json();
-        } else if (contentType.includes('text/')) {
-            result.data = await response.text();
-        } else {
-            result.data = await response.blob();
+        if (includeAuth) {
+            const token = CineScope.Storage.token.get();
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
         }
 
-        // Check if response is successful
+        return headers;
+    },
+
+    // Handle response
+    async handleResponse(response) {
         if (!response.ok) {
             const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
             error.status = response.status;
-            error.data = result.data;
+
+            // Try to get error message from response
+            try {
+                const errorData = await response.json();
+                error.message = errorData.error || errorData.message || error.message;
+            } catch (e) {
+                // Use default error message
+            }
+
             throw error;
         }
 
-        return result;
-    }
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return await response.json();
+        }
 
-    // Parse response headers
-    parseHeaders(headers) {
-        const parsed = {};
-        headers.forEach((value, key) => {
-            parsed[key] = value;
-        });
-        return parsed;
-    }
+        return await response.text();
+    },
 
-    // Build URL with query parameters
-    buildURL(endpoint, params = {}) {
-        let url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
+    // Generic request method with retry logic
+    async request(url, options = {}) {
+        const config = {
+            ...this.defaultOptions,
+            ...options,
+            headers: {
+                ...this.getHeaders(options.includeAuth !== false),
+                ...options.headers
+            }
+        };
 
-        if (Object.keys(params).length > 0) {
-            const searchParams = new URLSearchParams();
-            Object.entries(params).forEach(([key, value]) => {
-                if (value !== null && value !== undefined) {
-                    searchParams.append(key, value);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+
+        let lastError;
+
+        for (let attempt = 0; attempt <= config.retries; attempt++) {
+            try {
+                const response = await fetch(url, {
+                    ...config,
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+                return await this.handleResponse(response);
+            } catch (error) {
+                lastError = error;
+
+                // Don't retry on authentication errors
+                if (error.status === 401 || error.status === 403) {
+                    break;
                 }
-            });
 
-            const queryString = searchParams.toString();
-            if (queryString) {
-                url += (url.includes('?') ? '&' : '?') + queryString;
+                // Don't retry on client errors (4xx except 401, 403)
+                if (error.status >= 400 && error.status < 500) {
+                    break;
+                }
+
+                // If not the last attempt, wait before retrying
+                if (attempt < config.retries) {
+                    await new Promise(resolve => setTimeout(resolve, config.retryDelay * (attempt + 1)));
+                }
             }
         }
 
-        return url;
-    }
+        clearTimeout(timeoutId);
+        throw lastError;
+    },
 
-    // Generate cache key
-    getCacheKey(config) {
-        const url = this.buildURL(config.url, config.params);
-        return `http_${btoa(url).replace(/[+/=]/g, '')}`;
-    }
-
-    // Check if request should be retried
-    shouldRetry(error, attempt) {
-        if (attempt >= this.retryAttempts) {
-            return false;
-        }
-
-        // Retry on network errors and 5xx server errors
-        return (
-            error.message.includes('Failed to fetch') ||
-            error.message.includes('NetworkError') ||
-            (error.status >= 500 && error.status < 600)
-        );
-    }
-
-    // Normalize error messages
-    normalizeError(error) {
-        const normalizedError = new Error();
-        normalizedError.originalError = error;
-
-        if (error.message === 'NETWORK_OFFLINE') {
-            normalizedError.message = CONFIG.ERROR_MESSAGES.OFFLINE;
-            normalizedError.code = 'OFFLINE';
-        } else if (error.message === 'REQUEST_TIMEOUT') {
-            normalizedError.message = CONFIG.ERROR_MESSAGES.TIMEOUT;
-            normalizedError.code = 'TIMEOUT';
-        } else if (error.status === 401) {
-            normalizedError.message = CONFIG.ERROR_MESSAGES.AUTH_REQUIRED;
-            normalizedError.code = 'UNAUTHORIZED';
-            this.handleAuthError();
-        } else if (error.status === 403) {
-            normalizedError.message = CONFIG.ERROR_MESSAGES.ACCESS_DENIED;
-            normalizedError.code = 'FORBIDDEN';
-        } else if (error.status === 404) {
-            normalizedError.message = CONFIG.ERROR_MESSAGES.NOT_FOUND;
-            normalizedError.code = 'NOT_FOUND';
-        } else if (error.status === 429) {
-            normalizedError.message = CONFIG.ERROR_MESSAGES.RATE_LIMIT;
-            normalizedError.code = 'RATE_LIMIT';
-        } else if (error.status >= 500) {
-            normalizedError.message = CONFIG.ERROR_MESSAGES.SERVER_ERROR;
-            normalizedError.code = 'SERVER_ERROR';
-        } else {
-            normalizedError.message = CONFIG.ERROR_MESSAGES.NETWORK_ERROR;
-            normalizedError.code = 'NETWORK_ERROR';
-        }
-
-        normalizedError.status = error.status;
-        normalizedError.data = error.data;
-
-        return normalizedError;
-    }
-
-    // Handle authentication errors
-    handleAuthError() {
-        Storage.handleLogout();
-        // Redirect to login if not already there
-        if (!window.location.pathname.includes('/auth/login')) {
-            window.location.href = '/auth/login.html';
-        }
-    }
-
-    // Delay utility
-    delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    // HTTP methods
-    async get(url, params = {}, options = {}) {
-        return this.executeRequest({
-            method: 'GET',
-            url: url,
-            params: params,
-            ...options
+    // GET request
+    async get(endpoint, params = {}) {
+        const url = new URL(CineScope.API.BASE_URL + endpoint);
+        Object.keys(params).forEach(key => {
+            if (params[key] !== undefined && params[key] !== null) {
+                url.searchParams.append(key, params[key]);
+            }
         });
-    }
 
-    async post(url, data = {}, options = {}) {
-        return this.executeRequest({
+        return await this.request(url.toString(), {
+            method: 'GET'
+        });
+    },
+
+    // POST request
+    async post(endpoint, data = {}) {
+        return await this.request(CineScope.API.BASE_URL + endpoint, {
             method: 'POST',
-            url: url,
-            data: data,
-            ...options
+            body: JSON.stringify(data)
         });
-    }
+    },
 
-    async put(url, data = {}, options = {}) {
-        return this.executeRequest({
+    // PUT request
+    async put(endpoint, data = {}) {
+        return await this.request(CineScope.API.BASE_URL + endpoint, {
             method: 'PUT',
-            url: url,
-            data: data,
-            ...options
+            body: JSON.stringify(data)
         });
-    }
+    },
 
-    async patch(url, data = {}, options = {}) {
-        return this.executeRequest({
-            method: 'PATCH',
-            url: url,
-            data: data,
-            ...options
+    // DELETE request
+    async delete(endpoint) {
+        return await this.request(CineScope.API.BASE_URL + endpoint, {
+            method: 'DELETE'
         });
-    }
+    },
 
-    async delete(url, options = {}) {
-        return this.executeRequest({
-            method: 'DELETE',
-            url: url,
-            ...options
-        });
-    }
+    // Authentication methods
+    auth: {
+        async login(credentials) {
+            try {
+                const response = await CineScope.HTTP.post(CineScope.API.ENDPOINTS.AUTH.LOGIN, credentials);
 
-    // Cancel all requests
-    cancelAllRequests() {
-        this.abortActiveRequests();
-        this.requestQueue.clear();
-    }
+                if (response.token && response.user) {
+                    CineScope.Storage.token.set(response.token);
+                    CineScope.Storage.user.set(response.user);
+                }
 
-    // Cancel specific request
-    cancelRequest(requestId) {
-        const controller = this.abortControllers.get(requestId);
-        if (controller) {
-            controller.abort();
-            this.abortControllers.delete(requestId);
+                return response;
+            } catch (error) {
+                throw error;
+            }
+        },
+
+        async register(userData) {
+            try {
+                const response = await CineScope.HTTP.post(CineScope.API.ENDPOINTS.AUTH.REGISTER, userData);
+
+                if (response.token && response.user) {
+                    CineScope.Storage.token.set(response.token);
+                    CineScope.Storage.user.set(response.user);
+                }
+
+                return response;
+            } catch (error) {
+                throw error;
+            }
+        },
+
+        logout() {
+            CineScope.Storage.clearAll();
+            window.location.href = '/';
         }
-        this.activeRequests.delete(requestId);
-        this.requestQueue.delete(requestId);
-    }
+    },
 
-    // Get request statistics
-    getStats() {
-        return {
-            activeRequests: this.activeRequests.size,
-            queuedRequests: this.requestQueue.size,
-            isOnline: navigator.onLine
-        };
-    }
-}
+    // Content methods
+    content: {
+        async search(query, filters = {}) {
+            const params = { query, ...filters };
+            const response = await CineScope.HTTP.get(CineScope.API.ENDPOINTS.CONTENT.SEARCH, params);
 
-// API wrapper with specific endpoints
-class CineScopeAPI {
-    constructor() {
-        this.http = new HTTPClient();
-    }
+            // Add to search history
+            if (query.trim()) {
+                CineScope.Storage.searchHistory.add(query.trim());
+            }
 
-    // Authentication endpoints
-    async login(credentials) {
-        const response = await this.http.post('/login', credentials);
-        if (response.data.token) {
-            Storage.setAuthToken(response.data.token);
-            Storage.setUserData(response.data.user);
+            return response;
+        },
+
+        async getDetails(contentId) {
+            const response = await CineScope.HTTP.get(`${CineScope.API.ENDPOINTS.CONTENT.DETAILS}/${contentId}`);
+
+            // Add to last viewed
+            CineScope.Storage.lastViewed.add({
+                id: response.id,
+                title: response.title,
+                poster_path: response.poster_path,
+                content_type: response.content_type,
+                rating: response.rating
+            });
+
+            return response;
+        },
+
+        async getTrending(params = {}) {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.CONTENT.TRENDING, params);
+        },
+
+        async getNewReleases(params = {}) {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.CONTENT.NEW_RELEASES, params);
+        },
+
+        async getCriticsChoice(params = {}) {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.CONTENT.CRITICS_CHOICE, params);
+        },
+
+        async getByGenre(genre, params = {}) {
+            return await CineScope.HTTP.get(`${CineScope.API.ENDPOINTS.CONTENT.GENRE}/${genre}`, params);
+        },
+
+        async getRegional(language, params = {}) {
+            return await CineScope.HTTP.get(`${CineScope.API.ENDPOINTS.CONTENT.REGIONAL}/${language}`, params);
+        },
+
+        async getAnime(params = {}) {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.CONTENT.ANIME, params);
+        },
+
+        async getSimilar(contentId, params = {}) {
+            return await CineScope.HTTP.get(`${CineScope.API.ENDPOINTS.CONTENT.SIMILAR}/${contentId}`, params);
+        },
+
+        async getAdminChoice(params = {}) {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.CONTENT.ADMIN_CHOICE, params);
         }
-        return response.data;
-    }
+    },
 
-    async register(userData) {
-        const response = await this.http.post('/register', userData);
-        if (response.data.token) {
-            Storage.setAuthToken(response.data.token);
-            Storage.setUserData(response.data.user);
+    // User interaction methods
+    user: {
+        async recordInteraction(contentId, type, rating = null) {
+            return await CineScope.HTTP.post(CineScope.API.ENDPOINTS.USER.INTERACTIONS, {
+                content_id: contentId,
+                interaction_type: type,
+                rating: rating
+            });
+        },
+
+        async getWatchlist() {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.USER.WATCHLIST);
+        },
+
+        async getFavorites() {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.USER.FAVORITES);
+        },
+
+        async getPersonalized(params = {}) {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.USER.PERSONALIZED, params);
         }
-        return response.data;
-    }
+    },
 
-    async logout() {
-        try {
-            await this.http.post('/logout');
-        } catch (error) {
-            // Even if logout fails, clear local data
-            console.warn('Logout request failed:', error);
-        } finally {
-            Storage.handleLogout();
+    // Admin methods
+    admin: {
+        async search(query, source = 'tmdb', page = 1) {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.ADMIN.SEARCH, {
+                query,
+                source,
+                page
+            });
+        },
+
+        async saveContent(contentData) {
+            return await CineScope.HTTP.post(CineScope.API.ENDPOINTS.ADMIN.CONTENT, contentData);
+        },
+
+        async createRecommendation(data) {
+            return await CineScope.HTTP.post(CineScope.API.ENDPOINTS.ADMIN.RECOMMENDATIONS, data);
+        },
+
+        async getRecommendations(params = {}) {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.ADMIN.RECOMMENDATIONS, params);
+        },
+
+        async getAnalytics() {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.ADMIN.ANALYTICS);
+        },
+
+        async checkMLService() {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.ADMIN.ML_CHECK);
+        },
+
+        async updateMLService() {
+            return await CineScope.HTTP.post(CineScope.API.ENDPOINTS.ADMIN.ML_UPDATE);
+        },
+
+        async getMLStats() {
+            return await CineScope.HTTP.get(CineScope.API.ENDPOINTS.ADMIN.ML_STATS);
         }
     }
-
-    // Content discovery endpoints
-    async searchContent(query, filters = {}) {
-        const params = {
-            query: query,
-            ...filters
-        };
-        const response = await this.http.get('/search', params);
-        return response.data;
-    }
-
-    async getContentDetails(contentId) {
-        const response = await this.http.get(`/content/${contentId}`);
-        return response.data;
-    }
-
-    // Recommendation endpoints
-    async getTrending(params = {}) {
-        const response = await this.http.get('/recommendations/trending', params);
-        return response.data;
-    }
-
-    async getNewReleases(params = {}) {
-        const response = await this.http.get('/recommendations/new-releases', params);
-        return response.data;
-    }
-
-    async getCriticsChoice(params = {}) {
-        const response = await this.http.get('/recommendations/critics-choice', params);
-        return response.data;
-    }
-
-    async getGenreRecommendations(genre, params = {}) {
-        const response = await this.http.get(`/recommendations/genre/${genre}`, params);
-        return response.data;
-    }
-
-    async getRegionalRecommendations(language, params = {}) {
-        const response = await this.http.get(`/recommendations/regional/${language}`, params);
-        return response.data;
-    }
-
-    async getAnimeRecommendations(params = {}) {
-        const response = await this.http.get('/recommendations/anime', params);
-        return response.data;
-    }
-
-    async getSimilarRecommendations(contentId, params = {}) {
-        const response = await this.http.get(`/recommendations/similar/${contentId}`, params);
-        return response.data;
-    }
-
-    async getPersonalizedRecommendations(params = {}) {
-        const response = await this.http.get('/recommendations/personalized', params);
-        return response.data;
-    }
-
-    async getAdminChoiceRecommendations(params = {}) {
-        const response = await this.http.get('/recommendations/admin-choice', params);
-        return response.data;
-    }
-
-    // User interaction endpoints
-    async recordInteraction(interaction) {
-        const response = await this.http.post('/interactions', interaction);
-        return response.data;
-    }
-
-    async getUserWatchlist() {
-        const response = await this.http.get('/user/watchlist');
-        return response.data;
-    }
-
-    async getUserFavorites() {
-        const response = await this.http.get('/user/favorites');
-        return response.data;
-    }
-
-    // Admin endpoints
-    async adminSearch(query, params = {}) {
-        const searchParams = {
-            query: query,
-            ...params
-        };
-        const response = await this.http.get('/admin/search', searchParams);
-        return response.data;
-    }
-
-    async saveExternalContent(contentData) {
-        const response = await this.http.post('/admin/content', contentData);
-        return response.data;
-    }
-
-    async createAdminRecommendation(recommendation) {
-        const response = await this.http.post('/admin/recommendations', recommendation);
-        return response.data;
-    }
-
-    async getAdminRecommendations(params = {}) {
-        const response = await this.http.get('/admin/recommendations', params);
-        return response.data;
-    }
-
-    async getAnalytics() {
-        const response = await this.http.get('/admin/analytics');
-        return response.data;
-    }
-
-    async getMLServiceStats() {
-        const response = await this.http.get('/admin/ml-stats');
-        return response.data;
-    }
-
-    async performMLServiceCheck() {
-        const response = await this.http.get('/admin/ml-service-check');
-        return response.data;
-    }
-
-    async forceMLUpdate() {
-        const response = await this.http.post('/admin/ml-service-update');
-        return response.data;
-    }
-
-    // Utility methods
-    cancelAllRequests() {
-        this.http.cancelAllRequests();
-    }
-
-    getRequestStats() {
-        return this.http.getStats();
-    }
-}
-
-// Create global API instance
-const API = new CineScopeAPI();
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { HTTPClient, CineScopeAPI, API };
-}
-
-// Global access
-window.API = API;
-window.HTTPClient = HTTPClient;
+};

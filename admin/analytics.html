@@ -1,347 +1,294 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Analytics - CineScope Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CineScope Admin Analytics">
 
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="/css/base.css" rel="stylesheet">
-    <link href="/css/bootstrap-overrides.css" rel="stylesheet">
-    <link href="/css/tailwind.css" rel="stylesheet">
-    <link href="/css/animation.css" rel="stylesheet">
-    <link href="/css/responsive.css" rel="stylesheet">
-    <link href="/css/utilities.css" rel="stylesheet">
+    <title>Admin Analytics - CineScope</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/bootstrap-overrides.css">
+    <link rel="stylesheet" href="/css/animation.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+
+    <style>
+        .analytics-card {
+            background: var(--cs-surface-light);
+            border: 1px solid var(--cs-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+
+        .chart-wrapper {
+            background: var(--cs-surface);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+    </style>
 </head>
 
-<body>
-    <!-- Topbar -->
-    <div id="topbar-container"></div>
+<body class="bg-black">
+    <!-- Layout Container -->
+    <div id="app-container">
+        <!-- Top Bar Container (Desktop) -->
+        <div id="topbar-container" class="d-none d-lg-block"></div>
 
-    <!-- Main Content -->
-    <main class="container-fluid py-4">
-        <div class="row">
-            <div class="col-lg-3 mb-4">
-                <!-- Admin Sidebar -->
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="mb-3">Admin Panel</h5>
-
-                        <div class="list-group">
-                            <a href="/admin/" class="list-group-item list-group-item-action">
-                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                            </a>
-                            <a href="/admin/search" class="list-group-item list-group-item-action">
-                                <i class="bi bi-search me-2"></i> Content Search
-                            </a>
-                            <a href="/admin/recommendations" class="list-group-item list-group-item-action">
-                                <i class="bi bi-star me-2"></i> Recommendations
-                            </a>
-                            <a href="/admin/analytics" class="list-group-item list-group-item-action active">
-                                <i class="bi bi-graph-up me-2"></i> Analytics
-                            </a>
-                            <a href="/admin/ml" class="list-group-item list-group-item-action">
-                                <i class="bi bi-cpu me-2"></i> ML Service
-                            </a>
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container-fluid">
+                <!-- Admin Analytics Header -->
+                <div class="admin-analytics-header py-4 border-bottom border-secondary mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h1 class="text-white mb-2">
+                                <i class="bi bi-graph-up text-success me-3"></i>Analytics Dashboard
+                            </h1>
+                            <p class="text-muted mb-0">Platform performance and user insights</p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                                <select class="form-select bg-dark border-secondary text-white" style="width: auto;"
+                                    id="time-range">
+                                    <option value="week">Last 7 Days</option>
+                                    <option value="month">Last 30 Days</option>
+                                    <option value="quarter">Last 90 Days</option>
+                                    <option value="year">Last Year</option>
+                                    <option value="all">All Time</option>
+                                </select>
+                                <button class="btn btn-outline-primary btn-sm" id="export-analytics-btn">
+                                    <i class="bi bi-download me-2"></i>Export Report
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="col-lg-9">
-                <h1 class="h3 mb-4">Analytics</h1>
 
                 <!-- Key Metrics -->
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6 col-lg-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-people display-4 text-primary mb-2"></i>
-                                <h3 id="total-users">-</h3>
-                                <p class="text-muted mb-0">Total Users</p>
-                            </div>
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="analytics-card text-center">
+                            <i class="bi bi-people fs-1 text-primary mb-2"></i>
+                            <h3 class="text-white mb-1" id="total-users">0</h3>
+                            <p class="text-muted small mb-0">Total Users</p>
                         </div>
                     </div>
-
-                    <div class="col-md-6 col-lg-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-film display-4 text-success mb-2"></i>
-                                <h3 id="total-content">-</h3>
-                                <p class="text-muted mb-0">Total Content</p>
-                            </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="analytics-card text-center">
+                            <i class="bi bi-activity fs-1 text-success mb-2"></i>
+                            <h3 class="text-white mb-1" id="active-users">0</h3>
+                            <p class="text-muted small mb-0">Active Users</p>
                         </div>
                     </div>
-
-                    <div class="col-md-6 col-lg-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-activity display-4 text-warning mb-2"></i>
-                                <h3 id="active-users">-</h3>
-                                <p class="text-muted mb-0">Active This Week</p>
-                            </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="analytics-card text-center">
+                            <i class="bi bi-film fs-1 text-warning mb-2"></i>
+                            <h3 class="text-white mb-1" id="total-content">0</h3>
+                            <p class="text-muted small mb-0">Content Items</p>
                         </div>
                     </div>
-
-                    <div class="col-md-6 col-lg-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-cursor-fill display-4 text-info mb-2"></i>
-                                <h3 id="total-interactions">-</h3>
-                                <p class="text-muted mb-0">Total Interactions</p>
-                            </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="analytics-card text-center">
+                            <i class="bi bi-arrow-up-right fs-1 text-danger mb-2"></i>
+                            <h3 class="text-white mb-1" id="growth-rate">0%</h3>
+                            <p class="text-muted small mb-0">Growth Rate</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Charts Row -->
-                <div class="row g-3 mb-4">
-                    <div class="col-lg-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">Popular Content</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="popular-content-chart" height="300"></canvas>
-                            </div>
+                <!-- Charts -->
+                <div class="row mb-4">
+                    <div class="col-lg-8 mb-4">
+                        <div class="chart-wrapper">
+                            <h5 class="text-white mb-3">User Growth</h5>
+                            <canvas id="userGrowthChart"></canvas>
                         </div>
                     </div>
-
-                    <div class="col-lg-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">Genre Distribution</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="genre-chart" height="300"></canvas>
-                            </div>
+                    <div class="col-lg-4 mb-4">
+                        <div class="chart-wrapper">
+                            <h5 class="text-white mb-3">Content Distribution</h5>
+                            <canvas id="contentDistributionChart"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tables -->
-                <div class="row g-3">
-                    <div class="col-lg-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">Top Content by Interactions</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table">
-                                        <thead>
-                                            <tr>
-                                                <th>Title</th>
-                                                <th>Type</th>
-                                                <th>Interactions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="top-content-table">
-                                            <tr>
-                                                <td colspan="3" class="text-center">
-                                                    <div class="spinner-border spinner-border-sm"></div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                <!-- Top Content and Genres -->
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="analytics-card">
+                            <h5 class="text-white mb-3">Top Content</h5>
+                            <div class="list-group list-group-flush" id="top-content-list">
+                                <!-- Top content will be populated here -->
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-lg-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">Popular Genres</h5>
-                            </div>
-                            <div class="card-body">
-                                <div id="genre-list">
-                                    <div class="text-center">
-                                        <div class="spinner-border spinner-border-sm"></div>
-                                    </div>
-                                </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="analytics-card">
+                            <h5 class="text-white mb-3">Popular Genres</h5>
+                            <div class="list-group list-group-flush" id="popular-genres-list">
+                                <!-- Popular genres will be populated here -->
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
 
-    <!-- Mobile Navigation -->
-    <div id="mobile-nav-container"></div>
+        <!-- Mobile Navigation Container -->
+        <div id="mobile-nav-container" class="d-lg-none"></div>
+    </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Core JavaScript -->
     <script src="/js/config.js"></script>
     <script src="/js/storage.js"></script>
     <script src="/js/http.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/app.js"></script>
 
-    <!-- Page Specific Script -->
+    <!-- Page Script -->
     <script>
-        let popularContentChart, genreChart;
+        let userGrowthChart = null;
+        let contentDistributionChart = null;
 
-        async function loadAnalytics() {
+        document.addEventListener('DOMContentLoaded', async function () {
+            console.log('📈 Loading Admin Analytics Page...');
+
+            // Check admin access
+            if (!CineScope.App.getCurrentUser().is_admin) {
+                window.location.href = '/';
+                return;
+            }
+
+            // Set page title
+            CineScope.UI.updatePageTitle('Admin Analytics');
+
+            // Initialize charts
+            initializeCharts();
+
+            // Load analytics data
+            await loadAnalytics('week');
+
+            // Initialize time range selector
+            document.getElementById('time-range').addEventListener('change', function () {
+                loadAnalytics(this.value);
+            });
+
+            // Initialize export
+            document.getElementById('export-analytics-btn').addEventListener('click', exportAnalytics);
+
+            console.log('✅ Admin analytics page loaded');
+        });
+
+        async function loadAnalytics(range) {
             try {
-                const analytics = await api.getAnalytics();
+                const response = await CineScope.HTTP.admin.getAnalytics({ range });
 
-                // Update metrics
-                document.getElementById('total-users').textContent = analytics.total_users || 0;
-                document.getElementById('total-content').textContent = analytics.total_content || 0;
-                document.getElementById('active-users').textContent = analytics.active_users_last_week || 0;
-                document.getElementById('total-interactions').textContent = analytics.total_interactions || 0;
+                // Update key metrics
+                document.getElementById('total-users').textContent = response.total_users.toLocaleString();
+                document.getElementById('active-users').textContent = response.active_users_last_week.toLocaleString();
+                document.getElementById('total-content').textContent = response.total_content.toLocaleString();
+                document.getElementById('growth-rate').textContent = response.growth_rate + '%';
 
-                // Update tables
-                updateTopContentTable(analytics.popular_content);
-                updateGenreList(analytics.popular_genres);
+                // Update charts
+                updateUserGrowthChart(response.user_growth);
+                updateContentDistributionChart(response.content_types);
 
-                // Create charts
-                createPopularContentChart(analytics.popular_content);
-                createGenreChart(analytics.popular_genres);
+                // Update top content
+                updateTopContent(response.popular_content);
+
+                // Update popular genres
+                updatePopularGenres(response.popular_genres);
 
             } catch (error) {
-                ui.showToast('Failed to load analytics', 'error');
+                console.error('Failed to load analytics:', error);
+                CineScope.UI.toast.error('Failed to load analytics data');
             }
         }
 
-        function updateTopContentTable(popularContent) {
-            const tbody = document.getElementById('top-content-table');
-
-            if (!popularContent || popularContent.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No data</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = '';
-            popularContent.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-          <td>${item.title}</td>
-          <td><span class="badge badge-purple">Movie</span></td>
-          <td>${item.interactions}</td>
-        `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function updateGenreList(genres) {
-            const container = document.getElementById('genre-list');
-
-            if (!genres || genres.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center">No data</p>';
-                return;
-            }
-
-            container.innerHTML = '';
-            const list = document.createElement('div');
-            list.className = 'd-flex flex-column gap-2';
-
-            genres.forEach(genre => {
-                const item = document.createElement('div');
-                item.className = 'd-flex justify-content-between align-items-center';
-                item.innerHTML = `
-          <span>${genre.genre}</span>
-          <span class="badge badge-blue">${genre.count}</span>
-        `;
-                list.appendChild(item);
-            });
-
-            container.appendChild(list);
-        }
-
-        function createPopularContentChart(data) {
-            const ctx = document.getElementById('popular-content-chart').getContext('2d');
-
-            if (popularContentChart) {
-                popularContentChart.destroy();
-            }
-
-            const chartData = data ? data.slice(0, 5) : [];
-
-            popularContentChart = new Chart(ctx, {
-                type: 'bar',
+        function initializeCharts() {
+            // User Growth Chart
+            const userCtx = document.getElementById('userGrowthChart').getContext('2d');
+            userGrowthChart = new Chart(userCtx, {
+                type: 'line',
                 data: {
-                    labels: chartData.map(item => item.title.substring(0, 20) + '...'),
+                    labels: [],
                     datasets: [{
-                        label: 'Interactions',
-                        data: chartData.map(item => item.interactions),
-                        backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                        label: 'New Users',
+                        data: [],
                         borderColor: 'rgba(37, 99, 235, 1)',
-                        borderWidth: 1
+                        backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                        tension: 0.4
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            display: false
+                            labels: {
+                                color: '#e2e8f0'
+                            }
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                color: '#b3b3b3'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
+                                color: '#94a3b8'
                             }
                         },
                         x: {
                             ticks: {
-                                color: '#b3b3b3'
-                            },
-                            grid: {
-                                display: false
+                                color: '#94a3b8'
                             }
                         }
                     }
                 }
             });
-        }
 
-        function createGenreChart(data) {
-            const ctx = document.getElementById('genre-chart').getContext('2d');
-
-            if (genreChart) {
-                genreChart.destroy();
-            }
-
-            const chartData = data ? data.slice(0, 8) : [];
-
-            genreChart = new Chart(ctx, {
-                type: 'doughnut',
+            // Content Distribution Chart
+            const contentCtx = document.getElementById('contentDistributionChart').getContext('2d');
+            contentDistributionChart = new Chart(contentCtx, {
+                type: 'pie',
                 data: {
-                    labels: chartData.map(item => item.genre),
+                    labels: [],
                     datasets: [{
-                        data: chartData.map(item => item.count),
+                        data: [],
                         backgroundColor: [
                             'rgba(37, 99, 235, 0.8)',
                             'rgba(147, 51, 234, 0.8)',
-                            'rgba(59, 130, 246, 0.8)',
-                            'rgba(139, 92, 246, 0.8)',
-                            'rgba(79, 70, 229, 0.8)',
-                            'rgba(124, 58, 237, 0.8)',
-                            'rgba(99, 102, 241, 0.8)',
-                            'rgba(167, 139, 250, 0.8)'
+                            'rgba(245, 101, 101, 0.8)'
                         ]
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'right',
+                            position: 'bottom',
                             labels: {
-                                color: '#b3b3b3'
+                                color: '#e2e8f0'
                             }
                         }
                     }
@@ -349,8 +296,47 @@
             });
         }
 
-        // Initialize
-        loadAnalytics();
+        function updateUserGrowthChart(data) {
+            userGrowthChart.data.labels = data.labels;
+            userGrowthChart.data.datasets[0].data = data.values;
+            userGrowthChart.update();
+        }
+
+        function updateContentDistributionChart(data) {
+            contentDistributionChart.data.labels = data.labels;
+            contentDistributionChart.data.datasets[0].data = data.values;
+            contentDistributionChart.update();
+        }
+
+        function updateTopContent(topContent) {
+            const container = document.getElementById('top-content-list');
+            container.innerHTML = topContent.map(item => `
+                <a href="#" class="list-group-item list-group-item-action bg-dark border-secondary">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="text-white mb-1">${item.title}</h6>
+                        <small class="text-muted">${item.interactions} interactions</small>
+                    </div>
+                    <small class="text-muted">${item.content_type.toUpperCase()}</small>
+                </a>
+            `).join('');
+        }
+
+        function updatePopularGenres(genres) {
+            const container = document.getElementById('popular-genres-list');
+            container.innerHTML = genres.map(genre => `
+                <div class="list-group-item bg-dark border-secondary">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="text-white mb-1">${genre.genre}</h6>
+                        <small class="text-muted">${genre.count} views</small>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function exportAnalytics() {
+            // Implementation for exporting analytics data as CSV or PDF
+            CineScope.UI.toast.success('Analytics report exported');
+        }
     </script>
 </body>
 

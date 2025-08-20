@@ -1,280 +1,745 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Movie details on CineScope">
+
   <title>Content Details - CineScope</title>
-  
-  <!-- CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="/css/base.css" rel="stylesheet">
-  <link href="/css/bootstrap-overrides.css" rel="stylesheet">
-  <link href="/css/tailwind.css" rel="stylesheet">
-  <link href="/css/animation.css" rel="stylesheet">
-  <link href="/css/responsive.css" rel="stylesheet">
-  <link href="/css/utilities.css" rel="stylesheet">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/bootstrap-overrides.css">
+  <link rel="stylesheet" href="/css/animation.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+
+  <style>
+    .hero-backdrop {
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      position: relative;
+    }
+
+    .hero-backdrop::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to bottom,
+          rgba(10, 10, 11, 0.7) 0%,
+          rgba(10, 10, 11, 0.9) 50%,
+          rgba(10, 10, 11, 1) 100%);
+    }
+
+    .content-details-container {
+      position: relative;
+      z-index: 2;
+    }
+
+    .poster-container {
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      border-radius: 1rem;
+      overflow: hidden;
+    }
+
+    .cast-member-card {
+      transition: transform 0.2s ease;
+    }
+
+    .cast-member-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .similar-content-card {
+      transition: transform 0.2s ease;
+    }
+
+    .similar-content-card:hover {
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 768px) {
+      .hero-backdrop {
+        background-attachment: scroll;
+      }
+    }
+  </style>
 </head>
-<body>
-  <!-- Topbar -->
-  <div id="topbar-container"></div>
-  
-  <!-- Main Content -->
-  <main class="container-fluid py-4">
-    <div id="content-details">
-      <!-- Loading state -->
-      <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
+
+<body class="bg-black">
+  <!-- Layout Container -->
+  <div id="app-container">
+    <!-- Top Bar Container (Desktop) -->
+    <div id="topbar-container" class="d-none d-lg-block"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Loading State -->
+      <div id="loading-state" class="d-flex justify-content-center align-items-center" style="min-height: 70vh;">
+        <div class="text-center">
+          <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <h5 class="text-white">Loading content details...</h5>
         </div>
       </div>
-    </div>
-  </main>
 
-  <!-- Mobile Navigation -->
-  <div id="mobile-nav-container"></div>
+      <!-- Content Details -->
+      <div id="content-details" class="d-none">
+        <!-- Hero Section with Backdrop -->
+        <section class="hero-backdrop" id="hero-section">
+          <div class="content-details-container">
+            <div class="container-fluid py-5">
+              <div class="row align-items-center" style="min-height: 80vh;">
+                <div class="col-lg-4 col-xl-3 text-center mb-4 mb-lg-0">
+                  <!-- Movie Poster -->
+                  <div class="poster-container d-inline-block">
+                    <img id="content-poster" src="" alt="" class="img-fluid" style="max-width: 300px; width: 100%;">
+                  </div>
+                </div>
+                <div class="col-lg-8 col-xl-9">
+                  <div class="content-info">
+                    <!-- Title -->
+                    <h1 class="display-4 fw-bold text-white mb-3" id="content-title"></h1>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+                    <!-- Original Title (if different) -->
+                    <h2 class="h5 text-muted mb-3 d-none" id="content-original-title"></h2>
+
+                    <!-- Meta Information -->
+                    <div class="content-meta mb-4">
+                      <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                        <!-- Rating -->
+                        <div class="rating-display">
+                          <span class="badge bg-primary fs-6 px-3 py-2">
+                            <i class="bi bi-star-fill me-2"></i>
+                            <span id="content-rating">0.0</span>/10
+                          </span>
+                        </div>
+
+                        <!-- Content Type -->
+                        <span class="badge bg-secondary fs-6 px-3 py-2" id="content-type-badge">MOVIE</span>
+
+                        <!-- Release Date -->
+                        <span class="text-muted" id="content-release-date"></span>
+
+                        <!-- Runtime -->
+                        <span class="text-muted d-none" id="content-runtime"></span>
+                      </div>
+
+                      <!-- Genres -->
+                      <div class="genres-list mb-3" id="content-genres">
+                        <!-- Genres will be populated here -->
+                      </div>
+
+                      <!-- Special Badges -->
+                      <div class="special-badges mb-3" id="special-badges">
+                        <!-- Special badges will be populated here -->
+                      </div>
+                    </div>
+
+                    <!-- Overview -->
+                    <p class="lead text-light mb-4" id="content-overview"></p>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons d-flex flex-wrap gap-3">
+                      <button class="btn btn-primary btn-lg" id="play-trailer-btn">
+                        <i class="bi bi-play-fill me-2"></i>Play Trailer
+                      </button>
+                      <button class="btn btn-outline-light btn-lg" id="add-watchlist-btn">
+                        <i class="bi bi-bookmark me-2"></i>Add to Watchlist
+                      </button>
+                      <button class="btn btn-outline-danger btn-lg" id="add-favorite-btn">
+                        <i class="bi bi-heart me-2"></i>Add to Favorites
+                      </button>
+                      <button class="btn btn-outline-secondary" id="share-btn">
+                        <i class="bi bi-share"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Content Sections -->
+        <div class="container-fluid py-5">
+          <!-- Cast & Crew -->
+          <section class="mb-5" id="cast-crew-section">
+            <h3 class="text-white mb-4">
+              <i class="bi bi-people text-primary me-2"></i>Cast & Crew
+            </h3>
+            <div class="row">
+              <!-- Cast -->
+              <div class="col-lg-8 mb-4">
+                <h5 class="text-white mb-3">Cast</h5>
+                <div class="cast-list" id="cast-list">
+                  <!-- Cast will be populated here -->
+                </div>
+              </div>
+
+              <!-- Crew -->
+              <div class="col-lg-4">
+                <h5 class="text-white mb-3">Key Crew</h5>
+                <div class="crew-list" id="crew-list">
+                  <!-- Crew will be populated here -->
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Similar Content -->
+          <section class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h3 class="text-white mb-0">
+                <i class="bi bi-collection text-success me-2"></i>More Like This
+              </h3>
+              <button class="btn btn-outline-primary btn-sm" id="refresh-similar-btn">
+                <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+              </button>
+            </div>
+            <div id="similar-content-container">
+              <!-- Similar content will be populated here -->
+            </div>
+          </section>
+
+          <!-- Additional Information -->
+          <section class="mb-5">
+            <h3 class="text-white mb-4">
+              <i class="bi bi-info-circle text-warning me-2"></i>Additional Information
+            </h3>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="card bg-dark border-secondary">
+                  <div class="card-body">
+                    <h6 class="text-white mb-3">Details</h6>
+                    <div id="additional-details">
+                      <!-- Additional details will be populated here -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card bg-dark border-secondary">
+                  <div class="card-body">
+                    <h6 class="text-white mb-3">Languages</h6>
+                    <div id="content-languages">
+                      <!-- Languages will be populated here -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div id="error-state" class="d-none">
+        <div class="container-fluid">
+          <div class="text-center py-5">
+            <i class="bi bi-exclamation-triangle display-1 text-danger mb-4"></i>
+            <h3 class="text-white mb-3">Content Not Found</h3>
+            <p class="text-muted mb-4">The content you're looking for doesn't exist or has been removed.</p>
+            <div class="d-flex justify-content-center gap-3">
+              <button class="btn btn-primary" onclick="window.history.back()">
+                <i class="bi bi-arrow-left me-2"></i>Go Back
+              </button>
+              <a href="/" class="btn btn-outline-primary">
+                <i class="bi bi-house me-2"></i>Home
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Mobile Navigation Container -->
+    <div id="mobile-nav-container" class="d-lg-none"></div>
+  </div>
+
+  <!-- Include Widget Templates -->
+  <div id="widget-templates" class="d-none">
+    <template id="content-card-template">
+      <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+        <div class="card content-card bg-dark border-0 h-100 position-relative" data-content-id="">
+          <div class="card-img-wrapper position-relative overflow-hidden">
+            <img src="" class="card-img-top" alt="" loading="lazy" onerror="this.src='/assets/placeholder-poster.jpg'">
+            <div class="card-overlay position-absolute w-100 h-100 d-flex align-items-center justify-content-center">
+              <div class="d-flex gap-2">
+                <button class="btn btn-primary btn-sm rounded-circle p-2 play-trailer-btn" title="Play Trailer">
+                  <i class="bi bi-play-fill"></i>
+                </button>
+                <button class="btn btn-outline-light btn-sm rounded-circle p-2 quick-view-btn" title="Quick View">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+            </div>
+            <div class="position-absolute top-0 end-0 m-2 rating-badge">
+              <span class="badge bg-primary rounded-pill">
+                <i class="bi bi-star-fill me-1"></i><span class="rating-value">0.0</span>
+              </span>
+            </div>
+            <div class="position-absolute top-0 start-0 m-2 content-type-badge">
+              <span class="badge bg-secondary">MOVIE</span>
+            </div>
+            <div class="position-absolute bottom-0 start-0 m-2 special-badges"></div>
+          </div>
+          <div class="card-body p-3">
+            <h6 class="card-title text-white mb-2 text-truncate" title=""></h6>
+            <p class="card-text text-muted small mb-2 genres-text"></p>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-muted small release-date"></span>
+              <div class="btn-group" role="group">
+                <button class="btn btn-outline-light btn-sm watchlist-btn" title="Add to Watchlist">
+                  <i class="bi bi-bookmark"></i>
+                </button>
+                <button class="btn btn-outline-light btn-sm favorite-btn" title="Add to Favorites">
+                  <i class="bi bi-heart"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Core JavaScript -->
   <script src="/js/config.js"></script>
   <script src="/js/storage.js"></script>
   <script src="/js/http.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/app.js"></script>
-  
-  <!-- Page Specific Script -->
+
+  <!-- Widget Scripts -->
+  <script src="/widgets/content-card.html"></script>
+
+  <!-- Page Script -->
   <script>
     let currentContent = null;
 
-    async function loadContentDetails() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const contentId = urlParams.get('id');
-      
+    document.addEventListener('DOMContentLoaded', async function () {
+      console.log('🎬 Loading Content Details Page...');
+
+      // Get content ID from URL
+      const contentId = getContentIdFromUrl();
+
       if (!contentId) {
-        window.location.href = '/';
+        showErrorState();
         return;
       }
-      
+
+      // Load content details
+      await loadContentDetails(contentId);
+
+      console.log('✅ Content details page loaded');
+    });
+
+    function getContentIdFromUrl() {
+      // Check if we're in username route
+      const pathSegments = window.location.pathname.split('/').filter(Boolean);
+
+      if (pathSegments.length >= 3 && pathSegments[1] === 'details') {
+        // /{username}/details/{id}
+        return pathSegments[2];
+      } else {
+        // /content/details?id={id} (fallback)
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('id');
+      }
+    }
+
+    async function loadContentDetails(contentId) {
       try {
-        const content = await api.getContentDetails(contentId);
+        console.log(`📡 Loading details for content ID: ${contentId}`);
+
+        // Fetch content details
+        const content = await CineScope.HTTP.content.getDetails(contentId);
         currentContent = content;
-        displayContentDetails(content);
-        
+
         // Update page title
-        document.title = `${content.title} - CineScope`;
+        CineScope.UI.updatePageTitle(content.title);
+
+        // Record view interaction
+        if (CineScope.App.isLoggedIn()) {
+          CineScope.App.viewContent(contentId);
+        }
+
+        // Populate content details
+        populateContentDetails(content);
+
+        // Load similar content
+        await loadSimilarContent(contentId);
+
+        // Show content
+        document.getElementById('loading-state').classList.add('d-none');
+        document.getElementById('content-details').classList.remove('d-none');
+
+        console.log('✅ Content details loaded successfully');
+
       } catch (error) {
-        document.getElementById('content-details').innerHTML = '';
-        document.getElementById('content-details').appendChild(
-          ui.createErrorState('Failed to load content details', () => loadContentDetails())
-        );
+        console.error('❌ Failed to load content details:', error);
+        showErrorState();
       }
     }
 
-    function displayContentDetails(content) {
-      const container = document.getElementById('content-details');
-      
-      const backdropUrl = content.backdrop_path ? 
-        (content.backdrop_path.startsWith('http') ? content.backdrop_path : 
-         `${CONFIG.TMDB_IMAGE_BASE}/w1280${content.backdrop_path}`) : '';
-      
-      const posterUrl = content.poster_path ? 
-        (content.poster_path.startsWith('http') ? content.poster_path : 
-         `${CONFIG.TMDB_IMAGE_BASE}/w500${content.poster_path}`) : 
-        '/assets/no-poster.jpg';
-      
-      container.innerHTML = `
-        <!-- Backdrop -->
-        ${backdropUrl ? `
-          <div class="position-relative mb-4" style="margin: -1rem -1rem 0;">
-            <img src="${backdropUrl}" class="w-100" style="max-height: 400px; object-fit: cover; opacity: 0.3;">
-            <div class="position-absolute top-0 start-0 w-100 h-100" 
-                 style="background: linear-gradient(transparent, var(--bg-primary));"></div>
-          </div>
-        ` : ''}
-        
-        <!-- Content Info -->
-        <div class="row">
-          <div class="col-md-4 col-lg-3 mb-4">
-            <img src="${posterUrl}" class="w-100 rounded-lg shadow-lg" alt="${content.title}">
-            
-            <!-- Action Buttons -->
-            <div class="mt-3 d-grid gap-2">
-              ${content.youtube_trailer ? `
-                <button class="btn btn-primary" onclick="ui.showTrailer('${content.youtube_trailer.split('v=')[1]}')">
-                  <i class="bi bi-play-fill"></i> Watch Trailer
-                </button>
-              ` : ''}
-              
-              ${storage.isLoggedIn() ? `
-                <button class="btn btn-outline-primary" id="watchlist-btn">
-                  <i class="bi bi-bookmark"></i> Add to Watchlist
-                </button>
-                <button class="btn btn-outline-primary" id="favorite-btn">
-                  <i class="bi bi-heart"></i> Add to Favorites
-                </button>
-              ` : ''}
-            </div>
-          </div>
-          
-          <div class="col-md-8 col-lg-9">
-            <h1 class="h2 mb-3">${content.title}</h1>
-            
-            <!-- Metadata -->
-            <div class="d-flex flex-wrap gap-3 mb-4">
-              ${content.rating ? `
-                <div>
-                  <i class="bi bi-star-fill text-warning"></i>
-                  <strong>${content.rating.toFixed(1)}</strong>/10
-                  ${content.vote_count ? `<small class="text-muted">(${content.vote_count.toLocaleString()} votes)</small>` : ''}
-                </div>
-              ` : ''}
-              
-              ${content.release_date ? `
-                <div>
-                  <i class="bi bi-calendar"></i>
-                  ${ui.formatDate(content.release_date)}
-                </div>
-              ` : ''}
-              
-              ${content.runtime ? `
-                <div>
-                  <i class="bi bi-clock"></i>
-                  ${ui.formatRuntime(content.runtime)}
-                </div>
-              ` : ''}
-              
-              <div>
-                <span class="badge badge-purple">${content.content_type.toUpperCase()}</span>
-              </div>
-            </div>
-            
-            <!-- Genres -->
-            ${content.genres && content.genres.length > 0 ? `
-              <div class="mb-4">
-                <h6 class="text-muted mb-2">Genres</h6>
-                <div class="d-flex flex-wrap gap-2">
-                  ${content.genres.map(genre => `
-                    <a href="/content/genre?g=${genre.toLowerCase()}" class="badge badge-blue text-decoration-none">
-                      ${genre}
-                    </a>
-                  `).join('')}
-                </div>
-              </div>
-            ` : ''}
-            
-            <!-- Languages -->
-            ${content.languages && content.languages.length > 0 ? `
-              <div class="mb-4">
-                <h6 class="text-muted mb-2">Languages</h6>
-                <div class="d-flex flex-wrap gap-2">
-                  ${content.languages.map(lang => `
-                    <span class="badge bg-secondary">${lang}</span>
-                  `).join('')}
-                </div>
-              </div>
-            ` : ''}
-            
-            <!-- Overview -->
-            ${content.overview ? `
-              <div class="mb-4">
-                <h6 class="text-muted mb-2">Overview</h6>
-                <p class="lead">${content.overview}</p>
-              </div>
-            ` : ''}
-            
-            <!-- Cast -->
-            ${content.cast && content.cast.length > 0 ? `
-              <div class="mb-4">
-                <h6 class="text-muted mb-2">Cast</h6>
-                <div class="row g-2">
-                  ${content.cast.slice(0, 6).map(actor => `
-                    <div class="col-6 col-md-4 col-lg-2">
-                      <div class="text-center">
-                        ${actor.profile_path ? `
-                          <img src="${CONFIG.TMDB_IMAGE_BASE}/w185${actor.profile_path}" 
-                               class="rounded-circle mb-2" width="60" height="60" 
-                               style="object-fit: cover;" alt="${actor.name}">
-                        ` : `
-                          <div class="rounded-circle bg-secondary mb-2 mx-auto" 
-                               style="width: 60px; height: 60px;"></div>
-                        `}
-                        <small class="d-block">${actor.name}</small>
-                        <small class="text-muted">${actor.character || ''}</small>
-                      </div>
+    function populateContentDetails(content) {
+      // Basic Information
+      document.getElementById('content-title').textContent = content.title;
+      document.getElementById('content-rating').textContent = CineScope.utils.formatRating(content.rating);
+      document.getElementById('content-type-badge').textContent = (content.content_type || 'movie').toUpperCase();
+
+      // Original title (if different)
+      if (content.original_title && content.original_title !== content.title) {
+        const originalTitleElement = document.getElementById('content-original-title');
+        originalTitleElement.textContent = content.original_title;
+        originalTitleElement.classList.remove('d-none');
+      }
+
+      // Release date
+      if (content.release_date) {
+        document.getElementById('content-release-date').textContent = CineScope.utils.formatDate(content.release_date);
+      }
+
+      // Runtime
+      if (content.runtime) {
+        const runtimeElement = document.getElementById('content-runtime');
+        runtimeElement.textContent = `${content.runtime} min`;
+        runtimeElement.classList.remove('d-none');
+      }
+
+      // Overview
+      document.getElementById('content-overview').textContent = content.overview || 'No description available.';
+
+      // Poster
+      const posterElement = document.getElementById('content-poster');
+      posterElement.src = content.poster_path || '/assets/placeholder-poster.jpg';
+      posterElement.alt = content.title;
+
+      // Backdrop
+      if (content.backdrop_path) {
+        const heroSection = document.getElementById('hero-section');
+        heroSection.style.backgroundImage = `url('${content.backdrop_path}')`;
+      }
+
+      // Genres
+      populateGenres(content.genres);
+
+      // Special badges
+      populateSpecialBadges(content);
+
+      // Languages
+      populateLanguages(content.languages);
+
+      // Cast & Crew
+      populateCastCrew(content.cast, content.crew);
+
+      // Additional details
+      populateAdditionalDetails(content);
+
+      // Setup action buttons
+      setupActionButtons(content);
+    }
+
+    function populateGenres(genres) {
+      const genresContainer = document.getElementById('content-genres');
+
+      if (genres && genres.length > 0) {
+        genresContainer.innerHTML = genres.map(genre =>
+          `<span class="badge bg-outline-secondary me-2 mb-2">${genre}</span>`
+        ).join('');
+      } else {
+        genresContainer.innerHTML = '<span class="text-muted">No genres available</span>';
+      }
+    }
+
+    function populateSpecialBadges(content) {
+      const badgesContainer = document.getElementById('special-badges');
+      let badges = [];
+
+      if (content.is_trending) {
+        badges.push('<span class="badge bg-danger me-2 mb-2"><i class="bi bi-fire me-1"></i>Trending</span>');
+      }
+
+      if (content.is_new_release) {
+        badges.push('<span class="badge bg-success me-2 mb-2"><i class="bi bi-star me-1"></i>New Release</span>');
+      }
+
+      if (content.is_critics_choice) {
+        badges.push('<span class="badge bg-warning me-2 mb-2"><i class="bi bi-award me-1"></i>Critics\' Choice</span>');
+      }
+
+      // Anime-specific badges
+      if (content.content_type === 'anime' && content.anime_genres) {
+        content.anime_genres.forEach(genre => {
+          badges.push(`<span class="badge bg-info me-2 mb-2">${genre.toUpperCase()}</span>`);
+        });
+      }
+
+      badgesContainer.innerHTML = badges.join('');
+    }
+
+    function populateLanguages(languages) {
+      const languagesContainer = document.getElementById('content-languages');
+
+      if (languages && languages.length > 0) {
+        languagesContainer.innerHTML = languages.map(language =>
+          `<span class="badge bg-secondary me-2 mb-2">${language}</span>`
+        ).join('');
+      } else {
+        languagesContainer.innerHTML = '<span class="text-muted">No language information available</span>';
+      }
+    }
+
+    function populateCastCrew(cast, crew) {
+      // Cast
+      const castContainer = document.getElementById('cast-list');
+      if (cast && cast.length > 0) {
+        const castHtml = cast.slice(0, 6).map(person => `
+                    <div class="cast-member-card bg-dark border-secondary rounded p-3 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="cast-avatar bg-gradient rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                                 style="width: 50px; height: 50px; background: var(--cs-gradient-primary);">
+                                <i class="bi bi-person-fill text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-white mb-1">${person.name || 'Unknown'}</h6>
+                                <p class="text-muted small mb-0">${person.character || person.job || 'Actor'}</p>
+                            </div>
+                        </div>
                     </div>
-                  `).join('')}
-                </div>
-              </div>
-            ` : ''}
-          </div>
-        </div>
-        
-        <!-- Similar Content -->
-        ${content.similar_content && content.similar_content.length > 0 ? `
-          <div class="mt-5">
-            <h3 class="h4 mb-4">Similar Content</h3>
-            <div class="content-grid tw-grid tw-grid-cols-2 sm:tw-grid-cols-3 md:tw-grid-cols-4 lg:tw-grid-cols-6 tw-gap-4">
-              ${content.similar_content.map(item => `
-                <div class="content-card hover-lift cursor-pointer" 
-                     onclick="window.location.href='/content/details?id=${item.id}'">
-                  <div class="position-relative">
-                    <img src="${item.poster_path}" alt="${item.title}" 
-                         class="poster w-100" loading="lazy">
-                    ${item.rating ? `
-                      <span class="rating">
-                        <i class="bi bi-star-fill"></i> ${item.rating.toFixed(1)}
-                      </span>
-                    ` : ''}
-                  </div>
-                  <div class="p-2">
-                    <h6 class="mb-0 text-truncate small">${item.title}</h6>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        ` : ''}
-      `;
-      
-      // Setup interaction buttons
-      setupInteractionButtons();
-    }
-
-    function setupInteractionButtons() {
-      if (!storage.isLoggedIn()) return;
-      
-      const watchlistBtn = document.getElementById('watchlist-btn');
-      const favoriteBtn = document.getElementById('favorite-btn');
-      
-      if (watchlistBtn) {
-        watchlistBtn.addEventListener('click', async () => {
-          try {
-            await api.addToWatchlist(currentContent.id);
-            ui.showToast('Added to watchlist!', 'success');
-            watchlistBtn.innerHTML = '<i class="bi bi-bookmark-fill"></i> In Watchlist';
-            watchlistBtn.disabled = true;
-          } catch (error) {
-            ui.showToast('Failed to add to watchlist', 'error');
-          }
-        });
+                `).join('');
+        castContainer.innerHTML = castHtml;
+      } else {
+        castContainer.innerHTML = '<p class="text-muted">No cast information available</p>';
       }
-      
-      if (favoriteBtn) {
-        favoriteBtn.addEventListener('click', async () => {
-          try {
-            await api.addToFavorites(currentContent.id);
-            ui.showToast('Added to favorites!', 'success');
-            favoriteBtn.innerHTML = '<i class="bi bi-heart-fill"></i> In Favorites';
-            favoriteBtn.disabled = true;
-          } catch (error) {
-            ui.showToast('Failed to add to favorites', 'error');
-          }
-        });
+
+      // Crew
+      const crewContainer = document.getElementById('crew-list');
+      if (crew && crew.length > 0) {
+        const crewHtml = crew.slice(0, 4).map(person => `
+                    <div class="crew-member mb-3">
+                        <h6 class="text-white mb-1">${person.name || 'Unknown'}</h6>
+                        <p class="text-muted small mb-0">${person.job || person.department || 'Crew'}</p>
+                    </div>
+                `).join('');
+        crewContainer.innerHTML = crewHtml;
+      } else {
+        crewContainer.innerHTML = '<p class="text-muted">No crew information available</p>';
       }
     }
 
-    // Initialize
-    loadContentDetails();
+    function populateAdditionalDetails(content) {
+      const detailsContainer = document.getElementById('additional-details');
+      const details = [];
+
+      if (content.vote_count) {
+        details.push(`<p class="text-muted mb-2"><strong class="text-white">Vote Count:</strong> ${content.vote_count.toLocaleString()}</p>`);
+      }
+
+      if (content.popularity) {
+        details.push(`<p class="text-muted mb-2"><strong class="text-white">Popularity:</strong> ${Math.round(content.popularity)}</p>`);
+      }
+
+      if (content.tmdb_id) {
+        details.push(`<p class="text-muted mb-2"><strong class="text-white">TMDB ID:</strong> ${content.tmdb_id}</p>`);
+      }
+
+      if (content.mal_id) {
+        details.push(`<p class="text-muted mb-2"><strong class="text-white">MyAnimeList ID:</strong> ${content.mal_id}</p>`);
+      }
+
+      detailsContainer.innerHTML = details.length > 0 ? details.join('') : '<p class="text-muted">No additional details available</p>';
+    }
+
+    function setupActionButtons(content) {
+      // Play Trailer button
+      const trailerBtn = document.getElementById('play-trailer-btn');
+      if (content.youtube_trailer) {
+        trailerBtn.addEventListener('click', function () {
+          CineScope.UI.playTrailer(content.youtube_trailer);
+        });
+      } else {
+        trailerBtn.disabled = true;
+        trailerBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i>No Trailer Available';
+      }
+
+      // Watchlist button
+      const watchlistBtn = document.getElementById('add-watchlist-btn');
+      watchlistBtn.addEventListener('click', async function () {
+        if (!CineScope.App.requireAuth()) return;
+
+        try {
+          this.disabled = true;
+          this.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Adding...';
+
+          await CineScope.HTTP.user.recordInteraction(content.id, 'watchlist');
+
+          this.innerHTML = '<i class="bi bi-bookmark-check me-2"></i>Added to Watchlist';
+          this.classList.remove('btn-outline-light');
+          this.classList.add('btn-primary');
+
+          CineScope.UI.toast.success('Added to watchlist');
+        } catch (error) {
+          this.innerHTML = '<i class="bi bi-bookmark me-2"></i>Add to Watchlist';
+          this.disabled = false;
+          CineScope.UI.toast.error('Failed to add to watchlist');
+        }
+      });
+
+      // Favorite button
+      const favoriteBtn = document.getElementById('add-favorite-btn');
+      favoriteBtn.addEventListener('click', async function () {
+        if (!CineScope.App.requireAuth()) return;
+
+        try {
+          this.disabled = true;
+          this.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Adding...';
+
+          await CineScope.HTTP.user.recordInteraction(content.id, 'favorite');
+
+          this.innerHTML = '<i class="bi bi-heart-fill me-2"></i>Added to Favorites';
+          this.classList.remove('btn-outline-danger');
+          this.classList.add('btn-danger');
+
+          CineScope.UI.toast.success('Added to favorites');
+        } catch (error) {
+          this.innerHTML = '<i class="bi bi-heart me-2"></i>Add to Favorites';
+          this.disabled = false;
+          CineScope.UI.toast.error('Failed to add to favorites');
+        }
+      });
+
+      // Share button
+      const shareBtn = document.getElementById('share-btn');
+      shareBtn.addEventListener('click', function () {
+        if (navigator.share) {
+          navigator.share({
+            title: content.title,
+            text: content.overview,
+            url: window.location.href
+          });
+        } else {
+          // Fallback: copy to clipboard
+          navigator.clipboard.writeText(window.location.href).then(() => {
+            CineScope.UI.toast.success('Link copied to clipboard');
+          });
+        }
+      });
+    }
+
+    async function loadSimilarContent(contentId) {
+      const container = document.getElementById('similar-content-container');
+
+      try {
+        console.log('🔍 Loading similar content...');
+
+        // Show loading
+        container.innerHTML = `
+                    <div class="d-flex justify-content-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading similar content...</span>
+                        </div>
+                    </div>
+                `;
+
+        const response = await CineScope.HTTP.content.getSimilar(contentId, { limit: 12 });
+        const similarContent = response.recommendations || [];
+
+        if (similarContent.length > 0) {
+          CineScope.Widgets.ContentCard.createGrid(similarContent, container, {
+            showTrailer: true,
+            showRating: true,
+            showGenres: false,
+            cardSize: 'default'
+          });
+          console.log(`✅ Loaded ${similarContent.length} similar content items`);
+        } else {
+          container.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="bi bi-collection display-1 text-muted mb-3"></i>
+                            <h6 class="text-muted">No Similar Content Found</h6>
+                            <p class="text-muted">Check out our trending content instead</p>
+                            <a href="/?section=trending" class="btn btn-primary">
+                                <i class="bi bi-fire me-2"></i>Browse Trending
+                            </a>
+                        </div>
+                    `;
+        }
+
+        // Setup refresh button
+        document.getElementById('refresh-similar-btn').addEventListener('click', function () {
+          loadSimilarContent(contentId);
+        });
+
+      } catch (error) {
+        console.error('❌ Failed to load similar content:', error);
+        container.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="bi bi-exclamation-triangle display-1 text-danger mb-3"></i>
+                        <h6 class="text-danger">Failed to Load Similar Content</h6>
+                        <button class="btn btn-primary" onclick="loadSimilarContent(${contentId})">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Try Again
+                        </button>
+                    </div>
+                `;
+      }
+    }
+
+    function showErrorState() {
+      document.getElementById('loading-state').classList.add('d-none');
+      document.getElementById('content-details').classList.add('d-none');
+      document.getElementById('error-state').classList.remove('d-none');
+    }
+
+    // Scroll animations
+    document.addEventListener('DOMContentLoaded', function () {
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+          }
+        });
+      }, observerOptions);
+
+      // Observe sections for scroll animations
+      const sections = document.querySelectorAll('section');
+      sections.forEach(section => {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(30px)';
+        section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(section);
+      });
+    });
   </script>
 </body>
+
 </html>

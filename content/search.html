@@ -1,195 +1,781 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Search movies, TV shows, and anime on CineScope">
+
     <title>Search - CineScope</title>
 
-    <!-- Stylesheets -->
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.6/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/bootstrap-overrides.css">
     <link rel="stylesheet" href="/css/animation.css">
     <link rel="stylesheet" href="/css/responsive.css">
-    <link rel="stylesheet" href="/css/utilities.css">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 
-<body class="tw-bg-primary-bg tw-text-primary">
+<body class="bg-black">
+    <!-- Layout Container -->
+    <div id="app-container">
+        <!-- Top Bar Container (Desktop) -->
+        <div id="topbar-container" class="d-none d-lg-block"></div>
 
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg d-none d-lg-block">
-        <div class="container">
-            <a class="navbar-brand cinescope-gradient tw-text-2xl tw-font-bold" href="/index.html">
-                CineScope
-            </a>
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container-fluid">
+                <!-- Search Header -->
+                <div class="search-header py-4">
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <!-- Main Search Bar -->
+                            <div class="search-bar-widget mb-4">
+                                <div class="position-relative">
+                                    <div class="input-group input-group-lg">
+                                        <span class="input-group-text bg-dark border-secondary">
+                                            <i class="bi bi-search text-muted"></i>
+                                        </span>
+                                        <input type="search"
+                                            class="form-control form-control-lg bg-dark border-secondary text-white search-input"
+                                            id="main-search-input" placeholder="Search movies, TV shows, anime..."
+                                            autocomplete="off">
+                                        <button class="btn btn-primary search-btn" type="button" id="search-button">
+                                            <span class="search-btn-text">Search</span>
+                                            <div class="spinner-border spinner-border-sm d-none" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                        </button>
+                                    </div>
 
-            <div class="navbar-nav ms-auto tw-flex tw-items-center tw-gap-6">
-                <a class="nav-link" href="/index.html">Home</a>
-                <a class="nav-link active" href="/content/search.html">Search</a>
-                <a class="nav-link" href="/content/anime.html">Anime</a>
-                <a class="nav-link" href="/content/regional.html">Regional</a>
+                                    <!-- Search Results Dropdown -->
+                                    <div class="search-results-dropdown position-absolute w-100 bg-dark border border-secondary rounded-bottom shadow-lg mt-1 d-none"
+                                        style="z-index: 1050;">
+                                        <div class="search-results-content"></div>
+                                    </div>
 
-                <div class="user-menu">
-                    <!-- User menu will be populated by JavaScript -->
-                </div>
-            </div>
-        </div>
-    </nav>
+                                    <!-- Search Suggestions -->
+                                    <div class="search-suggestions-dropdown position-absolute w-100 bg-dark border border-secondary rounded-bottom shadow-lg mt-1 d-none"
+                                        style="z-index: 1050;">
+                                        <div class="p-3">
+                                            <h6 class="text-white mb-3">
+                                                <i class="bi bi-lightbulb me-2"></i>Search Suggestions
+                                            </h6>
+                                            <div class="search-suggestions-content"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-    <!-- Mobile Navigation -->
-    <nav class="mobile-nav d-lg-none">
-        <div class="tw-flex tw-justify-around tw-items-center tw-h-full">
-            <a href="/index.html" class="mobile-nav-link">
-                <svg class="mobile-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                <span>Home</span>
-            </a>
-            <a href="/content/search.html" class="mobile-nav-link active">
-                <svg class="mobile-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <span>Search</span>
-            </a>
-            <a href="/content/anime.html" class="mobile-nav-link">
-                <svg class="mobile-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2" />
-                </svg>
-                <span>Anime</span>
-            </a>
-            <a href="/user/profile.html" class="mobile-nav-link" data-auth>
-                <svg class="mobile-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span>Profile</span>
-            </a>
-            <a href="/auth/login.html" class="mobile-nav-link" data-guest>
-                <svg class="mobile-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                </svg>
-                <span>Login</span>
-            </a>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-
-            <!-- Page Header -->
-            <div class="tw-py-6">
-                <h1 class="tw-text-3xl tw-font-bold tw-mb-2">Search</h1>
-                <p class="tw-text-gray-400">Discover movies, TV shows, and anime from around the world</p>
-            </div>
-
-            <!-- Search Section -->
-            <div class="search-layout">
-
-                <!-- Filters Sidebar -->
-                <div class="search-filters">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="tw-text-lg tw-font-semibold tw-mb-0">Filters</h3>
+                            <!-- Search Query Display -->
+                            <div id="search-query-display" class="mb-3 d-none">
+                                <h5 class="text-white mb-2">
+                                    Search results for: <span class="text-primary" id="current-query"></span>
+                                </h5>
+                                <p class="text-muted mb-0">
+                                    <span id="results-count">0</span> results found
+                                </p>
+                            </div>
                         </div>
-                        <div class="card-body">
-
-                            <!-- Content Type Filter -->
-                            <div class="mb-4">
-                                <label class="form-label">Content Type</label>
-                                <select class="form-select" id="contentTypeFilter">
-                                    <option value="">All Types</option>
-                                    <option value="movie">Movies</option>
-                                    <option value="tv">TV Shows</option>
-                                    <option value="anime">Anime</option>
-                                </select>
+                        <div class="col-lg-4">
+                            <!-- Filters Toggle -->
+                            <div class="d-flex justify-content-end">
+                                <button class="btn btn-outline-primary" type="button" data-bs-toggle="offcanvas"
+                                    data-bs-target="#filtersOffcanvas">
+                                    <i class="bi bi-funnel me-2"></i>Filters
+                                    <span id="active-filters-count" class="badge bg-primary ms-2 d-none">0</span>
+                                </button>
                             </div>
-
-                            <!-- Genre Filter -->
-                            <div class="mb-4">
-                                <label class="form-label">Genres</label>
-                                <div class="tw-space-y-2 tw-max-h-48 tw-overflow-y-auto" id="genreFilters">
-                                    <!-- Genre checkboxes will be populated by JavaScript -->
-                                </div>
-                            </div>
-
-                            <!-- Language Filter -->
-                            <div class="mb-4">
-                                <label class="form-label">Language</label>
-                                <select class="form-select" id="languageFilter">
-                                    <option value="">All Languages</option>
-                                    <option value="en">🇺🇸 English</option>
-                                    <option value="hi">🇮🇳 Hindi</option>
-                                    <option value="ta">🇮🇳 Tamil</option>
-                                    <option value="te">🇮🇳 Telugu</option>
-                                    <option value="kn">🇮🇳 Kannada</option>
-                                    <option value="ml">🇮🇳 Malayalam</option>
-                                </select>
-                            </div>
-
-                            <!-- Rating Filter -->
-                            <div class="mb-4">
-                                <label class="form-label">Minimum Rating</label>
-                                <input type="range" class="form-range" id="ratingFilter" min="0" max="10" step="0.5"
-                                    value="0">
-                                <div class="tw-flex tw-justify-between tw-text-sm tw-text-gray-400">
-                                    <span>0</span>
-                                    <span id="ratingValue">0</span>
-                                    <span>10</span>
-                                </div>
-                            </div>
-
-                            <!-- Year Filter -->
-                            <div class="mb-4">
-                                <label class="form-label">Release Year</label>
-                                <div class="row">
-                                    <div class="col-6">
-                                        <input type="number" class="form-control" id="yearFromFilter" placeholder="From"
-                                            min="1900" max="2024">
-                                    </div>
-                                    <div class="col-6">
-                                        <input type="number" class="form-control" id="yearToFilter" placeholder="To"
-                                            min="1900" max="2024">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Sort By -->
-                            <div class="mb-4">
-                                <label class="form-label">Sort By</label>
-                                <select class="form-select" id="sortFilter">
-                                    <option value="relevance">Relevance</option>
-                                    <option value="popularity">Popularity</option>
-                                    <option value="rating">Rating</option>
-                                    <option value="release_date">Release Date</option>
-                                    <option value="title">Title</option>
-                                </select>
-                            </div>
-
-                            <button class="btn btn-outline-secondary w-100" id="clearFilters">
-                                Clear All Filters
-                            </button>
-
                         </div>
                     </div>
                 </div>
 
                 <!-- Search Results -->
-                <div class="search-results">
+                <div id="search-results-container" class="search-results">
+                    <!-- Default state - search suggestions -->
+                    <div id="search-suggestions" class="search-suggestions-grid">
+                        <div class="row mb-5">
+                            <div class="col-12">
+                                <h4 class="text-white mb-4">
+                                    <i class="bi bi-fire text-danger me-2"></i>Trending Searches
+                                </h4>
+                                <div class="trending-searches d-flex flex-wrap gap-2 mb-4">
+                                    <span class="badge bg-outline-primary p-2 trending-search-item"
+                                        data-query="Marvel">Marvel</span>
+                                    <span class="badge bg-outline-primary p-2 trending-search-item"
+                                        data-query="Batman">Batman</span>
+                                    <span class="badge bg-outline-primary p-2 trending-search-item"
+                                        data-query="Star Wars">Star Wars</span>
+                                    <span class="badge bg-outline-primary p-2 trending-search-item"
+                                        data-query="Harry Potter">Harry Potter</span>
+                                    <span class="badge bg-outline-primary p-2 trending-search-item"
+                                        data-query="Lord of the Rings">Lord of the Rings</span>
+                                    <span class="badge bg-outline-primary p-2 trending-search-item"
+                                        data-query="Dragon Ball">Dragon Ball</span>
+                                    <span class="badge bg-outline-primary p-2 trending-search-item"
+                                        data-query="Naruto">Naruto</span>
+                                    <span class="badge bg-outline-primary p-2 trending-search-item"
+                                        data-query="One Piece">One Piece</span>
+                                </div>
+                            </div>
+                        </div>
 
-                    <!-- Search Bar -->
-                    <div class="tw-mb-6">
-                        <div class="tw-relative">
-                            <div
-                                class="tw-absolute tw-inset-y-0 tw-left-0 tw-pl-3 tw-flex tw-items-center tw-pointer-events-none">
-                                <svg class="tw-w-5 tw-h-5 tw-text-gray-400" fill="none" stroke="currentColor"
-                                    viewBox="0 0 
+                        <!-- Popular Categories -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h4 class="text-white mb-4">
+                                    <i class="bi bi-grid text-primary me-2"></i>Browse by Category
+                                </h4>
+                                <div class="row g-3">
+                                    <div class="col-6 col-md-4 col-lg-3">
+                                        <a href="#"
+                                            class="card bg-gradient category-search-card h-100 text-decoration-none"
+                                            data-query="action movies"
+                                            style="background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);">
+                                            <div class="card-body text-center text-white p-3">
+                                                <i class="bi bi-lightning-fill display-6 mb-2"></i>
+                                                <h6 class="card-title">Action</h6>
+                                            </div>
+                                        </a>
+                                    </div>
+                                    <div class="col-6 col-md-4 col-lg-3">
+                                        <a href="#"
+                                            class="card bg-gradient category-search-card h-100 text-decoration-none"
+                                            data-query="comedy movies"
+                                            style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                                            <div class="card-body text-center text-white p-3">
+                                                <i class="bi bi-emoji-laughing-fill display-6 mb-2"></i>
+                                                <h6 class="card-title">Comedy</h6>
+                                            </div>
+                                        </a>
+                                    </div>
+                                    <div class="col-6 col-md-4 col-lg-3">
+                                        <a href="#"
+                                            class="card bg-gradient category-search-card h-100 text-decoration-none"
+                                            data-query="horror movies"
+                                            style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+                                            <div class="card-body text-center text-white p-3">
+                                                <i class="bi bi-mask display-6 mb-2"></i>
+                                                <h6 class="card-title">Horror</h6>
+                                            </div>
+                                        </a>
+                                    </div>
+                                    <div class="col-6 col-md-4 col-lg-3">
+                                        <a href="#"
+                                            class="card bg-gradient category-search-card h-100 text-decoration-none"
+                                            data-query="anime"
+                                            style="background: linear-gradient(135deg, #0dcaf0 0%, #6f42c1 100%);">
+                                            <div class="card-body text-center text-white p-3">
+                                                <i class="bi bi-heart-eyes-fill display-6 mb-2"></i>
+                                                <h6 class="card-title">Anime</h6>
+                                            </div>
+                                        </a>
+                                    </div>
+                                    <div class="col-6 col-md-4 col-lg-3">
+                                        <a href="#"
+                                            class="card bg-gradient category-search-card h-100 text-decoration-none"
+                                            data-query="sci-fi movies"
+                                            style="background: linear-gradient(135deg, #20c997 0%, #0dcaf0 100%);">
+                                            <div class="card-body text-center text-white p-3">
+                                                <i class="bi bi-rocket-takeoff-fill display-6 mb-2"></i>
+                                                <h6 class="card-title">Sci-Fi</h6>
+                                            </div>
+                                        </a>
+                                    </div>
+                                    <div class="col-6 col-md-4 col-lg-3">
+                                        <a href="#"
+                                            class="card bg-gradient category-search-card h-100 text-decoration-none"
+                                            data-query="romance movies"
+                                            style="background: linear-gradient(135deg, #e83e8c 0%, #fd7e14 100%);">
+                                            <div class="card-body text-center text-white p-3">
+                                                <i class="bi bi-heart-fill display-6 mb-2"></i>
+                                                <h6 class="card-title">Romance</h6>
+                                            </div>
+                                        </a>
+                                    </div>
+                                    <div class="col-6 col-md-4 col-lg-3">
+                                        <a href="#"
+                                            class="card bg-gradient category-search-card h-100 text-decoration-none"
+                                            data-query="documentary"
+                                            style="background: linear-gradient(135deg, #198754 0%, #20c997 100%);">
+                                            <div class="card-body text-center text-white p-3">
+                                                <i class="bi bi-camera-video-fill display-6 mb-2"></i>
+                                                <h6 class="card-title">Documentary</h6>
+                                            </div>
+                                        </a>
+                                    </div>
+                                    <div class="col-6 col-md-4 col-lg-3">
+                                        <a href="#"
+                                            class="card bg-gradient category-search-card h-100 text-decoration-none"
+                                            data-query="thriller movies"
+                                            style="background: linear-gradient(135deg, #495057 0%, #6c757d 100%);">
+                                            <div class="card-body text-center text-white p-3">
+                                                <i class="bi bi-eye-fill display-6 mb-2"></i>
+                                                <h6 class="card-title">Thriller</h6>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search Results Grid -->
+                    <div id="search-results-grid" class="d-none">
+                        <!-- Results will be populated here -->
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="search-loading" class="d-none">
+                        <div class="d-flex justify-content-center py-5">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary mb-3" role="status">
+                                    <span class="visually-hidden">Searching...</span>
+                                </div>
+                                <p class="text-muted">Searching for the best content...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No Results State -->
+                    <div id="no-results" class="d-none">
+                        <div class="text-center py-5">
+                            <i class="bi bi-search display-1 text-muted mb-4"></i>
+                            <h4 class="text-white mb-3">No Results Found</h4>
+                            <p class="text-muted mb-4">We couldn't find anything matching your search. Try:</p>
+                            <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+                                <span class="badge bg-outline-secondary p-2">Check your spelling</span>
+                                <span class="badge bg-outline-secondary p-2">Use fewer keywords</span>
+                                <span class="badge bg-outline-secondary p-2">Try different keywords</span>
+                                <span class="badge bg-outline-secondary p-2">Browse categories</span>
+                            </div>
+                            <button class="btn btn-primary" onclick="clearSearchAndShowSuggestions()">
+                                <i class="bi bi-arrow-left me-2"></i>Back to Browse
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Load More Button -->
+                <div id="load-more-container" class="text-center py-4 d-none">
+                    <button class="btn btn-outline-primary" id="load-more-btn">
+                        <span class="load-more-text">
+                            <i class="bi bi-arrow-down me-2"></i>Load More Results
+                        </span>
+                        <div class="spinner-border spinner-border-sm d-none" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Mobile Navigation Container -->
+        <div id="mobile-nav-container" class="d-lg-none"></div>
+    </div>
+
+    <!-- Include Widget Templates -->
+    <div id="widget-templates" class="d-none">
+        <template id="content-card-template">
+            <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+                <div class="card content-card bg-dark border-0 h-100 position-relative" data-content-id="">
+                    <div class="card-img-wrapper position-relative overflow-hidden">
+                        <img src="" class="card-img-top" alt="" loading="lazy"
+                            onerror="this.src='/assets/placeholder-poster.jpg'">
+                        <div
+                            class="card-overlay position-absolute w-100 h-100 d-flex align-items-center justify-content-center">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary btn-sm rounded-circle p-2 play-trailer-btn"
+                                    title="Play Trailer">
+                                    <i class="bi bi-play-fill"></i>
+                                </button>
+                                <button class="btn btn-outline-light btn-sm rounded-circle p-2 quick-view-btn"
+                                    title="Quick View">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="position-absolute top-0 end-0 m-2 rating-badge">
+                            <span class="badge bg-primary rounded-pill">
+                                <i class="bi bi-star-fill me-1"></i><span class="rating-value">0.0</span>
+                            </span>
+                        </div>
+                        <div class="position-absolute top-0 start-0 m-2 content-type-badge">
+                            <span class="badge bg-secondary">MOVIE</span>
+                        </div>
+                        <div class="position-absolute bottom-0 start-0 m-2 special-badges"></div>
+                    </div>
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-white mb-2 text-truncate" title=""></h6>
+                        <p class="card-text text-muted small mb-2 genres-text"></p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small release-date"></span>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-light btn-sm watchlist-btn" title="Add to Watchlist">
+                                    <i class="bi bi-bookmark"></i>
+                                </button>
+                                <button class="btn btn-outline-light btn-sm favorite-btn" title="Add to Favorites">
+                                    <i class="bi bi-heart"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Core JavaScript -->
+    <script src="/js/config.js"></script>
+    <script src="/js/storage.js"></script>
+    <script src="/js/http.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Widget Scripts -->
+    <script src="/widgets/content-card.html"></script>
+    <script src="/widgets/search-bar.html"></script>
+
+    <!-- Layout Components -->
+    <script src="/layouts/offcanvas-filters.html"></script>
+
+    <!-- Page Script -->
+    <script>
+        // Search page state
+        let currentQuery = '';
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMoreResults = true;
+        let totalResults = 0;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🔍 Loading Search Page...');
+
+            // Set page title
+            CineScope.UI.updatePageTitle('Search');
+
+            // Initialize search functionality
+            initializeSearch();
+
+            // Handle URL parameters
+            handleUrlParameters();
+
+            // Initialize filters
+            initializeFilters();
+
+            // Initialize category cards
+            initializeCategoryCards();
+
+            console.log('✅ Search page loaded');
+        });
+
+        function initializeSearch() {
+            const searchInput = document.getElementById('main-search-input');
+            const searchButton = document.getElementById('search-button');
+            const loadMoreBtn = document.getElementById('load-more-btn');
+
+            // Initialize search bar widget
+            const searchWidget = document.querySelector('.search-bar-widget');
+            if (searchWidget) {
+                CineScope.Widgets.SearchBar.init(searchWidget, {
+                    onSearch: performSearch,
+                    showSuggestions: true,
+                    showHistory: true,
+                    autoSearch: false
+                });
+            }
+
+            // Search button click
+            if (searchButton) {
+                searchButton.addEventListener('click', function () {
+                    const query = searchInput.value.trim();
+                    if (query) {
+                        performSearch(query);
+                    }
+                });
+            }
+
+            // Enter key search
+            if (searchInput) {
+                searchInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const query = this.value.trim();
+                        if (query) {
+                            performSearch(query);
+                        }
+                    }
+                });
+            }
+
+            // Load more button
+            if (loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', function () {
+                    if (!isLoading && hasMoreResults) {
+                        loadMoreResults();
+                    }
+                });
+            }
+
+            // Trending search items
+            const trendingItems = document.querySelectorAll('.trending-search-item');
+            trendingItems.forEach(item => {
+                item.addEventListener('click', function () {
+                    const query = this.dataset.query;
+                    searchInput.value = query;
+                    performSearch(query);
+                });
+            });
+        }
+
+        function initializeCategoryCards() {
+            const categoryCards = document.querySelectorAll('.category-search-card');
+            categoryCards.forEach(card => {
+                card.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const query = this.dataset.query;
+                    document.getElementById('main-search-input').value = query;
+                    performSearch(query);
+                });
+
+                // Hover effects
+                card.addEventListener('mouseenter', function () {
+                    this.style.transform = 'translateY(-4px) scale(1.02)';
+                });
+
+                card.addEventListener('mouseleave', function () {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+        }
+
+        function handleUrlParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('query');
+
+            if (query) {
+                document.getElementById('main-search-input').value = query;
+                performSearch(query);
+            }
+        }
+
+        function initializeFilters() {
+            // Listen for filter changes
+            document.addEventListener('cinescope:filtersChanged', function (e) {
+                const filters = e.detail;
+                updateActiveFiltersDisplay(filters);
+
+                // Re-search with filters if there's a current query
+                if (currentQuery) {
+                    currentPage = 1;
+                    performSearch(currentQuery, filters);
+                }
+            });
+
+            document.addEventListener('cinescope:filtersCleared', function () {
+                updateActiveFiltersDisplay({});
+
+                // Re-search without filters if there's a current query
+                if (currentQuery) {
+                    currentPage = 1;
+                    performSearch(currentQuery);
+                }
+            });
+        }
+
+        function updateActiveFiltersDisplay(filters) {
+            const filterCount = document.getElementById('active-filters-count');
+            let activeCount = 0;
+
+            // Count active filters
+            if (filters.contentTypes && filters.contentTypes.length > 0) activeCount++;
+            if (filters.genres && filters.genres.length > 0) activeCount++;
+            if (filters.minRating && filters.minRating > 0) activeCount++;
+            if (filters.yearFrom || filters.yearTo) activeCount++;
+            if (filters.language) activeCount++;
+
+            if (activeCount > 0) {
+                filterCount.textContent = activeCount;
+                filterCount.classList.remove('d-none');
+            } else {
+                filterCount.classList.add('d-none');
+            }
+        }
+
+        async function performSearch(query, filters = null) {
+            if (isLoading) return;
+
+            console.log(`🔍 Searching for: "${query}"`);
+
+            currentQuery = query;
+            currentPage = 1;
+            isLoading = true;
+
+            // Show loading state
+            showLoadingState();
+
+            try {
+                // Build search parameters
+                const searchParams = {
+                    query: query,
+                    page: currentPage,
+                    limit: 20
+                };
+
+                // Add filters if provided
+                if (filters) {
+                    if (filters.contentTypes && filters.contentTypes.length > 0) {
+                        searchParams.type = filters.contentTypes.join(',');
+                    }
+                    if (filters.minRating && filters.minRating > 0) {
+                        searchParams.min_rating = filters.minRating;
+                    }
+                    if (filters.yearFrom) {
+                        searchParams.year_from = filters.yearFrom;
+                    }
+                    if (filters.yearTo) {
+                        searchParams.year_to = filters.yearTo;
+                    }
+                    if (filters.language) {
+                        searchParams.language = filters.language;
+                    }
+                }
+
+                // Perform search
+                const response = await CineScope.HTTP.content.search(query, searchParams);
+
+                // Update results
+                displaySearchResults(response, query);
+
+                // Update URL
+                updateUrl(query);
+
+            } catch (error) {
+                console.error('❌ Search failed:', error);
+                showErrorState(error.message);
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        async function loadMoreResults() {
+            if (isLoading || !hasMoreResults) return;
+
+            currentPage++;
+            isLoading = true;
+
+            // Show loading on button
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            const text = loadMoreBtn.querySelector('.load-more-text');
+            const spinner = loadMoreBtn.querySelector('.spinner-border');
+
+            text.classList.add('d-none');
+            spinner.classList.remove('d-none');
+            loadMoreBtn.disabled = true;
+
+            try {
+                const filters = CineScope.Filters.get();
+                const searchParams = {
+                    query: currentQuery,
+                    page: currentPage,
+                    limit: 20
+                };
+
+                // Add filters
+                if (filters.contentTypes && filters.contentTypes.length > 0) {
+                    searchParams.type = filters.contentTypes.join(',');
+                }
+
+                const response = await CineScope.HTTP.content.search(currentQuery, searchParams);
+
+                // Append new results
+                appendSearchResults(response);
+
+            } catch (error) {
+                console.error('❌ Load more failed:', error);
+                CineScope.UI.toast.error('Failed to load more results');
+                currentPage--; // Revert page increment
+            } finally {
+                text.classList.remove('d-none');
+                spinner.classList.add('d-none');
+                loadMoreBtn.disabled = false;
+                isLoading = false;
+            }
+        }
+
+        function displaySearchResults(response, query) {
+            const results = response.results || [];
+            totalResults = response.total_results || 0;
+            const totalPages = response.total_pages || 0;
+
+            // Update query display
+            updateQueryDisplay(query, totalResults);
+
+            // Show results container
+            showResultsState();
+
+            if (results.length > 0) {
+                // Display results
+                const resultsContainer = document.getElementById('search-results-grid');
+                CineScope.Widgets.ContentCard.createGrid(results, resultsContainer, {
+                    showTrailer: true,
+                    showRating: true,
+                    showGenres: true
+                });
+
+                // Update load more button
+                hasMoreResults = currentPage < totalPages;
+                updateLoadMoreButton();
+
+                console.log(`✅ Found ${results.length} results (${totalResults} total)`);
+            } else {
+                showNoResultsState();
+            }
+        }
+
+        function appendSearchResults(response) {
+            const results = response.results || [];
+            const totalPages = response.total_pages || 0;
+
+            if (results.length > 0) {
+                const resultsContainer = document.getElementById('search-results-grid');
+                const existingRow = resultsContainer.querySelector('.row');
+
+                if (existingRow) {
+                    // Append to existing row
+                    results.forEach(content => {
+                        const cardElement = CineScope.Widgets.ContentCard.create(content, {
+                            showTrailer: true,
+                            showRating: true,
+                            showGenres: true
+                        });
+                        if (cardElement) {
+                            existingRow.appendChild(cardElement);
+                        }
+                    });
+                }
+
+                // Update load more button
+                hasMoreResults = currentPage < totalPages;
+                updateLoadMoreButton();
+
+                console.log(`✅ Loaded ${results.length} more results`);
+            } else {
+                hasMoreResults = false;
+                updateLoadMoreButton();
+            }
+        }
+
+        function updateQueryDisplay(query, count) {
+            document.getElementById('current-query').textContent = query;
+            document.getElementById('results-count').textContent = count.toLocaleString();
+            document.getElementById('search-query-display').classList.remove('d-none');
+        }
+
+        function updateLoadMoreButton() {
+            const container = document.getElementById('load-more-container');
+            if (hasMoreResults && totalResults > 20) {
+                container.classList.remove('d-none');
+            } else {
+                container.classList.add('d-none');
+            }
+        }
+
+        function updateUrl(query) {
+            const url = new URL(window.location);
+            url.searchParams.set('query', query);
+            window.history.pushState({}, '', url);
+        }
+
+        function showLoadingState() {
+            document.getElementById('search-suggestions').classList.add('d-none');
+            document.getElementById('search-results-grid').classList.add('d-none');
+            document.getElementById('no-results').classList.add('d-none');
+            document.getElementById('search-loading').classList.remove('d-none');
+            document.getElementById('load-more-container').classList.add('d-none');
+        }
+
+        function showResultsState() {
+            document.getElementById('search-suggestions').classList.add('d-none');
+            document.getElementById('search-loading').classList.add('d-none');
+            document.getElementById('no-results').classList.add('d-none');
+            document.getElementById('search-results-grid').classList.remove('d-none');
+        }
+
+        function showNoResultsState() {
+            document.getElementById('search-suggestions').classList.add('d-none');
+            document.getElementById('search-loading').classList.add('d-none');
+            document.getElementById('search-results-grid').classList.add('d-none');
+            document.getElementById('no-results').classList.remove('d-none');
+            document.getElementById('load-more-container').classList.add('d-none');
+        }
+
+        function showSuggestionsState() {
+            document.getElementById('search-loading').classList.add('d-none');
+            document.getElementById('search-results-grid').classList.add('d-none');
+            document.getElementById('no-results').classList.add('d-none');
+            document.getElementById('search-suggestions').classList.remove('d-none');
+            document.getElementById('search-query-display').classList.add('d-none');
+            document.getElementById('load-more-container').classList.add('d-none');
+        }
+
+        function showErrorState(message) {
+            showNoResultsState();
+            // Update no results content for error
+            const noResults = document.getElementById('no-results');
+            noResults.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="bi bi-exclamation-triangle display-1 text-danger mb-4"></i>
+                    <h4 class="text-white mb-3">Search Error</h4>
+                    <p class="text-muted mb-4">${message}</p>
+                    <button class="btn btn-primary" onclick="clearSearchAndShowSuggestions()">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Browse
+                    </button>
+                </div>
+            `;
+        }
+
+        function clearSearchAndShowSuggestions() {
+            currentQuery = '';
+            document.getElementById('main-search-input').value = '';
+            showSuggestionsState();
+
+            // Update URL
+            const url = new URL(window.location);
+            url.searchParams.delete('query');
+            window.history.pushState({}, '', url);
+        }
+
+        // Search keyboard shortcuts
+        document.addEventListener('keydown', function (e) {
+            // Ctrl/Cmd + K to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('main-search-input').focus();
+            }
+
+            // Escape to clear search
+            if (e.key === 'Escape' && document.activeElement === document.getElementById('main-search-input')) {
+                clearSearchAndShowSuggestions();
+            }
+        });
+    </script>
+</body>
+
+</html>
