@@ -1,997 +1,1002 @@
-// app.js - Main application with routing, components, and performance optimization
-class CineScopeApp {
-    constructor() {
-        this.router = new Router();
-        this.components = new ComponentManager();
-        this.performanceMonitor = new PerformanceMonitor();
-        this.currentPage = null;
-        this.init();
+// Main Application Controller with Router, Components, and Performance
+class CineScope {
+  constructor() {
+    this.currentPage = null;
+    this.components = new Map();
+    this.observers = new Map();
+    this.performanceMarks = new Map();
+    this.init();
+  }
+
+  // Initialize application
+  async init() {
+    this.markPerformance('app-init-start');
+
+    // Register service worker
+    await this.registerServiceWorker();
+
+    // Initialize router
+    this.initRouter();
+
+    // Initialize global components
+    this.initGlobalComponents();
+
+    // Load current page
+    await this.loadPage();
+
+    // Setup global event listeners
+    this.setupEventListeners();
+
+    // Prefetch critical data
+    this.prefetchData();
+
+    this.markPerformance('app-init-end');
+    this.logPerformance();
+  }
+
+  // Performance marking
+  markPerformance(name) {
+    if (window.performance && window.performance.mark) {
+      window.performance.mark(name);
+      this.performanceMarks.set(name, performance.now());
     }
+  }
 
-    async init() {
-        // Mark app initialization
-        this.performanceMonitor.mark('app-init-start');
-
-        // Initialize authentication
-        Auth.init();
-
-        // Register components
-        this.registerComponents();
-
-        // Setup routes
-        this.setupRoutes();
-
-        // Initialize UI
-        this.initializeUI();
-
-        // Setup event listeners
-        this.setupEventListeners();
-
-        // Start router
-        this.router.init();
-
-        // Prefetch critical data
-        this.prefetchData();
-
-        // Mark app ready
-        this.performanceMonitor.mark('app-init-end');
-        this.performanceMonitor.measure('app-initialization', 'app-init-start', 'app-init-end');
+  // Log performance metrics
+  logPerformance() {
+    if (window.performance && window.performance.measure) {
+      try {
+        window.performance.measure('app-init', 'app-init-start', 'app-init-end');
+        const measure = window.performance.getEntriesByName('app-init')[0];
+        console.log(`App initialization: ${measure.duration.toFixed(2)}ms`);
+      } catch (e) {
+        // Ignore errors
+      }
     }
+  }
 
-    registerComponents() {
-        // Content card component
-        this.components.register('content-card', {
-            render: (content) => {
-                const poster = content.poster_path || '/images/placeholder.jpg';
-                const rating = content.rating ? content.rating.toFixed(1) : 'N/A';
-
-                return `
-          <div class="content-card" data-content-id="${content.id}">
-            <div class="card-poster">
-              <img src="${poster}" alt="${content.title}" loading="lazy">
-              ${content.youtube_trailer ? `
-                <button class="play-trailer" data-trailer="${content.youtube_trailer}">
-                  <i class="icon-play"></i>
-                </button>
-              ` : ''}
-            </div>
-            <div class="card-info">
-              <h3 class="card-title">${content.title}</h3>
-              <div class="card-meta">
-                <span class="rating">⭐ ${rating}</span>
-                <span class="type">${content.content_type}</span>
-              </div>
-            </div>
-            <div class="card-actions">
-              <button class="action-watchlist" data-id="${content.id}">
-                <i class="icon-plus"></i>
-              </button>
-              <button class="action-favorite" data-id="${content.id}">
-                <i class="icon-heart"></i>
-              </button>
-            </div>
-          </div>
-        `;
-            }
-        });
-
-        // Carousel component
-        this.components.register('content-carousel', {
-            render: (title, items, id) => {
-                return `
-          <section class="content-section">
-            <h2 class="section-title">${title}</h2>
-            <div class="carousel-container" id="${id}">
-              <button class="carousel-prev" data-carousel="${id}">‹</button>
-              <div class="carousel-track">
-                ${items.map(item => this.components.render('content-card', item)).join('')}
-              </div>
-              <button class="carousel-next" data-carousel="${id}">›</button>
-            </div>
-          </section>
-        `;
-            }
-        });
-
-        // Loading component
-        this.components.register('loading', {
-            render: () => `
-        <div class="loading-container">
-          <div class="loading-spinner"></div>
-          <p>Loading amazing content...</p>
-        </div>
-      `
-        });
-
-        // Toast component
-        this.components.register('toast', {
-            render: (message, type = 'info') => `
-        <div class="toast toast-${type}">
-          <p>${message}</p>
-        </div>
-      `
-        });
-
-        // Navigation components
-        this.components.register('topbar', {
-            render: () => {
-                const user = Auth.getUser();
-                return `
-          <header class="topbar">
-            <div class="topbar-content">
-              <a href="/" class="logo">CineScope</a>
-              
-              <div class="search-container">
-                <input type="search" class="search-input" placeholder="Search movies, shows, anime...">
-                <div class="search-results"></div>
-              </div>
-              
-              <nav class="topbar-nav">
-                ${user ? `
-                  <a href="${Auth.getUserProfileUrl()}" class="nav-link">
-                    <i class="icon-user"></i>
-                    ${user.username}
-                  </a>
-                  ${user.is_admin ? `
-                    <a href="/admin" class="nav-link">
-                      <i class="icon-admin"></i>
-                      Admin
-                    </a>
-                  ` : ''}
-                  <button class="logout-btn">Logout</button>
-                ` : `
-                  <a href="/auth/login.html" class="nav-link">Login</a>
-                  <a href="/auth/register.html" class="nav-link btn-primary">Sign Up</a>
-                `}
-                <button class="theme-toggle">
-                  <i class="icon-theme"></i>
-                </button>
-              </nav>
-            </div>
-          </header>
-        `;
-            }
-        });
-
-        this.components.register('mobile-nav', {
-            render: () => {
-                const user = Auth.getUser();
-                return `
-          <nav class="mobile-nav">
-            <a href="/" class="nav-item active">
-              <i class="icon-home"></i>
-              <span>Home</span>
-            </a>
-            <a href="/content/search.html" class="nav-item">
-              <i class="icon-search"></i>
-              <span>Search</span>
-            </a>
-            ${user ? `
-              <a href="${Auth.getUserProfileUrl()}/watchlist" class="nav-item">
-                <i class="icon-bookmark"></i>
-                <span>Watchlist</span>
-              </a>
-              <a href="${Auth.getUserProfileUrl()}" class="nav-item">
-                <i class="icon-user"></i>
-                <span>Profile</span>
-              </a>
-            ` : `
-              <a href="/auth/login.html" class="nav-item">
-                <i class="icon-login"></i>
-                <span>Login</span>
-              </a>
-            `}
-          </nav>
-        `;
-            }
-        });
+  // Service Worker Registration
+  async registerServiceWorker() {
+    if ('serviceWorker' in navigator && CONFIG.FEATURES.SERVICE_WORKER) {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        console.log('Service Worker registered:', registration);
+      } catch (error) {
+        console.warn('Service Worker registration failed:', error);
+      }
     }
+  }
 
-    setupRoutes() {
-        // Public routes
-        this.router.on('/', () => this.loadHomePage());
-        this.router.on('/content/search.html', () => this.loadSearchPage());
-        this.router.on('/content/details.html', () => this.loadDetailsPage());
-        this.router.on('/content/genre.html', () => this.loadGenrePage());
-        this.router.on('/content/regional.html', () => this.loadRegionalPage());
-        this.router.on('/content/anime.html', () => this.loadAnimePage());
-        this.router.on('/content/trending.html', () => this.loadTrendingPage());
+  // Router initialization
+  initRouter() {
+    this.router = {
+      routes: {
+        '/': 'HomePage',
+        '/auth/login.html': 'LoginPage',
+        '/auth/register.html': 'RegisterPage',
+        '/auth/forgot-password.html': 'ForgotPasswordPage',
+        '/content/search.html': 'SearchPage',
+        '/content/details.html': 'DetailsPage',
+        '/content/anime.html': 'AnimePage',
+        '/content/genre.html': 'GenrePage',
+        '/content/regional.html': 'RegionalPage',
+        '/content/trending.html': 'TrendingPage',
+        '/user/profile.html': 'ProfilePage',
+        '/user/watchlist.html': 'WatchlistPage',
+        '/user/favorites.html': 'FavoritesPage',
+        '/user/activity.html': 'ActivityPage',
+        '/user/settings.html': 'SettingsPage',
+        '/admin/index.html': 'AdminDashboard',
+        '/admin/content.html': 'AdminContent',
+        '/admin/users.html': 'AdminUsers',
+        '/admin/analytics.html': 'AdminAnalytics'
+      },
 
-        // Auth routes
-        this.router.on('/auth/login.html', () => this.loadLoginPage());
-        this.router.on('/auth/register.html', () => this.loadRegisterPage());
-        this.router.on('/auth/forgot-password.html', () => this.loadForgotPasswordPage());
-
-        // User routes (with username)
-        this.router.on('/:username/profile', (params) => this.loadProfilePage(params.username));
-        this.router.on('/:username/watchlist', (params) => this.loadWatchlistPage(params.username));
-        this.router.on('/:username/favorites', (params) => this.loadFavoritesPage(params.username));
-        this.router.on('/:username/activity', (params) => this.loadActivityPage(params.username));
-        this.router.on('/:username/settings', (params) => this.loadSettingsPage(params.username));
-
-        // Admin routes
-        this.router.on('/admin', () => this.loadAdminDashboard());
-        this.router.on('/admin/content.html', () => this.loadAdminContent());
-        this.router.on('/admin/users.html', () => this.loadAdminUsers());
-        this.router.on('/admin/analytics.html', () => this.loadAdminAnalytics());
-    }
-
-    initializeUI() {
-        // Render navigation
-        const topbarEl = document.querySelector('#topbar');
-        const mobileNavEl = document.querySelector('#mobile-nav');
-
-        if (topbarEl) {
-            topbarEl.innerHTML = this.components.render('topbar');
+      getCurrentRoute() {
+        const path = window.location.pathname;
+        // Handle username-based routes
+        const userRouteMatch = path.match(/^\/([^\/]+)\/(profile|watchlist|favorites|activity|settings)$/);
+        if (userRouteMatch) {
+          return `/user/${userRouteMatch[2]}.html`;
         }
+        return path;
+      }
+    };
+  }
 
-        if (mobileNavEl) {
-            mobileNavEl.innerHTML = this.components.render('mobile-nav');
-        }
+  // Load current page
+  async loadPage() {
+    const route = this.router.getCurrentRoute();
+    const pageClass = this.router.routes[route];
 
-        // Apply saved theme
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', savedTheme);
+    if (pageClass && this[`init${pageClass}`]) {
+      this.currentPage = pageClass;
+      await this[`init${pageClass}`]();
+    }
+  }
 
-        // Setup viewport for mobile
-        this.setupMobileViewport();
+  // Initialize global components
+  initGlobalComponents() {
+    // Initialize navigation
+    this.initNavigation();
+
+    // Initialize theme manager
+    this.initThemeManager();
+
+    // Initialize lazy loading
+    this.initLazyLoading();
+
+    // Initialize infinite scroll
+    this.initInfiniteScroll();
+
+    // Initialize toast notifications
+    this.initToastNotifications();
+  }
+
+  // Navigation initialization
+  initNavigation() {
+    // Desktop navigation
+    const topbar = document.getElementById('topbar');
+    if (topbar) {
+      this.components.set('topbar', new TopbarComponent(topbar));
     }
 
-    setupEventListeners() {
-        // Delegated event handling for performance
-        document.addEventListener('click', (e) => {
-            // Navigation links
-            if (e.target.matches('a[href^="/"]')) {
-                e.preventDefault();
-                this.router.navigate(e.target.getAttribute('href'));
-            }
-
-            // Content card clicks
-            if (e.target.closest('.content-card')) {
-                const card = e.target.closest('.content-card');
-                const contentId = card.dataset.contentId;
-
-                if (e.target.closest('.play-trailer')) {
-                    this.playTrailer(e.target.closest('.play-trailer').dataset.trailer);
-                } else if (e.target.closest('.action-watchlist')) {
-                    this.toggleWatchlist(contentId);
-                } else if (e.target.closest('.action-favorite')) {
-                    this.toggleFavorite(contentId);
-                } else {
-                    this.router.navigate(`/content/details.html?id=${contentId}`);
-                }
-            }
-
-            // Carousel navigation
-            if (e.target.matches('.carousel-prev, .carousel-next')) {
-                this.handleCarouselNav(e.target);
-            }
-
-            // Theme toggle
-            if (e.target.closest('.theme-toggle')) {
-                this.toggleTheme();
-            }
-
-            // Logout
-            if (e.target.matches('.logout-btn')) {
-                Auth.logout();
-            }
-        });
-
-        // Search functionality
-        let searchTimeout;
-        document.addEventListener('input', (e) => {
-            if (e.target.matches('.search-input')) {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    this.handleSearch(e.target.value);
-                }, 300);
-            }
-        });
-
-        // Infinite scroll
-        if (CONFIG.FEATURES.INFINITE_SCROLL) {
-            let scrollTimeout;
-            window.addEventListener('scroll', () => {
-                clearTimeout(scrollTimeout);
-                scrollTimeout = setTimeout(() => {
-                    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
-                        this.loadMoreContent();
-                    }
-                }, 100);
-            });
-        }
-
-        // Handle back/forward navigation
-        window.addEventListener('popstate', () => {
-            this.router.resolve();
-        });
+    // Mobile navigation
+    const mobileNav = document.getElementById('mobile-nav');
+    if (mobileNav) {
+      this.components.set('mobileNav', new MobileNavComponent(mobileNav));
     }
-
-    setupMobileViewport() {
-        // Handle mobile viewport and safe areas
-        const updateViewport = () => {
-            const vh = window.innerHeight * 0.01;
-            document.documentElement.style.setProperty('--vh', `${vh}px`);
-
-            // Handle notch/safe areas
-            const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)') || '0');
-            const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)') || '0');
-
-            document.documentElement.style.setProperty('--safe-area-top', `${safeAreaTop}px`);
-            document.documentElement.style.setProperty('--safe-area-bottom', `${safeAreaBottom}px`);
-        };
-
-        updateViewport();
-        window.addEventListener('resize', updateViewport);
-    }
-
-    async prefetchData() {
-        // Prefetch critical data for performance
-        const prefetchList = [
-            { url: CONFIG.API_ENDPOINTS.TRENDING, params: { limit: 10 } },
-            { url: CONFIG.API_ENDPOINTS.GENRES, params: {} }
-        ];
-
-        if (Auth.isAuthenticated()) {
-            prefetchList.push({ url: CONFIG.API_ENDPOINTS.RECOMMENDATIONS, params: { limit: 10 } });
-        }
-
-        await API.client.prefetch(prefetchList);
-    }
-
-    // Page loaders
-    async loadHomePage() {
-        this.performanceMonitor.mark('home-load-start');
-
-        const mainContent = document.querySelector('#main-content');
-        mainContent.innerHTML = this.components.render('loading');
-
-        try {
-            // Fetch all homepage data in parallel
-            const [trending, newReleases, criticsChoice, adminChoice] = await Promise.all([
-                API.content.getTrending({ limit: 20 }),
-                API.content.getNewReleases({ limit: 15 }),
-                API.content.getCriticsChoice({ limit: 15 }),
-                API.content.getAdminChoice({ limit: 10 })
-            ]);
-
-            // Get personalized recommendations if logged in
-            let recommendations = null;
-            if (Auth.isAuthenticated()) {
-                recommendations = await API.user.getRecommendations({ limit: 20 });
-            }
-
-            // Build homepage HTML
-            let html = '';
-
-            // Hero section with trending content
-            if (trending.recommendations && trending.recommendations.length > 0) {
-                const hero = trending.recommendations[0];
-                html += `
-          <section class="hero-section" style="background-image: url('${hero.backdrop_path || hero.poster_path}')">
-            <div class="hero-overlay"></div>
-            <div class="hero-content">
-              <h1 class="hero-title">${hero.title}</h1>
-              <p class="hero-overview">${hero.overview || ''}</p>
-              <div class="hero-actions">
-                <button class="btn-primary" onclick="App.playTrailer('${hero.youtube_trailer}')">
-                  <i class="icon-play"></i> Play Trailer
-                </button>
-                <button class="btn-secondary" onclick="App.router.navigate('/content/details.html?id=${hero.id}')">
-                  <i class="icon-info"></i> More Info
-                </button>
-              </div>
-            </div>
-          </section>
-        `;
-            }
-
-            // Content sections
-            if (recommendations && recommendations.recommendations) {
-                html += this.components.render('content-carousel', 'Recommended For You', recommendations.recommendations, 'recommended');
-            }
-
-            html += this.components.render('content-carousel', 'Trending Now', trending.recommendations || [], 'trending');
-            html += this.components.render('content-carousel', 'New Releases', newReleases.recommendations || [], 'new-releases');
-            html += this.components.render('content-carousel', "Critics' Choice", criticsChoice.recommendations || [], 'critics');
-
-            if (adminChoice.recommendations && adminChoice.recommendations.length > 0) {
-                html += this.components.render('content-carousel', "Admin's Picks", adminChoice.recommendations, 'admin-picks');
-            }
-
-            // Genre sections
-            const genres = ['action', 'comedy', 'drama', 'thriller'];
-            for (const genre of genres) {
-                const genreContent = await API.content.getGenreContent(genre, { limit: 15 });
-                if (genreContent.recommendations) {
-                    html += this.components.render('content-carousel',
-                        `${genre.charAt(0).toUpperCase() + genre.slice(1)} Movies`,
-                        genreContent.recommendations,
-                        `genre-${genre}`
-                    );
-                }
-            }
-
-            mainContent.innerHTML = html;
-
-            // Initialize carousels
-            this.initializeCarousels();
-
-        } catch (error) {
-            mainContent.innerHTML = `
-        <div class="error-container">
-          <h2>Unable to load content</h2>
-          <p>Please check your connection and try again.</p>
-          <button onclick="location.reload()">Retry</button>
-        </div>
-      `;
-        }
-
-        this.performanceMonitor.mark('home-load-end');
-        this.performanceMonitor.measure('home-page-load', 'home-load-start', 'home-load-end');
-    }
-
-    async loadDetailsPage() {
-        const params = new URLSearchParams(window.location.search);
-        const contentId = params.get('id');
-
-        if (!contentId) {
-            this.router.navigate('/');
-            return;
-        }
-
-        const mainContent = document.querySelector('#main-content');
-        mainContent.innerHTML = this.components.render('loading');
-
-        try {
-            const [details, similar] = await Promise.all([
-                API.content.getDetails(contentId),
-                API.content.getSimilar(contentId, { limit: 12 })
-            ]);
-
-            // Record view interaction
-            if (Auth.isAuthenticated()) {
-                API.user.recordInteraction(contentId, 'view');
-            }
-
-            const genres = details.genres ? details.genres.join(', ') : 'N/A';
-            const cast = details.cast ? details.cast.slice(0, 8).map(actor => actor.name).join(', ') : 'N/A';
-
-            mainContent.innerHTML = `
-        <div class="details-container">
-          <div class="details-backdrop" style="background-image: url('${details.backdrop_path}')">
-            <div class="backdrop-overlay"></div>
-          </div>
-          
-          <div class="details-content">
-            <div class="details-poster">
-              <img src="${details.poster_path}" alt="${details.title}">
-            </div>
-            
-            <div class="details-info">
-              <h1 class="details-title">${details.title}</h1>
-              ${details.original_title && details.original_title !== details.title ?
-                    `<p class="details-original-title">${details.original_title}</p>` : ''
-                }
-              
-              <div class="details-meta">
-                <span class="rating">⭐ ${details.rating || 'N/A'}/10</span>
-                <span class="release-date">${details.release_date || 'N/A'}</span>
-                <span class="runtime">${details.runtime ? `${details.runtime} min` : 'N/A'}</span>
-                <span class="content-type">${details.content_type.toUpperCase()}</span>
-              </div>
-              
-              <div class="details-genres">
-                ${details.genres.map(g => `<span class="genre-chip">${g}</span>`).join('')}
-              </div>
-              
-              <p class="details-overview">${details.overview || 'No overview available.'}</p>
-              
-              <div class="details-actions">
-                ${details.youtube_trailer ? `
-                  <button class="btn-primary" onclick="App.playTrailer('${details.youtube_trailer}')">
-                    <i class="icon-play"></i> Watch Trailer
-                  </button>
-                ` : ''}
-                <button class="btn-secondary" onclick="App.toggleWatchlist(${contentId})">
-                  <i class="icon-plus"></i> Add to Watchlist
-                </button>
-                <button class="btn-secondary" onclick="App.toggleFavorite(${contentId})">
-                  <i class="icon-heart"></i> Add to Favorites
-                </button>
-              </div>
-              
-              <div class="details-cast">
-                <h3>Cast</h3>
-                <p>${cast}</p>
-              </div>
-            </div>
-          </div>
-          
-          ${similar.recommendations && similar.recommendations.length > 0 ?
-                    this.components.render('content-carousel', 'More Like This', similar.recommendations, 'similar')
-                    : ''
-                }
-        </div>
-      `;
-
-            this.initializeCarousels();
-
-        } catch (error) {
-            mainContent.innerHTML = `
-        <div class="error-container">
-          <h2>Content not found</h2>
-          <p>The requested content could not be loaded.</p>
-          <button onclick="App.router.navigate('/')">Back to Home</button>
-        </div>
-      `;
-        }
-    }
-
-    async loadSearchPage() {
-        const mainContent = document.querySelector('#main-content');
-
-        mainContent.innerHTML = `
-      <div class="search-page">
-        <h1>Search</h1>
-        
-        <div class="search-filters">
-          <input type="search" class="search-main" placeholder="Search movies, TV shows, anime..." autofocus>
-          
-          <div class="filter-options">
-            <select class="filter-type">
-              <option value="multi">All</option>
-              <option value="movie">Movies</option>
-              <option value="tv">TV Shows</option>
-              <option value="anime">Anime</option>
-            </select>
-            
-            <select class="filter-genre">
-              <option value="">All Genres</option>
-              ${Object.entries(CONFIG.GENRES).map(([key, genre]) =>
-            `<option value="${key}">${genre.name}</option>`
-        ).join('')}
-            </select>
-          </div>
-        </div>
-        
-        <div class="search-results-container">
-          <div id="search-results"></div>
-        </div>
-      </div>
-    `;
-
-        // Setup search handlers
-        const searchInput = document.querySelector('.search-main');
-        const typeFilter = document.querySelector('.filter-type');
-        const genreFilter = document.querySelector('.filter-genre');
-
-        const performSearch = async () => {
-            const query = searchInput.value.trim();
-            if (!query) return;
-
-            const resultsContainer = document.querySelector('#search-results');
-            resultsContainer.innerHTML = this.components.render('loading');
-
-            try {
-                const results = await API.content.search(query, {
-                    type: typeFilter.value,
-                    genre: genreFilter.value
-                });
-
-                if (results.results && results.results.length > 0) {
-                    resultsContainer.innerHTML = `
-            <div class="content-grid">
-              ${results.results.map(item => this.components.render('content-card', item)).join('')}
-            </div>
-          `;
-                } else {
-                    resultsContainer.innerHTML = `
-            <div class="no-results">
-              <p>No results found for "${query}"</p>
-            </div>
-          `;
-                }
-            } catch (error) {
-                resultsContainer.innerHTML = `
-          <div class="error-message">
-            <p>Search failed. Please try again.</p>
-          </div>
-        `;
-            }
-        };
-
-        searchInput.addEventListener('input', debounce(performSearch, 500));
-        typeFilter.addEventListener('change', performSearch);
-        genreFilter.addEventListener('change', performSearch);
-    }
-
-    async loadProfilePage(username) {
-        if (!Auth.canAccessRoute(`/${username}/profile`)) {
-            this.router.navigate('/auth/login.html');
-            return;
-        }
-
-        const mainContent = document.querySelector('#main-content');
-        const user = Auth.getUser();
-
-        mainContent.innerHTML = `
-      <div class="profile-page">
-        <div class="profile-header">
-          <div class="profile-avatar">
-            <i class="icon-user-large"></i>
-          </div>
-          <div class="profile-info">
-            <h1>${username}</h1>
-            <p>${user.email}</p>
-            <p>Member since ${new Date(user.created_at || Date.now()).toLocaleDateString()}</p>
-          </div>
-        </div>
-        
-        <div class="profile-stats">
-          <div class="stat-card">
-            <h3>Watchlist</h3>
-            <p class="stat-number" id="watchlist-count">-</p>
-          </div>
-          <div class="stat-card">
-            <h3>Favorites</h3>
-            <p class="stat-number" id="favorites-count">-</p>
-          </div>
-          <div class="stat-card">
-            <h3>Ratings</h3>
-            <p class="stat-number" id="ratings-count">-</p>
-          </div>
-        </div>
-        
-        <div class="profile-sections">
-          <section class="profile-section">
-            <h2>Recent Activity</h2>
-            <div id="recent-activity"></div>
-          </section>
-          
-          <section class="profile-section">
-            <h2>Favorite Genres</h2>
-            <div class="genre-preferences">
-              ${user.preferred_genres ? user.preferred_genres.map(genre =>
-            `<span class="genre-chip">${genre}</span>`
-        ).join('') : '<p>No genres selected</p>'}
-            </div>
-          </section>
-        </div>
-      </div>
-    `;
-
-        // Load user stats
-        try {
-            const [watchlist, favorites] = await Promise.all([
-                API.user.getWatchlist(),
-                API.user.getFavorites()
-            ]);
-
-            document.querySelector('#watchlist-count').textContent = watchlist.watchlist?.length || 0;
-            document.querySelector('#favorites-count').textContent = favorites.favorites?.length || 0;
-
-        } catch (error) {
-            console.error('Failed to load user stats:', error);
-        }
-    }
-
-    // Utility methods
-    initializeCarousels() {
-        document.querySelectorAll('.carousel-container').forEach(carousel => {
-            const track = carousel.querySelector('.carousel-track');
-            const cards = track.querySelectorAll('.content-card');
-            const cardWidth = cards[0]?.offsetWidth || 200;
-            const visibleCards = Math.floor(carousel.offsetWidth / cardWidth);
-
-            let currentIndex = 0;
-
-            const updateCarousel = () => {
-                const offset = -currentIndex * cardWidth;
-                track.style.transform = `translateX(${offset}px)`;
-            };
-
-            carousel.querySelector('.carousel-prev')?.addEventListener('click', () => {
-                currentIndex = Math.max(0, currentIndex - visibleCards);
-                updateCarousel();
-            });
-
-            carousel.querySelector('.carousel-next')?.addEventListener('click', () => {
-                const maxIndex = Math.max(0, cards.length - visibleCards);
-                currentIndex = Math.min(maxIndex, currentIndex + visibleCards);
-                updateCarousel();
-            });
-
-            // Touch/swipe support for mobile
-            let startX = 0;
-            let currentX = 0;
-            let isDragging = false;
-
-            track.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
-                isDragging = true;
-            });
-
-            track.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                currentX = e.touches[0].clientX;
-                const diff = currentX - startX;
-                track.style.transform = `translateX(${(-currentIndex * cardWidth) + diff}px)`;
-            });
-
-            track.addEventListener('touchend', () => {
-                if (!isDragging) return;
-                isDragging = false;
-                const diff = currentX - startX;
-
-                if (Math.abs(diff) > 50) {
-                    if (diff > 0) {
-                        currentIndex = Math.max(0, currentIndex - 1);
-                    } else {
-                        currentIndex = Math.min(cards.length - visibleCards, currentIndex + 1);
-                    }
-                }
-
-                updateCarousel();
-            });
-        });
-    }
-
-    async handleSearch(query) {
-        if (!query || query.length < 2) {
-            document.querySelector('.search-results').innerHTML = '';
-            return;
-        }
-
-        try {
-            const results = await API.content.search(query, { limit: 5 });
-            const resultsContainer = document.querySelector('.search-results');
-
-            if (results.results && results.results.length > 0) {
-                resultsContainer.innerHTML = `
-          <div class="search-dropdown">
-            ${results.results.map(item => `
-              <a href="/content/details.html?id=${item.id}" class="search-result-item">
-                <img src="${item.poster_path}" alt="${item.title}">
-                <div class="result-info">
-                  <h4>${item.title}</h4>
-                  <p>${item.content_type} • ${item.rating || 'N/A'} ⭐</p>
-                </div>
-              </a>
-            `).join('')}
-            <a href="/content/search.html?q=${encodeURIComponent(query)}" class="search-all-results">
-              View all results for "${query}"
-            </a>
-          </div>
-        `;
-            } else {
-                resultsContainer.innerHTML = `
-          <div class="search-dropdown">
-            <p class="no-results">No results found</p>
-          </div>
-        `;
-            }
-        } catch (error) {
-            console.error('Search failed:', error);
-        }
-    }
-
-    async toggleWatchlist(contentId) {
-        if (!Auth.isAuthenticated()) {
-            this.showToast('Please login to add to watchlist', 'warning');
-            return;
-        }
-
-        try {
-            await API.user.addToWatchlist(contentId);
-            this.showToast('Added to watchlist', 'success');
-
-            // Update UI
-            const button = document.querySelector(`.action-watchlist[data-id="${contentId}"]`);
-            if (button) {
-                button.classList.add('active');
-            }
-        } catch (error) {
-            this.showToast('Failed to add to watchlist', 'error');
-        }
-    }
-
-    async toggleFavorite(contentId) {
-        if (!Auth.isAuthenticated()) {
-            this.showToast('Please login to add to favorites', 'warning');
-            return;
-        }
-
-        try {
-            await API.user.addToFavorites(contentId);
-            this.showToast('Added to favorites', 'success');
-
-            // Update UI
-            const button = document.querySelector(`.action-favorite[data-id="${contentId}"]`);
-            if (button) {
-                button.classList.add('active');
-            }
-        } catch (error) {
-            this.showToast('Failed to add to favorites', 'error');
-        }
-    }
-
-    playTrailer(youtubeUrl) {
-        if (!youtubeUrl) return;
-
-        // Extract video ID
-        const videoId = youtubeUrl.split('v=')[1];
-        if (!videoId) return;
-
-        // Create modal
-        const modal = document.createElement('div');
-        modal.className = 'trailer-modal';
-        modal.innerHTML = `
-      <div class="trailer-content">
-        <button class="trailer-close">&times;</button>
-        <iframe 
-          src="https://www.youtube.com/embed/${videoId}?autoplay=1" 
-          frameborder="0" 
-          allowfullscreen
-        ></iframe>
-      </div>
-    `;
-
-        document.body.appendChild(modal);
-
-        // Close on click
-        modal.addEventListener('click', (e) => {
-            if (e.target.matches('.trailer-close') || e.target === modal) {
-                modal.remove();
-            }
-        });
-    }
-
-    showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.innerHTML = this.components.render('toast', message, type);
-        document.body.appendChild(toast.firstElementChild);
-
-        setTimeout(() => {
-            toast.firstElementChild.classList.add('show');
-        }, 10);
-
-        setTimeout(() => {
-            toast.firstElementChild.classList.remove('show');
-            setTimeout(() => toast.firstElementChild.remove(), 300);
-        }, 3000);
-    }
-
-    toggleTheme() {
+  }
+
+  // Theme manager
+  initThemeManager() {
+    const theme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+
+    // Theme toggle handler
+    document.querySelectorAll('[data-theme-toggle]').forEach(toggle => {
+      toggle.addEventListener('click', () => {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
-
-        // Haptic feedback on mobile
-        if (CONFIG.FEATURES.HAPTIC_FEEDBACK && 'vibrate' in navigator) {
-            navigator.vibrate(10);
-        }
-    }
-
-    async loadMoreContent() {
-        // Implement infinite scroll loading
-        console.log('Loading more content...');
-    }
-}
-
-// Router implementation
-class Router {
-    constructor() {
-        this.routes = new Map();
-        this.currentRoute = null;
-    }
-
-    on(pattern, handler) {
-        this.routes.set(pattern, { pattern, handler });
-    }
-
-    navigate(path) {
-        window.history.pushState({}, '', path);
-        this.resolve();
-    }
-
-    resolve() {
-        const path = window.location.pathname;
-
-        // Check auth requirements
-        if (Auth.requiresAuth(path) && !Auth.canAccessRoute(path)) {
-            this.navigate('/auth/login.html');
-            return;
-        }
-
-        // Find matching route
-        for (const [pattern, route] of this.routes) {
-            const regex = new RegExp('^' + pattern.replace(/:\w+/g, '([^/]+)') + '$');
-            const match = path.match(regex);
-
-            if (match) {
-                const params = {};
-                const paramNames = pattern.match(/:(\w+)/g);
-
-                if (paramNames) {
-                    paramNames.forEach((name, index) => {
-                        params[name.slice(1)] = match[index + 1];
-                    });
-                }
-
-                this.currentRoute = path;
-                route.handler(params);
-                return;
-            }
-        }
-
-        // Default to home
-        this.navigate('/');
-    }
-
-    init() {
-        this.resolve();
-    }
-}
-
-// Component Manager
-class ComponentManager {
-    constructor() {
-        this.components = new Map();
-    }
-
-    register(name, component) {
-        this.components.set(name, component);
-    }
-
-    render(name, ...args) {
-        const component = this.components.get(name);
-        return component ? component.render(...args) : '';
-    }
-}
-
-// Performance Monitor
-class PerformanceMonitor {
-    mark(name) {
-        if ('performance' in window) {
-            performance.mark(name);
-        }
-    }
-
-    measure(name, startMark, endMark) {
-        if ('performance' in window) {
-            try {
-                performance.measure(name, startMark, endMark);
-                const measure = performance.getEntriesByName(name)[0];
-                console.log(`Performance: ${name} took ${measure.duration.toFixed(2)}ms`);
-            } catch (e) {
-                // Marks may not exist
-            }
-        }
-    }
-}
-
-// Utility functions
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Initialize app when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.App = new CineScopeApp();
+      });
     });
-} else {
-    window.App = new CineScopeApp();
+  }
+
+  // Lazy loading with Intersection Observer
+  initLazyLoading() {
+    const lazyImages = document.querySelectorAll('[data-lazy]');
+
+    if ('IntersectionObserver' in window) {
+      const imageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            img.src = img.dataset.lazy;
+            img.removeAttribute('data-lazy');
+            imageObserver.unobserve(img);
+          }
+        });
+      }, {
+        rootMargin: `${CONFIG.LAZY_LOAD_OFFSET}px`
+      });
+
+      lazyImages.forEach(img => imageObserver.observe(img));
+      this.observers.set('lazyImages', imageObserver);
+    }
+  }
+
+  // Infinite scroll
+  initInfiniteScroll() {
+    const scrollContainers = document.querySelectorAll('[data-infinite-scroll]');
+
+    scrollContainers.forEach(container => {
+      const scrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const loadMore = container.dataset.infiniteScroll;
+            if (this[loadMore]) {
+              this[loadMore]();
+            }
+          }
+        });
+      }, {
+        rootMargin: `${CONFIG.INFINITE_SCROLL_THRESHOLD}px`
+      });
+
+      const sentinel = document.createElement('div');
+      sentinel.className = 'infinite-scroll-sentinel';
+      container.appendChild(sentinel);
+      scrollObserver.observe(sentinel);
+
+      this.observers.set(`infiniteScroll-${container.id}`, scrollObserver);
+    });
+  }
+
+  // Toast notifications
+  initToastNotifications() {
+    if (!document.getElementById('toast-container')) {
+      const toastContainer = document.createElement('div');
+      toastContainer.id = 'toast-container';
+      toastContainer.className = 'toast-container';
+      document.body.appendChild(toastContainer);
+    }
+  }
+
+  // Show toast notification
+  showToast(message, type = 'info', duration = 3000) {
+    const toastContainer = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(() => {
+      toast.classList.add('toast-visible');
+    });
+
+    // Remove after duration
+    setTimeout(() => {
+      toast.classList.remove('toast-visible');
+      setTimeout(() => toast.remove(), CONFIG.ANIMATION_DURATION);
+    }, duration);
+  }
+
+  // Setup global event listeners
+  setupEventListeners() {
+    // Search functionality
+    this.setupSearch();
+
+    // Haptic feedback for mobile
+    if (CONFIG.FEATURES.HAPTIC_FEEDBACK && 'vibrate' in navigator) {
+      document.querySelectorAll('button, a, [data-haptic]').forEach(element => {
+        element.addEventListener('touchstart', () => {
+          navigator.vibrate(10);
+        });
+      });
+    }
+
+    // Pull to refresh
+    this.setupPullToRefresh();
+
+    // Keyboard shortcuts
+    this.setupKeyboardShortcuts();
+  }
+
+  // Search setup
+  setupSearch() {
+    const searchInputs = document.querySelectorAll('[data-search-input]');
+    const searchResults = document.querySelector('[data-search-results]');
+
+    searchInputs.forEach(input => {
+      let debounceTimer;
+
+      input.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+          const query = e.target.value.trim();
+          if (query.length >= 2) {
+            await this.performSearch(query, searchResults);
+          } else if (searchResults) {
+            searchResults.innerHTML = '';
+            searchResults.classList.remove('active');
+          }
+        }, CONFIG.DEBOUNCE_DELAY);
+      });
+    });
+  }
+
+  // Perform search with real API
+  async performSearch(query, resultsContainer) {
+    try {
+      const results = await apiClient.get(CONFIG.API_ENDPOINTS.SEARCH, {
+        query,
+        limit: 5
+      });
+
+      if (resultsContainer && results.results) {
+        this.renderSearchResults(results.results, resultsContainer);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    }
+  }
+
+  // Render search results
+  renderSearchResults(results, container) {
+    container.innerHTML = results.map(item => `
+      <a href="/content/details.html?id=${item.id}" class="search-result-item">
+        <img src="${item.poster_path || '/images/placeholder.jpg'}" 
+             alt="${item.title}" 
+             loading="lazy">
+        <div class="search-result-info">
+          <h4>${item.title}</h4>
+          <p>${item.content_type} • ${item.rating ? `⭐ ${item.rating}` : 'Not rated'}</p>
+        </div>
+      </a>
+    `).join('');
+
+    container.classList.add('active');
+  }
+
+  // Pull to refresh
+  setupPullToRefresh() {
+    if (!('ontouchstart' in window)) return;
+
+    let startY = 0;
+    let currentY = 0;
+    let pulling = false;
+
+    document.addEventListener('touchstart', (e) => {
+      if (window.scrollY === 0) {
+        startY = e.touches[0].pageY;
+        pulling = true;
+      }
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!pulling) return;
+
+      currentY = e.touches[0].pageY;
+      const pullDistance = currentY - startY;
+
+      if (pullDistance > 0 && pullDistance < 150) {
+        e.preventDefault();
+        document.body.style.transform = `translateY(${pullDistance}px)`;
+      }
+    });
+
+    document.addEventListener('touchend', async () => {
+      if (!pulling) return;
+
+      const pullDistance = currentY - startY;
+      pulling = false;
+
+      if (pullDistance > 100) {
+        document.body.style.transform = 'translateY(50px)';
+        await this.refreshCurrentPage();
+      }
+
+      document.body.style.transform = '';
+    });
+  }
+
+  // Refresh current page
+  async refreshCurrentPage() {
+    apiClient.clearCache();
+    await this.loadPage();
+    this.showToast('Content refreshed', 'success');
+  }
+
+  // Keyboard shortcuts
+  setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // Ctrl/Cmd + K for search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('[data-search-input]');
+        if (searchInput) searchInput.focus();
+      }
+
+      // Escape to close modals
+      if (e.key === 'Escape') {
+        this.closeAllModals();
+      }
+    });
+  }
+
+  // Close all modals
+  closeAllModals() {
+    document.querySelectorAll('.modal.active').forEach(modal => {
+      modal.classList.remove('active');
+    });
+  }
+
+  // Prefetch critical data
+  async prefetchData() {
+    if (auth.isAuthenticated()) {
+      apiClient.prefetch([
+        CONFIG.API_ENDPOINTS.RECOMMENDATIONS,
+        CONFIG.API_ENDPOINTS.WATCHLIST,
+        CONFIG.API_ENDPOINTS.FAVORITES
+      ]);
+    } else {
+      apiClient.prefetch([
+        CONFIG.API_ENDPOINTS.TRENDING,
+        CONFIG.API_ENDPOINTS.POPULAR
+      ]);
+    }
+  }
+
+  // Page initializers
+  async initHomePage() {
+    const isAuthenticated = auth.isAuthenticated();
+
+    if (isAuthenticated) {
+      await this.loadPersonalizedHome();
+    } else {
+      await this.loadPublicHome();
+    }
+  }
+
+  async loadPublicHome() {
+    // Load hero section
+    const hero = new HeroCarousel(document.getElementById('hero-carousel'));
+    await hero.load();
+
+    // Load content sections
+    const sections = [
+      { id: 'trending', endpoint: CONFIG.API_ENDPOINTS.TRENDING, title: "What's Hot 🔥" },
+      { id: 'new-releases', endpoint: CONFIG.API_ENDPOINTS.NEW_RELEASES, title: 'New Releases' },
+      { id: 'critics-choice', endpoint: CONFIG.API_ENDPOINTS.CRITICS_CHOICE, title: "Critics' Choice" },
+      { id: 'admin-choice', endpoint: CONFIG.API_ENDPOINTS.ADMIN_CHOICE, title: "Admin's Picks" }
+    ];
+
+    for (const section of sections) {
+      const container = document.getElementById(section.id);
+      if (container) {
+        const carousel = new ContentCarousel(container, {
+          endpoint: section.endpoint,
+          title: section.title
+        });
+        await carousel.load();
+        this.components.set(section.id, carousel);
+      }
+    }
+
+    // Load genre sections
+    const genres = ['Action', 'Comedy', 'Drama', 'Thriller', 'Romance', 'Sci-Fi'];
+    for (const genre of genres) {
+      const container = document.getElementById(`genre-${genre.toLowerCase()}`);
+      if (container) {
+        const carousel = new ContentCarousel(container, {
+          endpoint: `${CONFIG.API_ENDPOINTS.GENRES}/${genre.toLowerCase()}`,
+          title: genre
+        });
+        await carousel.load();
+      }
+    }
+
+    // Load regional content
+    const regions = ['Telugu', 'Hindi', 'Tamil', 'Kannada'];
+    for (const region of regions) {
+      const container = document.getElementById(`regional-${region.toLowerCase()}`);
+      if (container) {
+        const carousel = new ContentCarousel(container, {
+          endpoint: `${CONFIG.API_ENDPOINTS.REGIONAL}/${region.toLowerCase()}`,
+          title: `${region} Cinema`
+        });
+        await carousel.load();
+      }
+    }
+  }
+
+  async loadPersonalizedHome() {
+    const user = auth.getUser();
+
+    // Update welcome message
+    const welcomeMessage = document.getElementById('welcome-message');
+    if (welcomeMessage) {
+      welcomeMessage.textContent = `Welcome back, ${user.username}!`;
+    }
+
+    // Load personalized hero
+    const hero = new HeroCarousel(document.getElementById('hero-carousel'), {
+      personalized: true
+    });
+    await hero.load();
+
+    // Load personalized sections
+    const sections = [
+      { id: 'recommended', endpoint: CONFIG.API_ENDPOINTS.ML_RECOMMENDATIONS, title: 'Recommended for You' },
+      { id: 'continue-watching', endpoint: CONFIG.API_ENDPOINTS.WATCH_HISTORY, title: 'Continue Watching' },
+      { id: 'watchlist-preview', endpoint: CONFIG.API_ENDPOINTS.WATCHLIST, title: 'From Your Watchlist' },
+      { id: 'trending-genres', endpoint: CONFIG.API_ENDPOINTS.TRENDING, title: 'Trending in Your Genres' }
+    ];
+
+    for (const section of sections) {
+      const container = document.getElementById(section.id);
+      if (container) {
+        const carousel = new ContentCarousel(container, {
+          endpoint: section.endpoint,
+          title: section.title,
+          personalized: true
+        });
+        await carousel.load();
+        this.components.set(section.id, carousel);
+      }
+    }
+
+    // Load "Because you liked" sections
+    await this.loadSimilarRecommendations();
+  }
+
+  async loadSimilarRecommendations() {
+    try {
+      const favorites = await apiClient.get(CONFIG.API_ENDPOINTS.FAVORITES, { limit: 3 });
+
+      if (favorites.favorites && favorites.favorites.length > 0) {
+        const container = document.getElementById('similar-recommendations');
+
+        for (const favorite of favorites.favorites) {
+          const section = document.createElement('section');
+          section.className = 'content-section';
+          section.innerHTML = `<h2>Because you liked ${favorite.title}</h2>`;
+
+          const carousel = document.createElement('div');
+          carousel.className = 'content-carousel';
+          section.appendChild(carousel);
+          container.appendChild(section);
+
+          const similarCarousel = new ContentCarousel(carousel, {
+            endpoint: `${CONFIG.API_ENDPOINTS.SIMILAR}/${favorite.id}`,
+            title: ''
+          });
+          await similarCarousel.load();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load similar recommendations:', error);
+    }
+  }
+
+  // Component Classes
 }
+
+// Hero Carousel Component
+class HeroCarousel {
+  constructor(container, options = {}) {
+    this.container = container;
+    this.options = options;
+    this.currentIndex = 0;
+    this.items = [];
+    this.autoPlayInterval = null;
+  }
+
+  async load() {
+    try {
+      const endpoint = this.options.personalized
+        ? CONFIG.API_ENDPOINTS.ML_RECOMMENDATIONS
+        : CONFIG.API_ENDPOINTS.TRENDING;
+
+      const data = await apiClient.get(endpoint, { limit: 5, content_type: 'movie' });
+      this.items = data.recommendations || data.results || [];
+
+      if (this.items.length > 0) {
+        this.render();
+        this.startAutoPlay();
+      }
+    } catch (error) {
+      console.error('Failed to load hero carousel:', error);
+    }
+  }
+
+  render() {
+    this.container.innerHTML = `
+      <div class="hero-slides">
+        ${this.items.map((item, index) => `
+          <div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
+            <div class="hero-backdrop" style="background-image: url('${item.backdrop_path || item.poster_path}')"></div>
+            <div class="hero-content">
+              <h1 class="hero-title">${item.title}</h1>
+              <div class="hero-meta">
+                <span class="hero-rating">⭐ ${item.rating || 'N/A'}</span>
+                <span class="hero-type">${item.content_type}</span>
+                ${item.genres ? `<span class="hero-genres">${item.genres.slice(0, 3).join(', ')}</span>` : ''}
+              </div>
+              <p class="hero-overview">${item.overview || ''}</p>
+              <div class="hero-actions">
+                <button class="btn btn-primary" onclick="app.playTrailer(${item.id})">
+                  <i class="icon-play"></i> Play Trailer
+                </button>
+                <button class="btn btn-secondary" onclick="app.showDetails(${item.id})">
+                  <i class="icon-info"></i> More Info
+                </button>
+                <button class="btn btn-icon" onclick="app.addToWatchlist(${item.id})" data-haptic>
+                  <i class="icon-plus"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="hero-indicators">
+        ${this.items.map((_, index) => `
+          <button class="hero-indicator ${index === 0 ? 'active' : ''}" 
+                  onclick="app.components.get('hero').goToSlide(${index})"
+                  data-index="${index}"></button>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  startAutoPlay() {
+    this.autoPlayInterval = setInterval(() => {
+      this.nextSlide();
+    }, 5000);
+  }
+
+  stopAutoPlay() {
+    if (this.autoPlayInterval) {
+      clearInterval(this.autoPlayInterval);
+      this.autoPlayInterval = null;
+    }
+  }
+
+  nextSlide() {
+    this.goToSlide((this.currentIndex + 1) % this.items.length);
+  }
+
+  goToSlide(index) {
+    const slides = this.container.querySelectorAll('.hero-slide');
+    const indicators = this.container.querySelectorAll('.hero-indicator');
+
+    slides[this.currentIndex].classList.remove('active');
+    indicators[this.currentIndex].classList.remove('active');
+
+    this.currentIndex = index;
+
+    slides[this.currentIndex].classList.add('active');
+    indicators[this.currentIndex].classList.add('active');
+  }
+}
+
+// Content Carousel Component
+class ContentCarousel {
+  constructor(container, options = {}) {
+    this.container = container;
+    this.options = options;
+    this.items = [];
+    this.currentPage = 1;
+    this.loading = false;
+  }
+
+  async load() {
+    if (this.loading) return;
+
+    this.loading = true;
+    this.showLoading();
+
+    try {
+      const params = {
+        page: this.currentPage,
+        limit: 20
+      };
+
+      if (this.options.personalized) {
+        params.personalized = true;
+      }
+
+      const data = await apiClient.get(this.options.endpoint, params);
+      this.items = data.recommendations || data.results || data.watchlist || data.favorites || [];
+
+      this.render();
+    } catch (error) {
+      console.error('Failed to load carousel:', error);
+      this.showError();
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  render() {
+    this.container.innerHTML = `
+      ${this.options.title ? `<h2 class="section-title">${this.options.title}</h2>` : ''}
+      <div class="carousel-wrapper">
+        <button class="carousel-nav carousel-nav-prev" onclick="this.parentElement.scrollBy(-300, 0)">
+          <i class="icon-chevron-left"></i>
+        </button>
+        <div class="carousel-track">
+          ${this.items.map(item => this.renderCard(item)).join('')}
+        </div>
+        <button class="carousel-nav carousel-nav-next" onclick="this.parentElement.scrollBy(300, 0)">
+          <i class="icon-chevron-right"></i>
+        </button>
+      </div>
+    `;
+
+    // Setup horizontal scroll with mouse wheel
+    const track = this.container.querySelector('.carousel-track');
+    track.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        track.scrollBy(e.deltaY, 0);
+      }
+    });
+  }
+
+  renderCard(item) {
+    return `
+      <div class="content-card" data-id="${item.id}">
+        <a href="/content/details.html?id=${item.id}" class="content-card-link">
+          <div class="content-card-image">
+            <img src="${item.poster_path || '/images/placeholder.jpg'}" 
+                 alt="${item.title}"
+                 loading="lazy">
+            ${item.youtube_trailer ? `
+              <button class="content-card-play" onclick="event.preventDefault(); app.playTrailer(${item.id})">
+                <i class="icon-play"></i>
+              </button>
+            ` : ''}
+          </div>
+          <div class="content-card-info">
+            <h3 class="content-card-title">${item.title}</h3>
+            <div class="content-card-meta">
+              ${item.rating ? `<span class="rating-badge">⭐ ${item.rating}</span>` : ''}
+              <span class="type-badge">${item.content_type}</span>
+            </div>
+          </div>
+        </a>
+        <div class="content-card-actions">
+          <button class="btn-icon" onclick="app.toggleWatchlist(${item.id})" title="Add to Watchlist" data-haptic>
+            <i class="icon-bookmark"></i>
+          </button>
+          <button class="btn-icon" onclick="app.toggleFavorite(${item.id})" title="Add to Favorites" data-haptic>
+            <i class="icon-heart"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  showLoading() {
+    this.container.innerHTML = `
+      <div class="carousel-loading">
+        ${Array(5).fill(0).map(() => `
+          <div class="skeleton-card">
+            <div class="skeleton skeleton-image"></div>
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-meta"></div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  showError() {
+    this.container.innerHTML = `
+      <div class="error-message">
+        <p>Failed to load content. Please try again.</p>
+        <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+      </div>
+    `;
+  }
+}
+
+// Navigation Components
+class TopbarComponent {
+  constructor(element) {
+    this.element = element;
+    this.init();
+  }
+
+  init() {
+    this.render();
+    this.setupSearch();
+    this.updateUserAvatar();
+  }
+
+  render() {
+    const user = auth.getUser();
+
+    this.element.innerHTML = `
+      <div class="topbar-container">
+        <a href="/" class="topbar-logo">
+          <img src="/images/logo.svg" alt="CineScope">
+        </a>
+        
+        <div class="topbar-search">
+          <input type="text" 
+                 class="search-input" 
+                 placeholder="Search movies, shows, anime..."
+                 data-search-input>
+          <i class="icon-search"></i>
+        </div>
+        
+        <div class="topbar-actions">
+          ${user ? `
+            <a href="${auth.getProfileUrl()}" class="topbar-avatar">
+              <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=fff" 
+                   alt="${user.username}">
+            </a>
+          ` : `
+            <a href="/auth/login.html" class="btn btn-primary">Sign In</a>
+          `}
+          <button class="btn-icon" data-theme-toggle>
+            <i class="icon-moon"></i>
+          </button>
+        </div>
+      </div>
+      <div class="search-results" data-search-results></div>
+    `;
+  }
+
+  setupSearch() {
+    const searchInput = this.element.querySelector('[data-search-input]');
+    const searchResults = this.element.querySelector('[data-search-results]');
+
+    if (searchInput) {
+      searchInput.addEventListener('focus', () => {
+        this.element.classList.add('search-active');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!this.element.contains(e.target)) {
+          this.element.classList.remove('search-active');
+        }
+      });
+    }
+  }
+
+  updateUserAvatar() {
+    const user = auth.getUser();
+    if (user) {
+      const avatar = this.element.querySelector('.topbar-avatar img');
+      if (avatar) {
+        avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=fff&cache=${Date.now()}`;
+      }
+    }
+  }
+}
+
+class MobileNavComponent {
+  constructor(element) {
+    this.element = element;
+    this.init();
+  }
+
+  init() {
+    this.render();
+    this.updateActiveTab();
+  }
+
+  render() {
+    const user = auth.getUser();
+
+    this.element.innerHTML = `
+      <nav class="mobile-nav-container">
+        <a href="/" class="mobile-nav-item" data-nav="home">
+          <i class="icon-home"></i>
+          <span>Home</span>
+        </a>
+        <a href="/content/search.html" class="mobile-nav-item" data-nav="search">
+          <i class="icon-search"></i>
+          <span>Search</span>
+        </a>
+        <a href="${user ? '/user/watchlist.html' : '/auth/login.html'}" class="mobile-nav-item" data-nav="watchlist">
+          <i class="icon-bookmark"></i>
+          <span>Watchlist</span>
+        </a>
+        <a href="${user ? '/user/favorites.html' : '/auth/login.html'}" class="mobile-nav-item" data-nav="favorites">
+          <i class="icon-heart"></i>
+          <span>Favorites</span>
+        </a>
+        <a href="${user ? auth.getProfileUrl() : '/auth/login.html'}" class="mobile-nav-item" data-nav="profile">
+          <i class="icon-user"></i>
+          <span>Profile</span>
+        </a>
+      </nav>
+    `;
+  }
+
+  updateActiveTab() {
+    const currentPath = window.location.pathname;
+    const items = this.element.querySelectorAll('.mobile-nav-item');
+
+    items.forEach(item => {
+      item.classList.remove('active');
+      const href = item.getAttribute('href');
+      if (href === currentPath || (currentPath === '/' && item.dataset.nav === 'home')) {
+        item.classList.add('active');
+      }
+    });
+  }
+}
+
+// Application methods for global actions
+CineScope.prototype.playTrailer = async function (contentId) {
+  try {
+    const details = await apiClient.get(`${CONFIG.API_ENDPOINTS.CONTENT_DETAILS}/${contentId}`);
+
+    if (details.youtube_trailer) {
+      this.showTrailerModal(details);
+    } else {
+      this.showToast('Trailer not available', 'warning');
+    }
+  } catch (error) {
+    this.showToast('Failed to load trailer', 'error');
+  }
+};
+
+CineScope.prototype.showTrailerModal = function (content) {
+  const modal = document.createElement('div');
+  modal.className = 'modal trailer-modal active';
+  modal.innerHTML = `
+    <div class="modal-backdrop" onclick="app.closeModal(this.parentElement)"></div>
+    <div class="modal-content">
+      <button class="modal-close" onclick="app.closeModal(this.closest('.modal'))">
+        <i class="icon-x"></i>
+      </button>
+      <div class="video-wrapper">
+        <iframe src="https://www.youtube.com/embed/${content.youtube_trailer.split('v=')[1]}?autoplay=1" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen></iframe>
+      </div>
+      <div class="modal-info">
+        <h2>${content.title}</h2>
+        <p>${content.overview}</p>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  document.body.style.overflow = 'hidden';
+};
+
+CineScope.prototype.closeModal = function (modal) {
+  modal.classList.remove('active');
+  setTimeout(() => modal.remove(), CONFIG.ANIMATION_DURATION);
+  document.body.style.overflow = '';
+};
+
+CineScope.prototype.showDetails = function (contentId) {
+  window.location.href = `/content/details.html?id=${contentId}`;
+};
+
+CineScope.prototype.toggleWatchlist = async function (contentId) {
+  if (!auth.requireAuth()) return;
+
+  try {
+    await apiClient.post(CONFIG.API_ENDPOINTS.INTERACTIONS, {
+      content_id: contentId,
+      interaction_type: 'watchlist'
+    });
+
+    this.showToast('Added to watchlist', 'success');
+    this.updateCardState(contentId, 'watchlist', true);
+  } catch (error) {
+    this.showToast('Failed to update watchlist', 'error');
+  }
+};
+
+CineScope.prototype.toggleFavorite = async function (contentId) {
+  if (!auth.requireAuth()) return;
+
+  try {
+    await apiClient.post(CONFIG.API_ENDPOINTS.INTERACTIONS, {
+      content_id: contentId,
+      interaction_type: 'favorite'
+    });
+
+    this.showToast('Added to favorites', 'success');
+    this.updateCardState(contentId, 'favorite', true);
+  } catch (error) {
+    this.showToast('Failed to update favorites', 'error');
+  }
+};
+
+CineScope.prototype.updateCardState = function (contentId, type, state) {
+  const card = document.querySelector(`[data-id="${contentId}"]`);
+  if (card) {
+    const button = card.querySelector(type === 'watchlist' ? '.icon-bookmark' : '.icon-heart');
+    if (button) {
+      button.parentElement.classList.toggle('active', state);
+    }
+  }
+};
+
+// Initialize app on DOM ready
+let app;
+document.addEventListener('DOMContentLoaded', () => {
+  app = new CineScope();
+  window.app = app; // Make available globally
+});
+
+// Handle navigation for SPAs
+window.addEventListener('popstate', () => {
+  app.loadPage();
+});

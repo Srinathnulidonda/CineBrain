@@ -1,16 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Profile - CineScope</title>
 
+    <!-- Preload Critical Resources -->
     <link rel="preload" href="/js/config.js" as="script">
     <link rel="preload" href="/js/api.js" as="script">
     <link rel="preload" href="/js/auth.js" as="script">
     <link rel="preload" href="/js/app.js" as="script">
 
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/layouts.css">
@@ -19,22 +21,241 @@
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 
-<body>
-    <div id="topbar"></div>
+<body class="app-layout">
+    <!-- Fixed Topbar -->
+    <header class="topbar" id="topbar">
+        <!-- Populated by JavaScript -->
+    </header>
 
-    <main id="main-content">
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
-            <p>Loading profile...</p>
-        </div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Profile Header -->
+        <section class="profile-header">
+            <div class="profile-info">
+                <div class="profile-avatar">
+                    <img id="profile-avatar" src="" alt="">
+                </div>
+                <div class="profile-details">
+                    <h1 id="profile-username"></h1>
+                    <p id="profile-email"></p>
+                    <div class="profile-stats">
+                        <div class="profile-stat">
+                            <span class="profile-stat-value" id="watchlist-count">0</span>
+                            <span class="profile-stat-label">Watchlist</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="profile-stat-value" id="favorites-count">0</span>
+                            <span class="profile-stat-label">Favorites</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="profile-stat-value" id="watched-count">0</span>
+                            <span class="profile-stat-label">Watched</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="profile-actions">
+                    <a href="/user/settings.html" class="btn btn-secondary">
+                        <i class="icon-settings"></i> Settings
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Activity -->
+        <section class="content-section">
+            <div class="container">
+                <h2>Recent Activity</h2>
+                <div class="activity-feed" id="recent-activity">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Continue Watching -->
+        <section class="content-section" id="continue-watching">
+            <!-- Populated by JavaScript -->
+        </section>
+
+        <!-- Favorites Preview -->
+        <section class="content-section" id="favorites-preview">
+            <!-- Populated by JavaScript -->
+        </section>
+
+        <!-- Watchlist Preview -->
+        <section class="content-section" id="watchlist-preview">
+            <!-- Populated by JavaScript -->
+        </section>
     </main>
 
-    <div id="mobile-nav"></div>
+    <!-- Footer -->
+    <footer class="footer">
+        <!-- Same footer as index.html -->
+    </footer>
 
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobile-nav">
+        <!-- Populated by JavaScript -->
+    </nav>
+
+    <!-- Scripts -->
     <script src="/js/config.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/app.js"></script>
+    <script>
+        // Profile page logic
+        class ProfilePage {
+            constructor() {
+                // Check if user is authenticated
+                if (!auth.requireAuth()) return;
+
+                // Validate username in URL
+                const pathMatch = window.location.pathname.match(/^\/([^\/]+)\/profile$/);
+                if (pathMatch) {
+                    const urlUsername = pathMatch[1];
+                    if (!auth.validateUsernameRoute(urlUsername)) {
+                        window.location.href = auth.getProfileUrl();
+                        return;
+                    }
+                }
+
+                this.init();
+            }
+
+            async init() {
+                this.renderUserInfo();
+                await this.loadUserData();
+                await this.loadUserContent();
+            }
+
+            renderUserInfo() {
+                const user = auth.getUser();
+
+                // Update avatar
+                const avatar = document.getElementById('profile-avatar');
+                avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=fff&size=240`;
+                avatar.alt = user.username;
+
+                // Update user details
+                document.getElementById('profile-username').textContent = user.username;
+                document.getElementById('profile-email').textContent = user.email;
+            }
+
+            async loadUserData() {
+                try {
+                    // Load user statistics
+                    const [watchlist, favorites, history] = await Promise.all([
+                        apiClient.get(CONFIG.API_ENDPOINTS.WATCHLIST),
+                        apiClient.get(CONFIG.API_ENDPOINTS.FAVORITES),
+                        apiClient.get(CONFIG.API_ENDPOINTS.WATCH_HISTORY)
+                    ]);
+
+                    // Update counts
+                    document.getElementById('watchlist-count').textContent = watchlist.watchlist?.length || 0;
+                    document.getElementById('favorites-count').textContent = favorites.favorites?.length || 0;
+                    document.getElementById('watched-count').textContent = history.history?.length || 0;
+
+                    // Load recent activity
+                    this.renderRecentActivity(history.history || []);
+
+                } catch (error) {
+                    console.error('Failed to load user data:', error);
+                }
+            }
+
+            async loadUserContent() {
+                // Continue Watching
+                const continueWatching = document.getElementById('continue-watching');
+                const continueCarousel = new app.constructor.prototype.constructor.ContentCarousel(continueWatching, {
+                    endpoint: CONFIG.API_ENDPOINTS.WATCH_HISTORY,
+                    title: 'Continue Watching'
+                });
+                await continueCarousel.load();
+
+                // Favorites Preview
+                const favoritesPreview = document.getElementById('favorites-preview');
+                const favoritesCarousel = new app.constructor.prototype.constructor.ContentCarousel(favoritesPreview, {
+                    endpoint: CONFIG.API_ENDPOINTS.FAVORITES,
+                    title: 'Your Favorites'
+                });
+                await favoritesCarousel.load();
+
+                // Watchlist Preview
+                const watchlistPreview = document.getElementById('watchlist-preview');
+                const watchlistCarousel = new app.constructor.prototype.constructor.ContentCarousel(watchlistPreview, {
+                    endpoint: CONFIG.API_ENDPOINTS.WATCHLIST,
+                    title: 'Your Watchlist'
+                });
+                await watchlistCarousel.load();
+            }
+
+            renderRecentActivity(activities) {
+                const container = document.getElementById('recent-activity');
+
+                if (activities.length === 0) {
+                    container.innerHTML = '<p class="text-secondary">No recent activity</p>';
+                    return;
+                }
+
+                container.innerHTML = activities.slice(0, 10).map(activity => `
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="icon-${this.getActivityIcon(activity.type)}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">
+                                ${this.getActivityTitle(activity)}
+                            </div>
+                            <div class="activity-time">
+                                ${this.formatTime(activity.timestamp)}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            getActivityIcon(type) {
+                const icons = {
+                    'watch': 'play',
+                    'watchlist': 'bookmark',
+                    'favorite': 'heart',
+                    'rating': 'star'
+                };
+                return icons[type] || 'activity';
+            }
+
+            getActivityTitle(activity) {
+                const titles = {
+                    'watch': `Watched ${activity.content_title}`,
+                    'watchlist': `Added ${activity.content_title} to watchlist`,
+                    'favorite': `Added ${activity.content_title} to favorites`,
+                    'rating': `Rated ${activity.content_title} ${activity.rating}/5`
+                };
+                return titles[activity.type] || 'Activity';
+            }
+
+            formatTime(timestamp) {
+                const date = new Date(timestamp);
+                const now = new Date();
+                const diff = now - date;
+
+                const minutes = Math.floor(diff / 60000);
+                const hours = Math.floor(diff / 3600000);
+                const days = Math.floor(diff / 86400000);
+
+                if (minutes < 60) return `${minutes}m ago`;
+                if (hours < 24) return `${hours}h ago`;
+                if (days < 7) return `${days}d ago`;
+
+                return date.toLocaleDateString();
+            }
+        }
+
+        // Initialize profile page
+        document.addEventListener('DOMContentLoaded', () => {
+            new ProfilePage();
+        });
+    </script>
 </body>
 
 </html>

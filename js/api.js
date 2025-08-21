@@ -1,15 +1,23 @@
-// api.js - HTTP client with real backend integration, caching, and service worker hooks
+// API Client with Caching, Retry Logic, and Service Worker Integration
 class APIClient {
     constructor() {
         this.cache = new Map();
-        this.requestQueue = new Map();
-        this.retryAttempts = 3;
-        this.retryDelay = 1000;
+        this.pendingRequests = new Map();
+        this.retryConfig = {
+            maxRetries: 3,
+            retryDelay: 1000,
+            backoffMultiplier: 2
+        };
     }
 
-    // Build full URL from endpoint
+    // Get auth token from localStorage
+    getAuthToken() {
+        return localStorage.getItem('auth_token');
+    }
+
+    // Build full URL
     buildUrl(endpoint, params = {}) {
-        const url = new URL(`${CONFIG.BASE_URL}${endpoint}`);
+        const url = new URL(CONFIG.API_BASE_URL + endpoint);
         Object.keys(params).forEach(key => {
             if (params[key] !== undefined && params[key] !== null) {
                 url.searchParams.append(key, params[key]);
@@ -18,77 +26,57 @@ class APIClient {
         return url.toString();
     }
 
-    // Get cache key
+    // Cache key generator
     getCacheKey(url, options = {}) {
-        return `${options.method || 'GET'}:${url}:${JSON.stringify(options.body || {})}`;
+        return `${url}:${JSON.stringify(options)}`;
     }
 
-    // Check if cached data is still valid
+    // Check if cache is valid
     isCacheValid(cachedData, duration) {
         return cachedData && (Date.now() - cachedData.timestamp < duration);
     }
 
-    // Intelligent retry with exponential backoff
-    async retryRequest(requestFn, attempts = this.retryAttempts) {
-        for (let i = 0; i < attempts; i++) {
-            try {
-                return await requestFn();
-            } catch (error) {
-                if (i === attempts - 1) throw error;
-                await new Promise(resolve => setTimeout(resolve, this.retryDelay * Math.pow(2, i)));
-            }
-        }
-    }
-
-    // Core request method with caching and retry logic
+    // Main request method with caching and retry
     async request(endpoint, options = {}) {
-        const url = this.buildUrl(endpoint, options.params);
-        const cacheKey = this.getCacheKey(url, options);
-        const cacheDuration = options.cache || CONFIG.CACHE_DURATION.DYNAMIC;
+        const {
+            method = 'GET',
+            params = {},
+            body = null,
+            cache = true,
+            cacheDuration = CONFIG.CACHE_DURATION.CONTENT,
+            retry = true
+        } = options;
 
-        // Check cache first
-        if (options.method === 'GET' || !options.method) {
+        const url = this.buildUrl(endpoint, method === 'GET' ? params : {});
+        const cacheKey = this.getCacheKey(url, { method, body });
+
+        // Check cache for GET requests
+        if (method === 'GET' && cache) {
             const cachedData = this.cache.get(cacheKey);
             if (this.isCacheValid(cachedData, cacheDuration)) {
                 return cachedData.data;
             }
         }
 
-        // Deduplicate concurrent requests
-        if (this.requestQueue.has(cacheKey)) {
-            return this.requestQueue.get(cacheKey);
+        // Prevent duplicate requests
+        if (this.pendingRequests.has(cacheKey)) {
+            return this.pendingRequests.get(cacheKey);
         }
 
-        // Make the actual request
-        const requestPromise = this.retryRequest(async () => {
-            const response = await fetch(url, {
-                method: options.method || 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': Auth.getToken() ? `Bearer ${Auth.getToken()}` : '',
-                    ...options.headers
-                },
-                body: options.body ? JSON.stringify(options.body) : undefined
-            });
+        // Create request promise
+        const requestPromise = this.executeRequest(url, {
+            method,
+            headers: this.buildHeaders(),
+            body: body ? JSON.stringify(body) : null
+        }, retry);
 
-            if (!response.ok) {
-                if (response.status === 401) {
-                    // Token expired, try to refresh
-                    if (await Auth.refreshToken()) {
-                        // Retry with new token
-                        return this.request(endpoint, options);
-                    } else {
-                        Auth.logout();
-                        throw new Error('Authentication failed');
-                    }
-                }
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
+        this.pendingRequests.set(cacheKey, requestPromise);
 
-            const data = await response.json();
+        try {
+            const data = await requestPromise;
 
             // Cache successful GET requests
-            if (options.method === 'GET' || !options.method) {
+            if (method === 'GET' && cache && data) {
                 this.cache.set(cacheKey, {
                     data,
                     timestamp: Date.now()
@@ -96,252 +84,127 @@ class APIClient {
             }
 
             return data;
-        });
-
-        this.requestQueue.set(cacheKey, requestPromise);
-
-        try {
-            const result = await requestPromise;
-            return result;
         } finally {
-            this.requestQueue.delete(cacheKey);
+            this.pendingRequests.delete(cacheKey);
+        }
+    }
+
+    // Execute request with retry logic
+    async executeRequest(url, options, retry = true, retryCount = 0) {
+        try {
+            const response = await fetch(url, options);
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // Handle token refresh
+                    await this.handleTokenRefresh();
+                    // Retry with new token
+                    options.headers = this.buildHeaders();
+                    return this.executeRequest(url, options, false);
+                }
+
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            if (retry && retryCount < this.retryConfig.maxRetries) {
+                const delay = this.retryConfig.retryDelay * Math.pow(this.retryConfig.backoffMultiplier, retryCount);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return this.executeRequest(url, options, retry, retryCount + 1);
+            }
+            throw error;
+        }
+    }
+
+    // Build request headers
+    buildHeaders() {
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        };
+
+        const token = this.getAuthToken();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        return headers;
+    }
+
+    // Handle token refresh
+    async handleTokenRefresh() {
+        try {
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (!refreshToken) {
+                throw new Error('No refresh token');
+            }
+
+            const response = await fetch(this.buildUrl(CONFIG.API_ENDPOINTS.REFRESH_TOKEN), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refreshToken })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem('auth_token', data.token);
+                if (data.refresh_token) {
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                }
+            } else {
+                // Redirect to login
+                window.location.href = '/auth/login.html';
+            }
+        } catch (error) {
+            window.location.href = '/auth/login.html';
         }
     }
 
     // Convenience methods
-    async get(endpoint, params = {}, options = {}) {
-        return this.request(endpoint, { ...options, params, method: 'GET' });
+    get(endpoint, params = {}, options = {}) {
+        return this.request(endpoint, { ...options, method: 'GET', params });
     }
 
-    async post(endpoint, body = {}, options = {}) {
-        return this.request(endpoint, { ...options, body, method: 'POST' });
+    post(endpoint, body = {}, options = {}) {
+        return this.request(endpoint, { ...options, method: 'POST', body });
     }
 
-    async put(endpoint, body = {}, options = {}) {
-        return this.request(endpoint, { ...options, body, method: 'PUT' });
+    put(endpoint, body = {}, options = {}) {
+        return this.request(endpoint, { ...options, method: 'PUT', body });
     }
 
-    async delete(endpoint, options = {}) {
+    delete(endpoint, options = {}) {
         return this.request(endpoint, { ...options, method: 'DELETE' });
     }
 
     // Clear cache
-    clearCache(pattern = null) {
-        if (pattern) {
-            for (const [key] of this.cache) {
-                if (key.includes(pattern)) {
-                    this.cache.delete(key);
-                }
-            }
-        } else {
-            this.cache.clear();
-        }
+    clearCache() {
+        this.cache.clear();
     }
 
-    // Prefetch data for better performance
+    // Prefetch data
     async prefetch(endpoints) {
         const promises = endpoints.map(endpoint =>
-            this.get(endpoint.url, endpoint.params).catch(() => null)
+            this.get(endpoint).catch(err => console.warn(`Prefetch failed for ${endpoint}:`, err))
         );
-        await Promise.all(promises);
-    }
-}
-
-// Content-specific API methods
-class ContentAPI {
-    constructor(client) {
-        this.client = client;
+        await Promise.allSettled(promises);
     }
 
-    async getTrending(params = {}) {
-        return this.client.get(CONFIG.API_ENDPOINTS.TRENDING, {
-            limit: params.limit || 20,
-            type: params.type || 'all',
-            region: params.region
-        });
-    }
-
-    async getNewReleases(params = {}) {
-        return this.client.get(CONFIG.API_ENDPOINTS.NEW_RELEASES, {
-            limit: params.limit || 20,
-            language: params.language,
-            type: params.type || 'movie'
-        });
-    }
-
-    async getCriticsChoice(params = {}) {
-        return this.client.get(CONFIG.API_ENDPOINTS.TOP_RATED, {
-            limit: params.limit || 20,
-            type: params.type || 'movie'
-        });
-    }
-
-    async getGenreContent(genre, params = {}) {
-        return this.client.get(`${CONFIG.API_ENDPOINTS.GENRES}/${genre}`, {
-            limit: params.limit || 20,
-            type: params.type || 'movie',
-            region: params.region
-        });
-    }
-
-    async getRegionalContent(language, params = {}) {
-        return this.client.get(`${CONFIG.API_ENDPOINTS.REGIONAL}/${language}`, {
-            limit: params.limit || 20,
-            type: params.type || 'movie'
-        });
-    }
-
-    async getAnimeContent(params = {}) {
-        return this.client.get(CONFIG.API_ENDPOINTS.ANIME, {
-            limit: params.limit || 20,
-            genre: params.genre
-        });
-    }
-
-    async search(query, params = {}) {
-        return this.client.get(CONFIG.API_ENDPOINTS.SEARCH, {
-            query,
-            type: params.type || 'multi',
-            page: params.page || 1
-        });
-    }
-
-    async getDetails(contentId) {
-        return this.client.get(`${CONFIG.API_ENDPOINTS.CONTENT_DETAILS}/${contentId}`);
-    }
-
-    async getSimilar(contentId, params = {}) {
-        return this.client.get(`${CONFIG.API_ENDPOINTS.SIMILAR}/${contentId}`, {
-            limit: params.limit || 20
-        });
-    }
-
-    async getAdminChoice(params = {}) {
-        return this.client.get(CONFIG.API_ENDPOINTS.ADMIN_CHOICE, {
-            limit: params.limit || 20,
-            type: params.type || 'admin_choice'
-        });
-    }
-}
-
-// User-specific API methods
-class UserAPI {
-    constructor(client) {
-        this.client = client;
-    }
-
-    async getRecommendations(params = {}) {
-        if (!Auth.isAuthenticated()) {
-            return this.client.get(CONFIG.API_ENDPOINTS.ANONYMOUS_RECOMMENDATIONS, {
-                limit: params.limit || 20
-            });
-        }
-
-        if (CONFIG.FEATURES.ML_RECOMMENDATIONS) {
+    // Service Worker integration
+    async syncWithServiceWorker() {
+        if ('serviceWorker' in navigator && CONFIG.FEATURES.SERVICE_WORKER) {
             try {
-                return await this.client.get(CONFIG.API_ENDPOINTS.ML_RECOMMENDATIONS, {
-                    limit: params.limit || 20
-                });
+                const registration = await navigator.serviceWorker.ready;
+                if (registration.sync) {
+                    await registration.sync.register('sync-data');
+                }
             } catch (error) {
-                // Fallback to regular recommendations
-                return this.client.get(CONFIG.API_ENDPOINTS.RECOMMENDATIONS, {
-                    limit: params.limit || 20
-                });
+                console.warn('Service Worker sync failed:', error);
             }
         }
-
-        return this.client.get(CONFIG.API_ENDPOINTS.RECOMMENDATIONS, {
-            limit: params.limit || 20
-        });
-    }
-
-    async getWatchlist() {
-        return this.client.get(CONFIG.API_ENDPOINTS.WATCHLIST);
-    }
-
-    async getFavorites() {
-        return this.client.get(CONFIG.API_ENDPOINTS.FAVORITES);
-    }
-
-    async recordInteraction(contentId, interactionType, rating = null) {
-        return this.client.post(CONFIG.API_ENDPOINTS.INTERACTIONS, {
-            content_id: contentId,
-            interaction_type: interactionType,
-            rating
-        });
-    }
-
-    async addToWatchlist(contentId) {
-        return this.recordInteraction(contentId, 'watchlist');
-    }
-
-    async addToFavorites(contentId) {
-        return this.recordInteraction(contentId, 'favorite');
-    }
-
-    async rateContent(contentId, rating) {
-        return this.recordInteraction(contentId, 'rating', rating);
     }
 }
 
-// Admin API methods
-class AdminAPI {
-    constructor(client) {
-        this.client = client;
-    }
-
-    async searchExternal(query, source = 'tmdb', page = 1) {
-        return this.client.get(CONFIG.API_ENDPOINTS.ADMIN_SEARCH, {
-            query,
-            source,
-            page
-        });
-    }
-
-    async saveContent(contentData) {
-        return this.client.post(CONFIG.API_ENDPOINTS.ADMIN_CONTENT, contentData);
-    }
-
-    async createRecommendation(data) {
-        return this.client.post(CONFIG.API_ENDPOINTS.ADMIN_RECOMMENDATIONS, data);
-    }
-
-    async getRecommendations(params = {}) {
-        return this.client.get(CONFIG.API_ENDPOINTS.ADMIN_RECOMMENDATIONS, {
-            page: params.page || 1,
-            per_page: params.per_page || 20
-        });
-    }
-
-    async getAnalytics() {
-        return this.client.get(CONFIG.API_ENDPOINTS.ADMIN_ANALYTICS);
-    }
-
-    async checkMLService() {
-        return this.client.get(CONFIG.API_ENDPOINTS.ADMIN_ML_CHECK);
-    }
-
-    async updateMLService() {
-        return this.client.post(CONFIG.API_ENDPOINTS.ADMIN_ML_UPDATE);
-    }
-
-    async getMLStats() {
-        return this.client.get(CONFIG.API_ENDPOINTS.ADMIN_ML_STATS);
-    }
-}
-
-// Initialize API clients
+// Export singleton instance
 const apiClient = new APIClient();
-const API = {
-    content: new ContentAPI(apiClient),
-    user: new UserAPI(apiClient),
-    admin: new AdminAPI(apiClient),
-    client: apiClient
-};
-
-// Service Worker integration
-if ('serviceWorker' in navigator && CONFIG.FEATURES.OFFLINE_MODE) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => { });
-    });
-}
