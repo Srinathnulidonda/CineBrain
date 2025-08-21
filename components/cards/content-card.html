@@ -1,0 +1,424 @@
+<!-- Reusable Content Card Component -->
+<template id="content-card-template">
+    <div class="content-card" data-content-id="">
+        <div class="content-card__image-wrapper">
+            <img class="content-card__image" loading="lazy" alt="">
+            <div class="content-card__badges"></div>
+            <div class="content-card__quick-actions">
+                <button class="quick-action-btn" data-action="play" aria-label="Play">
+                    <i class="bi bi-play-fill"></i>
+                </button>
+                <button class="quick-action-btn" data-action="watchlist" aria-label="Add to Watchlist">
+                    <i class="bi bi-bookmark"></i>
+                </button>
+                <button class="quick-action-btn" data-action="favorite" aria-label="Add to Favorites">
+                    <i class="bi bi-heart"></i>
+                </button>
+            </div>
+        </div>
+        <div class="content-card__body">
+            <h3 class="content-card__title"></h3>
+            <div class="content-card__meta">
+                <span class="content-card__rating">
+                    <i class="bi bi-star-fill content-card__rating-star"></i>
+                    <span class="rating-value"></span>
+                </span>
+                <span class="content-card__type"></span>
+                <span class="content-card__year"></span>
+            </div>
+            <div class="content-card__genres"></div>
+        </div>
+        <div class="content-card__overlay">
+            <p class="content-card__description"></p>
+            <div class="content-card__actions"></div>
+            <div class="content-card__progress" style="display: none;">
+                <div class="progress-bar"></div>
+                <span class="progress-text"></span>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+    class ContentCard extends HTMLElement {
+        constructor() {
+            super();
+            this.attachShadow({ mode: 'open' });
+            this.content = null;
+            this.isInWatchlist = false;
+            this.isInFavorites = false;
+        }
+
+        static get observedAttributes() {
+            return ['content-id', 'view-type', 'show-progress'];
+        }
+
+        connectedCallback() {
+            this.loadTemplate();
+            this.setupEventListeners();
+            if (this.getAttribute('content-id')) {
+                this.loadContent();
+            }
+        }
+
+        loadTemplate() {
+            const template = document.getElementById('content-card-template');
+            const node = template.content.cloneNode(true);
+
+            // Add styles
+            const style = document.createElement('style');
+            style.textContent = `
+            @import '/assets/css/components.css';
+            
+            .content-card {
+                position: relative;
+                height: 100%;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .content-card__quick-actions {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                display: flex;
+                gap: 4px;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            
+            .content-card:hover .content-card__quick-actions {
+                opacity: 1;
+            }
+            
+            .quick-action-btn {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: rgba(0, 0, 0, 0.8);
+                backdrop-filter: blur(10px);
+                border: none;
+                color: white;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+            }
+            
+            .quick-action-btn:hover {
+                background: var(--accent-blue);
+                transform: scale(1.1);
+            }
+            
+            .quick-action-btn.active {
+                background: var(--accent-blue);
+            }
+            
+            .quick-action-btn.active i {
+                fill: currentColor;
+            }
+            
+            .content-card__progress {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 4px;
+            }
+            
+            .progress-bar {
+                height: 3px;
+                background: var(--accent-blue);
+                border-radius: 2px;
+                transition: width 0.3s ease;
+            }
+            
+            .progress-text {
+                font-size: 10px;
+                color: var(--text-muted);
+                display: block;
+                text-align: center;
+                margin-top: 2px;
+            }
+        `;
+
+            this.shadowRoot.appendChild(style);
+            this.shadowRoot.appendChild(node);
+        }
+
+        async loadContent() {
+            const contentId = this.getAttribute('content-id');
+
+            try {
+                // Load from cache first
+                const cached = this.getCachedContent(contentId);
+                if (cached) {
+                    this.content = cached;
+                    this.render();
+                }
+
+                // Fetch fresh data
+                const response = await api.getContentDetails(contentId);
+                this.content = response;
+                this.cacheContent(contentId, response);
+                this.render();
+
+                // Check user lists if authenticated
+                if (auth.isAuthenticated()) {
+                    this.checkUserLists();
+                }
+
+            } catch (error) {
+                console.error('Failed to load content:', error);
+                this.renderError();
+            }
+        }
+
+        render() {
+            if (!this.content) return;
+
+            const card = this.shadowRoot.querySelector('.content-card');
+            const img = this.shadowRoot.querySelector('.content-card__image');
+            const title = this.shadowRoot.querySelector('.content-card__title');
+            const rating = this.shadowRoot.querySelector('.rating-value');
+            const type = this.shadowRoot.querySelector('.content-card__type');
+            const year = this.shadowRoot.querySelector('.content-card__year');
+            const description = this.shadowRoot.querySelector('.content-card__description');
+            const genres = this.shadowRoot.querySelector('.content-card__genres');
+            const badges = this.shadowRoot.querySelector('.content-card__badges');
+
+            // Set content
+            card.dataset.contentId = this.content.id;
+            img.src = this.content.poster_path || '/assets/images/placeholder-poster.jpg';
+            img.alt = this.content.title;
+            title.textContent = this.content.title;
+            rating.textContent = this.content.rating || 'N/A';
+            type.textContent = this.content.content_type?.toUpperCase() || '';
+            year.textContent = this.content.release_date ?
+                new Date(this.content.release_date).getFullYear() : '';
+            description.textContent = this.content.overview || 'No description available';
+
+            // Render genres
+            if (this.content.genres && this.content.genres.length > 0) {
+                genres.innerHTML = this.content.genres.slice(0, 3).map(genre =>
+                    `<span class="genre-chip">${genre}</span>`
+                ).join('');
+            }
+
+            // Render badges
+            this.renderBadges(badges);
+
+            // Update progress if watching
+            this.updateProgress();
+        }
+
+        renderBadges(container) {
+            const badges = [];
+
+            if (this.content.is_new_release) {
+                badges.push('<span class="badge badge--new">NEW</span>');
+            }
+
+            if (this.content.is_trending) {
+                badges.push('<span class="badge badge--trending">TRENDING</span>');
+            }
+
+            if (this.content.is_critics_choice) {
+                badges.push('<span class="badge badge--critics">CRITICS CHOICE</span>');
+            }
+
+            if (this.content.content_type === 'anime') {
+                badges.push('<span class="badge badge--anime">ANIME</span>');
+            }
+
+            container.innerHTML = badges.join('');
+        }
+
+        async checkUserLists() {
+            try {
+                const [watchlist, favorites] = await Promise.all([
+                    api.getWatchlist(),
+                    api.getFavorites()
+                ]);
+
+                this.isInWatchlist = watchlist.watchlist.some(item =>
+                    item.id === this.content.id
+                );
+
+                this.isInFavorites = favorites.favorites.some(item =>
+                    item.id === this.content.id
+                );
+
+                this.updateActionButtons();
+            } catch (error) {
+                console.error('Failed to check user lists:', error);
+            }
+        }
+
+        updateActionButtons() {
+            const watchlistBtn = this.shadowRoot.querySelector('[data-action="watchlist"]');
+            const favoriteBtn = this.shadowRoot.querySelector('[data-action="favorite"]');
+
+            if (watchlistBtn) {
+                watchlistBtn.classList.toggle('active', this.isInWatchlist);
+                watchlistBtn.querySelector('i').className =
+                    this.isInWatchlist ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
+            }
+
+            if (favoriteBtn) {
+                favoriteBtn.classList.toggle('active', this.isInFavorites);
+                favoriteBtn.querySelector('i').className =
+                    this.isInFavorites ? 'bi bi-heart-fill' : 'bi bi-heart';
+            }
+        }
+
+        updateProgress() {
+            if (this.getAttribute('show-progress') !== 'true') return;
+
+            const progress = this.getWatchProgress();
+            if (progress > 0) {
+                const progressContainer = this.shadowRoot.querySelector('.content-card__progress');
+                const progressBar = this.shadowRoot.querySelector('.progress-bar');
+                const progressText = this.shadowRoot.querySelector('.progress-text');
+
+                progressContainer.style.display = 'block';
+                progressBar.style.width = `${progress}%`;
+                progressText.textContent = `${Math.round(progress)}% watched`;
+            }
+        }
+
+        getWatchProgress() {
+            // Get from local storage or API
+            const watchHistory = Storage.getSessionData('watch_history') || {};
+            return watchHistory[this.content?.id] || 0;
+        }
+
+        setupEventListeners() {
+            // Card click
+            this.shadowRoot.querySelector('.content-card').addEventListener('click', (e) => {
+                if (!e.target.closest('.quick-action-btn')) {
+                    this.navigateToDetails();
+                }
+            });
+
+            // Quick actions
+            this.shadowRoot.querySelectorAll('.quick-action-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.handleQuickAction(btn.dataset.action);
+                });
+            });
+        }
+
+        async handleQuickAction(action) {
+            if (!auth.isAuthenticated() && action !== 'play') {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            switch (action) {
+                case 'play':
+                    this.playContent();
+                    break;
+                case 'watchlist':
+                    await this.toggleWatchlist();
+                    break;
+                case 'favorite':
+                    await this.toggleFavorite();
+                    break;
+            }
+        }
+
+        playContent() {
+            if (this.content.youtube_trailer) {
+                modalManager.video(this.content.youtube_trailer, this.content.title);
+            } else {
+                this.navigateToDetails();
+            }
+        }
+
+        async toggleWatchlist() {
+            try {
+                const action = this.isInWatchlist ? 'remove_watchlist' : Config.INTERACTIONS.WATCHLIST;
+                await api.recordInteraction(this.content.id, action);
+
+                this.isInWatchlist = !this.isInWatchlist;
+                this.updateActionButtons();
+
+                toastManager.success(
+                    this.isInWatchlist ? 'Added to watchlist' : 'Removed from watchlist'
+                );
+
+                // Emit custom event
+                this.dispatchEvent(new CustomEvent('watchlist-changed', {
+                    detail: { contentId: this.content.id, inWatchlist: this.isInWatchlist }
+                }));
+
+            } catch (error) {
+                toastManager.error('Failed to update watchlist');
+            }
+        }
+
+        async toggleFavorite() {
+            try {
+                const action = this.isInFavorites ? 'remove_favorite' : Config.INTERACTIONS.FAVORITE;
+                await api.recordInteraction(this.content.id, action);
+
+                this.isInFavorites = !this.isInFavorites;
+                this.updateActionButtons();
+
+                toastManager.success(
+                    this.isInFavorites ? 'Added to favorites' : 'Removed from favorites'
+                );
+
+                // Emit custom event
+                this.dispatchEvent(new CustomEvent('favorite-changed', {
+                    detail: { contentId: this.content.id, inFavorites: this.isInFavorites }
+                }));
+
+            } catch (error) {
+                toastManager.error('Failed to update favorites');
+            }
+        }
+
+        navigateToDetails() {
+            window.location.href = `/content/details.html?id=${this.content.id}`;
+        }
+
+        renderError() {
+            const card = this.shadowRoot.querySelector('.content-card');
+            card.innerHTML = `
+            <div class="content-card__error">
+                <i class="bi bi-exclamation-triangle"></i>
+                <p>Failed to load content</p>
+            </div>
+        `;
+        }
+
+        getCachedContent(contentId) {
+            const cache = Storage.getSessionData('content_cache') || {};
+            return cache[contentId];
+        }
+
+        cacheContent(contentId, content) {
+            const cache = Storage.getSessionData('content_cache') || {};
+            cache[contentId] = content;
+            Storage.setSessionData('content_cache', cache);
+        }
+
+        attributeChangedCallback(name, oldValue, newValue) {
+            if (oldValue !== newValue) {
+                if (name === 'content-id' && newValue) {
+                    this.loadContent();
+                } else if (name === 'show-progress') {
+                    this.updateProgress();
+                }
+            }
+        }
+    }
+
+    // Register custom element
+    customElements.define('content-card', ContentCard);
+</script>

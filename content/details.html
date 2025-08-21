@@ -1,745 +1,541 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Movie details on CineScope">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Details - CineScope</title>
 
-  <title>Content Details - CineScope</title>
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Bootstrap Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="/css/base.css">
-  <link rel="stylesheet" href="/css/bootstrap-overrides.css">
-  <link rel="stylesheet" href="/css/animation.css">
-  <link rel="stylesheet" href="/css/responsive.css">
-
-  <style>
-    .hero-backdrop {
-      background-size: cover;
-      background-position: center;
-      background-attachment: fixed;
-      position: relative;
-    }
-
-    .hero-backdrop::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(to bottom,
-          rgba(10, 10, 11, 0.7) 0%,
-          rgba(10, 10, 11, 0.9) 50%,
-          rgba(10, 10, 11, 1) 100%);
-    }
-
-    .content-details-container {
-      position: relative;
-      z-index: 2;
-    }
-
-    .poster-container {
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-      border-radius: 1rem;
-      overflow: hidden;
-    }
-
-    .cast-member-card {
-      transition: transform 0.2s ease;
-    }
-
-    .cast-member-card:hover {
-      transform: translateY(-4px);
-    }
-
-    .similar-content-card {
-      transition: transform 0.2s ease;
-    }
-
-    .similar-content-card:hover {
-      transform: scale(1.05);
-    }
-
-    @media (max-width: 768px) {
-      .hero-backdrop {
-        background-attachment: scroll;
-      }
-    }
-  </style>
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/assets/css/base.css" rel="stylesheet">
+    <link href="/assets/css/components.css" rel="stylesheet">
+    <link href="/assets/css/layouts.css" rel="stylesheet">
+    <link href="/assets/css/animations.css" rel="stylesheet">
+    <link href="/assets/css/responsive.css" rel="stylesheet">
+    <link href="/assets/css/utilities.css" rel="stylesheet">
 </head>
 
-<body class="bg-black">
-  <!-- Layout Container -->
-  <div id="app-container">
-    <!-- Top Bar Container (Desktop) -->
-    <div id="topbar-container" class="d-none d-lg-block"></div>
+<body>
+    <div class="app-layout">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="container navbar__container">
+                <a href="/" class="navbar__logo">CineScope</a>
 
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Loading State -->
-      <div id="loading-state" class="d-flex justify-content-center align-items-center" style="min-height: 70vh;">
-        <div class="text-center">
-          <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <h5 class="text-white">Loading content details...</h5>
-        </div>
-      </div>
-
-      <!-- Content Details -->
-      <div id="content-details" class="d-none">
-        <!-- Hero Section with Backdrop -->
-        <section class="hero-backdrop" id="hero-section">
-          <div class="content-details-container">
-            <div class="container-fluid py-5">
-              <div class="row align-items-center" style="min-height: 80vh;">
-                <div class="col-lg-4 col-xl-3 text-center mb-4 mb-lg-0">
-                  <!-- Movie Poster -->
-                  <div class="poster-container d-inline-block">
-                    <img id="content-poster" src="" alt="" class="img-fluid" style="max-width: 300px; width: 100%;">
-                  </div>
+                <div class="navbar__menu">
+                    <a href="/content/trending.html" class="navbar__link">Trending</a>
+                    <a href="/content/search.html" class="navbar__link">Browse</a>
+                    <a href="/content/anime.html" class="navbar__link">Anime</a>
+                    <a href="/content/regional.html" class="navbar__link">Regional</a>
                 </div>
-                <div class="col-lg-8 col-xl-9">
-                  <div class="content-info">
-                    <!-- Title -->
-                    <h1 class="display-4 fw-bold text-white mb-3" id="content-title"></h1>
 
-                    <!-- Original Title (if different) -->
-                    <h2 class="h5 text-muted mb-3 d-none" id="content-original-title"></h2>
-
-                    <!-- Meta Information -->
-                    <div class="content-meta mb-4">
-                      <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
-                        <!-- Rating -->
-                        <div class="rating-display">
-                          <span class="badge bg-primary fs-6 px-3 py-2">
-                            <i class="bi bi-star-fill me-2"></i>
-                            <span id="content-rating">0.0</span>/10
-                          </span>
-                        </div>
-
-                        <!-- Content Type -->
-                        <span class="badge bg-secondary fs-6 px-3 py-2" id="content-type-badge">MOVIE</span>
-
-                        <!-- Release Date -->
-                        <span class="text-muted" id="content-release-date"></span>
-
-                        <!-- Runtime -->
-                        <span class="text-muted d-none" id="content-runtime"></span>
-                      </div>
-
-                      <!-- Genres -->
-                      <div class="genres-list mb-3" id="content-genres">
-                        <!-- Genres will be populated here -->
-                      </div>
-
-                      <!-- Special Badges -->
-                      <div class="special-badges mb-3" id="special-badges">
-                        <!-- Special badges will be populated here -->
-                      </div>
-                    </div>
-
-                    <!-- Overview -->
-                    <p class="lead text-light mb-4" id="content-overview"></p>
-
-                    <!-- Action Buttons -->
-                    <div class="action-buttons d-flex flex-wrap gap-3">
-                      <button class="btn btn-primary btn-lg" id="play-trailer-btn">
-                        <i class="bi bi-play-fill me-2"></i>Play Trailer
-                      </button>
-                      <button class="btn btn-outline-light btn-lg" id="add-watchlist-btn">
-                        <i class="bi bi-bookmark me-2"></i>Add to Watchlist
-                      </button>
-                      <button class="btn btn-outline-danger btn-lg" id="add-favorite-btn">
-                        <i class="bi bi-heart me-2"></i>Add to Favorites
-                      </button>
-                      <button class="btn btn-outline-secondary" id="share-btn">
-                        <i class="bi bi-share"></i>
-                      </button>
-                    </div>
-                  </div>
+                <div class="navbar__user" id="navbarUser">
+                    <!-- Dynamic user menu -->
                 </div>
-              </div>
             </div>
-          </div>
-        </section>
+        </nav>
 
-        <!-- Content Sections -->
-        <div class="container-fluid py-5">
-          <!-- Cast & Crew -->
-          <section class="mb-5" id="cast-crew-section">
-            <h3 class="text-white mb-4">
-              <i class="bi bi-people text-primary me-2"></i>Cast & Crew
-            </h3>
-            <div class="row">
-              <!-- Cast -->
-              <div class="col-lg-8 mb-4">
-                <h5 class="text-white mb-3">Cast</h5>
-                <div class="cast-list" id="cast-list">
-                  <!-- Cast will be populated here -->
+        <!-- Main Content -->
+        <main class="app-layout__main">
+            <div class="content-details" id="contentDetails">
+                <!-- Loading skeleton -->
+                <div class="content-details__backdrop">
+                    <div class="skeleton" style="height: 100%;"></div>
                 </div>
-              </div>
-
-              <!-- Crew -->
-              <div class="col-lg-4">
-                <h5 class="text-white mb-3">Key Crew</h5>
-                <div class="crew-list" id="crew-list">
-                  <!-- Crew will be populated here -->
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- Similar Content -->
-          <section class="mb-5">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-              <h3 class="text-white mb-0">
-                <i class="bi bi-collection text-success me-2"></i>More Like This
-              </h3>
-              <button class="btn btn-outline-primary btn-sm" id="refresh-similar-btn">
-                <i class="bi bi-arrow-clockwise me-2"></i>Refresh
-              </button>
-            </div>
-            <div id="similar-content-container">
-              <!-- Similar content will be populated here -->
-            </div>
-          </section>
-
-          <!-- Additional Information -->
-          <section class="mb-5">
-            <h3 class="text-white mb-4">
-              <i class="bi bi-info-circle text-warning me-2"></i>Additional Information
-            </h3>
-            <div class="row">
-              <div class="col-md-6">
-                <div class="card bg-dark border-secondary">
-                  <div class="card-body">
-                    <h6 class="text-white mb-3">Details</h6>
-                    <div id="additional-details">
-                      <!-- Additional details will be populated here -->
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="card bg-dark border-secondary">
-                  <div class="card-body">
-                    <h6 class="text-white mb-3">Languages</h6>
-                    <div id="content-languages">
-                      <!-- Languages will be populated here -->
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
-
-      <!-- Error State -->
-      <div id="error-state" class="d-none">
-        <div class="container-fluid">
-          <div class="text-center py-5">
-            <i class="bi bi-exclamation-triangle display-1 text-danger mb-4"></i>
-            <h3 class="text-white mb-3">Content Not Found</h3>
-            <p class="text-muted mb-4">The content you're looking for doesn't exist or has been removed.</p>
-            <div class="d-flex justify-content-center gap-3">
-              <button class="btn btn-primary" onclick="window.history.back()">
-                <i class="bi bi-arrow-left me-2"></i>Go Back
-              </button>
-              <a href="/" class="btn btn-outline-primary">
-                <i class="bi bi-house me-2"></i>Home
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- Mobile Navigation Container -->
-    <div id="mobile-nav-container" class="d-lg-none"></div>
-  </div>
-
-  <!-- Include Widget Templates -->
-  <div id="widget-templates" class="d-none">
-    <template id="content-card-template">
-      <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
-        <div class="card content-card bg-dark border-0 h-100 position-relative" data-content-id="">
-          <div class="card-img-wrapper position-relative overflow-hidden">
-            <img src="" class="card-img-top" alt="" loading="lazy" onerror="this.src='/assets/placeholder-poster.jpg'">
-            <div class="card-overlay position-absolute w-100 h-100 d-flex align-items-center justify-content-center">
-              <div class="d-flex gap-2">
-                <button class="btn btn-primary btn-sm rounded-circle p-2 play-trailer-btn" title="Play Trailer">
-                  <i class="bi bi-play-fill"></i>
-                </button>
-                <button class="btn btn-outline-light btn-sm rounded-circle p-2 quick-view-btn" title="Quick View">
-                  <i class="bi bi-eye-fill"></i>
-                </button>
-              </div>
-            </div>
-            <div class="position-absolute top-0 end-0 m-2 rating-badge">
-              <span class="badge bg-primary rounded-pill">
-                <i class="bi bi-star-fill me-1"></i><span class="rating-value">0.0</span>
-              </span>
-            </div>
-            <div class="position-absolute top-0 start-0 m-2 content-type-badge">
-              <span class="badge bg-secondary">MOVIE</span>
-            </div>
-            <div class="position-absolute bottom-0 start-0 m-2 special-badges"></div>
-          </div>
-          <div class="card-body p-3">
-            <h6 class="card-title text-white mb-2 text-truncate" title=""></h6>
-            <p class="card-text text-muted small mb-2 genres-text"></p>
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="text-muted small release-date"></span>
-              <div class="btn-group" role="group">
-                <button class="btn btn-outline-light btn-sm watchlist-btn" title="Add to Watchlist">
-                  <i class="bi bi-bookmark"></i>
-                </button>
-                <button class="btn btn-outline-light btn-sm favorite-btn" title="Add to Favorites">
-                  <i class="bi bi-heart"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-  </div>
-
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- Core JavaScript -->
-  <script src="/js/config.js"></script>
-  <script src="/js/storage.js"></script>
-  <script src="/js/http.js"></script>
-  <script src="/js/ui.js"></script>
-  <script src="/js/app.js"></script>
-
-  <!-- Widget Scripts -->
-  <script src="/widgets/content-card.html"></script>
-
-  <!-- Page Script -->
-  <script>
-    let currentContent = null;
-
-    document.addEventListener('DOMContentLoaded', async function () {
-      console.log('🎬 Loading Content Details Page...');
-
-      // Get content ID from URL
-      const contentId = getContentIdFromUrl();
-
-      if (!contentId) {
-        showErrorState();
-        return;
-      }
-
-      // Load content details
-      await loadContentDetails(contentId);
-
-      console.log('✅ Content details page loaded');
-    });
-
-    function getContentIdFromUrl() {
-      // Check if we're in username route
-      const pathSegments = window.location.pathname.split('/').filter(Boolean);
-
-      if (pathSegments.length >= 3 && pathSegments[1] === 'details') {
-        // /{username}/details/{id}
-        return pathSegments[2];
-      } else {
-        // /content/details?id={id} (fallback)
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('id');
-      }
-    }
-
-    async function loadContentDetails(contentId) {
-      try {
-        console.log(`📡 Loading details for content ID: ${contentId}`);
-
-        // Fetch content details
-        const content = await CineScope.HTTP.content.getDetails(contentId);
-        currentContent = content;
-
-        // Update page title
-        CineScope.UI.updatePageTitle(content.title);
-
-        // Record view interaction
-        if (CineScope.App.isLoggedIn()) {
-          CineScope.App.viewContent(contentId);
-        }
-
-        // Populate content details
-        populateContentDetails(content);
-
-        // Load similar content
-        await loadSimilarContent(contentId);
-
-        // Show content
-        document.getElementById('loading-state').classList.add('d-none');
-        document.getElementById('content-details').classList.remove('d-none');
-
-        console.log('✅ Content details loaded successfully');
-
-      } catch (error) {
-        console.error('❌ Failed to load content details:', error);
-        showErrorState();
-      }
-    }
-
-    function populateContentDetails(content) {
-      // Basic Information
-      document.getElementById('content-title').textContent = content.title;
-      document.getElementById('content-rating').textContent = CineScope.utils.formatRating(content.rating);
-      document.getElementById('content-type-badge').textContent = (content.content_type || 'movie').toUpperCase();
-
-      // Original title (if different)
-      if (content.original_title && content.original_title !== content.title) {
-        const originalTitleElement = document.getElementById('content-original-title');
-        originalTitleElement.textContent = content.original_title;
-        originalTitleElement.classList.remove('d-none');
-      }
-
-      // Release date
-      if (content.release_date) {
-        document.getElementById('content-release-date').textContent = CineScope.utils.formatDate(content.release_date);
-      }
-
-      // Runtime
-      if (content.runtime) {
-        const runtimeElement = document.getElementById('content-runtime');
-        runtimeElement.textContent = `${content.runtime} min`;
-        runtimeElement.classList.remove('d-none');
-      }
-
-      // Overview
-      document.getElementById('content-overview').textContent = content.overview || 'No description available.';
-
-      // Poster
-      const posterElement = document.getElementById('content-poster');
-      posterElement.src = content.poster_path || '/assets/placeholder-poster.jpg';
-      posterElement.alt = content.title;
-
-      // Backdrop
-      if (content.backdrop_path) {
-        const heroSection = document.getElementById('hero-section');
-        heroSection.style.backgroundImage = `url('${content.backdrop_path}')`;
-      }
-
-      // Genres
-      populateGenres(content.genres);
-
-      // Special badges
-      populateSpecialBadges(content);
-
-      // Languages
-      populateLanguages(content.languages);
-
-      // Cast & Crew
-      populateCastCrew(content.cast, content.crew);
-
-      // Additional details
-      populateAdditionalDetails(content);
-
-      // Setup action buttons
-      setupActionButtons(content);
-    }
-
-    function populateGenres(genres) {
-      const genresContainer = document.getElementById('content-genres');
-
-      if (genres && genres.length > 0) {
-        genresContainer.innerHTML = genres.map(genre =>
-          `<span class="badge bg-outline-secondary me-2 mb-2">${genre}</span>`
-        ).join('');
-      } else {
-        genresContainer.innerHTML = '<span class="text-muted">No genres available</span>';
-      }
-    }
-
-    function populateSpecialBadges(content) {
-      const badgesContainer = document.getElementById('special-badges');
-      let badges = [];
-
-      if (content.is_trending) {
-        badges.push('<span class="badge bg-danger me-2 mb-2"><i class="bi bi-fire me-1"></i>Trending</span>');
-      }
-
-      if (content.is_new_release) {
-        badges.push('<span class="badge bg-success me-2 mb-2"><i class="bi bi-star me-1"></i>New Release</span>');
-      }
-
-      if (content.is_critics_choice) {
-        badges.push('<span class="badge bg-warning me-2 mb-2"><i class="bi bi-award me-1"></i>Critics\' Choice</span>');
-      }
-
-      // Anime-specific badges
-      if (content.content_type === 'anime' && content.anime_genres) {
-        content.anime_genres.forEach(genre => {
-          badges.push(`<span class="badge bg-info me-2 mb-2">${genre.toUpperCase()}</span>`);
-        });
-      }
-
-      badgesContainer.innerHTML = badges.join('');
-    }
-
-    function populateLanguages(languages) {
-      const languagesContainer = document.getElementById('content-languages');
-
-      if (languages && languages.length > 0) {
-        languagesContainer.innerHTML = languages.map(language =>
-          `<span class="badge bg-secondary me-2 mb-2">${language}</span>`
-        ).join('');
-      } else {
-        languagesContainer.innerHTML = '<span class="text-muted">No language information available</span>';
-      }
-    }
-
-    function populateCastCrew(cast, crew) {
-      // Cast
-      const castContainer = document.getElementById('cast-list');
-      if (cast && cast.length > 0) {
-        const castHtml = cast.slice(0, 6).map(person => `
-                    <div class="cast-member-card bg-dark border-secondary rounded p-3 mb-3">
-                        <div class="d-flex align-items-center">
-                            <div class="cast-avatar bg-gradient rounded-circle me-3 d-flex align-items-center justify-content-center" 
-                                 style="width: 50px; height: 50px; background: var(--cs-gradient-primary);">
-                                <i class="bi bi-person-fill text-white"></i>
-                            </div>
+                <div class="container">
+                    <div class="content-details__main">
+                        <div class="content-details__header">
+                            <div class="skeleton" style="height: 450px; border-radius: var(--border-radius-lg);"></div>
                             <div>
-                                <h6 class="text-white mb-1">${person.name || 'Unknown'}</h6>
-                                <p class="text-muted small mb-0">${person.character || person.job || 'Actor'}</p>
+                                <div class="skeleton mb-md" style="height: 40px; width: 300px;"></div>
+                                <div class="skeleton mb-md" style="height: 20px; width: 200px;"></div>
+                                <div class="skeleton" style="height: 100px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Mobile Navigation -->
+        <nav class="mobile-nav">
+            <ul class="mobile-nav__list">
+                <li class="mobile-nav__item">
+                    <a href="/" class="mobile-nav__link">
+                        <i class="bi bi-house mobile-nav__icon"></i>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li class="mobile-nav__item">
+                    <a href="/content/search.html" class="mobile-nav__link">
+                        <i class="bi bi-search mobile-nav__icon"></i>
+                        <span>Search</span>
+                    </a>
+                </li>
+                <li class="mobile-nav__item">
+                    <a href="/content/trending.html" class="mobile-nav__link">
+                        <i class="bi bi-fire mobile-nav__icon"></i>
+                        <span>Trending</span>
+                    </a>
+                </li>
+                <li class="mobile-nav__item" id="mobileWatchlistItem">
+                    <a href="/auth/login.html" class="mobile-nav__link">
+                        <i class="bi bi-bookmark mobile-nav__icon"></i>
+                        <span>Watchlist</span>
+                    </a>
+                </li>
+                <li class="mobile-nav__item" id="mobileProfileItem">
+                    <a href="/auth/login.html" class="mobile-nav__link">
+                        <i class="bi bi-person mobile-nav__icon"></i>
+                        <span>Profile</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Trailer Modal -->
+    <div class="modal" id="trailerModal">
+        <div class="modal__content" style="max-width: 900px;">
+            <div class="modal__header">
+                <h3 class="modal__title">Trailer</h3>
+                <button class="modal__close" onclick="closeTrailerModal()">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div class="modal__body p-0">
+                <div class="ratio ratio-16x9">
+                    <iframe id="trailerIframe" src="" frameborder="0" allowfullscreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/assets/js/core/config.js"></script>
+    <script src="/assets/js/core/storage.js"></script>
+    <script src="/assets/js/core/api.js"></script>
+    <script src="/assets/js/core/auth.js"></script>
+    <script src="/assets/js/core/router.js"></script>
+
+    <script>
+        let currentContent = null;
+        let isInWatchlist = false;
+        let isInFavorites = false;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Update navigation
+            updateNavigation();
+
+            // Get content ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const contentId = urlParams.get('id');
+
+            if (!contentId) {
+                window.location.href = '/';
+                return;
+            }
+
+            // Load content details
+            await loadContentDetails(contentId);
+
+            // Check user lists if authenticated
+            if (auth.isAuthenticated()) {
+                checkUserLists();
+            }
+        });
+
+        function updateNavigation() {
+            const navbarUser = document.getElementById('navbarUser');
+            const mobileWatchlistItem = document.getElementById('mobileWatchlistItem');
+            const mobileProfileItem = document.getElementById('mobileProfileItem');
+
+            if (auth.isAuthenticated()) {
+                const user = auth.getUser();
+                navbarUser.innerHTML = `
+                    <a href="${auth.getUserUrl('watchlist')}" class="navbar__link">
+                        <i class="bi bi-bookmark"></i>
+                    </a>
+                    <a href="${auth.getUserUrl('favorites')}" class="navbar__link">
+                        <i class="bi bi-heart"></i>
+                    </a>
+                    <div class="navbar__avatar">
+                        <img src="${user.avatar || '/assets/images/default-avatar.png'}" alt="${user.username}">
+                    </div>
+                `;
+
+                mobileWatchlistItem.innerHTML = `
+                    <a href="${auth.getUserUrl('watchlist')}" class="mobile-nav__link">
+                        <i class="bi bi-bookmark mobile-nav__icon"></i>
+                        <span>Watchlist</span>
+                    </a>
+                `;
+
+                mobileProfileItem.innerHTML = `
+                    <a href="${auth.getUserUrl('profile')}" class="mobile-nav__link">
+                        <i class="bi bi-person mobile-nav__icon"></i>
+                        <span>Profile</span>
+                    </a>
+                `;
+            } else {
+                navbarUser.innerHTML = `
+                    <a href="/auth/login.html" class="btn btn-primary">Sign In</a>
+                `;
+            }
+        }
+
+        async function loadContentDetails(contentId) {
+            try {
+                // Fetch content details
+                currentContent = await api.getContentDetails(contentId);
+
+                // Update page title
+                document.title = `${currentContent.title} - CineScope`;
+
+                // Render content
+                renderContentDetails();
+
+                // Load similar content
+                loadSimilarContent();
+
+                // Record view interaction if authenticated
+                if (auth.isAuthenticated()) {
+                    api.recordInteraction(contentId, Config.INTERACTIONS.VIEW);
+                }
+
+                // Add to recently viewed
+                Storage.addToRecentlyViewed(currentContent);
+
+            } catch (error) {
+                console.error('Failed to load content details:', error);
+                showToast('Failed to load content details', 'error');
+            }
+        }
+
+        function renderContentDetails() {
+            const detailsContainer = document.getElementById('contentDetails');
+
+            // Format backdrop URL
+            const backdropUrl = currentContent.backdrop_path || currentContent.poster_path;
+
+            detailsContainer.innerHTML = `
+                <!-- Backdrop -->
+                <div class="content-details__backdrop">
+                    ${backdropUrl ? `
+                        <img src="${backdropUrl}" 
+                             alt="${currentContent.title}" 
+                             class="content-details__backdrop-image">
+                    ` : ''}
+                    <div class="content-details__backdrop-gradient"></div>
+                </div>
+                
+                <div class="container">
+                    <div class="content-details__main animate-fadeInUp">
+                        <!-- Header -->
+                        <div class="content-details__header">
+                            <!-- Poster -->
+                            <div class="content-details__poster">
+                                <img src="${currentContent.poster_path || '/assets/images/placeholder-poster.jpg'}" 
+                                     alt="${currentContent.title}">
+                            </div>
+                            
+                            <!-- Info -->
+                            <div class="content-details__info">
+                                <!-- Badges -->
+                                <div class="content-details__badges">
+                                    ${currentContent.is_new_release ? '<span class="content-card__badge">NEW RELEASE</span>' : ''}
+                                    ${currentContent.is_critics_choice ? '<span class="content-card__badge">CRITICS CHOICE</span>' : ''}
+                                    ${currentContent.is_trending ? '<span class="content-card__badge">TRENDING</span>' : ''}
+                                </div>
+                                
+                                <h1>${currentContent.title}</h1>
+                                ${currentContent.original_title && currentContent.original_title !== currentContent.title ?
+                    `<p class="text-muted mb-md">${currentContent.original_title}</p>` : ''}
+                                
+                                <!-- Meta Info -->
+                                <div class="content-details__meta">
+                                    <span class="content-card__rating">
+                                        <i class="bi bi-star-fill content-card__rating-star"></i>
+                                        ${currentContent.rating || 'N/A'}
+                                    </span>
+                                    ${currentContent.vote_count ? `<span>${currentContent.vote_count.toLocaleString()} votes</span>` : ''}
+                                    ${currentContent.release_date ? `<span>${new Date(currentContent.release_date).getFullYear()}</span>` : ''}
+                                    ${currentContent.runtime ? `<span>${formatRuntime(currentContent.runtime)}</span>` : ''}
+                                    <span>${currentContent.content_type.toUpperCase()}</span>
+                                </div>
+                                
+                                <!-- Genres -->
+                                ${currentContent.genres && currentContent.genres.length > 0 ? `
+                                    <div class="content-details__genres">
+                                        ${currentContent.genres.map(genre => `
+                                            <a href="/content/genre.html?genre=${encodeURIComponent(genre.toLowerCase())}" 
+                                               class="filter-chip">${genre}</a>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                                
+                                <!-- Languages -->
+                                ${currentContent.languages && currentContent.languages.length > 0 ? `
+                                    <p class="text-sm text-muted mb-lg">
+                                        <i class="bi bi-translate"></i> 
+                                        ${currentContent.languages.join(', ')}
+                                    </p>
+                                ` : ''}
+                                
+                                <!-- Actions -->
+                                <div class="content-details__actions">
+                                    <button class="btn btn-primary" onclick="playContent()">
+                                        <i class="bi bi-play-fill"></i> Play Now
+                                    </button>
+                                    ${currentContent.youtube_trailer ? `
+                                        <button class="btn btn-secondary" onclick="playTrailer('${currentContent.youtube_trailer}')">
+                                            <i class="bi bi-play-circle"></i> Watch Trailer
+                                        </button>
+                                    ` : ''}
+                                    ${auth.isAuthenticated() ? `
+                                        <button class="btn btn-secondary" onclick="toggleWatchlist()" id="watchlistBtn">
+                                            <i class="bi bi-bookmark${isInWatchlist ? '-fill' : ''}"></i> 
+                                            <span>${isInWatchlist ? 'In Watchlist' : 'Add to Watchlist'}</span>
+                                        </button>
+                                        <button class="btn btn-secondary" onclick="toggleFavorite()" id="favoriteBtn">
+                                            <i class="bi bi-heart${isInFavorites ? '-fill' : ''}"></i>
+                                        </button>
+                                    ` : ''}
+                                    <button class="btn btn-secondary" onclick="shareContent()">
+                                        <i class="bi bi-share"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Overview -->
+                                ${currentContent.overview ? `
+                                    <div class="mt-xl">
+                                        <h3 class="mb-md">Synopsis</h3>
+                                        <p class="text-secondary">${currentContent.overview}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Sections -->
+                        <div class="content-details__sections">
+                            <!-- Cast -->
+                            ${currentContent.cast && currentContent.cast.length > 0 ? `
+                                <section>
+                                    <h3 class="mb-lg">Cast</h3>
+                                    <div class="d-flex gap-lg overflow-x-auto pb-md">
+                                        ${currentContent.cast.slice(0, 10).map(person => `
+                                            <div class="text-center" style="min-width: 120px;">
+                                                <div class="rounded-full overflow-hidden mb-sm mx-auto" style="width: 80px; height: 80px;">
+                                                    <img src="${person.profile_path ? `https://image.tmdb.org/t/p/w185${person.profile_path}` : '/assets/images/default-avatar.png'}" 
+                                                         alt="${person.name}"
+                                                         class="w-100 h-100 object-cover">
+                                                </div>
+                                                <p class="font-weight-semibold text-sm mb-xs">${person.name}</p>
+                                                <p class="text-xs text-muted">${person.character || person.role || ''}</p>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </section>
+                            ` : ''}
+                            
+                            <!-- Similar Content -->
+                            <section>
+                                <h3 class="mb-lg">You Might Also Like</h3>
+                                <div class="content-grid content-grid--movies" id="similarContent">
+                                    <!-- Dynamic content -->
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadSimilarContent() {
+            try {
+                const similar = currentContent.similar_content || [];
+                const similarGrid = document.getElementById('similarContent');
+
+                if (similar.length === 0) {
+                    // Fetch from API if not included
+                    const response = await api.getSimilarContent(currentContent.id);
+                    similar.push(...response.recommendations);
+                }
+
+                similarGrid.innerHTML = similar.slice(0, 6).map(item => `
+                    <div class="content-card" onclick="navigateToContentDetails(${item.id})">
+                        <div class="content-card__image-wrapper">
+                            <img src="${item.poster_path}" 
+                                 alt="${item.title}" 
+                                 class="content-card__image"
+                                 loading="lazy">
+                        </div>
+                        <div class="content-card__body">
+                            <h3 class="content-card__title">${item.title}</h3>
+                            <div class="content-card__meta">
+                                <span class="content-card__rating">
+                                    <i class="bi bi-star-fill content-card__rating-star"></i>
+                                    ${item.rating || 'N/A'}
+                                </span>
+                                <span>${item.content_type}</span>
                             </div>
                         </div>
                     </div>
                 `).join('');
-        castContainer.innerHTML = castHtml;
-      } else {
-        castContainer.innerHTML = '<p class="text-muted">No cast information available</p>';
-      }
+            } catch (error) {
+                console.error('Failed to load similar content:', error);
+            }
+        }
 
-      // Crew
-      const crewContainer = document.getElementById('crew-list');
-      if (crew && crew.length > 0) {
-        const crewHtml = crew.slice(0, 4).map(person => `
-                    <div class="crew-member mb-3">
-                        <h6 class="text-white mb-1">${person.name || 'Unknown'}</h6>
-                        <p class="text-muted small mb-0">${person.job || person.department || 'Crew'}</p>
-                    </div>
-                `).join('');
-        crewContainer.innerHTML = crewHtml;
-      } else {
-        crewContainer.innerHTML = '<p class="text-muted">No crew information available</p>';
-      }
-    }
+        async function checkUserLists() {
+            try {
+                // Check watchlist
+                const watchlistResponse = await api.getWatchlist();
+                isInWatchlist = watchlistResponse.watchlist.some(item => item.id === currentContent.id);
 
-    function populateAdditionalDetails(content) {
-      const detailsContainer = document.getElementById('additional-details');
-      const details = [];
+                // Check favorites
+                const favoritesResponse = await api.getFavorites();
+                isInFavorites = favoritesResponse.favorites.some(item => item.id === currentContent.id);
 
-      if (content.vote_count) {
-        details.push(`<p class="text-muted mb-2"><strong class="text-white">Vote Count:</strong> ${content.vote_count.toLocaleString()}</p>`);
-      }
+                // Update buttons
+                updateListButtons();
+            } catch (error) {
+                console.error('Failed to check user lists:', error);
+            }
+        }
 
-      if (content.popularity) {
-        details.push(`<p class="text-muted mb-2"><strong class="text-white">Popularity:</strong> ${Math.round(content.popularity)}</p>`);
-      }
+        function updateListButtons() {
+            const watchlistBtn = document.getElementById('watchlistBtn');
+            const favoriteBtn = document.getElementById('favoriteBtn');
 
-      if (content.tmdb_id) {
-        details.push(`<p class="text-muted mb-2"><strong class="text-white">TMDB ID:</strong> ${content.tmdb_id}</p>`);
-      }
+            if (watchlistBtn) {
+                const icon = watchlistBtn.querySelector('i');
+                const text = watchlistBtn.querySelector('span');
+                icon.className = `bi bi-bookmark${isInWatchlist ? '-fill' : ''}`;
+                text.textContent = isInWatchlist ? 'In Watchlist' : 'Add to Watchlist';
+            }
 
-      if (content.mal_id) {
-        details.push(`<p class="text-muted mb-2"><strong class="text-white">MyAnimeList ID:</strong> ${content.mal_id}</p>`);
-      }
+            if (favoriteBtn) {
+                const icon = favoriteBtn.querySelector('i');
+                icon.className = `bi bi-heart${isInFavorites ? '-fill' : ''}`;
+            }
+        }
 
-      detailsContainer.innerHTML = details.length > 0 ? details.join('') : '<p class="text-muted">No additional details available</p>';
-    }
+        async function toggleWatchlist() {
+            try {
+                if (isInWatchlist) {
+                    // Remove from watchlist
+                    await api.recordInteraction(currentContent.id, 'remove_watchlist');
+                    isInWatchlist = false;
+                    showToast('Removed from watchlist', 'success');
+                } else {
+                    // Add to watchlist
+                    await api.recordInteraction(currentContent.id, Config.INTERACTIONS.WATCHLIST);
+                    isInWatchlist = true;
+                    showToast('Added to watchlist', 'success');
+                }
+                updateListButtons();
+            } catch (error) {
+                showToast('Failed to update watchlist', 'error');
+            }
+        }
 
-    function setupActionButtons(content) {
-      // Play Trailer button
-      const trailerBtn = document.getElementById('play-trailer-btn');
-      if (content.youtube_trailer) {
-        trailerBtn.addEventListener('click', function () {
-          CineScope.UI.playTrailer(content.youtube_trailer);
+        async function toggleFavorite() {
+            try {
+                if (isInFavorites) {
+                    // Remove from favorites
+                    await api.recordInteraction(currentContent.id, 'remove_favorite');
+                    isInFavorites = false;
+                    showToast('Removed from favorites', 'success');
+                } else {
+                    // Add to favorites
+                    await api.recordInteraction(currentContent.id, Config.INTERACTIONS.FAVORITE);
+                    isInFavorites = true;
+                    showToast('Added to favorites', 'success');
+                }
+                updateListButtons();
+            } catch (error) {
+                showToast('Failed to update favorites', 'error');
+            }
+        }
+
+        function playContent() {
+            // In production, this would integrate with video player
+            showToast('Video player coming soon!', 'info');
+        }
+
+        function playTrailer(youtubeUrl) {
+            const modal = document.getElementById('trailerModal');
+            const iframe = document.getElementById('trailerIframe');
+
+            // Extract video ID
+            const videoId = youtubeUrl.includes('watch?v=')
+                ? youtubeUrl.split('watch?v=')[1].split('&')[0]
+                : youtubeUrl.split('/').pop();
+
+            iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+            modal.classList.add('modal--open');
+        }
+
+        function closeTrailerModal() {
+            const modal = document.getElementById('trailerModal');
+            const iframe = document.getElementById('trailerIframe');
+
+            modal.classList.remove('modal--open');
+            setTimeout(() => {
+                iframe.src = '';
+            }, 300);
+        }
+
+        function shareContent() {
+            if (navigator.share) {
+                navigator.share({
+                    title: currentContent.title,
+                    text: `Check out ${currentContent.title} on CineScope!`,
+                    url: window.location.href
+                });
+            } else {
+                // Fallback - copy to clipboard
+                navigator.clipboard.writeText(window.location.href);
+                showToast('Link copied to clipboard!', 'success');
+            }
+        }
+
+        function formatRuntime(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast--${type} animate-slideInRight`;
+            toast.innerHTML = `
+                <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'x-circle' : 'info-circle'} toast__icon"></i>
+                <span class="toast__message">${message}</span>
+                <i class="bi bi-x toast__close" onclick="this.parentElement.remove()"></i>
+            `;
+
+            document.getElementById('toastContainer').appendChild(toast);
+            setTimeout(() => toast.classList.add('toast--visible'), 10);
+            setTimeout(() => toast.remove(), 5000);
+        }
+
+        // Close modal on click outside
+        document.getElementById('trailerModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                closeTrailerModal();
+            }
         });
-      } else {
-        trailerBtn.disabled = true;
-        trailerBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i>No Trailer Available';
-      }
-
-      // Watchlist button
-      const watchlistBtn = document.getElementById('add-watchlist-btn');
-      watchlistBtn.addEventListener('click', async function () {
-        if (!CineScope.App.requireAuth()) return;
-
-        try {
-          this.disabled = true;
-          this.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Adding...';
-
-          await CineScope.HTTP.user.recordInteraction(content.id, 'watchlist');
-
-          this.innerHTML = '<i class="bi bi-bookmark-check me-2"></i>Added to Watchlist';
-          this.classList.remove('btn-outline-light');
-          this.classList.add('btn-primary');
-
-          CineScope.UI.toast.success('Added to watchlist');
-        } catch (error) {
-          this.innerHTML = '<i class="bi bi-bookmark me-2"></i>Add to Watchlist';
-          this.disabled = false;
-          CineScope.UI.toast.error('Failed to add to watchlist');
-        }
-      });
-
-      // Favorite button
-      const favoriteBtn = document.getElementById('add-favorite-btn');
-      favoriteBtn.addEventListener('click', async function () {
-        if (!CineScope.App.requireAuth()) return;
-
-        try {
-          this.disabled = true;
-          this.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Adding...';
-
-          await CineScope.HTTP.user.recordInteraction(content.id, 'favorite');
-
-          this.innerHTML = '<i class="bi bi-heart-fill me-2"></i>Added to Favorites';
-          this.classList.remove('btn-outline-danger');
-          this.classList.add('btn-danger');
-
-          CineScope.UI.toast.success('Added to favorites');
-        } catch (error) {
-          this.innerHTML = '<i class="bi bi-heart me-2"></i>Add to Favorites';
-          this.disabled = false;
-          CineScope.UI.toast.error('Failed to add to favorites');
-        }
-      });
-
-      // Share button
-      const shareBtn = document.getElementById('share-btn');
-      shareBtn.addEventListener('click', function () {
-        if (navigator.share) {
-          navigator.share({
-            title: content.title,
-            text: content.overview,
-            url: window.location.href
-          });
-        } else {
-          // Fallback: copy to clipboard
-          navigator.clipboard.writeText(window.location.href).then(() => {
-            CineScope.UI.toast.success('Link copied to clipboard');
-          });
-        }
-      });
-    }
-
-    async function loadSimilarContent(contentId) {
-      const container = document.getElementById('similar-content-container');
-
-      try {
-        console.log('🔍 Loading similar content...');
-
-        // Show loading
-        container.innerHTML = `
-                    <div class="d-flex justify-content-center py-4">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading similar content...</span>
-                        </div>
-                    </div>
-                `;
-
-        const response = await CineScope.HTTP.content.getSimilar(contentId, { limit: 12 });
-        const similarContent = response.recommendations || [];
-
-        if (similarContent.length > 0) {
-          CineScope.Widgets.ContentCard.createGrid(similarContent, container, {
-            showTrailer: true,
-            showRating: true,
-            showGenres: false,
-            cardSize: 'default'
-          });
-          console.log(`✅ Loaded ${similarContent.length} similar content items`);
-        } else {
-          container.innerHTML = `
-                        <div class="text-center py-4">
-                            <i class="bi bi-collection display-1 text-muted mb-3"></i>
-                            <h6 class="text-muted">No Similar Content Found</h6>
-                            <p class="text-muted">Check out our trending content instead</p>
-                            <a href="/?section=trending" class="btn btn-primary">
-                                <i class="bi bi-fire me-2"></i>Browse Trending
-                            </a>
-                        </div>
-                    `;
-        }
-
-        // Setup refresh button
-        document.getElementById('refresh-similar-btn').addEventListener('click', function () {
-          loadSimilarContent(contentId);
-        });
-
-      } catch (error) {
-        console.error('❌ Failed to load similar content:', error);
-        container.innerHTML = `
-                    <div class="text-center py-4">
-                        <i class="bi bi-exclamation-triangle display-1 text-danger mb-3"></i>
-                        <h6 class="text-danger">Failed to Load Similar Content</h6>
-                        <button class="btn btn-primary" onclick="loadSimilarContent(${contentId})">
-                            <i class="bi bi-arrow-clockwise me-2"></i>Try Again
-                        </button>
-                    </div>
-                `;
-      }
-    }
-
-    function showErrorState() {
-      document.getElementById('loading-state').classList.add('d-none');
-      document.getElementById('content-details').classList.add('d-none');
-      document.getElementById('error-state').classList.remove('d-none');
-    }
-
-    // Scroll animations
-    document.addEventListener('DOMContentLoaded', function () {
-      const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-      };
-
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-          }
-        });
-      }, observerOptions);
-
-      // Observe sections for scroll animations
-      const sections = document.querySelectorAll('section');
-      sections.forEach(section => {
-        section.style.opacity = '0';
-        section.style.transform = 'translateY(30px)';
-        section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observer.observe(section);
-      });
-    });
-  </script>
+    </script>
 </body>
 
 </html>
