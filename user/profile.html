@@ -1,192 +1,832 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="User Profile - CineScope">
     <title>Profile - CineScope</title>
     
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="/css/main.css" as="style">
-    <link rel="preload" href="/js/config.js" as="script">
-    <link rel="preload" href="/js/api.js" as="script">
-    <link rel="preload" href="/js/auth.js" as="script">
-    <link rel="preload" href="/js/app.js" as="script">
+    <link rel="preload" href="../js/config.js" as="script">
+    <link rel="preload" href="../js/api.js" as="script">
+    <link rel="preload" href="../js/auth.js" as="script">
     
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/layouts.css">
-    <link rel="stylesheet" href="/css/animations.css">
-    <link rel="stylesheet" href="/css/responsive.css">
-    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layouts.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
-    <div id="app">
-        <main id="app-content">
-            <div class="user-page container">
-                <div class="user-header">
-                    <div class="user-avatar-large">
-                        <img id="user-avatar" src="" alt="">
-                    </div>
-                    <div class="user-info">
-                        <h1 id="username"></h1>
-                        <p id="user-email"></p>
-                        <div class="user-stats">
-                            <div class="stat-item">
-                                <div class="stat-value" id="watchlist-count">0</div>
-                                <div class="stat-label">Watchlist</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="favorites-count">0</div>
-                                <div class="stat-label">Favorites</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="watched-count">0</div>
-                                <div class="stat-label">Watched</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="profile-sections">
-                    <section class="profile-section">
-                        <h2>Continue Watching</h2>
-                        <div id="continue-watching" class="content-carousel">
-                            <p class="empty-message">No content in progress</p>
-                        </div>
-                    </section>
-                    
-                    <section class="profile-section">
-                        <h2>Recommended for You</h2>
-                        <div id="recommendations" class="content-carousel">
-                            <div class="loading">
-                                <div class="loader-spinner"></div>
-                            </div>
-                        </div>
-                    </section>
-                    
-                    <section class="profile-section">
-                        <h2>Recent Activity</h2>
-                        <div id="recent-activity" class="activity-list">
-                            <p class="empty-message">No recent activity</p>
-                        </div>
-                    </section>
-                </div>
-                
-                <div class="profile-actions">
-                    <a href="/user/settings.html" class="btn btn-secondary">
-                        <i class="icon-settings"></i> Settings
-                    </a>
-                    <button class="btn btn-secondary" onclick="logout()">
-                        <i class="icon-logout"></i> Logout
-                    </button>
+    <!-- Top Navigation -->
+    <nav class="topbar">
+        <div class="topbar-left">
+            <a href="/" class="logo">CineScope</a>
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search..." id="headerSearch">
+        </div>
+        <div class="topbar-right" id="userSection"></div>
+    </nav>
+
+    <main class="profile-page">
+        <div class="container">
+            <!-- Profile Header -->
+            <div class="profile-header" id="profileHeader">
+                <div class="loading" id="profileLoading">
+                    <div class="spinner"></div>
+                    <p>Loading profile...</p>
                 </div>
             </div>
-        </main>
-    </div>
-    
-    <!-- Scripts -->
-    <script src="/js/config.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/app.js"></script>
-    
+
+            <!-- Profile Navigation -->
+            <div class="profile-nav" id="profileNav" style="display: none;">
+                <a href="#" class="profile-nav-item active" data-section="overview">Overview</a>
+                <a href="#" class="profile-nav-item" data-section="watchlist">Watchlist</a>
+                <a href="#" class="profile-nav-item" data-section="favorites">Favorites</a>
+                <a href="#" class="profile-nav-item" data-section="activity">Activity</a>
+                <a href="#" class="profile-nav-item" data-section="stats">Statistics</a>
+            </div>
+
+            <!-- Profile Content -->
+            <div class="profile-content" id="profileContent">
+                <!-- Content will be dynamically loaded -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav">
+        <a href="/" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🏠</span>
+            <span class="mobile-nav-label">Home</span>
+        </a>
+        <a href="/content/search.html" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🔍</span>
+            <span class="mobile-nav-label">Search</span>
+        </a>
+        <a href="#" class="mobile-nav-item" onclick="showSection('watchlist')">
+            <span class="mobile-nav-icon">📚</span>
+            <span class="mobile-nav-label">Watchlist</span>
+        </a>
+        <a href="#" class="mobile-nav-item" onclick="showSection('favorites')">
+            <span class="mobile-nav-icon">❤️</span>
+            <span class="mobile-nav-label">Favorites</span>
+        </a>
+        <a href="#" class="mobile-nav-item active">
+            <span class="mobile-nav-icon">👤</span>
+            <span class="mobile-nav-label">Profile</span>
+        </a>
+    </nav>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+
     <script>
-        // Check authentication
-        if (!Auth.requireAuth()) {
-            // Will redirect to login
-        }
-        
-        async function loadProfile() {
-            const user = Auth.getUser();
-            if (!user) return;
+        let currentUser = null;
+        let userStats = null;
+        let watchlistData = [];
+        let favoritesData = [];
+        let activityData = [];
+        let personalizedRecs = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check authentication
+            if (!window.auth.isAuthenticated()) {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            // Verify URL username matches current user
+            const pathUsername = window.location.pathname.split('/')[1];
+            const currentUsername = window.auth.getUser()?.username;
             
-            // Set user info
-            document.getElementById('username').textContent = user.username;
-            document.getElementById('user-email').textContent = user.email;
-            document.getElementById('user-avatar').src = `https://ui-avatars.com/api/?name=${user.username}&background=3b82f6&color=fff&size=200`;
-            document.getElementById('user-avatar').alt = user.username;
-            
-            // Load user stats
+            if (pathUsername !== currentUsername) {
+                window.location.href = `/${currentUsername}/profile`;
+                return;
+            }
+
+            currentUser = window.auth.getUser();
+            updateUserSection();
+            setupHeaderSearch();
+            await loadProfileData();
+            setupProfileNavigation();
+        });
+
+        async function loadProfileData() {
             try {
-                const [watchlist, favorites, recommendations] = await Promise.all([
-                    API.getWatchlist(),
-                    API.getFavorites(),
-                    API.getPersonalizedRecommendations(10)
-                ]);
-                
-                // Update stats
-                document.getElementById('watchlist-count').textContent = watchlist.watchlist?.length || 0;
-                document.getElementById('favorites-count').textContent = favorites.favorites?.length || 0;
-                
-                // Load recommendations
-                const recDiv = document.getElementById('recommendations');
-                if (recommendations.recommendations && recommendations.recommendations.length > 0) {
-                    recDiv.innerHTML = recommendations.recommendations.map(item => 
-                        app.renderContentCard(item)
-                    ).join('');
-                    app.initializeCarousels();
-                    app.initializeLazyLoading();
-                } else {
-                    recDiv.innerHTML = '<p class="empty-message">No recommendations yet. Watch more content to get personalized suggestions.</p>';
-                }
-                
+                // Load all profile-related data in parallel
+                const promises = [
+                    window.api.getWatchlist(),
+                    window.api.getFavorites(),
+                    window.api.getPersonalizedRecommendations({ limit: 12 }),
+                    loadUserActivity(),
+                    loadUserStats()
+                ];
+
+                const [watchlist, favorites, recommendations, activity, stats] = await Promise.allSettled(promises);
+
+                watchlistData = watchlist.value?.watchlist || [];
+                favoritesData = favorites.value?.favorites || [];
+                personalizedRecs = recommendations.value?.recommendations || [];
+                activityData = activity.value || [];
+                userStats = stats.value || {};
+
+                renderProfileHeader();
+                showSection('overview');
+
             } catch (error) {
                 console.error('Failed to load profile data:', error);
+                showError('Failed to load profile data');
             }
         }
-        
-        function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                Auth.logout();
+
+        async function loadUserActivity() {
+            // Since there's no direct activity endpoint, we'll simulate based on interactions
+            try {
+                const interactions = await window.api.request('/user/activity');
+                return interactions || [];
+            } catch (error) {
+                // Fallback to recent watchlist/favorites as activity
+                return [
+                    ...watchlistData.slice(0, 5).map(item => ({
+                        type: 'watchlist',
+                        content: item,
+                        timestamp: new Date().toISOString()
+                    })),
+                    ...favoritesData.slice(0, 5).map(item => ({
+                        type: 'favorite',
+                        content: item,
+                        timestamp: new Date().toISOString()
+                    }))
+                ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             }
         }
-        
-        // Load profile on page load
-        loadProfile();
+
+        async function loadUserStats() {
+            // Calculate user statistics from available data
+            const totalWatchlist = watchlistData.length;
+            const totalFavorites = favoritesData.length;
+            const totalInteractions = totalWatchlist + totalFavorites;
+            
+            const genreCount = {};
+            const typeCount = {};
+            
+            [...watchlistData, ...favoritesData].forEach(item => {
+                // Count genres
+                if (item.genres) {
+                    item.genres.forEach(genre => {
+                        genreCount[genre] = (genreCount[genre] || 0) + 1;
+                    });
+                }
+                
+                // Count types
+                const type = item.content_type || 'movie';
+                typeCount[type] = (typeCount[type] || 0) + 1;
+            });
+
+            const topGenres = Object.entries(genreCount)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 5)
+                .map(([genre, count]) => ({ genre, count }));
+
+            return {
+                totalWatchlist,
+                totalFavorites,
+                totalInteractions,
+                topGenres,
+                typeCount,
+                joinDate: currentUser.created_at || new Date().toISOString(),
+                lastActive: currentUser.last_active || new Date().toISOString()
+            };
+        }
+
+        function renderProfileHeader() {
+            const header = document.getElementById('profileHeader');
+            const nav = document.getElementById('profileNav');
+            
+            header.innerHTML = `
+                <div class="profile-banner">
+                    <div class="profile-avatar-section">
+                        <img src="${window.auth.getUserAvatarLarge()}" alt="${currentUser.username}" class="profile-avatar">
+                        <div class="profile-info">
+                            <h1 class="profile-username">${currentUser.username}</h1>
+                            <p class="profile-email">${currentUser.email}</p>
+                            <div class="profile-badges">
+                                ${currentUser.is_admin ? '<span class="profile-badge admin-badge">Admin</span>' : ''}
+                                <span class="profile-badge member-badge">Member since ${new Date(userStats.joinDate).getFullYear()}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-stats-preview">
+                        <div class="stat-item">
+                            <div class="stat-number">${userStats.totalWatchlist}</div>
+                            <div class="stat-label">Watchlist</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">${userStats.totalFavorites}</div>
+                            <div class="stat-label">Favorites</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">${userStats.totalInteractions}</div>
+                            <div class="stat-label">Total Items</div>
+                        </div>
+                    </div>
+
+                    <div class="profile-actions">
+                        <a href="/${currentUser.username}/settings" class="btn btn-outline">⚙️ Settings</a>
+                        ${currentUser.is_admin ? '<a href="/admin/" class="btn btn-primary">🔧 Admin Panel</a>' : ''}
+                    </div>
+                </div>
+            `;
+
+            nav.style.display = 'flex';
+        }
+
+        function setupProfileNavigation() {
+            document.querySelectorAll('.profile-nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const section = e.target.dataset.section;
+                    showSection(section);
+                    
+                    // Update active state
+                    document.querySelectorAll('.profile-nav-item').forEach(nav => nav.classList.remove('active'));
+                    e.target.classList.add('active');
+                });
+            });
+        }
+
+        function showSection(section) {
+            const content = document.getElementById('profileContent');
+            
+            switch (section) {
+                case 'overview':
+                    renderOverviewSection(content);
+                    break;
+                case 'watchlist':
+                    renderWatchlistSection(content);
+                    break;
+                case 'favorites':
+                    renderFavoritesSection(content);
+                    break;
+                case 'activity':
+                    renderActivitySection(content);
+                    break;
+                case 'stats':
+                    renderStatsSection(content);
+                    break;
+                default:
+                    renderOverviewSection(content);
+            }
+
+            // Update mobile nav
+            document.querySelectorAll('.mobile-nav-item').forEach(nav => nav.classList.remove('active'));
+            const mobileNavMap = {
+                'watchlist': 2,
+                'favorites': 3,
+                'overview': 4,
+                'activity': 4,
+                'stats': 4
+            };
+            const mobileNavIndex = mobileNavMap[section] || 4;
+            document.querySelectorAll('.mobile-nav-item')[mobileNavIndex]?.classList.add('active');
+        }
+
+        function renderOverviewSection(container) {
+            container.innerHTML = `
+                <div class="profile-overview">
+                    <div class="overview-grid">
+                        <div class="overview-section">
+                            <h3>Recommended for You</h3>
+                            <div class="content-grid">
+                                ${personalizedRecs.slice(0, 6).map(item => renderContentCard(item)).join('')}
+                            </div>
+                            ${personalizedRecs.length === 0 ? '<p class="empty-state">Start watching content to get personalized recommendations!</p>' : ''}
+                        </div>
+
+                        <div class="overview-section">
+                            <h3>Recent Watchlist</h3>
+                            <div class="content-list">
+                                ${watchlistData.slice(0, 5).map(item => renderListItem(item)).join('')}
+                                ${watchlistData.length === 0 ? '<p class="empty-state">Your watchlist is empty. Add some content!</p>' : ''}
+                            </div>
+                            ${watchlistData.length > 5 ? `<a href="#" onclick="showSection('watchlist')" class="view-all">View All (${watchlistData.length})</a>` : ''}
+                        </div>
+
+                        <div class="overview-section">
+                            <h3>Your Favorites</h3>
+                            <div class="content-list">
+                                ${favoritesData.slice(0, 5).map(item => renderListItem(item)).join('')}
+                                ${favoritesData.length === 0 ? '<p class="empty-state">No favorites yet. Mark content as favorite!</p>' : ''}
+                            </div>
+                            ${favoritesData.length > 5 ? `<a href="#" onclick="showSection('favorites')" class="view-all">View All (${favoritesData.length})</a>` : ''}
+                        </div>
+
+                        <div class="overview-section">
+                            <h3>Quick Stats</h3>
+                            <div class="quick-stats">
+                                <div class="quick-stat">
+                                    <span class="stat-icon">📊</span>
+                                    <div class="stat-info">
+                                        <div class="stat-value">${userStats.totalInteractions}</div>
+                                        <div class="stat-desc">Total Items</div>
+                                    </div>
+                                </div>
+                                ${userStats.topGenres.length > 0 ? `
+                                    <div class="quick-stat">
+                                        <span class="stat-icon">🎭</span>
+                                        <div class="stat-info">
+                                            <div class="stat-value">${userStats.topGenres[0].genre}</div>
+                                            <div class="stat-desc">Top Genre</div>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                <div class="quick-stat">
+                                    <span class="stat-icon">📅</span>
+                                    <div class="stat-info">
+                                        <div class="stat-value">${new Date(userStats.joinDate).getFullYear()}</div>
+                                        <div class="stat-desc">Member Since</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderWatchlistSection(container) {
+            container.innerHTML = `
+                <div class="profile-section">
+                    <div class="section-header">
+                        <h2>My Watchlist</h2>
+                        <div class="section-stats">${watchlistData.length} items</div>
+                    </div>
+                    
+                    ${watchlistData.length > 0 ? `
+                        <div class="content-filters">
+                            <select id="watchlistSort" onchange="sortWatchlist(this.value)">
+                                <option value="recent">Recently Added</option>
+                                <option value="title">Title A-Z</option>
+                                <option value="rating">Rating</option>
+                                <option value="year">Release Year</option>
+                            </select>
+                            <select id="watchlistFilter" onchange="filterWatchlist(this.value)">
+                                <option value="all">All Types</option>
+                                <option value="movie">Movies</option>
+                                <option value="tv">TV Shows</option>
+                                <option value="anime">Anime</option>
+                            </select>
+                        </div>
+
+                        <div class="content-grid" id="watchlistGrid">
+                            ${watchlistData.map(item => renderContentCard(item, 'watchlist')).join('')}
+                        </div>
+                    ` : `
+                        <div class="empty-section">
+                            <div class="empty-icon">📚</div>
+                            <h3>Your watchlist is empty</h3>
+                            <p>Discover amazing content and add it to your watchlist to watch later.</p>
+                            <a href="/content/search.html" class="btn btn-primary">Browse Content</a>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function renderFavoritesSection(container) {
+            container.innerHTML = `
+                <div class="profile-section">
+                    <div class="section-header">
+                        <h2>My Favorites</h2>
+                        <div class="section-stats">${favoritesData.length} items</div>
+                    </div>
+                    
+                    ${favoritesData.length > 0 ? `
+                        <div class="content-filters">
+                            <select id="favoritesSort" onchange="sortFavorites(this.value)">
+                                <option value="recent">Recently Added</option>
+                                <option value="title">Title A-Z</option>
+                                <option value="rating">Rating</option>
+                                <option value="year">Release Year</option>
+                            </select>
+                            <select id="favoritesFilter" onchange="filterFavorites(this.value)">
+                                <option value="all">All Types</option>
+                                <option value="movie">Movies</option>
+                                <option value="tv">TV Shows</option>
+                                <option value="anime">Anime</option>
+                            </select>
+                        </div>
+
+                        <div class="content-grid" id="favoritesGrid">
+                            ${favoritesData.map(item => renderContentCard(item, 'favorites')).join('')}
+                        </div>
+                    ` : `
+                        <div class="empty-section">
+                            <div class="empty-icon">❤️</div>
+                            <h3>No favorites yet</h3>
+                            <p>Mark content as favorite to see it here. Your favorites help us recommend similar content!</p>
+                            <a href="/content/search.html" class="btn btn-primary">Discover Content</a>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function renderActivitySection(container) {
+            container.innerHTML = `
+                <div class="profile-section">
+                    <div class="section-header">
+                        <h2>Recent Activity</h2>
+                        <div class="section-stats">${activityData.length} recent actions</div>
+                    </div>
+                    
+                    ${activityData.length > 0 ? `
+                        <div class="activity-timeline">
+                            ${activityData.slice(0, 20).map(activity => renderActivityItem(activity)).join('')}
+                        </div>
+                    ` : `
+                        <div class="empty-section">
+                            <div class="empty-icon">📈</div>
+                            <h3>No recent activity</h3>
+                            <p>Your activity will appear here as you interact with content.</p>
+                            <a href="/" class="btn btn-primary">Start Exploring</a>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function renderStatsSection(container) {
+            container.innerHTML = `
+                <div class="profile-section">
+                    <div class="section-header">
+                        <h2>Your Statistics</h2>
+                        <div class="section-stats">Viewing insights</div>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stats-card">
+                            <h3>Content Overview</h3>
+                            <div class="stats-items">
+                                <div class="stats-item">
+                                    <span class="stats-label">Watchlist Items</span>
+                                    <span class="stats-value">${userStats.totalWatchlist}</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">Favorite Items</span>
+                                    <span class="stats-value">${userStats.totalFavorites}</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">Total Interactions</span>
+                                    <span class="stats-value">${userStats.totalInteractions}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="stats-card">
+                            <h3>Content Types</h3>
+                            <div class="stats-chart">
+                                ${Object.entries(userStats.typeCount).map(([type, count]) => `
+                                    <div class="chart-item">
+                                        <div class="chart-label">${type.toUpperCase()}</div>
+                                        <div class="chart-bar">
+                                            <div class="chart-fill" style="width: ${(count / userStats.totalInteractions) * 100}%"></div>
+                                        </div>
+                                        <div class="chart-value">${count}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="stats-card">
+                            <h3>Top Genres</h3>
+                            <div class="stats-items">
+                                ${userStats.topGenres.slice(0, 5).map((genre, index) => `
+                                    <div class="stats-item">
+                                        <span class="stats-rank">#${index + 1}</span>
+                                        <span class="stats-label">${genre.genre}</span>
+                                        <span class="stats-value">${genre.count}</span>
+                                    </div>
+                                `).join('')}
+                                ${userStats.topGenres.length === 0 ? '<p class="empty-state">No genre data available yet.</p>' : ''}
+                            </div>
+                        </div>
+
+                        <div class="stats-card">
+                            <h3>Account Info</h3>
+                            <div class="stats-items">
+                                <div class="stats-item">
+                                    <span class="stats-label">Member Since</span>
+                                    <span class="stats-value">${new Date(userStats.joinDate).toLocaleDateString()}</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">Last Active</span>
+                                    <span class="stats-value">${new Date(userStats.lastActive).toLocaleDateString()}</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">Account Type</span>
+                                    <span class="stats-value">${currentUser.is_admin ? 'Admin' : 'User'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderContentCard(item, listType = null) {
+            return `
+                <div class="profile-content-card" onclick="viewContent(${item.id})">
+                    <div class="card-image">
+                        <img src="${item.poster_path}" alt="${item.title}" loading="lazy">
+                        <div class="card-overlay">
+                            <button class="play-btn" onclick="event.stopPropagation(); playTrailer(${item.id})">▶</button>
+                        </div>
+                        ${listType ? `
+                            <button class="card-remove" onclick="event.stopPropagation(); removeFromList(${item.id}, '${listType}')" title="Remove from ${listType}">×</button>
+                        ` : ''}
+                    </div>
+                    <div class="card-info">
+                        <h4 class="card-title">${item.title}</h4>
+                        <div class="card-metadata">
+                            <span class="rating">★ ${item.rating || 'N/A'}</span>
+                            <span class="type">${item.content_type}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderListItem(item) {
+            return `
+                <div class="content-list-item" onclick="viewContent(${item.id})">
+                    <img src="${item.poster_path}" alt="${item.title}" class="list-item-poster">
+                    <div class="list-item-info">
+                        <h4 class="list-item-title">${item.title}</h4>
+                        <div class="list-item-meta">
+                            <span class="rating">★ ${item.rating || 'N/A'}</span>
+                            <span class="type">${item.content_type}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderActivityItem(activity) {
+            const timeAgo = getTimeAgo(activity.timestamp);
+            const actionText = {
+                'watchlist': 'Added to watchlist',
+                'favorite': 'Marked as favorite',
+                'view': 'Viewed',
+                'trailer_view': 'Watched trailer'
+            };
+
+            return `
+                <div class="activity-item">
+                    <div class="activity-icon">${activity.type === 'favorite' ? '❤️' : activity.type === 'watchlist' ? '📚' : '👁️'}</div>
+                    <div class="activity-content">
+                        <div class="activity-text">
+                            ${actionText[activity.type] || 'Interacted with'} 
+                            <strong onclick="viewContent(${activity.content?.id})" class="activity-link">${activity.content?.title || 'Unknown Content'}</strong>
+                        </div>
+                        <div class="activity-time">${timeAgo}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Action Functions
+        async function viewContent(contentId) {
+            window.location.href = `/content/details.html?id=${contentId}`;
+        }
+
+        async function playTrailer(contentId) {
+            try {
+                const content = await window.api.getContentDetails(contentId);
+                
+                if (content.youtube_trailer) {
+                    const modal = document.createElement('div');
+                    modal.className = 'modal modal-large';
+                    modal.innerHTML = `
+                        <div class="modal-backdrop" onclick="this.parentElement.remove()"></div>
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>${content.title} - Trailer</h3>
+                                <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                            </div>
+                            <div class="modal-body">
+                                <iframe 
+                                    src="https://www.youtube.com/embed/${content.youtube_trailer_id}?autoplay=1"
+                                    frameborder="0" 
+                                    allowfullscreen
+                                    width="100%" 
+                                    height="400">
+                                </iframe>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    modal.style.display = 'flex';
+                } else {
+                    showToast('Trailer not available', 'warning');
+                }
+            } catch (error) {
+                console.error('Failed to play trailer:', error);
+                showToast('Failed to load trailer', 'error');
+            }
+        }
+
+        async function removeFromList(contentId, listType) {
+            try {
+                // Note: This would typically call a DELETE endpoint, but since we only have POST for interactions,
+                // we'll simulate removal by calling the same endpoint (toggle behavior)
+                await window.api.recordInteraction({
+                    content_id: contentId,
+                    interaction_type: listType
+                });
+
+                showToast(`Removed from ${listType}`, 'info');
+                
+                // Refresh the specific list
+                if (listType === 'watchlist') {
+                    const updatedWatchlist = await window.api.getWatchlist();
+                    watchlistData = updatedWatchlist.watchlist || [];
+                } else if (listType === 'favorites') {
+                    const updatedFavorites = await window.api.getFavorites();
+                    favoritesData = updatedFavorites.favorites || [];
+                }
+
+                // Re-render current section
+                const activeSection = document.querySelector('.profile-nav-item.active')?.dataset.section || 'overview';
+                showSection(activeSection);
+
+            } catch (error) {
+                console.error(`Failed to remove from ${listType}:`, error);
+                showToast(`Failed to remove from ${listType}`, 'error');
+            }
+        }
+
+        // Sorting and Filtering Functions
+        function sortWatchlist(sortBy) {
+            const grid = document.getElementById('watchlistGrid');
+            let sortedData = [...watchlistData];
+
+            switch (sortBy) {
+                case 'title':
+                    sortedData.sort((a, b) => a.title.localeCompare(b.title));
+                    break;
+                case 'rating':
+                    sortedData.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+                    break;
+                case 'year':
+                    sortedData.sort((a, b) => {
+                        const yearA = a.release_date ? new Date(a.release_date).getFullYear() : 0;
+                        const yearB = b.release_date ? new Date(b.release_date).getFullYear() : 0;
+                        return yearB - yearA;
+                    });
+                    break;
+                default: // recent
+                    // Already in recent order from API
+                    break;
+            }
+
+            grid.innerHTML = sortedData.map(item => renderContentCard(item, 'watchlist')).join('');
+        }
+
+        function filterWatchlist(filterBy) {
+            const grid = document.getElementById('watchlistGrid');
+            let filteredData = watchlistData;
+
+            if (filterBy !== 'all') {
+                filteredData = watchlistData.filter(item => item.content_type === filterBy);
+            }
+
+            grid.innerHTML = filteredData.map(item => renderContentCard(item, 'watchlist')).join('');
+        }
+
+        function sortFavorites(sortBy) {
+            const grid = document.getElementById('favoritesGrid');
+            let sortedData = [...favoritesData];
+
+            switch (sortBy) {
+                case 'title':
+                    sortedData.sort((a, b) => a.title.localeCompare(b.title));
+                    break;
+                case 'rating':
+                    sortedData.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+                    break;
+                case 'year':
+                    sortedData.sort((a, b) => {
+                        const yearA = a.release_date ? new Date(a.release_date).getFullYear() : 0;
+                        const yearB = b.release_date ? new Date(b.release_date).getFullYear() : 0;
+                        return yearB - yearA;
+                    });
+                    break;
+                default: // recent
+                    break;
+            }
+
+            grid.innerHTML = sortedData.map(item => renderContentCard(item, 'favorites')).join('');
+        }
+
+        function filterFavorites(filterBy) {
+            const grid = document.getElementById('favoritesGrid');
+            let filteredData = favoritesData;
+
+            if (filterBy !== 'all') {
+                filteredData = favoritesData.filter(item => item.content_type === filterBy);
+            }
+
+            grid.innerHTML = filteredData.map(item => renderContentCard(item, 'favorites')).join('');
+        }
+
+        // Utility Functions
+        function updateUserSection() {
+            const userSection = document.getElementById('userSection');
+            
+            if (window.auth.isAuthenticated()) {
+                const user = window.auth.getUser();
+                userSection.innerHTML = `
+                    <img src="${window.auth.getUserAvatar()}" 
+                         alt="${user.username}" 
+                         class="user-avatar"
+                         onclick="toggleUserMenu()">
+                    <div class="user-dropdown" id="userDropdown" style="display: none;">
+                        <a href="/${user.username}/profile" class="dropdown-item active">Profile</a>
+                        <a href="/${user.username}/settings" class="dropdown-item">Settings</a>
+                        ${user.is_admin ? '<a href="/admin/" class="dropdown-item">Admin</a>' : ''}
+                        <hr>
+                        <a href="#" onclick="window.auth.logout()" class="dropdown-item">Logout</a>
+                    </div>
+                `;
+            }
+        }
+
+        function setupHeaderSearch() {
+            const searchInput = document.getElementById('headerSearch');
+            
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const query = e.target.value.trim();
+                    if (query) {
+                        window.location.href = `/content/search.html?q=${encodeURIComponent(query)}`;
+                    }
+                }
+            });
+        }
+
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const time = new Date(timestamp);
+            const diffInSeconds = Math.floor((now - time) / 1000);
+
+            if (diffInSeconds < 60) return 'Just now';
+            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+            if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+            return time.toLocaleDateString();
+        }
+
+        function showError(message) {
+            document.getElementById('profileContent').innerHTML = `
+                <div class="error-message">
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+                </div>
+            `;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('toast-show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.topbar-right')) {
+                const dropdown = document.getElementById('userDropdown');
+                if (dropdown) dropdown.style.display = 'none';
+            }
+        });
     </script>
-    
-    <style>
-        .user-page {
-            padding-top: var(--space-2xl);
-            min-height: 100vh;
-        }
-        
-        .profile-sections {
-            margin-top: var(--space-2xl);
-        }
-        
-        .profile-section {
-            margin-bottom: var(--space-2xl);
-        }
-        
-        .profile-section h2 {
-            margin-bottom: var(--space-lg);
-        }
-        
-        .empty-message {
-            text-align: center;
-            color: var(--text-secondary);
-            padding: var(--space-xl);
-        }
-        
-        .activity-list {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-md);
-        }
-        
-        .profile-actions {
-            display: flex;
-            gap: var(--space-md);
-            justify-content: center;
-            margin-top: var(--space-2xl);
-            padding-top: var(--space-2xl);
-            border-top: 1px solid var(--border-primary);
-        }
-        
-        .icon-settings::before { content: '⚙️'; }
-        .icon-logout::before { content: '🚪'; }
-    </style>
 </body>
 </html>

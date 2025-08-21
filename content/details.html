@@ -1,317 +1,713 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Details - CineScope</title>
+    <meta name="description" content="Movie and TV show details - CineScope">
+    <title>Content Details - CineScope</title>
     
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="/css/main.css" as="style">
-    <link rel="preload" href="/js/config.js" as="script">
-    <link rel="preload" href="/js/api.js" as="script">
-    <link rel="preload" href="/js/auth.js" as="script">
-    <link rel="preload" href="/js/app.js" as="script">
+    <link rel="preload" href="../js/config.js" as="script">
+    <link rel="preload" href="../js/api.js" as="script">
+    <link rel="preload" href="../js/auth.js" as="script">
     
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/layouts.css">
-    <link rel="stylesheet" href="/css/animations.css">
-    <link rel="stylesheet" href="/css/responsive.css">
-    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layouts.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
-    <div id="app">
-        <main id="app-content">
-            <div class="details-page">
-                <div id="details-content">
-                    <!-- Content will be loaded dynamically -->
-                    <div class="details-loading">
-                        <div class="skeleton skeleton-hero"></div>
-                        <div class="container">
-                            <div class="skeleton skeleton-content"></div>
-                        </div>
-                    </div>
-                </div>
+    <!-- Top Navigation -->
+    <nav class="topbar" id="topbar">
+        <div class="topbar-left">
+            <a href="/" class="logo">CineScope</a>
+            <button class="back-btn" onclick="history.back()">← Back</button>
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search..." id="headerSearch">
+        </div>
+        <div class="topbar-right" id="userSection"></div>
+    </nav>
+
+    <main id="mainContent">
+        <div class="loading" id="loadingState">
+            <div class="spinner"></div>
+            <p>Loading content details...</p>
+        </div>
+    </main>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+        <a href="/" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🏠</span>
+            <span class="mobile-nav-label">Home</span>
+        </a>
+        <a href="/content/search.html" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🔍</span>
+            <span class="mobile-nav-label">Search</span>
+        </a>
+        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToWatchlist())">
+            <span class="mobile-nav-icon">📚</span>
+            <span class="mobile-nav-label">Watchlist</span>
+        </a>
+        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToFavorites())">
+            <span class="mobile-nav-icon">❤️</span>
+            <span class="mobile-nav-label">Favorites</span>
+        </a>
+        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToProfile())">
+            <span class="mobile-nav-icon">👤</span>
+            <span class="mobile-nav-label">Profile</span>
+        </a>
+    </nav>
+
+    <!-- Trailer Modal -->
+    <div class="modal" id="trailerModal" style="display: none;">
+        <div class="modal-backdrop" onclick="closeTrailerModal()"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="trailerTitle">Trailer</h3>
+                <button class="modal-close" onclick="closeTrailerModal()">×</button>
             </div>
-        </main>
+            <div class="modal-body">
+                <div class="trailer-player" id="trailerPlayer"></div>
+            </div>
+        </div>
     </div>
-    
-    <!-- Scripts -->
-    <script src="/js/config.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/app.js"></script>
-    
+
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+
     <script>
-        async function loadContentDetails() {
+        let currentContent = null;
+        let similarContent = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize auth and UI
+            updateUserSection();
+            setupHeaderSearch();
+            
+            // Get content ID from URL
             const params = new URLSearchParams(window.location.search);
             const contentId = params.get('id');
             
             if (!contentId) {
-                window.location.href = '/';
+                showError('Content not found');
                 return;
             }
-            
+
+            // Load content details
+            await loadContentDetails(contentId);
+        });
+
+        async function loadContentDetails(contentId) {
             try {
-                const [details, similar] = await Promise.all([
-                    API.getContentDetails(contentId),
-                    API.getSimilarContent(contentId, 10)
+                const loadingState = document.getElementById('loadingState');
+                loadingState.style.display = 'flex';
+
+                // Load content details and similar content in parallel
+                const [contentDetails, similarResponse] = await Promise.all([
+                    window.api.getContentDetails(contentId),
+                    window.api.getSimilarContent(contentId, { limit: 12 })
                 ]);
+
+                currentContent = contentDetails;
+                similarContent = similarResponse.recommendations || [];
+
+                // Update page title and meta
+                document.title = `${currentContent.title} - CineScope`;
                 
-                renderDetailsPage(details, similar.recommendations || []);
+                // Render content
+                renderContentDetails();
+                
+                loadingState.style.display = 'none';
+
+                // Record view interaction
+                if (window.auth.isAuthenticated()) {
+                    window.api.recordInteraction({
+                        content_id: contentId,
+                        interaction_type: 'view'
+                    }).catch(console.warn);
+                }
+
             } catch (error) {
                 console.error('Failed to load content details:', error);
-                document.getElementById('details-content').innerHTML = `
-                    <div class="error-state">
-                        <h2>Failed to load content</h2>
-                        <a href="/" class="btn btn-primary">Go Back Home</a>
-                    </div>
-                `;
+                showError('Failed to load content details');
             }
         }
-        
-        function renderDetailsPage(details, similar) {
-            const backdropUrl = details.backdrop_path 
-                ? (details.backdrop_path.startsWith('http') 
-                    ? details.backdrop_path 
-                    : `https://image.tmdb.org/t/p/w1280${details.backdrop_path}`)
-                : details.poster_path;
-                
-            const posterUrl = details.poster_path 
-                ? (details.poster_path.startsWith('http') 
-                    ? details.poster_path 
-                    : `https://image.tmdb.org/t/p/w500${details.poster_path}`)
-                : '/images/placeholder.jpg';
+
+        function renderContentDetails() {
+            const main = document.getElementById('mainContent');
             
-            document.getElementById('details-content').innerHTML = `
-                <div class="details-hero" style="background-image: url('${backdropUrl}')">
-                    <div class="hero-gradient"></div>
+            main.innerHTML = `
+                <div class="content-details">
+                    ${renderHeroSection()}
+                    ${renderContentInfo()}
+                    ${renderCastCrew()}
+                    ${renderSimilarContent()}
                 </div>
-                
-                <div class="details-content container">
-                    <div class="details-info">
-                        <div class="details-poster">
-                            <img src="${posterUrl}" alt="${details.title}">
-                        </div>
-                        
-                        <div class="details-main">
-                            <h1 class="details-title">${details.title}</h1>
-                            ${details.original_title && details.original_title !== details.title ? 
-                                `<p class="original-title">${details.original_title}</p>` : ''}
-                            
-                            <div class="details-meta">
-                                ${details.rating ? `
-                                    <div class="rating-badge">
-                                        <span>⭐ ${details.rating.toFixed(1)}</span>
-                                    </div>
-                                ` : ''}
-                                <span class="type-badge">${details.content_type}</span>
-                                ${details.release_date ? `
-                                    <span class="release-year">${new Date(details.release_date).getFullYear()}</span>
-                                ` : ''}
-                                ${details.runtime ? `
-                                    <span class="runtime">${Math.floor(details.runtime / 60)}h ${details.runtime % 60}m</span>
-                                ` : ''}
+            `;
+
+            // Initialize interactions
+            setupContentInteractions();
+            initializeSimilarCarousel();
+        }
+
+        function renderHeroSection() {
+            const backdropUrl = currentContent.backdrop_path || currentContent.poster_path;
+            const genres = currentContent.genres || [];
+            const languages = currentContent.languages || [];
+
+            return `
+                <section class="content-hero">
+                    <div class="hero-backdrop" style="background-image: url('${backdropUrl}')">
+                        <div class="hero-overlay"></div>
+                        <div class="hero-content">
+                            <div class="hero-poster">
+                                <img src="${currentContent.poster_path}" alt="${currentContent.title}" class="poster-image">
                             </div>
-                            
-                            ${details.genres && details.genres.length > 0 ? `
-                                <div class="genre-chips">
-                                    ${details.genres.map(genre => 
+                            <div class="hero-info">
+                                <h1 class="content-title">${currentContent.title}</h1>
+                                ${currentContent.original_title && currentContent.original_title !== currentContent.title ? 
+                                    `<p class="original-title">${currentContent.original_title}</p>` : ''}
+                                
+                                <div class="content-metadata">
+                                    <span class="rating">★ ${currentContent.rating || 'N/A'}</span>
+                                    <span class="type">${(currentContent.content_type || 'movie').toUpperCase()}</span>
+                                    ${currentContent.release_date ? 
+                                        `<span class="year">${new Date(currentContent.release_date).getFullYear()}</span>` : ''}
+                                    ${currentContent.runtime ? 
+                                        `<span class="runtime">${currentContent.runtime} min</span>` : ''}
+                                </div>
+
+                                <div class="content-genres">
+                                    ${genres.slice(0, 4).map(genre => 
                                         `<span class="genre-chip">${genre}</span>`
                                     ).join('')}
                                 </div>
-                            ` : ''}
-                            
-                            <div class="details-actions">
-                                ${details.youtube_trailer ? `
-                                    <button class="btn btn-primary" onclick="app.playTrailer('${details.youtube_trailer}')">
-                                        <i class="icon-play"></i> Watch Trailer
+
+                                <p class="content-overview">${currentContent.overview || 'No description available.'}</p>
+
+                                <div class="content-actions">
+                                    ${currentContent.youtube_trailer ? 
+                                        `<button class="btn btn-primary" onclick="playTrailer()">
+                                            ▶ Play Trailer
+                                        </button>` : ''}
+                                    <button class="btn btn-outline" onclick="toggleWatchlist()" id="watchlistBtn">
+                                        <span id="watchlistIcon">+</span> My List
                                     </button>
-                                ` : ''}
-                                ${Auth.isAuthenticated() ? `
-                                    <button class="btn btn-secondary" onclick="addToWatchlist(${details.id})">
-                                        <i class="icon-bookmark"></i> Add to Watchlist
+                                    <button class="btn btn-outline" onclick="toggleFavorite()" id="favoriteBtn">
+                                        <span id="favoriteIcon">♡</span> Favorite
                                     </button>
-                                    <button class="btn btn-icon" onclick="addToFavorites(${details.id})">
-                                        <i class="icon-heart"></i>
+                                    <button class="btn btn-secondary" onclick="shareContent()">
+                                        📤 Share
                                     </button>
-                                ` : ''}
+                                </div>
+
+                                <div class="content-badges">
+                                    ${currentContent.is_trending ? '<span class="badge badge-trending">🔥 Trending</span>' : ''}
+                                    ${currentContent.is_new_release ? '<span class="badge badge-new">✨ New Release</span>' : ''}
+                                    ${currentContent.is_critics_choice ? '<span class="badge badge-critics">🏆 Critics Choice</span>' : ''}
+                                </div>
                             </div>
-                            
-                            ${details.overview ? `
-                                <div class="details-overview">
-                                    <h2>Synopsis</h2>
-                                    <p>${details.overview}</p>
-                                </div>
-                            ` : ''}
-                            
-                            ${details.languages && details.languages.length > 0 ? `
-                                <div class="details-languages">
-                                    <h3>Languages</h3>
-                                    <p>${details.languages.join(', ')}</p>
-                                </div>
-                            ` : ''}
                         </div>
                     </div>
-                    
-                    ${details.cast && details.cast.length > 0 ? `
-                        <div class="cast-section">
-                            <h2>Cast</h2>
-                            <div class="cast-list">
-                                ${details.cast.slice(0, 10).map(person => `
-                                    <div class="cast-member">
-                                        <img src="${person.profile_path ? 
-                                            `https://image.tmdb.org/t/p/w185${person.profile_path}` : 
-                                            `https://ui-avatars.com/api/?name=${person.name}&background=3b82f6&color=fff`}" 
-                                            alt="${person.name}">
-                                        <p class="cast-name">${person.name}</p>
-                                        <p class="cast-character">${person.character || person.job || ''}</p>
+                </section>
+            `;
+        }
+
+        function renderContentInfo() {
+            const cast = currentContent.cast || [];
+            const crew = currentContent.crew || [];
+            const languages = currentContent.languages || [];
+
+            return `
+                <section class="content-info">
+                    <div class="container">
+                        <div class="info-grid">
+                            <div class="info-main">
+                                <div class="info-section">
+                                    <h3>Synopsis</h3>
+                                    <p class="synopsis-text">${currentContent.overview || 'No synopsis available.'}</p>
+                                </div>
+
+                                ${currentContent.anime_genres ? `
+                                    <div class="info-section">
+                                        <h3>Anime Categories</h3>
+                                        <div class="anime-genres">
+                                            ${currentContent.anime_genres.map(genre => 
+                                                `<span class="anime-genre-chip">${genre}</span>`
+                                            ).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <div class="info-sidebar">
+                                <div class="info-section">
+                                    <h3>Details</h3>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Type:</span>
+                                        <span class="detail-value">${(currentContent.content_type || 'movie').toUpperCase()}</span>
+                                    </div>
+                                    ${currentContent.release_date ? `
+                                        <div class="detail-item">
+                                            <span class="detail-label">Release Date:</span>
+                                            <span class="detail-value">${new Date(currentContent.release_date).toLocaleDateString()}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${currentContent.runtime ? `
+                                        <div class="detail-item">
+                                            <span class="detail-label">Runtime:</span>
+                                            <span class="detail-value">${currentContent.runtime} minutes</span>
+                                        </div>
+                                    ` : ''}
+                                    <div class="detail-item">
+                                        <span class="detail-label">Rating:</span>
+                                        <span class="detail-value">★ ${currentContent.rating || 'N/A'}/10</span>
+                                    </div>
+                                    ${currentContent.vote_count ? `
+                                        <div class="detail-item">
+                                            <span class="detail-label">Votes:</span>
+                                            <span class="detail-value">${currentContent.vote_count.toLocaleString()}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${languages.length > 0 ? `
+                                        <div class="detail-item">
+                                            <span class="detail-label">Languages:</span>
+                                            <span class="detail-value">${languages.join(', ')}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderCastCrew() {
+            const cast = currentContent.cast || [];
+            const crew = currentContent.crew || [];
+
+            if (cast.length === 0 && crew.length === 0) return '';
+
+            return `
+                <section class="cast-crew">
+                    <div class="container">
+                        ${cast.length > 0 ? `
+                            <div class="cast-section">
+                                <h3>Cast</h3>
+                                <div class="cast-grid">
+                                    ${cast.slice(0, 8).map(person => `
+                                        <div class="cast-member">
+                                            ${person.profile_path ? 
+                                                `<img src="https://image.tmdb.org/t/p/w185${person.profile_path}" alt="${person.name}" class="cast-photo">` :
+                                                `<div class="cast-photo-placeholder">${person.name.charAt(0)}</div>`
+                                            }
+                                            <div class="cast-info">
+                                                <div class="cast-name">${person.name}</div>
+                                                <div class="cast-character">${person.character || person.role || ''}</div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${crew.length > 0 ? `
+                            <div class="crew-section">
+                                <h3>Crew</h3>
+                                <div class="crew-grid">
+                                    ${crew.slice(0, 6).map(person => `
+                                        <div class="crew-member">
+                                            <div class="crew-name">${person.name}</div>
+                                            <div class="crew-job">${person.job || person.role || ''}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderSimilarContent() {
+            if (similarContent.length === 0) return '';
+
+            return `
+                <section class="similar-content">
+                    <div class="container">
+                        <div class="section-header">
+                            <h3>More Like This</h3>
+                        </div>
+                        <div class="carousel-container" id="similarCarousel">
+                            <div class="carousel-track">
+                                ${similarContent.map(item => `
+                                    <div class="content-card" onclick="navigateToContent(${item.id})">
+                                        <div class="card-image">
+                                            <img src="${item.poster_path}" alt="${item.title}" loading="lazy">
+                                            <div class="card-overlay">
+                                                <button class="play-btn" onclick="event.stopPropagation(); playContentTrailer(${item.id})">▶</button>
+                                            </div>
+                                        </div>
+                                        <div class="card-info">
+                                            <h4 class="card-title">${item.title}</h4>
+                                            <div class="card-metadata">
+                                                <span class="rating">★ ${item.rating || 'N/A'}</span>
+                                                <span class="type">${item.content_type}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
+                            <button class="carousel-btn carousel-prev" onclick="scrollSimilarCarousel(-1)">‹</button>
+                            <button class="carousel-btn carousel-next" onclick="scrollSimilarCarousel(1)">›</button>
                         </div>
-                    ` : ''}
-                    
-                    ${similar.length > 0 ? `
-                        <div class="similar-section">
-                            <h2>More Like This</h2>
-                            <div class="content-carousel">
-                                ${similar.map(item => app.renderContentCard(item)).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
+                    </div>
+                </section>
+            `;
+        }
+
+        function setupContentInteractions() {
+            // Check if content is in user's lists
+            if (window.auth.isAuthenticated()) {
+                checkUserLists();
+            }
+        }
+
+        async function checkUserLists() {
+            try {
+                const [watchlist, favorites] = await Promise.all([
+                    window.api.getWatchlist(),
+                    window.api.getFavorites()
+                ]);
+
+                // Update watchlist button
+                const isInWatchlist = watchlist.watchlist?.some(item => item.id === currentContent.id);
+                const watchlistBtn = document.getElementById('watchlistBtn');
+                const watchlistIcon = document.getElementById('watchlistIcon');
+                
+                if (isInWatchlist) {
+                    watchlistBtn.classList.add('btn-active');
+                    watchlistIcon.textContent = '✓';
+                }
+
+                // Update favorite button
+                const isInFavorites = favorites.favorites?.some(item => item.id === currentContent.id);
+                const favoriteBtn = document.getElementById('favoriteBtn');
+                const favoriteIcon = document.getElementById('favoriteIcon');
+                
+                if (isInFavorites) {
+                    favoriteBtn.classList.add('btn-active');
+                    favoriteIcon.textContent = '♥';
+                }
+
+            } catch (error) {
+                console.warn('Failed to check user lists:', error);
+            }
+        }
+
+        function initializeSimilarCarousel() {
+            const carousel = document.getElementById('similarCarousel');
+            if (!carousel) return;
+
+            const track = carousel.querySelector('.carousel-track');
+            const cards = carousel.querySelectorAll('.content-card');
+            
+            if (cards.length === 0) return;
+
+            let currentIndex = 0;
+            const itemsPerView = getItemsPerView();
+
+            function updateCarousel() {
+                const translateX = -(currentIndex * (100 / itemsPerView));
+                track.style.transform = `translateX(${translateX}%)`;
+                
+                const prevBtn = carousel.querySelector('.carousel-prev');
+                const nextBtn = carousel.querySelector('.carousel-next');
+                
+                prevBtn.style.display = currentIndex === 0 ? 'none' : 'block';
+                nextBtn.style.display = currentIndex >= cards.length - itemsPerView ? 'none' : 'block';
+            }
+
+            window.scrollSimilarCarousel = (direction) => {
+                const itemsPerView = getItemsPerView();
+                
+                if (direction === -1) {
+                    currentIndex = Math.max(0, currentIndex - itemsPerView);
+                } else {
+                    currentIndex = Math.min(cards.length - itemsPerView, currentIndex + itemsPerView);
+                }
+                
+                updateCarousel();
+            };
+
+            updateCarousel();
+        }
+
+        function getItemsPerView() {
+            const width = window.innerWidth;
+            if (width >= 1400) return 6;
+            if (width >= 992) return 4;
+            if (width >= 768) return 3;
+            return 2;
+        }
+
+        // Action Functions
+        function playTrailer() {
+            if (!currentContent.youtube_trailer_id) {
+                showToast('Trailer not available', 'warning');
+                return;
+            }
+
+            const modal = document.getElementById('trailerModal');
+            const title = document.getElementById('trailerTitle');
+            const player = document.getElementById('trailerPlayer');
+
+            title.textContent = `${currentContent.title} - Trailer`;
+            player.innerHTML = `
+                <iframe 
+                    src="https://www.youtube.com/embed/${currentContent.youtube_trailer_id}?autoplay=1&rel=0"
+                    frameborder="0" 
+                    allowfullscreen
+                    width="100%" 
+                    height="400"
+                    allow="autoplay; encrypted-media">
+                </iframe>
+            `;
+
+            modal.style.display = 'flex';
+
+            // Record interaction
+            if (window.auth.isAuthenticated()) {
+                window.api.recordInteraction({
+                    content_id: currentContent.id,
+                    interaction_type: 'trailer_view'
+                }).catch(console.warn);
+            }
+        }
+
+        function closeTrailerModal() {
+            const modal = document.getElementById('trailerModal');
+            const player = document.getElementById('trailerPlayer');
+            
+            modal.style.display = 'none';
+            player.innerHTML = '';
+        }
+
+        async function toggleWatchlist() {
+            if (!window.auth.isAuthenticated()) {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            try {
+                const watchlistBtn = document.getElementById('watchlistBtn');
+                const watchlistIcon = document.getElementById('watchlistIcon');
+                const isActive = watchlistBtn.classList.contains('btn-active');
+
+                await window.api.recordInteraction({
+                    content_id: currentContent.id,
+                    interaction_type: 'watchlist'
+                });
+
+                if (isActive) {
+                    watchlistBtn.classList.remove('btn-active');
+                    watchlistIcon.textContent = '+';
+                    showToast('Removed from watchlist', 'info');
+                } else {
+                    watchlistBtn.classList.add('btn-active');
+                    watchlistIcon.textContent = '✓';
+                    showToast('Added to watchlist', 'success');
+                }
+
+            } catch (error) {
+                console.error('Failed to toggle watchlist:', error);
+                showToast('Failed to update watchlist', 'error');
+            }
+        }
+
+        async function toggleFavorite() {
+            if (!window.auth.isAuthenticated()) {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            try {
+                const favoriteBtn = document.getElementById('favoriteBtn');
+                const favoriteIcon = document.getElementById('favoriteIcon');
+                const isActive = favoriteBtn.classList.contains('btn-active');
+
+                await window.api.recordInteraction({
+                    content_id: currentContent.id,
+                    interaction_type: 'favorite'
+                });
+
+                if (isActive) {
+                    favoriteBtn.classList.remove('btn-active');
+                    favoriteIcon.textContent = '♡';
+                    showToast('Removed from favorites', 'info');
+                } else {
+                    favoriteBtn.classList.add('btn-active');
+                    favoriteIcon.textContent = '♥';
+                    showToast('Added to favorites', 'success');
+                }
+
+            } catch (error) {
+                console.error('Failed to toggle favorite:', error);
+                showToast('Failed to update favorites', 'error');
+            }
+        }
+
+        function shareContent() {
+            if (navigator.share) {
+                navigator.share({
+                    title: currentContent.title,
+                    text: `Check out ${currentContent.title} on CineScope!`,
+                    url: window.location.href
+                }).catch(console.warn);
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    showToast('Link copied to clipboard', 'success');
+                }).catch(() => {
+                    showToast('Failed to copy link', 'error');
+                });
+            }
+        }
+
+        function navigateToContent(contentId) {
+            window.location.href = `/content/details.html?id=${contentId}`;
+        }
+
+        async function playContentTrailer(contentId) {
+            try {
+                const content = await window.api.getContentDetails(contentId);
+                
+                if (content.youtube_trailer_id) {
+                    const modal = document.getElementById('trailerModal');
+                    const title = document.getElementById('trailerTitle');
+                    const player = document.getElementById('trailerPlayer');
+
+                    title.textContent = `${content.title} - Trailer`;
+                    player.innerHTML = `
+                        <iframe 
+                            src="https://www.youtube.com/embed/${content.youtube_trailer_id}?autoplay=1&rel=0"
+                            frameborder="0" 
+                            allowfullscreen
+                            width="100%" 
+                            height="400"
+                            allow="autoplay; encrypted-media">
+                        </iframe>
+                    `;
+
+                    modal.style.display = 'flex';
+                } else {
+                    showToast('Trailer not available', 'warning');
+                }
+            } catch (error) {
+                console.error('Failed to play trailer:', error);
+                showToast('Failed to load trailer', 'error');
+            }
+        }
+
+        // Utility Functions
+        function updateUserSection() {
+            const userSection = document.getElementById('userSection');
+            
+            if (window.auth.isAuthenticated()) {
+                const user = window.auth.getUser();
+                userSection.innerHTML = `
+                    <img src="${window.auth.getUserAvatar()}" 
+                         alt="${user.username}" 
+                         class="user-avatar"
+                         onclick="window.location.href='/${user.username}/profile'">
+                `;
+            } else {
+                userSection.innerHTML = `
+                    <a href="/auth/login.html" class="btn btn-outline btn-sm">Login</a>
+                `;
+            }
+        }
+
+        function setupHeaderSearch() {
+            const searchInput = document.getElementById('headerSearch');
+            
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const query = e.target.value.trim();
+                    if (query) {
+                        window.location.href = `/content/search.html?q=${encodeURIComponent(query)}`;
+                    }
+                }
+            });
+        }
+
+        function goToWatchlist() {
+            const user = window.auth.getUser();
+            window.location.href = `/${user.username}/watchlist`;
+        }
+
+        function goToFavorites() {
+            const user = window.auth.getUser();
+            window.location.href = `/${user.username}/favorites`;
+        }
+
+        function goToProfile() {
+            const user = window.auth.getUser();
+            window.location.href = `/${user.username}/profile`;
+        }
+
+        function requireAuth(callback) {
+            if (window.auth.isAuthenticated()) {
+                callback();
+            } else {
+                window.location.href = '/auth/login.html';
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('mainContent').innerHTML = `
+                <div class="error-message">
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="history.back()">Go Back</button>
                 </div>
             `;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
             
-            // Update page title
-            document.title = `${details.title} - CineScope`;
+            document.body.appendChild(toast);
             
-            // Initialize components
-            app.initializeCarousels();
-            app.initializeLazyLoading();
+            setTimeout(() => toast.classList.add('toast-show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
-        
-        async function addToWatchlist(contentId) {
-            try {
-                await API.addInteraction(contentId, 'watchlist');
-                app.showToast('Added to watchlist', 'success');
-            } catch (error) {
-                app.showToast('Failed to add to watchlist', 'error');
+
+        // Close modal when clicking outside
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.modal-backdrop')) {
+                closeTrailerModal();
             }
-        }
-        
-        async function addToFavorites(contentId) {
-            try {
-                await API.addInteraction(contentId, 'favorite');
-                app.showToast('Added to favorites', 'success');
-            } catch (error) {
-                app.showToast('Failed to add to favorites', 'error');
+        });
+
+        // Handle browser back/forward
+        window.addEventListener('popstate', () => {
+            const params = new URLSearchParams(window.location.search);
+            const contentId = params.get('id');
+            
+            if (contentId && contentId !== currentContent?.id) {
+                loadContentDetails(contentId);
             }
-        }
-        
-        // Load content on page load
-        loadContentDetails();
+        });
     </script>
-    
-    <style>
-        .details-loading {
-            min-height: 100vh;
-        }
-        
-        .skeleton-hero {
-            height: 70vh;
-            min-height: 500px;
-        }
-        
-        .skeleton-content {
-            height: 400px;
-            margin-top: -100px;
-            border-radius: 20px 20px 0 0;
-        }
-        
-        .original-title {
-            font-size: 1.125rem;
-            color: var(--text-secondary);
-            margin-bottom: var(--space-md);
-        }
-        
-        .details-meta {
-            display: flex;
-            align-items: center;
-            gap: var(--space-md);
-            margin-bottom: var(--space-lg);
-            flex-wrap: wrap;
-        }
-        
-        .release-year,
-        .runtime {
-            color: var(--text-secondary);
-        }
-        
-        .details-overview {
-            margin-top: var(--space-xl);
-        }
-        
-        .details-overview h2 {
-            margin-bottom: var(--space-md);
-        }
-        
-        .details-languages {
-            margin-top: var(--space-lg);
-        }
-        
-        .details-languages h3 {
-            margin-bottom: var(--space-sm);
-        }
-        
-        .cast-section,
-        .similar-section {
-            margin-top: var(--space-2xl);
-        }
-        
-        .cast-list {
-            display: flex;
-            gap: var(--space-lg);
-            overflow-x: auto;
-            padding: var(--space-md) 0;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        .cast-member {
-            flex-shrink: 0;
-            text-align: center;
-            width: 120px;
-        }
-        
-        .cast-member img {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-bottom: var(--space-sm);
-        }
-        
-        .cast-name {
-            font-weight: 600;
-            font-size: 0.875rem;
-            margin-bottom: var(--space-xs);
-        }
-        
-        .cast-character {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-        
-        .error-state {
-            text-align: center;
-            padding: var(--space-2xl);
-            min-height: 50vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-    </style>
 </body>
 </html>

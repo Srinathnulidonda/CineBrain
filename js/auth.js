@@ -1,203 +1,272 @@
-// CineScope Authentication Module - JWT & User Management
-class AuthManager {
-  constructor() {
-    this.user = null;
-    this.token = null;
-    this.refreshTimer = null;
-    this.init();
-  }
-
-  init() {
-    // Load stored auth data
-    this.token = localStorage.getItem('authToken');
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        this.user = JSON.parse(userData);
-      } catch (e) {
-        console.error('Failed to parse user data:', e);
-        this.logout();
-      }
+// CineScope Authentication - JWT with Username Routing
+class CineScopeAuth {
+    constructor() {
+        this.token = localStorage.getItem('cinescope_token');
+        this.user = this.getStoredUser();
+        this.setupEventListeners();
+        this.checkAuthStatus();
+        performance.mark(window.CineScope.PERF_MARKS.AUTH_READY);
     }
 
-    // Setup token refresh
-    if (this.token) {
-      this.scheduleTokenRefresh();
+    setupEventListeners() {
+        // Handle auth state changes
+        window.addEventListener('auth:logout', () => {
+            this.handleLogout();
+        });
+
+        // Handle page navigation
+        window.addEventListener('popstate', () => {
+            this.handleRouteChange();
+        });
+
+        // Check auth on visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.isAuthenticated()) {
+                this.validateToken();
+            }
+        });
     }
-  }
 
-  async login(username, password) {
-    try {
-      const response = await API.request(API_ENDPOINTS.LOGIN, {
-        method: 'POST',
-        data: { username, password },
-        useCache: false
-      });
+    // Real JWT token validation with backend
+    async validateToken() {
+        if (!this.token) return false;
 
-      if (response.token && response.user) {
-        this.token = response.token;
-        this.user = response.user;
+        try {
+            // Verify token is not expired
+            const payload = this.decodeJWT(this.token);
+            if (payload.exp * 1000 < Date.now()) {
+                this.clearAuth();
+                return false;
+            }
+
+            // Validate with backend by making an authenticated request
+            const response = await window.api.getWatchlist();
+            return true;
+        } catch (error) {
+            if (error.message.includes('Authentication')) {
+                this.clearAuth();
+                return false;
+            }
+            return true; // Network error, assume valid
+        }
+    }
+
+    async login(credentials) {
+        try {
+            const response = await window.api.login(credentials);
+            
+            if (response.token && response.user) {
+                this.setAuth(response.token, response.user);
+                this.navigateToUserProfile();
+                return { success: true, user: response.user };
+            }
+            
+            return { success: false, error: 'Invalid response format' };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    async register(userData) {
+        try {
+            const response = await window.api.register(userData);
+            
+            if (response.token && response.user) {
+                this.setAuth(response.token, response.user);
+                this.navigateToUserProfile();
+                return { success: true, user: response.user };
+            }
+            
+            return { success: false, error: 'Registration failed' };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    logout() {
+        this.clearAuth();
+        this.navigateToHome();
+        window.dispatchEvent(new CustomEvent('auth:stateChanged', { 
+            detail: { authenticated: false } 
+        }));
+    }
+
+    setAuth(token, user) {
+        this.token = token;
+        this.user = user;
+        localStorage.setItem('cinescope_token', token);
+        localStorage.setItem('cinescope_user', JSON.stringify(user));
         
-        localStorage.setItem('authToken', this.token);
-        localStorage.setItem('user', JSON.stringify(this.user));
+        window.dispatchEvent(new CustomEvent('auth:stateChanged', { 
+            detail: { authenticated: true, user } 
+        }));
+    }
+
+    clearAuth() {
+        this.token = null;
+        this.user = null;
+        localStorage.removeItem('cinescope_token');
+        localStorage.removeItem('cinescope_user');
+        window.api.clearCache();
+    }
+
+    getStoredUser() {
+        try {
+            const userData = localStorage.getItem('cinescope_user');
+            return userData ? JSON.parse(userData) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    isAuthenticated() {
+        return !!(this.token && this.user);
+    }
+
+    isAdmin() {
+        return this.user?.is_admin === true;
+    }
+
+    getUser() {
+        return this.user;
+    }
+
+    getToken() {
+        return this.token;
+    }
+
+    // Username-based routing
+    navigateToUserProfile() {
+        if (this.user?.username) {
+            this.navigate(`/${this.user.username}/profile`);
+        }
+    }
+
+    navigateToHome() {
+        this.navigate('/');
+    }
+
+    navigate(path) {
+        window.history.pushState({}, '', path);
+        this.handleRouteChange();
+    }
+
+    // Route handling with authentication
+    handleRouteChange() {
+        const path = window.location.pathname;
+        const segments = path.split('/').filter(Boolean);
+
+        // Check if this is a protected route
+        if (this.isProtectedRoute(path)) {
+            if (!this.isAuthenticated()) {
+                this.redirectToLogin(path);
+                return;
+            }
+
+            // Validate username in URL matches current user
+            if (segments.length >= 2 && segments[1] === 'profile') {
+                const urlUsername = segments[0];
+                if (this.user?.username !== urlUsername) {
+                    this.navigateToUserProfile();
+                    return;
+                }
+            }
+        }
+
+        // Check admin routes
+        if (path.startsWith('/admin')) {
+            if (!this.isAuthenticated() || !this.isAdmin()) {
+                this.navigate('/');
+                window.app?.showToast('Admin access required', 'error');
+                return;
+            }
+        }
+
+        // Trigger route change event
+        window.dispatchEvent(new CustomEvent('route:changed', { 
+            detail: { path, segments } 
+        }));
+    }
+
+    isProtectedRoute(path) {
+        const protectedPatterns = [
+            /^\/[^\/]+\/profile/,
+            /^\/[^\/]+\/watchlist/,
+            /^\/[^\/]+\/favorites/,
+            /^\/[^\/]+\/activity/,
+            /^\/[^\/]+\/settings/,
+            /^\/admin/
+        ];
+
+        return protectedPatterns.some(pattern => pattern.test(path));
+    }
+
+    redirectToLogin(intendedPath) {
+        localStorage.setItem('cinescope_intended_path', intendedPath);
+        this.navigate('/auth/login.html');
+    }
+
+    handleSuccessfulAuth() {
+        const intendedPath = localStorage.getItem('cinescope_intended_path');
+        localStorage.removeItem('cinescope_intended_path');
         
-        this.scheduleTokenRefresh();
-        API.clearCache(); // Clear cache on login
+        if (intendedPath) {
+            this.navigate(intendedPath);
+        } else {
+            this.navigateToUserProfile();
+        }
+    }
+
+    checkAuthStatus() {
+        if (this.isAuthenticated()) {
+            this.validateToken().then(isValid => {
+                if (!isValid) {
+                    this.logout();
+                }
+            });
+        }
         
-        return { success: true, user: this.user };
-      }
-
-      return { success: false, error: response.error || 'Login failed' };
-    } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: error.message };
+        this.handleRouteChange();
     }
-  }
 
-  async register(userData) {
-    try {
-      const response = await API.request(API_ENDPOINTS.REGISTER, {
-        method: 'POST',
-        data: userData,
-        useCache: false
-      });
-
-      if (response.token && response.user) {
-        this.token = response.token;
-        this.user = response.user;
-        
-        localStorage.setItem('authToken', this.token);
-        localStorage.setItem('user', JSON.stringify(this.user));
-        
-        this.scheduleTokenRefresh();
-        
-        return { success: true, user: this.user };
-      }
-
-      return { success: false, error: response.error || 'Registration failed' };
-    } catch (error) {
-      console.error('Registration error:', error);
-      return { success: false, error: error.message };
+    // JWT helper
+    decodeJWT(token) {
+        try {
+            const payload = token.split('.')[1];
+            return JSON.parse(atob(payload));
+        } catch {
+            return {};
+        }
     }
-  }
 
-  logout() {
-    this.token = null;
-    this.user = null;
-    
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    
-    if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
+    // Avatar generation
+    getUserAvatar(username = null) {
+        const user = username || this.user?.username || 'User';
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(user)}&background=3b82f6&color=ffffff&bold=true&size=40`;
     }
-    
-    API.clearCache();
-    window.location.href = '/';
-  }
 
-  isAuthenticated() {
-    return !!this.token && !!this.user;
-  }
-
-  isAdmin() {
-    return this.isAuthenticated() && this.user.is_admin === true;
-  }
-
-  getUser() {
-    return this.user;
-  }
-
-  getUsername() {
-    return this.user?.username || null;
-  }
-
-  getUserRoute(path = '') {
-    if (!this.isAuthenticated()) return '/auth/login.html';
-    return `/${this.user.username}${path}`;
-  }
-
-  scheduleTokenRefresh() {
-    // Schedule refresh 5 minutes before expiry (assuming 30 day tokens)
-    const refreshIn = 29 * 24 * 60 * 60 * 1000; // 29 days
-    
-    if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
+    getUserAvatarLarge(username = null) {
+        const user = username || this.user?.username || 'User';
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(user)}&background=3b82f6&color=ffffff&bold=true&size=120`;
     }
-    
-    this.refreshTimer = setTimeout(() => {
-      this.refreshToken();
-    }, refreshIn);
-  }
+}
 
-  async refreshToken() {
-    // In a real implementation, this would call a refresh endpoint
-    // For now, we'll just log a warning
-    console.warn('Token refresh not implemented - user will need to login again');
-  }
+// Initialize global auth instance
+window.auth = new CineScopeAuth();
 
-  // Route protection
-  requireAuth(redirectTo = '/auth/login.html') {
-    if (!this.isAuthenticated()) {
-      // Store intended destination
-      sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
-      window.location.href = redirectTo;
-      return false;
-    }
-    return true;
-  }
-
-  requireAdmin(redirectTo = '/') {
-    if (!this.isAdmin()) {
-      window.location.href = redirectTo;
-      return false;
-    }
-    return true;
-  }
-
-  // User preferences
-  async updatePreferences(preferences) {
-    if (!this.isAuthenticated()) return false;
-
-    try {
-      // Update local user object
-      this.user = {
-        ...this.user,
-        ...preferences
-      };
-      
-      localStorage.setItem('user', JSON.stringify(this.user));
-      
-      // In a real app, this would sync with backend
-      return true;
-    } catch (error) {
-      console.error('Failed to update preferences:', error);
-      return false;
-    }
-  }
-
-  // Check if current route matches user route pattern
-  isUserRoute() {
-    const path = window.location.pathname;
-    return this.isAuthenticated() && path.startsWith(`/${this.user.username}/`);
-  }
-
-  // Redirect after login
-  handlePostLoginRedirect() {
-    const redirectTo = sessionStorage.getItem('redirectAfterLogin');
-    if (redirectTo) {
-      sessionStorage.removeItem('redirectAfterLogin');
-      window.location.href = redirectTo;
+// Export auth utilities
+window.requireAuth = (callback) => {
+    if (window.auth.isAuthenticated()) {
+        callback();
     } else {
-      window.location.href = this.getUserRoute('/profile');
+        window.auth.redirectToLogin(window.location.pathname);
     }
-  }
-}
+};
 
-// Create global auth instance
-const Auth = new AuthManager();
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Auth;
-}
+window.requireAdmin = (callback) => {
+    if (window.auth.isAuthenticated() && window.auth.isAdmin()) {
+        callback();
+    } else {
+        window.location.href = '/';
+    }
+};

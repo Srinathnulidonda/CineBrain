@@ -1,126 +1,102 @@
-// CineScope Configuration - Production Backend Integration
-const BASE_URL = 'https://backend-app-970m.onrender.com/api';
+// CineScope Configuration - Real Backend Integration
+const API_CONFIG = {
+    BASE_URL: 'https://backend-app-970m.onrender.com/api',
+    TIMEOUT: 15000,
+    RETRY_ATTEMPTS: 3,
+    CACHE_DURATION: 30000, // 30 seconds for dynamic data
+    STATIC_CACHE_DURATION: 86400000 // 24 hours for static data
+};
 
 const API_ENDPOINTS = {
-  // Authentication
-  LOGIN: `${BASE_URL}/login`,
-  REGISTER: `${BASE_URL}/register`,
-  LOGOUT: `${BASE_URL}/logout`,
-  
-  // Content Discovery
-  TRENDING: `${BASE_URL}/recommendations/trending`,
-  POPULAR: `${BASE_URL}/recommendations/trending?type=movie`,
-  TOP_RATED: `${BASE_URL}/recommendations/critics-choice`,
-  NEW_RELEASES: `${BASE_URL}/recommendations/new-releases`,
-  REGIONAL: `${BASE_URL}/recommendations/regional`,
-  GENRES: `${BASE_URL}/recommendations/genre`,
-  ANIME: `${BASE_URL}/recommendations/anime`,
-  ADMIN_CHOICE: `${BASE_URL}/recommendations/admin-choice`,
-  
-  // Search & Filtering
-  SEARCH: `${BASE_URL}/search`,
-  AUTOCOMPLETE: `${BASE_URL}/search`,
-  
-  // Content Details
-  MOVIE_DETAILS: `${BASE_URL}/content`,
-  TV_DETAILS: `${BASE_URL}/content`,
-  SIMILAR: `${BASE_URL}/recommendations/similar`,
-  
-  // User Features (Authenticated)
-  RECOMMENDATIONS: `${BASE_URL}/recommendations/personalized`,
-  ML_RECOMMENDATIONS: `${BASE_URL}/recommendations/ml-personalized`,
-  WATCHLIST: `${BASE_URL}/user/watchlist`,
-  FAVORITES: `${BASE_URL}/user/favorites`,
-  WATCH_HISTORY: `${BASE_URL}/user/activity`,
-  USER_RATINGS: `${BASE_URL}/interactions`,
-  
-  // Admin
-  ADMIN_SEARCH: `${BASE_URL}/admin/search`,
-  ADMIN_CONTENT: `${BASE_URL}/admin/content`,
-  ADMIN_RECOMMENDATIONS: `${BASE_URL}/admin/recommendations`,
-  ADMIN_ANALYTICS: `${BASE_URL}/admin/analytics`,
-  ADMIN_ML_CHECK: `${BASE_URL}/admin/ml-service-check`,
-  ADMIN_ML_STATS: `${BASE_URL}/admin/ml-stats`
+    // Authentication
+    LOGIN: '/login',
+    REGISTER: '/register',
+    REFRESH_TOKEN: '/refresh-token',
+    LOGOUT: '/logout',
+    
+    // Content Discovery
+    SEARCH: '/search',
+    CONTENT_DETAILS: '/content/{id}',
+    AUTOCOMPLETE: '/search?query={query}&limit=5',
+    
+    // Recommendations (Real ML-Powered)
+    TRENDING: '/recommendations/trending',
+    POPULAR: '/recommendations/trending?type=movie',
+    TOP_RATED: '/recommendations/critics-choice',
+    NEW_RELEASES: '/recommendations/new-releases',
+    CRITICS_CHOICE: '/recommendations/critics-choice',
+    
+    // Genre & Regional
+    GENRES: '/recommendations/genre/{genre}',
+    REGIONAL: '/recommendations/regional/{language}',
+    ANIME: '/recommendations/anime',
+    
+    // Personalized (Authenticated)
+    RECOMMENDATIONS: '/recommendations/personalized',
+    ML_RECOMMENDATIONS: '/recommendations/ml-personalized',
+    SIMILAR: '/recommendations/similar/{id}',
+    
+    // User Features
+    WATCHLIST: '/user/watchlist',
+    FAVORITES: '/user/favorites',
+    USER_ACTIVITY: '/user/activity',
+    USER_PROFILE: '/user/profile',
+    USER_SETTINGS: '/user/settings',
+    INTERACTIONS: '/interactions',
+    
+    // Admin Dashboard
+    ADMIN_SEARCH: '/admin/search',
+    ADMIN_CONTENT: '/admin/content',
+    ADMIN_RECOMMENDATIONS: '/admin/recommendations',
+    ADMIN_ANALYTICS: '/admin/analytics',
+    ADMIN_ML_CHECK: '/admin/ml-service-check',
+    ADMIN_ML_UPDATE: '/admin/ml-service-update',
+    
+    // Public Admin Choices
+    ADMIN_CHOICE: '/recommendations/admin-choice'
 };
 
-// App Configuration
-const APP_CONFIG = {
-  APP_NAME: 'CineScope',
-  APP_VERSION: '1.0.0',
-  API_TIMEOUT: 15000,
-  CACHE_TTL: 300000, // 5 minutes
-  IMAGE_BASE_URL: 'https://image.tmdb.org/t/p/',
-  IMAGE_SIZES: {
-    poster_small: 'w300',
-    poster_medium: 'w500',
-    poster_large: 'w780',
-    backdrop_small: 'w780',
-    backdrop_large: 'w1280',
-    backdrop_original: 'original'
-  },
-  ANIMATIONS: {
-    duration: 200,
-    easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
-  },
-  BREAKPOINTS: {
-    mobile: 575,
-    tablet: 768,
-    desktop: 992,
-    wide: 1400
-  },
-  GENRES: {
-    movie: [
-      { id: 28, name: 'Action' },
-      { id: 12, name: 'Adventure' },
-      { id: 16, name: 'Animation' },
-      { id: 35, name: 'Comedy' },
-      { id: 80, name: 'Crime' },
-      { id: 99, name: 'Documentary' },
-      { id: 18, name: 'Drama' },
-      { id: 10751, name: 'Family' },
-      { id: 14, name: 'Fantasy' },
-      { id: 36, name: 'History' },
-      { id: 27, name: 'Horror' },
-      { id: 10402, name: 'Music' },
-      { id: 9648, name: 'Mystery' },
-      { id: 10749, name: 'Romance' },
-      { id: 878, name: 'Science Fiction' },
-      { id: 53, name: 'Thriller' },
-      { id: 10752, name: 'War' },
-      { id: 37, name: 'Western' }
-    ],
-    tv: [
-      { id: 10759, name: 'Action & Adventure' },
-      { id: 16, name: 'Animation' },
-      { id: 35, name: 'Comedy' },
-      { id: 80, name: 'Crime' },
-      { id: 99, name: 'Documentary' },
-      { id: 18, name: 'Drama' },
-      { id: 10751, name: 'Family' },
-      { id: 10762, name: 'Kids' },
-      { id: 9648, name: 'Mystery' },
-      { id: 10763, name: 'News' },
-      { id: 10764, name: 'Reality' },
-      { id: 10765, name: 'Sci-Fi & Fantasy' },
-      { id: 10766, name: 'Soap' },
-      { id: 10767, name: 'Talk' },
-      { id: 10768, name: 'War & Politics' },
-      { id: 37, name: 'Western' }
-    ]
-  },
-  REGIONAL_LANGUAGES: [
-    { code: 'hindi', name: 'Hindi', region: 'IN' },
-    { code: 'telugu', name: 'Telugu', region: 'IN' },
-    { code: 'tamil', name: 'Tamil', region: 'IN' },
-    { code: 'kannada', name: 'Kannada', region: 'IN' },
-    { code: 'malayalam', name: 'Malayalam', region: 'IN' }
-  ],
-  ANIME_GENRES: [
-    'shonen', 'shojo', 'seinen', 'josei', 'kodomomuke'
-  ]
+const PERFORMANCE_CONFIG = {
+    PRELOAD_IMAGES: 5,
+    LAZY_LOAD_THRESHOLD: 200,
+    DEBOUNCE_SEARCH: 300,
+    CAROUSEL_AUTOPLAY: 5000,
+    ANIMATION_DURATION: 200,
+    SCROLL_THRESHOLD: 100
 };
 
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { BASE_URL, API_ENDPOINTS, APP_CONFIG };
-}
+const UI_CONFIG = {
+    CARDS_PER_ROW: {
+        mobile: 2,
+        tablet: 3,
+        desktop: 5,
+        ultrawide: 7
+    },
+    PAGINATION_SIZE: 20,
+    SEARCH_SUGGESTION_LIMIT: 8,
+    RECOMMENDATION_SECTIONS: {
+        trending: 20,
+        newReleases: 15,
+        criticsChoice: 12,
+        genre: 10,
+        similar: 8
+    }
+};
+
+// Performance Markers
+const PERF_MARKS = {
+    APP_START: 'app-start',
+    API_READY: 'api-ready', 
+    AUTH_READY: 'auth-ready',
+    FIRST_CONTENT: 'first-content',
+    INTERACTIVE: 'interactive'
+};
+
+// Export for global access
+window.CineScope = {
+    API_CONFIG,
+    API_ENDPOINTS,
+    PERFORMANCE_CONFIG,
+    UI_CONFIG,
+    PERF_MARKS
+};

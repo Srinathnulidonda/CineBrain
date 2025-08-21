@@ -1,260 +1,638 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Activity History - CineScope">
     <title>Activity - CineScope</title>
     
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="/css/main.css" as="style">
-    <link rel="preload" href="/js/config.js" as="script">
-    <link rel="preload" href="/js/api.js" as="script">
-    <link rel="preload" href="/js/auth.js" as="script">
-    <link rel="preload" href="/js/app.js" as="script">
+    <link rel="preload" href="../js/config.js" as="script">
+    <link rel="preload" href="../js/api.js" as="script">
+    <link rel="preload" href="../js/auth.js" as="script">
     
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/layouts.css">
-    <link rel="stylesheet" href="/css/animations.css">
-    <link rel="stylesheet" href="/css/responsive.css">
-    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layouts.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
-    <div id="app">
-        <main id="app-content">
-            <div class="user-page container">
-                <div class="page-header">
-                    <h1>Watch History</h1>
-                    <p>Your viewing activity</p>
+    <!-- Top Navigation -->
+    <nav class="topbar">
+        <div class="topbar-left">
+            <a href="/" class="logo">CineScope</a>
+            <button class="back-btn" onclick="goToProfile()">← Profile</button>
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search..." id="headerSearch">
+        </div>
+        <div class="topbar-right" id="userSection"></div>
+    </nav>
+
+    <main class="activity-page">
+        <div class="container">
+            <!-- Activity Header -->
+            <div class="page-header">
+                <div class="header-content">
+                    <h1 class="page-title">Activity History</h1>
+                    <p class="page-description">Track your viewing journey</p>
                 </div>
-                
-                <div class="activity-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon">🎬</div>
-                        <div class="stat-content">
-                            <div class="stat-value" id="total-watched">0</div>
-                            <div class="stat-label">Total Watched</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">⏱️</div>
-                        <div class="stat-content">
-                            <div class="stat-value" id="watch-time">0h</div>
-                            <div class="stat-label">Watch Time</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🎭</div>
-                        <div class="stat-content">
-                            <div class="stat-value" id="fav-genre">-</div>
-                            <div class="stat-label">Favorite Genre</div>
-                        </div>
-                    </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline btn-sm" onclick="exportActivity()">
+                        📤 Export Activity
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="clearActivity()">
+                        🗑️ Clear History
+                    </button>
                 </div>
-                
-                <div class="activity-timeline">
-                    <h2>Recent Activity</h2>
-                    <div id="activity-list" class="activity-list">
-                        <div class="loading">
-                            <div class="loader-spinner"></div>
-                        </div>
+            </div>
+
+            <!-- Activity Filters -->
+            <div class="activity-filters">
+                <div class="filters-left">
+                    <select id="activityFilter" class="filter-select" onchange="filterActivity()">
+                        <option value="all">All Activity</option>
+                        <option value="view">Views</option>
+                        <option value="watchlist">Watchlist</option>
+                        <option value="favorite">Favorites</option>
+                        <option value="rating">Ratings</option>
+                        <option value="trailer_view">Trailers</option>
+                    </select>
+                    
+                    <select id="timeFilter" class="filter-select" onchange="filterActivity()">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="year">This Year</option>
+                    </select>
+
+                    <select id="contentTypeFilter" class="filter-select" onchange="filterActivity()">
+                        <option value="all">All Types</option>
+                        <option value="movie">Movies</option>
+                        <option value="tv">TV Shows</option>
+                        <option value="anime">Anime</option>
+                    </select>
+                </div>
+
+                <div class="filters-right">
+                    <div class="activity-stats" id="activityStats">
+                        <span class="stat-item">
+                            <span class="stat-label">Total:</span>
+                            <span class="stat-value" id="totalActivities">0</span>
+                        </span>
+                        <span class="stat-item">
+                            <span class="stat-label">This Week:</span>
+                            <span class="stat-value" id="weekActivities">0</span>
+                        </span>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
-    
-    <!-- Scripts -->
-    <script src="/js/config.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/app.js"></script>
-    
+
+            <!-- Activity Timeline -->
+            <div class="activity-content" id="activityContent">
+                <div class="loading" id="loadingState">
+                    <div class="spinner"></div>
+                    <p>Loading your activity...</p>
+                </div>
+            </div>
+
+            <!-- Load More -->
+            <div class="load-more-section" id="loadMoreSection" style="display: none;">
+                <button class="btn btn-outline" onclick="loadMoreActivity()" id="loadMoreBtn">
+                    Load More Activity
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav">
+        <a href="/" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🏠</span>
+            <span class="mobile-nav-label">Home</span>
+        </a>
+        <a href="/content/search.html" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🔍</span>
+            <span class="mobile-nav-label">Search</span>
+        </a>
+        <a href="#" class="mobile-nav-item" onclick="goToWatchlist()">
+            <span class="mobile-nav-icon">📚</span>
+            <span class="mobile-nav-label">Watchlist</span>
+        </a>
+        <a href="#" class="mobile-nav-item" onclick="goToFavorites()">
+            <span class="mobile-nav-icon">❤️</span>
+            <span class="mobile-nav-label">Favorites</span>
+        </a>
+        <a href="#" class="mobile-nav-item active" onclick="goToProfile()">
+            <span class="mobile-nav-icon">👤</span>
+            <span class="mobile-nav-label">Profile</span>
+        </a>
+    </nav>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+
     <script>
-        // Check authentication
-        if (!Auth.requireAuth()) {
-            // Will redirect to login
-        }
-        
-        // Mock activity data (in a real app, this would come from the API)
-        const mockActivity = [
-            {
-                id: 1,
-                content: {
-                    id: 1,
-                    title: "Inception",
-                    poster_path: "/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
-                    content_type: "movie",
-                    runtime: 148
-                },
-                timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-                type: "watched"
-            },
-            {
-                id: 2,
-                content: {
-                    id: 2,
-                    title: "The Dark Knight",
-                    poster_path: "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-                    content_type: "movie",
-                    runtime: 152
-                },
-                timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-                type: "watched"
-            }
-        ];
-        
-        function loadActivity() {
-            // Calculate stats
-            const totalWatched = mockActivity.length;
-            const totalMinutes = mockActivity.reduce((sum, item) => 
-                sum + (item.content.runtime || 0), 0
-            );
-            const hours = Math.floor(totalMinutes / 60);
-            
-            // Update stats
-            document.getElementById('total-watched').textContent = totalWatched;
-            document.getElementById('watch-time').textContent = `${hours}h`;
-            document.getElementById('fav-genre').textContent = 'Action';
-            
-            // Display activity
-            const activityList = document.getElementById('activity-list');
-            
-            if (mockActivity.length === 0) {
-                activityList.innerHTML = `
-                    <div class="empty-state">
-                        <p>No activity yet. Start watching to see your history here.</p>
-                    </div>
-                `;
+        let allActivities = [];
+        let filteredActivities = [];
+        let currentUser = null;
+        let currentPage = 1;
+        let isLoading = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check authentication
+            if (!window.auth.isAuthenticated()) {
+                window.location.href = '/auth/login.html';
                 return;
             }
+
+            // Verify URL username matches current user
+            const pathUsername = window.location.pathname.split('/')[1];
+            currentUser = window.auth.getUser();
             
-            activityList.innerHTML = mockActivity.map(item => renderActivityItem(item)).join('');
-        }
-        
-        function renderActivityItem(activity) {
-            const posterUrl = activity.content.poster_path 
-                ? `https://image.tmdb.org/t/p/w92${activity.content.poster_path}`
-                : '/images/placeholder.jpg';
+            if (pathUsername !== currentUser.username) {
+                window.location.href = `/${currentUser.username}/activity`;
+                return;
+            }
+
+            updateUserSection();
+            setupHeaderSearch();
+            await loadActivityData();
+        });
+
+        async function loadActivityData() {
+            if (isLoading) return;
+            
+            isLoading = true;
+            const loadingState = document.getElementById('loadingState');
+            loadingState.style.display = 'flex';
+
+            try {
+                // Load user's watchlist and favorites to create activity timeline
+                const [watchlistResponse, favoritesResponse] = await Promise.all([
+                    window.api.getWatchlist(),
+                    window.api.getFavorites()
+                ]);
+
+                const watchlist = watchlistResponse.watchlist || [];
+                const favorites = favoritesResponse.favorites || [];
+
+                // Create activity entries from real data
+                allActivities = [];
+
+                // Add watchlist items as activities
+                watchlist.forEach((item, index) => {
+                    allActivities.push({
+                        id: `watchlist-${item.id}`,
+                        type: 'watchlist',
+                        content: item,
+                        timestamp: new Date(Date.now() - (index * 3600000)).toISOString(), // Simulate timestamps
+                        action: 'Added to watchlist'
+                    });
+                });
+
+                // Add favorites as activities
+                favorites.forEach((item, index) => {
+                    allActivities.push({
+                        id: `favorite-${item.id}`,
+                        type: 'favorite',
+                        content: item,
+                        timestamp: new Date(Date.now() - (index * 7200000)).toISOString(), // Simulate timestamps
+                        action: 'Marked as favorite'
+                    });
+                });
+
+                // Sort by timestamp (newest first)
+                allActivities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                // Add some simulated view activities
+                const viewedItems = [...watchlist, ...favorites].slice(0, 10);
+                viewedItems.forEach((item, index) => {
+                    allActivities.push({
+                        id: `view-${item.id}-${index}`,
+                        type: 'view',
+                        content: item,
+                        timestamp: new Date(Date.now() - (index * 1800000)).toISOString(),
+                        action: 'Viewed details'
+                    });
+                });
+
+                // Sort again after adding views
+                allActivities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                filteredActivities = [...allActivities];
                 
-            const timeAgo = getTimeAgo(new Date(activity.timestamp));
+                renderActivityStats();
+                renderActivityTimeline();
+                
+                loadingState.style.display = 'none';
+                document.getElementById('loadMoreSection').style.display = 
+                    allActivities.length > 20 ? 'block' : 'none';
+
+            } catch (error) {
+                console.error('Failed to load activity:', error);
+                showError('Failed to load your activity history');
+                loadingState.style.display = 'none';
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        function renderActivityStats() {
+            const totalCount = allActivities.length;
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const weekCount = allActivities.filter(activity => 
+                new Date(activity.timestamp) >= weekAgo
+            ).length;
+
+            document.getElementById('totalActivities').textContent = totalCount;
+            document.getElementById('weekActivities').textContent = weekCount;
+        }
+
+        function renderActivityTimeline() {
+            const container = document.getElementById('activityContent');
             
+            if (filteredActivities.length === 0) {
+                container.innerHTML = renderEmptyState();
+                return;
+            }
+
+            // Group activities by date
+            const groupedActivities = groupActivitiesByDate(filteredActivities.slice(0, 20));
+            
+            container.innerHTML = `
+                <div class="activity-timeline">
+                    ${Object.entries(groupedActivities).map(([date, activities]) => `
+                        <div class="activity-date-group">
+                            <div class="date-header">
+                                <div class="date-label">${formatDateHeader(date)}</div>
+                                <div class="date-count">${activities.length} activities</div>
+                            </div>
+                            <div class="date-activities">
+                                ${activities.map(activity => renderActivityItem(activity)).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function groupActivitiesByDate(activities) {
+            const grouped = {};
+            
+            activities.forEach(activity => {
+                const date = new Date(activity.timestamp).toDateString();
+                if (!grouped[date]) {
+                    grouped[date] = [];
+                }
+                grouped[date].push(activity);
+            });
+            
+            return grouped;
+        }
+
+        function formatDateHeader(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            if (date.toDateString() === today.toDateString()) {
+                return 'Today';
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                return 'Yesterday';
+            } else {
+                return date.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            }
+        }
+
+        function renderActivityItem(activity) {
+            const timeAgo = getTimeAgo(activity.timestamp);
+            const iconMap = {
+                'view': '👁️',
+                'watchlist': '📚',
+                'favorite': '❤️',
+                'rating': '⭐',
+                'trailer_view': '▶️'
+            };
+
             return `
-                <div class="activity-item">
-                    <div class="activity-poster">
-                        <img src="${posterUrl}" alt="${activity.content.title}">
-                    </div>
-                    <div class="activity-info">
-                        <h4>${activity.content.title}</h4>
-                        <p>${activity.content.content_type} • Watched ${timeAgo}</p>
-                    </div>
-                    <div class="activity-actions">
-                        <a href="/content/details.html?id=${activity.content.id}" class="btn btn-secondary btn-sm">
-                            Watch Again
-                        </a>
+                <div class="activity-item" data-id="${activity.id}">
+                    <div class="activity-icon">${iconMap[activity.type] || '📌'}</div>
+                    <div class="activity-content">
+                        <div class="activity-main">
+                            <div class="activity-poster" onclick="viewContent(${activity.content.id})">
+                                <img src="${activity.content.poster_path}" alt="${activity.content.title}" loading="lazy">
+                            </div>
+                            <div class="activity-details">
+                                <div class="activity-text">
+                                    <span class="activity-action">${activity.action}</span>
+                                    <strong class="activity-title" onclick="viewContent(${activity.content.id})">${activity.content.title}</strong>
+                                </div>
+                                <div class="activity-meta">
+                                    <span class="activity-time">${timeAgo}</span>
+                                    <span class="activity-type">${activity.content.content_type}</span>
+                                    ${activity.content.rating ? `<span class="activity-rating">★ ${activity.content.rating}</span>` : ''}
+                                </div>
+                                <div class="activity-actions">
+                                    <button class="btn btn-xs btn-outline" onclick="viewContent(${activity.content.id})">
+                                        View Details
+                                    </button>
+                                    ${activity.type !== 'watchlist' ? `
+                                        <button class="btn btn-xs btn-outline" onclick="addToWatchlist(${activity.content.id})">
+                                            + Watchlist
+                                        </button>
+                                    ` : ''}
+                                    ${activity.type !== 'favorite' ? `
+                                        <button class="btn btn-xs btn-outline" onclick="addToFavorites(${activity.content.id})">
+                                            ♡ Favorite
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <button class="activity-remove" onclick="removeActivity('${activity.id}')" title="Remove from history">×</button>
                     </div>
                 </div>
             `;
         }
-        
-        function getTimeAgo(date) {
-            const seconds = Math.floor((new Date() - date) / 1000);
-            
-            let interval = seconds / 31536000;
-            if (interval > 1) return Math.floor(interval) + " years ago";
-            
-            interval = seconds / 2592000;
-            if (interval > 1) return Math.floor(interval) + " months ago";
-            
-            interval = seconds / 86400;
-            if (interval > 1) return Math.floor(interval) + " days ago";
-            
-            interval = seconds / 3600;
-            if (interval > 1) return Math.floor(interval) + " hours ago";
-            
-            interval = seconds / 60;
-            if (interval > 1) return Math.floor(interval) + " minutes ago";
-            
-            return "Just now";
+
+        function renderEmptyState() {
+            return `
+                <div class="empty-activity">
+                    <div class="empty-icon">📊</div>
+                    <h3>No activity yet</h3>
+                    <p>Your viewing activity will appear here as you explore content.</p>
+                    <div class="empty-actions">
+                        <a href="/content/search.html" class="btn btn-primary">Browse Content</a>
+                        <a href="/" class="btn btn-outline">Explore Trending</a>
+                    </div>
+                </div>
+            `;
         }
-        
-        // Load activity on page load
-        loadActivity();
+
+        // Filtering Functions
+        function filterActivity() {
+            const activityFilter = document.getElementById('activityFilter').value;
+            const timeFilter = document.getElementById('timeFilter').value;
+            const contentTypeFilter = document.getElementById('contentTypeFilter').value;
+            
+            filteredActivities = allActivities.filter(activity => {
+                // Activity type filter
+                if (activityFilter !== 'all' && activity.type !== activityFilter) {
+                    return false;
+                }
+                
+                // Time filter
+                if (timeFilter !== 'all') {
+                    const activityDate = new Date(activity.timestamp);
+                    const now = new Date();
+                    
+                    switch (timeFilter) {
+                        case 'today':
+                            if (activityDate.toDateString() !== now.toDateString()) return false;
+                            break;
+                        case 'week':
+                            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                            if (activityDate < weekAgo) return false;
+                            break;
+                        case 'month':
+                            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                            if (activityDate < monthAgo) return false;
+                            break;
+                        case 'year':
+                            const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                            if (activityDate < yearAgo) return false;
+                            break;
+                    }
+                }
+                
+                // Content type filter
+                if (contentTypeFilter !== 'all' && activity.content.content_type !== contentTypeFilter) {
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            renderActivityTimeline();
+        }
+
+        function removeActivity(activityId) {
+            // Remove from local arrays
+            allActivities = allActivities.filter(a => a.id !== activityId);
+            filteredActivities = filteredActivities.filter(a => a.id !== activityId);
+            
+            // Re-render
+            renderActivityStats();
+            renderActivityTimeline();
+            
+            showToast('Activity removed', 'success');
+        }
+
+        async function clearActivity() {
+            if (allActivities.length === 0) return;
+            
+            const confirmed = confirm('Are you sure you want to clear all activity history? This action cannot be undone.');
+            
+            if (confirmed) {
+                // In a real app, this would call an API to clear history
+                allActivities = [];
+                filteredActivities = [];
+                
+                renderActivityStats();
+                renderActivityTimeline();
+                
+                showToast('Activity history cleared', 'success');
+            }
+        }
+
+        function exportActivity() {
+            if (allActivities.length === 0) {
+                showToast('No activity to export', 'warning');
+                return;
+            }
+
+            const exportData = {
+                user: currentUser.username,
+                exportDate: new Date().toISOString(),
+                totalActivities: allActivities.length,
+                activities: allActivities.map(activity => ({
+                    type: activity.type,
+                    action: activity.action,
+                    content: {
+                        title: activity.content.title,
+                        type: activity.content.content_type,
+                        rating: activity.content.rating
+                    },
+                    timestamp: activity.timestamp
+                }))
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cinescope-activity-${currentUser.username}-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast('Activity exported successfully', 'success');
+        }
+
+        async function loadMoreActivity() {
+            // In a real implementation, this would load more pages
+            showToast('All activity loaded', 'info');
+            document.getElementById('loadMoreSection').style.display = 'none';
+        }
+
+        // Action Functions
+        async function viewContent(contentId) {
+            window.location.href = `/content/details.html?id=${contentId}`;
+        }
+
+        async function addToWatchlist(contentId) {
+            try {
+                await window.api.recordInteraction({
+                    content_id: contentId,
+                    interaction_type: 'watchlist'
+                });
+                
+                showToast('Added to watchlist', 'success');
+                // Reload activity to show new interaction
+                await loadActivityData();
+            } catch (error) {
+                console.error('Failed to add to watchlist:', error);
+                showToast('Failed to add to watchlist', 'error');
+            }
+        }
+
+        async function addToFavorites(contentId) {
+            try {
+                await window.api.recordInteraction({
+                    content_id: contentId,
+                    interaction_type: 'favorite'
+                });
+                
+                showToast('Added to favorites', 'success');
+                // Reload activity to show new interaction
+                await loadActivityData();
+            } catch (error) {
+                console.error('Failed to add to favorites:', error);
+                showToast('Failed to add to favorites', 'error');
+            }
+        }
+
+        // Utility Functions
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const time = new Date(timestamp);
+            const diffInSeconds = Math.floor((now - time) / 1000);
+
+            if (diffInSeconds < 60) return 'Just now';
+            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+            if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+            return time.toLocaleDateString();
+        }
+
+        function updateUserSection() {
+            const userSection = document.getElementById('userSection');
+            
+            if (window.auth.isAuthenticated()) {
+                const user = window.auth.getUser();
+                userSection.innerHTML = `
+                    <img src="${window.auth.getUserAvatar()}" 
+                         alt="${user.username}" 
+                         class="user-avatar"
+                         onclick="toggleUserMenu()">
+                    <div class="user-dropdown" id="userDropdown" style="display: none;">
+                        <a href="/${user.username}/profile" class="dropdown-item">Profile</a>
+                        <a href="/${user.username}/watchlist" class="dropdown-item">Watchlist</a>
+                        <a href="/${user.username}/favorites" class="dropdown-item">Favorites</a>
+                        <a href="/${user.username}/activity" class="dropdown-item active">Activity</a>
+                        <a href="/${user.username}/settings" class="dropdown-item">Settings</a>
+                        ${user.is_admin ? '<a href="/admin/" class="dropdown-item">Admin</a>' : ''}
+                        <hr>
+                        <a href="#" onclick="window.auth.logout()" class="dropdown-item">Logout</a>
+                    </div>
+                `;
+            }
+        }
+
+        function setupHeaderSearch() {
+            const searchInput = document.getElementById('headerSearch');
+            
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const query = e.target.value.trim();
+                    if (query) {
+                        window.location.href = `/content/search.html?q=${encodeURIComponent(query)}`;
+                    }
+                }
+            });
+        }
+
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function goToProfile() {
+            const user = window.auth.getUser();
+            window.location.href = `/${user.username}/profile`;
+        }
+
+        function goToWatchlist() {
+            const user = window.auth.getUser();
+            window.location.href = `/${user.username}/watchlist`;
+        }
+
+        function goToFavorites() {
+            const user = window.auth.getUser();
+            window.location.href = `/${user.username}/favorites`;
+        }
+
+        function showError(message) {
+            document.getElementById('activityContent').innerHTML = `
+                <div class="error-message">
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+                </div>
+            `;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('toast-show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.topbar-right')) {
+                const dropdown = document.getElementById('userDropdown');
+                if (dropdown) dropdown.style.display = 'none';
+            }
+        });
     </script>
-    
-    <style>
-        .activity-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: var(--space-lg);
-            margin-bottom: var(--space-2xl);
-        }
-        
-        .stat-card {
-            display: flex;
-            align-items: center;
-            gap: var(--space-lg);
-            padding: var(--space-xl);
-            background: var(--surface-secondary);
-            border-radius: 8px;
-            border: 1px solid var(--border-primary);
-        }
-        
-        .stat-icon {
-            font-size: 2.5rem;
-        }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-500);
-        }
-        
-        .activity-timeline h2 {
-            margin-bottom: var(--space-lg);
-        }
-        
-        .activity-item {
-            display: flex;
-            align-items: center;
-            gap: var(--space-lg);
-            padding: var(--space-lg);
-            background: var(--surface-secondary);
-            border-radius: 8px;
-            margin-bottom: var(--space-md);
-            transition: all var(--transition-fast);
-        }
-        
-        .activity-item:hover {
-            background: var(--surface-tertiary);
-            transform: translateX(4px);
-        }
-        
-        .activity-poster img {
-            width: 60px;
-            height: 90px;
-            object-fit: cover;
-            border-radius: 4px;
-        }
-        
-        .activity-info {
-            flex: 1;
-        }
-        
-        .activity-info h4 {
-            margin-bottom: var(--space-xs);
-        }
-        
-        .activity-info p {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-        
-        .btn-sm {
-            padding: var(--space-xs) var(--space-md);
-            font-size: 0.875rem;
-        }
-    </style>
 </body>
 </html>

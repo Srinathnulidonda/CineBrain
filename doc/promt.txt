@@ -1,155 +1,516 @@
-povide the best promt for production-grade prompt you can use to generate the best possible design + code with top UI/UX for CineScope frontend
+  You are a Principal Frontend Architect at a Fortune 100+ streaming company tasked with building CineScope — a premium movie, tv series and anime recommendation platform that must outperform Netflix, Disney+, and HBO Max in user experience, performance, and technical excellence, based on backend/app.py.
 
-You are a Senior Frontend Engineer and UI/UX Designer.
-Your task is to produce a complete, production-ready CineScope frontend codebase that integrates with the Flask backend (backend/app.py).________________________________________
-🎯 Goal
-Build a pure HTML/CSS/JS frontend that:
-• Consumes the provided Flask API (/api/...)
-• Deploys as a static site (Vercel-ready) with clean URLs (no .html)
-• Uses fixed desktop topbar and fixed mobile bottom nav
-• Mobile-first responsive design
-• Uses only 5 global JS files (all page-specific JS must be inline)
-• Fully production-ready: no placeholders, no dummy data
-• Applies a Cinematic Dark Theme with blue + purple highlights for a premium, immersive look
-• After login, the URL must include the username in the route
-→ Example: https://frontendmov.vercel.app/<username>/profile
-________________________________________
-🎨 Cinematic Dark Theme (Design System)
-Concept: Dark theme to evoke the feel of a movie theater — posters, trailers, and media pop against the dark background.
-• Primary Base: Deep charcoal / near-black backgrounds (#0d0d0f, #121212)
-• Primary Accent (Blue): #2563eb (Tailwind blue-600) → symbolizes rarity, peace, and calmness
-• Secondary Accent (Purple): #9333ea (Tailwind purple-600) → evokes royalty, luxury, and cinematic depth
-• Text:
-o Primary text: #f9f9f9 (white 95%)
-o Secondary/muted: #b3b3b3
-• Surfaces / Cards: #1a1a1d background with subtle shadow/glow
-• Hover / Active states: blend of blue → purple gradients (linear-gradient 90deg, #2563eb → #9333ea)
-• UI examples:
-o topbar background → dark with glowing blue-purple highlights on active items
-o Mobile bottom nav → dark with blue icons, purple on active
-o Buttons → gradient from blue → purple with hover glow
-o Badges/labels → pill shape with blue or purple fill
-This theme must be applied globally across layouts, cards, badges, toasts, and navs.
-________________________________________
-⚙️ Tech Stack & Rules
-• Stack: HTML5, CSS3, Bootstrap 5, Tailwind (via CDN, prefixed tw-), vanilla JavaScript only
-• ✅ Exactly 5 global JS files under /js:
-    config.js
-    storage.js
-    http.js
-    ui.js
-    app.js
-• All page-specific logic inline at the bottom of each HTML file
-• Fixed topbar (desktop ≥ 992px) and fixed bottom nav (mobile < 992px)
-• Safe areas respected using env(safe-area-inset-*)
-• Viewport locked (maximum-scale=1, no zoom)
-• Touch-optimized (touch-action: manipulation)
-• Lazy loading images (loading="lazy")
-• Accessibility: semantic HTML, ARIA labels, keyboard focus visible
-________________________________________
-🚀 Deployment & Routing
-• Deploy on Vercel
-• Clean URLs (cleanUrls: true) → no .html in routes
-• Redirect /index.html → /
-• /api defaults to relative path (reverse proxy supported)
-• User-specific routes must work (e.g., /:username/profile, /:username/watchlist)
-• Provide vercel.json exactly as defined in the spec
-
-const API_BASE = 'https://backend-app-970m.onrender.com/api';
-
-________________________________________
-📂 Project Structure
+## **🚨 CRITICAL RULES** ⚠️
+1. **Only 4 JS Files (Global):**
+   * `config.js`, `api.js`, `auth.js`, `app.js` are the only global scripts.
+   * Page-specific logic/scripts → inline inside `.html` files.
+2. **Only 6 CSS Files (Global):**
+   * No extra `.css` files beyond `main.css`, `components.css`, `layouts.css`, `animations.css`, `responsive.css`, `theme.css`.
+   * Page-specific styles → inline inside `.html`.
+3. **Zero Placeholder Policy:**
+   * No mock, dummy, or static placeholder content.
+   * Every component must fetch **live data** from `https://backend-app-970m.onrender.com/api`.
+4. **Ultra-Fast API Response:**
+   * Must load in `<100ms`.
+   * Service Worker caching, retries, and prefetch must be used.
+5. **Premium CineScope Standard:**
+   * Must **outperform Netflix, Disney+, HBO Max** in performance and UI.
+   * All recommendations must be **real ML-powered suggestions from backend**.
+   * API should be preloaded for instant response times.
+---
+## 📂 Project Structure (Mandatory)
+```
 frontend/
-├── index.html
+├── index.html                          # Public landing page
+├── vercel.json                         # Deployment configuration
+├── auth/                               # Authentication pages
+│   ├── login.html                      # Login form
+│   ├── register.html                   # Registration form
+│   └── forgot-password.html            # Password recovery
 │
-├── auth/
-│   ├── login.html
-│   └── register.html
+├── content/                            # Content discovery
+│   ├── search.html                     # Global search
+│   ├── details.html                    # Movie/Show details
+│   ├── anime.html                      # Anime category
+│   ├── genre.html                      # Genre browsing
+│   ├── regional.html                   # Regional content
+│   └── trending.html                   # Trending content
 │
-├── content/
-│   ├── search.html
-│   ├── details.html
-│   ├── anime.html
-│   ├── genre.html
-│   └── regional.html
+├── user/                               # User-specific pages
+│   ├── profile.html                    # User profile /{username}/profile
+│   ├── watchlist.html                  # Personal watchlist
+│   ├── favorites.html                  # Favorite content
+│   ├── activity.html                   # Watch history
+│   └── settings.html                   # User preferences AND activity + subscription
 │
-├── user/
-│   ├── watchlist.html
-│   ├── favorites.html
-│   ├── settings.html
-│   ├── activity.html
-│   └── profile.html
+├── admin/                              # Admin dashboard
+│   ├── index.html                      # Admin overview
+│   ├── content.html                    # Content management, ML recommendations, Admin post in Telegram
+│   ├── users.html                      # User management
+│   └── analytics.html                  # Usage analytics
 │
-├── admin/
-│   ├── index.html
-│   ├── search.html
-│   ├── recommendations.html
-│   ├── analytics.html
-│   └── ml.html
+├── components/                         # Reusable widgets
+│   ├── cards/
+│   │   ├── content-card.html           # Standard content card
+│   │   └── card-mini.html           
+│   ├── ui/
+│   │   ├── rating-badge.html           # Rating display
+│   │   ├── type-badge.html             # Content type badge
+│   │   ├── genre-chips.html            # Genre tags
+│   │   └── search-bar.html             # Search component
+│   ├── layout/
+│   │   ├── topbar.html                 # Desktop navigation
+│   │   └── mobile-nav.html             # Mobile bottom nav
+│   └── modals/
+│       ├── trailer-modal.html          # Video player modal
+│       └── filter-modal.html           # Advanced filters
 │
-├── widgets/
-│   ├── content-card.html
-│   ├── content-card-anime.html
-│   ├── card-mini.html
-│   ├── rating-badge.html
-│   ├── type-badge.html
-│   ├── chips-genre.html
-│   ├── chips-language.html
-│   ├── search-bar.html
-│   ├── pagination.html
-│   ├── trailer-modal.html
-│   ├── toast-container.html
-│   ├── skeleton-card.html
-│   ├── skeleton-grid.html
-│   └── admin-kpi-tile.html
+├── js/                                 # ⚠️ Only 4 JS files (global)
+│   ├── config.js                       # BASE_URL + API_ENDPOINTS map (no placeholders)
+│   ├── api.js                          # HTTP client, retries, caching, SW hooks, preloading
+│   ├── auth.js                         # JWT auth, refresh, username routing
+│   └── app.js                          # Router, boot, page controllers, perf marks, Components, carousels, toasts, virtualization
 │
-├── layouts/
-│   ├── mobile-nav.html
-│   ├── topbar.html
-│   ├── offcanvas-filters.html
-│   └── container.html
-│
-├── css/
-│   ├── base.css
-│   ├── bootstrap-overrides.css
-│   ├── Tailwind.css
-│   ├── animation.css
-│   ├── responsive.css
-│   └── utilities.css
-│
-├── js/
-│   ├── config.js
-│   ├── app.js
-│   ├── http.js
-│   ├── storage.js
-│   └── ui.js
-│
-├── vercel.json
-└── README.md
-________________________________________
-🛠️ Global JS Responsibilities
-•	config.js → API base, Tailwind prefix
-•	storage.js → localStorage/sessionStorage for token + user
-•	http.js → api.get/post with token handling
-•	ui.js → reusable UI (cards, grids, toast, trailer modal)
-•	app.js → layout injection, guards (auth/admin), event hooks
-________________________________________
-✅ Acceptance Checklist
-•  No .html in URLs (cleanUrls true)
-•  Fixed bars (desktop topbar, mobile bottom nav)
-•  Safe-area padding respected
-•  5 global JS files only
-•  Inline page-specific JS per page
-•  Uses backend API directly (/api/...)
-•  Deploys on Vercel with zero edits required
-•  Usernames must appear in the URL after login (/:username/profile)
-________________________________________
-📦 Output
-•	Generate all files and folders exactly as specified
-•	Fill HTMLs with working markup, inline JS calling real /api endpoints
-•	Implement base.css, animation.css, utilities, and responsive rules
-•	Implement all 5 global JS files with correct logic
-•	Provide vercel.json from the spec
-•	Under Goal (explicit login behavior)
-•	Under Deployment & Routing (so Vercel routing handles /username/...)
-•	In Acceptance Checklist (final validation)
+└── css/                                # ⚠️ Only 6 CSS files (global)
+    ├── main.css                        # Global styles
+    ├── components.css                  # Component styles
+    ├── layouts.css                     # Layout-specific styles
+    ├── animations.css                  # Transitions & keyframes
+    ├── responsive.css                  # Breakpoints (mobile-first)
+    └── theme.css                       # Dark/Light toggle + cinematic tokens
+---------------------
+
+## 🔝 Fixed Topbar (Mobile & Desktop)
+- **Fixed Position**: Always pinned to the top across all breakpoints.
+- **Element Order** (Left → Right):
+  - Logo (CineScope) → Clickable, routes to / (landing).
+  - Search Icon/Input → Expands into search bar with real-time backend autocomplete.
+  - User Avatar → Real-time avatar (via ui-avatars) that updates with username dynamically.
+- **No Zoom Hacks / No CSS Workarounds** → Must be truly fixed.
+
+## 📱 Fixed Bottom Navigation (Mobile Only)
+- **Fixed Position**: Always pinned to the bottom of the viewport on mobile.
+- **5 Primary Tabs** (with haptic feedback):
+  - Home
+  - Search
+  - Watchlist
+  - Favorites
+  - Profile
+- **Safe Area Handling**: Must adapt perfectly for iPhone 14/15 Pro notches and Android cutouts.
+- **Gesture Support**: Swipe navigation + pull-to-refresh + infinite scroll.
+------------------------------------
+## 🏠 HOMEPAGE (NON-LOGGED USERS)
+- **Hero Section**: Show real trending movie, auto-rotate every 5s, backdrop 16:9, play/info/add-to-list buttons, preload images.
+- **"What's Hot"**: Horizontal scrolling cards with real posters, titles, ratings with real data & local titles.
+- **Genres**: Sections for Action, Comedy, Drama, Thriller, Romance, Sci-Fi with lazy loading & trailer preview.
+- **Regional Favorites**: Telugu, Hindi, Tamil, Kannada movies with real data & local titles.
+- **Critics' Choice**: Premium curated content with real critic scores & reviews with real data & local titles.
+- **User Favorites**: Community-driven popular content with real user ratings.
+- **Search**: Auto-suggest with posters, real-time results, filters for genre, year, cast, crew with real data & local titles.
+- **Theme**: Dark/Light mode toggle, Netflix-inspired design.
+
+## 🏠 PERSONALIZED HOMEPAGE (LOGGED-IN USERS)
+- **Recommended for You**: Real ML-powered suggestions with confidence scores.
+- **Personalized recommendations** according to user and Real ML-powered suggestions
+- **Because You Liked [X]**: Similar content based on user's past likes.
+- **Continue Watching**: Resume from last watched point with real progress.
+- **From Your Wishlist**: Show wishlist items with availability and scores.
+- **Trending in Your Genres**: Personalized trending based on user preferences.
+- **Personalized Hero**: Rotates content from user's favorite genres, adapts to time & behavior.
+
+## 🎬 DETAIL PAGE (ALL USERS)
+- **Hero Section**: Real movie data with title, overview, poster, backdrop.
+- **Trailer Player**: Real trailers, autoplay logic, adaptive quality, custom controls.
+- **Synopsis**: Real overview, plot summary, and warnings.
+- **Cast & Crew**: Real actor names, roles, profile images, filmography links.
+- **Ratings**: IMDB, Rotten Tomatoes, user reviews, backend composite score.
+- **Metadata**: Genres, advisories, 4K/HDR status, release dates.
+- **More Like This**: Similar movies section with real discovery.
+- **Lists**: Add/remove from Watchlist & Favorites.
+- **Reviews**: Real user reviews with spoiler tags and helpful votes.
+- **Gallery**: Real posters, stills, and behind-the-scenes images.
+---------------------------
+## 🚨 CRITICAL MANDATE: ZERO PLACEHOLDER POLICY
+
+### ABSOLUTE REQUIREMENTS - NO EXCEPTIONS:
+- **NO PLACEHOLDER DATA**: Every piece of content must come from real backend API calls
+- **NO MOCK DATA**: All movie titles, descriptions, images, ratings must be fetched from https://backend-app-970m.onrender.com/api
+- **NO STATIC CONTENT**: Every card, every list, every recommendation must be dynamically populated
+- **NO FAKE IMAGES**: All posters, backdrops, and thumbnails must be real URLs from the backend
+- **NO DUMMY TEXT**: All descriptions, reviews, cast information must be authentic data
+- **REAL-TIME DATA**: Every page load must make actual API calls and display live data
+- **PRODUCTION-READY**: The frontend must work seamlessly with the existing backend without any modifications
+
+### BACKEND INTEGRATION REQUIREMENTS:
+```javascript
+// MANDATORY: All data must come from these real endpoints
+export const API_ENDPOINTS = {
+  BASE_URL: 'https://backend-app-970m.onrender.com/api',
+
+  // Content Discovery (real)
+  TRENDING: '/recommendations/trending',          // ?type=all|movie|tv&limit=&region=
+  NEW_RELEASES: '/recommendations/new-releases',  // ?type=movie|tv&language=&limit=
+  TOP_RATED: '/recommendations/critics-choice',   // ?type=movie|tv&limit=
+  REGIONAL: '/recommendations/regional',          // append '/:language' + ?type=&limit=
+  GENRE_RECS: '/recommendations/genre',           // append '/:genre' + ?type=&limit=
+  ANIME: '/recommendations/anime',                // ?genre=&limit=
+  ADMIN_CHOICE: '/recommendations/admin-choice',  // public feed of admin picks
+  ANONYMOUS_RECS: '/recommendations/anonymous',   // fallback for non-auth users
+
+  // Search & Filtering (real)
+  SEARCH: '/search',          // ?query=&type=multi|movie|tv|anime&page=
+  // Not implemented in backend: FILTER, AUTOCOMPLETE endpoints
+  // We alias AUTOCOMPLETE to SEARCH so UI can reuse it
+  FILTER: null,
+  AUTOCOMPLETE: '/search',
+
+  // Content Details (real)
+  CONTENT_DETAILS: '/content',         // append '/:id' (returns cast, crew, similar_content in one go)
+  SIMILAR: '/recommendations/similar', // append '/:id' + ?limit=
+  // There are no separate endpoints for these in backend; use CONTENT_DETAILS and transform client-side
+  MOVIE_DETAILS: '/content', // append '/:id'
+  TV_DETAILS: '/content',    // append '/:id'
+  CAST_CREW: '/content',     // append '/:id' (extract cast/crew from response)
+  REVIEWS: null,             // backend doesn’t return reviews in /content
+
+  // User Features (Authenticated; real)
+  RECOMMENDATIONS: '/recommendations/personalized',   // GET (requires Bearer token)
+  ML_RECOMMENDATIONS: '/recommendations/ml-personalized', // GET (requires Bearer token)
+  WATCHLIST: '/user/watchlist',                       // GET (requires Bearer token)
+  FAVORITES: '/user/favorites',                       // GET (requires Bearer token)
+  // Not implemented in backend:
+  WATCH_HISTORY: null,
+  USER_RATINGS: '/interactions', // POST to create rating/interaction
+
+  // Authentication (real)
+  LOGIN: '/login',       // POST
+  REGISTER: '/register', // POST
+  // Not implemented in backend:
+  REFRESH_TOKEN: null,
+  LOGOUT: null,
+
+  // Health (real)
+  HEALTH: '/health',
+};
+
+// Helpers to build dynamic endpoint URLs
+export const buildUrl = {
+  // Content
+  contentDetails: (id) => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.CONTENT_DETAILS}/${id}`,
+  movieDetails: (id) => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.MOVIE_DETAILS}/${id}`,
+  tvDetails: (id) => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.TV_DETAILS}/${id}`,
+  castCrew: (id) => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.CAST_CREW}/${id}`,
+  similar: (id, params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.SIMILAR}/${id}${qs ? `?${qs}` : ''}`;
+  },
+
+  // Recommendations
+  trending: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.TRENDING}${qs ? `?${qs}` : ''}`;
+  },
+  newReleases: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.NEW_RELEASES}${qs ? `?${qs}` : ''}`;
+  },
+  topRated: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.TOP_RATED}${qs ? `?${qs}` : ''}`;
+  },
+  regional: (language, params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.REGIONAL}/${language}${qs ? `?${qs}` : ''}`;
+  },
+  genreRecs: (genre, params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.GENRE_RECS}/${genre}${qs ? `?${qs}` : ''}`;
+  },
+  anime: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.ANIME}${qs ? `?${qs}` : ''}`;
+  },
+  adminChoice: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.ADMIN_CHOICE}${qs ? `?${qs}` : ''}`;
+  },
+  anonymousRecs: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.ANONYMOUS_RECS}${qs ? `?${qs}` : ''}`;
+  },
+
+  // Search
+  search: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.SEARCH}${qs ? `?${qs}` : ''}`;
+  },
+
+  // Auth
+  login: () => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.LOGIN}`,
+  register: () => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.REGISTER}`,
+
+  // User
+  watchlist: () => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.WATCHLIST}`,
+  favorites: () => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.FAVORITES}`,
+  userRatings: () => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.USER_RATINGS}`,
+};
+
+// Minimal token getter (customize if needed)
+const getAuthToken = () => localStorage.getItem('auth_token');
+
+// Simple in-memory cache for preloading
+const __cache = new Map(); // key -> { data, expiresAt, promise }
+const defaultTTL = 60_000; // 60s
+
+const now = () => Date.now();
+const isFresh = (entry) => entry && entry.expiresAt && entry.expiresAt > now();
+
+// Generic real API fetcher with preloading and SWR-like caching
+export const fetchRealData = async (
+  urlOrEndpoint, 
+  {
+    method = 'GET',
+    params,
+    body,
+    token = getAuthToken(),
+    headers = {},
+    ttl = defaultTTL,
+    prefetch = false,
+    transform, // optional (data) => any
+    signal,
+  } = {}
+) => {
+  // Allow passing endpoint path (e.g., '/recommendations/trending') or a full URL
+  const isFullUrl = /^https?:\/\//i.test(urlOrEndpoint);
+  const base = isFullUrl ? '' : API_ENDPOINTS.BASE_URL;
+  const qs = params && Object.keys(params).length ? `?${new URLSearchParams(params).toString()}` : '';
+  const url = `${base}${urlOrEndpoint}${qs}`;
+
+  // If cached and fresh, return immediately
+  const cached = __cache.get(url);
+  if (!prefetch && isFresh(cached) && cached.data !== undefined) {
+    return cached.data;
+  }
+  if (!prefetch && cached?.promise) {
+    // Share in-flight request
+    const data = await cached.promise;
+    return transform ? transform(data) : data;
+  }
+
+  const controller = new AbortController();
+  const combinedSignal = signal
+    ? new AbortController()
+    : null;
+
+  if (combinedSignal) {
+    // Link signals if provided
+    const onAbort = () => controller.abort();
+    signal.addEventListener('abort', onAbort, { once: true });
+  }
+
+  const fetchPromise = fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+    signal: controller.signal,
+  }).then(async (res) => {
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      const err = new Error(`HTTP ${res.status} ${res.statusText}: ${text || url}`);
+      err.status = res.status;
+      throw err;
+    }
+    return res.json();
+  });
+
+  // Store in cache immediately to share in-flight promise
+  __cache.set(url, {
+    promise: fetchPromise,
+    data: cached?.data,
+    expiresAt: now() + ttl,
+  });
+
+  try {
+    const data = await fetchPromise;
+    const finalData = transform ? transform(data) : data;
+
+    __cache.set(url, {
+      promise: null,
+      data: finalData,
+      expiresAt: now() + ttl,
+    });
+
+    return prefetch ? undefined : finalData;
+  } catch (e) {
+    // On error, clear promise but keep any stale data if available
+    __cache.set(url, {
+      promise: null,
+      data: cached?.data,
+      expiresAt: now() + ttl / 4,
+    });
+    if (prefetch) return undefined;
+    throw e;
+  }
+};
+
+// Convenience transformers (client-side) where the backend bundles data together
+export const transformers = {
+  castCrew: (contentDetails) => ({
+    cast: contentDetails?.cast ?? [],
+    crew: contentDetails?.crew ?? [],
+  }),
+  similarFromContent: (contentDetails) => contentDetails?.similar_content ?? [],
+  recommendationsList: (payload) => payload?.recommendations ?? [],
+};
+
+// EVERY component must fetch real data with preloading
+const fetchRealData = async (endpoint, params = {}) => {
+  // Implementation with real API integration
+};
+-----------------------
+## 🏆 SUCCESS METRICS (Non-Negotiable)
+
+### Performance Benchmarks
+- **First Contentful Paint**: <1.2s (beat Netflix's 1.8s)
+- **Largest Contentful Paint**: <2.1s (beat Disney+'s 2.8s)
+- **Time to Interactive**: <2.5s (beat HBO Max's 3.2s)
+- **Core Web Vitals**: 100% green scores
+- **Lighthouse Performance**: ≥95 across all pages
+- **API Response Time**: <100ms with preloading
+
+### User Experience Standards
+- Zero placeholder content - every component must be production-ready with real data
+- Sub-200ms interaction responses - faster than human perception threshold
+- Buttery smooth 60fps animations on all devices
+- One-tap navigation - maximum 2 taps to reach any content
+- Instant search results with <100ms autocomplete using real backend data
+------------------------
+## 🎨 CINEMATIC DESIGN PHILOSOPHY
+
+### Brand Identity: "Premium IMAX Experience"
+Create the digital equivalent of a luxury cinema experience - sophisticated, immersive, and premium.
+
+### Color Psychology & Hierarchy
+```css
+/* Tier 1: Foundation (Premium Black) */
+--cinema-black: #0a0a0b;        /* Main backgrounds - conveys luxury */
+--theater-dark: #141418;         /* Card surfaces - premium feel */
+--velvet-dark: #1e1e23;          /* Elevated content - sophisticated */
+
+/* Tier 2: Premium Accents */
+--platinum-blue: #3b82f6;        /* Trust & reliability */
+--royal-purple: #8b5cf6;         /* Exclusivity & premium */
+--vip-gold: #f59e0b;            /* Premium features & highlights */
+
+/* Tier 3: Content Hierarchy */
+--hero-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #1e1e23 100%);
+--premium-glow: 0 0 30px rgba(139, 92, 246, 0.3);
+--interactive-pulse: 0 0 20px rgba(59, 130, 246, 0.4);
+
+---------------------------
+
+### Visual Hierarchy Rules
+1. **Hero Content**: Cinematic 16:9 ratio with subtle parallax
+2. **Content Cards**: Sharp corners (4px), premium shadows, hover scaling (1.03x)
+3. **Typography**: Ultra-clean hierarchy with perfect contrast ratios
+4. **Micro-interactions**: Sophisticated 0.2s cubic-bezier(0.4, 0, 0.2, 1) transitions
+
+---------------------------
+
+## 📱 MOBILE-FIRST ARCHITECTURE
+
+### Fixed Navigation System (Critical Requirement)
+- **Top Bar (Fixed)**: Search, profile, notifications - always accessible
+- **Bottom Navigation (Fixed)**: 5 primary tabs with haptic feedback
+- **Safe Area Handling**: Perfect iPhone 14/15 Pro notch adaptation
+- **Gesture Support**: Swipe navigation, pull-to-refresh, infinite scroll
+
+### Responsive Breakpoints (Performance Optimized)
+```css
+/* Mobile-First Strategy */
+@media (max-width: 575px)   { /* Mobile: Optimized for thumb navigation */ }
+@media (min-width: 576px)   { /* Large Mobile: Enhanced touch targets */ }
+@media (min-width: 768px)   { /* Tablet: Hybrid touch/cursor interface */ }
+@media (min-width: 992px)   { /* Desktop: Full-featured experience */ }
+@media (min-width: 1400px)  { /* Ultra-wide: Cinematic layouts */ }
+
+---
+
+## ⚡ PERFORMANCE ARCHITECTURE
+
+### 4-File JavaScript Strategy (Mandatory)
+```javascript
+// 1. config.js (50KB) - App configuration & API endpoints with preloading
+// 2. api.js (75KB) - HTTP client, real backend integration, caching, preloading
+// 3. auth.js (60KB) - Real authentication with backend JWT
+// 4. app.js (120KB) - All UI components + main application logic with real data binding
+// Total Bundle: ~305KB (compressed: ~80KB with Brotli)
+// Preload Strategy: All 4 files + critical API data loaded in parallel during initial paint
+------------------------
+### Critical Performance Optimizations
+- **Preload Critical Resources**: All 4 JS files + critical CSS + API data
+- **Image Optimization**: Real backend image URLs with WebP/AVIF lazy loading
+- **API Response Caching**: Real backend data cached for 30s dynamic, 24h static
+- **Service Worker**: Aggressive caching of real API responses with preloading
+- **Code Splitting**: Route-based chunks for non-critical features
+- **API Preloading**: Critical endpoints preloaded for <100ms response times
+------------------------
+
+## 🔐 URL ARCHITECTURE & ROUTING
+
+### Professional URL Structure (SEO-Optimized)
+**Public Routes:**
+- `/` (landing page with real trending data)
+
+**Authenticated Routes (Username Required):**
+- `/{username}/profile` (real user data)
+
+**Admin Routes:**
+- `/admin/analytics` (real analytics)
+
+### Authentication Flow Excellence
+1. **Login Success**: Real JWT token, redirect to `/{username}/profile` with real user data
+2. **Route Protection**: Real JWT validation with backend verification
+3. **Deep Linking**: Preserve intended destination through real auth flow
+4. **Session Management**: Real secure token storage with backend refresh
+
+---
+
+## 🎯 FINAL DELIVERABLE REQUIREMENTS
+
+### Quality Gates (All Must Pass)
+- ✅ **ZERO PLACEHOLDER POLICY**: Every single piece of data comes from real backend API calls
+- ✅ **REAL DATA INTEGRATION**: All movies, shows, ratings, reviews are authentic from backend
+- ✅ **PRODUCTION BACKEND**: Seamless integration with https://backend-app-970m.onrender.com/api
+- ✅ **LIVE API CALLS**: Every page load makes real HTTP requests and displays live data
+- ✅ **AUTHENTIC CONTENT**: Real movie posters, descriptions, cast info, ratings from backend
+- ✅ **FUNCTIONAL FEATURES**: Search, recommendations, user lists all work with real data
+- ✅ **PERFORMANCE EXCELLENCE**: Sub-2s load times with real API integration
+- ✅ **MOBILE PERFECTION**: Fixed top/bottom nav with smooth interactions
+- ✅ **USERNAME ROUTING**: Perfect `/{username}/profile` implementation with real user data
+- ✅ **PRODUCTION READY**: Deploy to Vercel and immediately work with existing backend
+- ✅ **API PRELOADING**: Critical data preloaded for <100ms response times
+- ✅ **4 JS FILES ONLY**: No additional global scripts beyond the mandatory 4
+- ✅ **6 CSS FILES ONLY**: No additional global stylesheets beyond the mandatory 6
+
+---
+
+## 🚨 FINAL MANDATE
+
+Generate a complete, enterprise-grade codebase that:
+
+1. **MAKES REAL API CALLS**: Every single component must fetch actual data from the backend
+2. **DISPLAYS REAL CONTENT**: Movie titles, posters, descriptions, ratings must all be authentic
+3. **WORKS IMMEDIATELY**: Can be deployed and used in production without any backend changes
+4. **HANDLES REAL DATA**: Properly formats and displays actual movie/TV show information
+5. **INTEGRATES SEAMLESSLY**: Works perfectly with the existing backend API structure
+6. **PRELOADS CRITICAL DATA**: API responses must be <100ms through intelligent preloading
+7. **FOLLOWS FILE LIMITS**: Strictly adheres to 4 JS files and 6 CSS files maximum
+8. **INLINE PAGE LOGIC**: All page-specific scripts and styles must be inline in HTML files
+
+**NO PLACEHOLDERS. NO MOCK DATA. NO FAKE CONTENT. NO EXTRA FILES. ONLY REAL, LIVE, PRODUCTION DATA WITH PRELOADED API RESPONSES.**
+This should be the reference implementation that can immediately replace any existing streaming platform frontend and work flawlessly with real user data and content.

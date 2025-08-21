@@ -1,351 +1,752 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Search movies, TV shows and anime - CineScope">
     <title>Search - CineScope</title>
     
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="/css/main.css" as="style">
-    <link rel="preload" href="/js/config.js" as="script">
-    <link rel="preload" href="/js/api.js" as="script">
-    <link rel="preload" href="/js/auth.js" as="script">
-    <link rel="preload" href="/js/app.js" as="script">
+    <link rel="preload" href="../js/config.js" as="script">
+    <link rel="preload" href="../js/api.js" as="script">
+    <link rel="preload" href="../js/auth.js" as="script">
     
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/layouts.css">
-    <link rel="stylesheet" href="/css/animations.css">
-    <link rel="stylesheet" href="/css/responsive.css">
-    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layouts.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
-    <div id="app">
-        <main id="app-content">
-            <div class="search-page container">
-                <div class="search-header">
-                    <h1>Search</h1>
-                    <div class="search-box">
-                        <input type="text" id="search-input" placeholder="Search movies, TV shows, anime..." 
-                               autocomplete="off" autofocus>
-                        <button class="btn btn-primary" onclick="performSearch()">Search</button>
-                    </div>
-                    
-                    <div class="search-filters">
-                        <select id="type-filter" class="filter-select">
-                            <option value="multi">All Types</option>
-                            <option value="movie">Movies</option>
-                            <option value="tv">TV Shows</option>
-                            <option value="anime">Anime</option>
-                        </select>
+    <!-- Top Navigation -->
+    <nav class="topbar">
+        <div class="topbar-left">
+            <a href="/" class="logo">CineScope</a>
+        </div>
+        <div class="search-container search-main">
+            <input type="text" 
+                   class="search-input search-primary" 
+                   placeholder="Search movies, shows, anime..." 
+                   id="mainSearch"
+                   autocomplete="off">
+            <button class="search-btn" onclick="performSearch()">🔍</button>
+            <div class="search-suggestions" id="searchSuggestions"></div>
+        </div>
+        <div class="topbar-right" id="userSection"></div>
+    </nav>
+
+    <main class="search-page">
+        <div class="container">
+            <!-- Search Filters -->
+            <div class="search-filters" id="searchFilters">
+                <div class="filter-group">
+                    <label class="filter-label">Type</label>
+                    <select class="filter-select" id="typeFilter" onchange="updateFilters()">
+                        <option value="multi">All</option>
+                        <option value="movie">Movies</option>
+                        <option value="tv">TV Shows</option>
+                        <option value="anime">Anime</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Genre</label>
+                    <select class="filter-select" id="genreFilter" onchange="updateFilters()">
+                        <option value="">All Genres</option>
+                        <option value="action">Action</option>
+                        <option value="comedy">Comedy</option>
+                        <option value="drama">Drama</option>
+                        <option value="thriller">Thriller</option>
+                        <option value="romance">Romance</option>
+                        <option value="sci-fi">Sci-Fi</option>
+                        <option value="horror">Horror</option>
+                        <option value="animation">Animation</option>
+                        <option value="documentary">Documentary</option>
+                        <option value="fantasy">Fantasy</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Sort By</label>
+                    <select class="filter-select" id="sortFilter" onchange="updateFilters()">
+                        <option value="relevance">Relevance</option>
+                        <option value="rating">Rating</option>
+                        <option value="year">Year</option>
+                        <option value="title">Title</option>
+                        <option value="popularity">Popularity</option>
+                    </select>
+                </div>
+
+                <button class="filter-clear" onclick="clearFilters()">Clear Filters</button>
+            </div>
+
+            <!-- Search Results -->
+            <div class="search-content">
+                <!-- Initial State -->
+                <div class="search-initial" id="searchInitial">
+                    <div class="initial-content">
+                        <h2>Discover Amazing Content</h2>
+                        <p>Search through thousands of movies, TV shows, and anime</p>
                         
-                        <button class="btn btn-secondary" onclick="showFilterModal()">
-                            More Filters
-                        </button>
+                        <div class="search-suggestions-grid">
+                            <h3>Popular Searches</h3>
+                            <div class="suggestion-tags" id="popularSearches">
+                                <!-- Will be populated with real trending data -->
+                            </div>
+                        </div>
+
+                        <div class="quick-browse">
+                            <h3>Quick Browse</h3>
+                            <div class="browse-categories">
+                                <a href="#" class="browse-card" onclick="searchByCategory('action')">
+                                    <span class="browse-icon">⚡</span>
+                                    <span class="browse-label">Action</span>
+                                </a>
+                                <a href="#" class="browse-card" onclick="searchByCategory('comedy')">
+                                    <span class="browse-icon">😄</span>
+                                    <span class="browse-label">Comedy</span>
+                                </a>
+                                <a href="#" class="browse-card" onclick="searchByCategory('drama')">
+                                    <span class="browse-icon">🎭</span>
+                                    <span class="browse-label">Drama</span>
+                                </a>
+                                <a href="#" class="browse-card" onclick="searchByCategory('anime')">
+                                    <span class="browse-icon">🎌</span>
+                                    <span class="browse-label">Anime</span>
+                                </a>
+                                <a href="#" class="browse-card" onclick="searchByCategory('thriller')">
+                                    <span class="browse-icon">🔪</span>
+                                    <span class="browse-label">Thriller</span>
+                                </a>
+                                <a href="#" class="browse-card" onclick="searchByCategory('romance')">
+                                    <span class="browse-icon">💕</span>
+                                    <span class="browse-label">Romance</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div id="search-results" class="search-results-container">
-                    <!-- Popular searches will be shown initially -->
-                    <div class="popular-searches">
-                        <h2>Popular Searches</h2>
-                        <div class="search-tags">
-                            <button class="search-tag" onclick="searchFor('Action Movies')">Action Movies</button>
-                            <button class="search-tag" onclick="searchFor('Comedy')">Comedy</button>
-                            <button class="search-tag" onclick="searchFor('Anime')">Anime</button>
-                            <button class="search-tag" onclick="searchFor('Telugu Movies')">Telugu Movies</button>
-                            <button class="search-tag" onclick="searchFor('Hindi Movies')">Hindi Movies</button>
-                            <button class="search-tag" onclick="searchFor('Thriller')">Thriller</button>
-                        </div>
+
+                <!-- Loading State -->
+                <div class="search-loading" id="searchLoading" style="display: none;">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Searching...</p>
+                    </div>
+                </div>
+
+                <!-- Results Container -->
+                <div class="search-results" id="searchResults" style="display: none;">
+                    <div class="results-header">
+                        <h2 id="resultsTitle">Search Results</h2>
+                        <div class="results-count" id="resultsCount"></div>
                     </div>
                     
-                    <div class="trending-searches">
-                        <h2>Trending Now</h2>
-                        <div id="trending-grid" class="content-grid">
-                            <!-- Will be populated with trending content -->
+                    <div class="results-grid" id="resultsGrid">
+                        <!-- Results will be populated here -->
+                    </div>
+
+                    <div class="results-pagination" id="resultsPagination">
+                        <!-- Pagination will be populated here -->
+                    </div>
+                </div>
+
+                <!-- No Results State -->
+                <div class="search-no-results" id="searchNoResults" style="display: none;">
+                    <div class="no-results-content">
+                        <h3>No results found</h3>
+                        <p>Try adjusting your search terms or filters</p>
+                        <div class="no-results-suggestions">
+                            <h4>Suggestions:</h4>
+                            <ul>
+                                <li>Check your spelling</li>
+                                <li>Try more general terms</li>
+                                <li>Remove some filters</li>
+                                <li>Browse by category instead</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
-    
-    <!-- Filter Modal -->
-    <div id="filter-modal" class="filter-modal">
-        <div class="filter-header">
-            <h3>Filters</h3>
-            <button class="btn-close" onclick="closeFilterModal()">×</button>
         </div>
-        <div class="filter-content">
-            <div class="filter-group">
-                <h4>Genres</h4>
-                <div class="filter-options">
-                    <label><input type="checkbox" value="Action"> Action</label>
-                    <label><input type="checkbox" value="Comedy"> Comedy</label>
-                    <label><input type="checkbox" value="Drama"> Drama</label>
-                    <label><input type="checkbox" value="Horror"> Horror</label>
-                    <label><input type="checkbox" value="Romance"> Romance</label>
-                    <label><input type="checkbox" value="Sci-Fi"> Sci-Fi</label>
-                </div>
-            </div>
-            
-            <div class="filter-group">
-                <h4>Year</h4>
-                <select id="year-filter">
-                    <option value="">All Years</option>
-                    <option value="2024">2024</option>
-                    <option value="2023">2023</option>
-                    <option value="2022">2022</option>
-                    <option value="2021">2021</option>
-                    <option value="2020">2020</option>
-                </select>
-            </div>
-            
-            <div class="filter-group">
-                <h4>Rating</h4>
-                <input type="range" id="rating-filter" min="0" max="10" step="0.5" value="0">
-                <span id="rating-value">0+</span>
-            </div>
-            
-            <button class="btn btn-primary btn-block" onclick="applyFilters()">Apply Filters</button>
-        </div>
-    </div>
-    
-    <!-- Scripts -->
-    <script src="/js/config.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/app.js"></script>
-    
+    </main>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav">
+        <a href="/" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🏠</span>
+            <span class="mobile-nav-label">Home</span>
+        </a>
+        <a href="/content/search.html" class="mobile-nav-item active">
+            <span class="mobile-nav-icon">🔍</span>
+            <span class="mobile-nav-label">Search</span>
+        </a>
+        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToWatchlist())">
+            <span class="mobile-nav-icon">📚</span>
+            <span class="mobile-nav-label">Watchlist</span>
+        </a>
+        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToFavorites())">
+            <span class="mobile-nav-icon">❤️</span>
+            <span class="mobile-nav-label">Favorites</span>
+        </a>
+        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToProfile())">
+            <span class="mobile-nav-icon">👤</span>
+            <span class="mobile-nav-label">Profile</span>
+        </a>
+    </nav>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+
     <script>
         let currentQuery = '';
         let currentPage = 1;
-        let isLoading = false;
-        
-        // Initialize trending content
-        async function loadTrending() {
+        let currentFilters = {
+            type: 'multi',
+            genre: '',
+            sort: 'relevance'
+        };
+        let searchTimeout;
+        let isSearching = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            updateUserSection();
+            await loadInitialContent();
+            setupSearchFunctionality();
+            
+            // Check if there's a query in URL
+            const params = new URLSearchParams(window.location.search);
+            const query = params.get('q');
+            if (query) {
+                document.getElementById('mainSearch').value = query;
+                performSearch(query);
+            }
+        });
+
+        async function loadInitialContent() {
             try {
-                const trending = await API.getTrending('all', 12);
-                const grid = document.getElementById('trending-grid');
-                
-                if (trending.recommendations && trending.recommendations.length > 0) {
-                    grid.innerHTML = trending.recommendations.map(item => 
-                        app.renderContentCard(item)
-                    ).join('');
-                    app.initializeLazyLoading();
-                }
+                // Load trending content for popular searches
+                const trending = await window.api.getTrending({ limit: 10 });
+                populatePopularSearches(trending.recommendations || []);
             } catch (error) {
-                console.error('Failed to load trending:', error);
+                console.warn('Failed to load initial content:', error);
             }
         }
-        
-        // Search functionality
-        async function performSearch() {
-            const query = document.getElementById('search-input').value.trim();
-            if (!query || query === currentQuery) return;
+
+        function populatePopularSearches(trending) {
+            const container = document.getElementById('popularSearches');
             
-            currentQuery = query;
+            if (trending.length === 0) {
+                container.innerHTML = '<p class="text-muted">No trending content available</p>';
+                return;
+            }
+
+            const popularTerms = trending.slice(0, 8).map(item => item.title);
+            
+            container.innerHTML = popularTerms.map(term => 
+                `<button class="suggestion-tag" onclick="searchByTerm('${term.replace(/'/g, "\\'")}')">${term}</button>`
+            ).join('');
+        }
+
+        function setupSearchFunctionality() {
+            const searchInput = document.getElementById('mainSearch');
+            
+            // Auto-focus search input
+            searchInput.focus();
+
+            // Search on input with debouncing
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                
+                clearTimeout(searchTimeout);
+                
+                if (query.length === 0) {
+                    showInitialState();
+                    return;
+                }
+
+                if (query.length < 2) {
+                    return;
+                }
+
+                searchTimeout = setTimeout(() => {
+                    performSearch(query);
+                }, 300);
+            });
+
+            // Search on Enter
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const query = e.target.value.trim();
+                    if (query) {
+                        performSearch(query);
+                    }
+                }
+            });
+
+            // Real-time suggestions
+            searchInput.addEventListener('input', debounce(async (e) => {
+                const query = e.target.value.trim();
+                if (query.length >= 2) {
+                    await showSearchSuggestions(query);
+                } else {
+                    hideSuggestions();
+                }
+            }, 200));
+        }
+
+        async function performSearch(query = null) {
+            if (isSearching) return;
+            
+            const searchQuery = query || document.getElementById('mainSearch').value.trim();
+            
+            if (!searchQuery) {
+                showInitialState();
+                return;
+            }
+
+            isSearching = true;
+            currentQuery = searchQuery;
             currentPage = 1;
-            
-            const resultsContainer = document.getElementById('search-results');
-            resultsContainer.innerHTML = '<div class="loading">Searching...</div>';
-            
+
+            // Update URL
+            const url = new URL(window.location);
+            url.searchParams.set('q', searchQuery);
+            window.history.pushState({}, '', url);
+
             try {
-                const type = document.getElementById('type-filter').value;
-                const results = await API.searchContent(query, type, currentPage);
+                showLoadingState();
+                
+                const searchParams = {
+                    query: searchQuery,
+                    type: currentFilters.type,
+                    page: currentPage
+                };
+
+                const results = await window.api.search(searchQuery, searchParams);
                 
                 if (results.results && results.results.length > 0) {
-                    resultsContainer.innerHTML = `
-                        <div class="search-results-header">
-                            <h2>Results for "${query}"</h2>
-                            <p>${results.total_results} results found</p>
-                        </div>
-                        <div class="content-grid">
-                            ${results.results.map(item => app.renderContentCard(item)).join('')}
-                        </div>
-                        ${results.total_pages > 1 ? `
-                            <div class="pagination">
-                                <button class="btn btn-secondary" onclick="loadMore()">Load More</button>
-                            </div>
-                        ` : ''}
-                    `;
-                    app.initializeLazyLoading();
+                    showResults(results);
                 } else {
-                    resultsContainer.innerHTML = `
-                        <div class="no-results">
-                            <h2>No results found for "${query}"</h2>
-                            <p>Try searching with different keywords</p>
+                    showNoResults();
+                }
+
+            } catch (error) {
+                console.error('Search error:', error);
+                showError('Search failed. Please try again.');
+            } finally {
+                isSearching = false;
+                hideSuggestions();
+            }
+        }
+
+        async function showSearchSuggestions(query) {
+            try {
+                const suggestions = await window.api.autocomplete(query);
+                const container = document.getElementById('searchSuggestions');
+                
+                if (!suggestions.results || suggestions.results.length === 0) {
+                    container.style.display = 'none';
+                    return;
+                }
+
+                container.innerHTML = suggestions.results.slice(0, 5).map(item => `
+                    <div class="suggestion-item" onclick="selectSuggestion('${item.title.replace(/'/g, "\\'")}', ${item.id})">
+                        <img src="${item.poster_path}" alt="${item.title}" class="suggestion-poster">
+                        <div class="suggestion-info">
+                            <div class="suggestion-title">${item.title}</div>
+                            <div class="suggestion-meta">${item.content_type} • ★ ${item.rating || 'N/A'}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.style.display = 'block';
+
+            } catch (error) {
+                console.warn('Failed to load suggestions:', error);
+            }
+        }
+
+        function hideSuggestions() {
+            document.getElementById('searchSuggestions').style.display = 'none';
+        }
+
+        function selectSuggestion(title, contentId) {
+            if (contentId) {
+                window.location.href = `/content/details.html?id=${contentId}`;
+            } else {
+                document.getElementById('mainSearch').value = title;
+                performSearch(title);
+            }
+        }
+
+        function showInitialState() {
+            document.getElementById('searchInitial').style.display = 'block';
+            document.getElementById('searchLoading').style.display = 'none';
+            document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('searchNoResults').style.display = 'none';
+        }
+
+        function showLoadingState() {
+            document.getElementById('searchInitial').style.display = 'none';
+            document.getElementById('searchLoading').style.display = 'block';
+            document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('searchNoResults').style.display = 'none';
+        }
+
+        function showResults(results) {
+            document.getElementById('searchInitial').style.display = 'none';
+            document.getElementById('searchLoading').style.display = 'none';
+            document.getElementById('searchResults').style.display = 'block';
+            document.getElementById('searchNoResults').style.display = 'none';
+
+            // Update results info
+            document.getElementById('resultsTitle').textContent = `Results for "${currentQuery}"`;
+            document.getElementById('resultsCount').textContent = 
+                `${results.total_results?.toLocaleString() || results.results.length} results found`;
+
+            // Render results grid
+            const grid = document.getElementById('resultsGrid');
+            grid.innerHTML = results.results.map(item => renderSearchResultCard(item)).join('');
+
+            // Render pagination
+            renderPagination(results);
+
+            // Scroll to results
+            document.getElementById('searchResults').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showNoResults() {
+            document.getElementById('searchInitial').style.display = 'none';
+            document.getElementById('searchLoading').style.display = 'none';
+            document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('searchNoResults').style.display = 'block';
+        }
+
+        function showError(message) {
+            showNoResults();
+            document.querySelector('#searchNoResults .no-results-content h3').textContent = 'Search Error';
+            document.querySelector('#searchNoResults .no-results-content p').textContent = message;
+        }
+
+        function renderSearchResultCard(item) {
+            return `
+                <div class="search-result-card" onclick="viewContent(${item.id})">
+                    <div class="result-poster">
+                        <img src="${item.poster_path}" alt="${item.title}" loading="lazy">
+                        <div class="result-overlay">
+                            <button class="play-btn" onclick="event.stopPropagation(); playTrailer(${item.id})">▶</button>
+                        </div>
+                    </div>
+                    <div class="result-info">
+                        <h3 class="result-title">${item.title}</h3>
+                        <div class="result-metadata">
+                            <span class="result-rating">★ ${item.rating || 'N/A'}</span>
+                            <span class="result-type">${item.content_type}</span>
+                            ${item.release_date ? 
+                                `<span class="result-year">${new Date(item.release_date).getFullYear()}</span>` : ''}
+                        </div>
+                        <div class="result-genres">
+                            ${(item.genres || []).slice(0, 3).map(genre => 
+                                `<span class="genre-chip">${genre}</span>`
+                            ).join('')}
+                        </div>
+                        <p class="result-overview">${(item.overview || '').substring(0, 150)}${item.overview && item.overview.length > 150 ? '...' : ''}</p>
+                        <div class="result-actions">
+                            <button class="btn btn-sm btn-outline" onclick="event.stopPropagation(); addToWatchlist(${item.id})">
+                                + Watchlist
+                            </button>
+                            <button class="btn btn-sm btn-outline" onclick="event.stopPropagation(); addToFavorites(${item.id})">
+                                ♡ Favorite
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPagination(results) {
+            const container = document.getElementById('resultsPagination');
+            const totalPages = results.total_pages || 1;
+            
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let paginationHTML = '';
+
+            // Previous button
+            if (currentPage > 1) {
+                paginationHTML += `<button class="pagination-btn" onclick="goToPage(${currentPage - 1})">Previous</button>`;
+            }
+
+            // Page numbers
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+
+            if (startPage > 1) {
+                paginationHTML += `<button class="pagination-btn" onclick="goToPage(1)">1</button>`;
+                if (startPage > 2) {
+                    paginationHTML += `<span class="pagination-ellipsis">...</span>`;
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `
+                    <button class="pagination-btn ${i === currentPage ? 'active' : ''}" 
+                            onclick="goToPage(${i})">${i}</button>
+                `;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHTML += `<span class="pagination-ellipsis">...</span>`;
+                }
+                paginationHTML += `<button class="pagination-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+
+            // Next button
+            if (currentPage < totalPages) {
+                paginationHTML += `<button class="pagination-btn" onclick="goToPage(${currentPage + 1})">Next</button>`;
+            }
+
+            container.innerHTML = paginationHTML;
+        }
+
+        async function goToPage(page) {
+            if (page === currentPage || isSearching) return;
+            
+            currentPage = page;
+            
+            try {
+                showLoadingState();
+                
+                const searchParams = {
+                    query: currentQuery,
+                    type: currentFilters.type,
+                    page: currentPage
+                };
+
+                const results = await window.api.search(currentQuery, searchParams);
+                showResults(results);
+
+            } catch (error) {
+                console.error('Pagination error:', error);
+                showError('Failed to load page. Please try again.');
+            }
+        }
+
+        function updateFilters() {
+            currentFilters.type = document.getElementById('typeFilter').value;
+            currentFilters.genre = document.getElementById('genreFilter').value;
+            currentFilters.sort = document.getElementById('sortFilter').value;
+
+            if (currentQuery) {
+                performSearch();
+            }
+        }
+
+        function clearFilters() {
+            document.getElementById('typeFilter').value = 'multi';
+            document.getElementById('genreFilter').value = '';
+            document.getElementById('sortFilter').value = 'relevance';
+            
+            currentFilters = {
+                type: 'multi',
+                genre: '',
+                sort: 'relevance'
+            };
+
+            if (currentQuery) {
+                performSearch();
+            }
+        }
+
+        function searchByTerm(term) {
+            document.getElementById('mainSearch').value = term;
+            performSearch(term);
+        }
+
+        function searchByCategory(category) {
+            document.getElementById('mainSearch').value = category;
+            document.getElementById('typeFilter').value = category === 'anime' ? 'anime' : 'multi';
+            if (category !== 'anime') {
+                document.getElementById('genreFilter').value = category;
+            }
+            updateFilters();
+            performSearch(category);
+        }
+
+        // Action Functions
+        function viewContent(contentId) {
+            window.location.href = `/content/details.html?id=${contentId}`;
+        }
+
+        async function playTrailer(contentId) {
+            try {
+                const content = await window.api.getContentDetails(contentId);
+                
+                if (content.youtube_trailer) {
+                    const modal = document.createElement('div');
+                    modal.className = 'modal modal-large';
+                    modal.innerHTML = `
+                        <div class="modal-backdrop" onclick="this.parentElement.remove()"></div>
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>${content.title} - Trailer</h3>
+                                <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                            </div>
+                            <div class="modal-body">
+                                <iframe 
+                                    src="https://www.youtube.com/embed/${content.youtube_trailer_id}?autoplay=1"
+                                    frameborder="0" 
+                                    allowfullscreen
+                                    width="100%" 
+                                    height="400">
+                                </iframe>
+                            </div>
                         </div>
                     `;
+                    
+                    document.body.appendChild(modal);
+                    modal.style.display = 'flex';
+                } else {
+                    showToast('Trailer not available', 'warning');
                 }
             } catch (error) {
-                resultsContainer.innerHTML = `
-                    <div class="error-state">
-                        <h2>Something went wrong</h2>
-                        <p>Please try again later</p>
-                    </div>
+                console.error('Failed to play trailer:', error);
+                showToast('Failed to load trailer', 'error');
+            }
+        }
+
+        async function addToWatchlist(contentId) {
+            if (!window.auth.isAuthenticated()) {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            try {
+                await window.api.recordInteraction({
+                    content_id: contentId,
+                    interaction_type: 'watchlist'
+                });
+                
+                showToast('Added to watchlist', 'success');
+            } catch (error) {
+                console.error('Failed to add to watchlist:', error);
+                showToast('Failed to add to watchlist', 'error');
+            }
+        }
+
+        async function addToFavorites(contentId) {
+            if (!window.auth.isAuthenticated()) {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            try {
+                await window.api.recordInteraction({
+                    content_id: contentId,
+                    interaction_type: 'favorite'
+                });
+                
+                showToast('Added to favorites', 'success');
+            } catch (error) {
+                console.error('Failed to add to favorites:', error);
+                showToast('Failed to add to favorites', 'error');
+            }
+        }
+
+        // Utility Functions
+        function updateUserSection() {
+            const userSection = document.getElementById('userSection');
+            
+            if (window.auth.isAuthenticated()) {
+                const user = window.auth.getUser();
+                userSection.innerHTML = `
+                    <img src="${window.auth.getUserAvatar()}" 
+                         alt="${user.username}" 
+                         class="user-avatar"
+                         onclick="window.location.href='/${user.username}/profile'">
+                `;
+            } else {
+                userSection.innerHTML = `
+                    <a href="/auth/login.html" class="btn btn-outline btn-sm">Login</a>
                 `;
             }
         }
-        
-        function searchFor(query) {
-            document.getElementById('search-input').value = query;
-            performSearch();
+
+        function goToWatchlist() {
+            const user = window.auth.getUser();
+            window.location.href = `/${user.username}/watchlist`;
         }
-        
-        async function loadMore() {
-            if (isLoading) return;
-            isLoading = true;
-            currentPage++;
+
+        function goToFavorites() {
+            const user = window.auth.getUser();
+            window.location.href = `/${user.username}/favorites`;
+        }
+
+        function goToProfile() {
+            const user = window.auth.getUser();
+            window.location.href = `/${user.username}/profile`;
+        }
+
+        function requireAuth(callback) {
+            if (window.auth.isAuthenticated()) {
+                callback();
+            } else {
+                window.location.href = '/auth/login.html';
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
             
-            try {
-                const type = document.getElementById('type-filter').value;
-                const results = await API.searchContent(currentQuery, type, currentPage);
-                
-                if (results.results && results.results.length > 0) {
-                    const grid = document.querySelector('.content-grid');
-                    grid.insertAdjacentHTML('beforeend', 
-                        results.results.map(item => app.renderContentCard(item)).join('')
-                    );
-                    app.initializeLazyLoading();
-                    
-                    // Hide load more if no more pages
-                    if (currentPage >= results.total_pages) {
-                        document.querySelector('.pagination').style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                app.showToast('Failed to load more results', 'error');
-            } finally {
-                isLoading = false;
-            }
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('toast-show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
-        
-        function showFilterModal() {
-            document.getElementById('filter-modal').classList.add('open');
-        }
-        
-        function closeFilterModal() {
-            document.getElementById('filter-modal').classList.remove('open');
-        }
-        
-        function applyFilters() {
-            // Implement filter logic
-            closeFilterModal();
-            performSearch();
-        }
-        
-        // Search on enter
-        document.getElementById('search-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                performSearch();
+
+        // Handle clicks outside search suggestions
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-container')) {
+                hideSuggestions();
             }
         });
-        
-        // Rating slider
-        document.getElementById('rating-filter').addEventListener('input', (e) => {
-            document.getElementById('rating-value').textContent = e.target.value + '+';
+
+        // Handle browser back/forward
+        window.addEventListener('popstate', () => {
+            const params = new URLSearchParams(window.location.search);
+            const query = params.get('q');
+            
+            if (query) {
+                document.getElementById('mainSearch').value = query;
+                performSearch(query);
+            } else {
+                document.getElementById('mainSearch').value = '';
+                showInitialState();
+            }
         });
-        
-        // Initialize
-        loadTrending();
     </script>
-    
-    <style>
-        .search-page {
-            padding-top: var(--space-2xl);
-            min-height: 100vh;
-        }
-        
-        .search-header {
-            margin-bottom: var(--space-2xl);
-        }
-        
-        .search-box {
-            display: flex;
-            gap: var(--space-md);
-            margin: var(--space-lg) 0;
-        }
-        
-        .search-box input {
-            flex: 1;
-            font-size: 1.125rem;
-            padding: var(--space-md) var(--space-lg);
-        }
-        
-        .search-filters {
-            display: flex;
-            gap: var(--space-md);
-            flex-wrap: wrap;
-        }
-        
-        .filter-select {
-            min-width: 150px;
-        }
-        
-        .search-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--space-sm);
-            margin-top: var(--space-md);
-        }
-        
-        .search-tag {
-            padding: var(--space-sm) var(--space-md);
-            background: var(--surface-tertiary);
-            border: 1px solid var(--border-primary);
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all var(--transition-fast);
-        }
-        
-        .search-tag:hover {
-            background: var(--primary-500);
-            color: white;
-            transform: translateY(-2px);
-        }
-        
-        .popular-searches,
-        .trending-searches {
-            margin-bottom: var(--space-2xl);
-        }
-        
-        .search-results-header {
-            margin-bottom: var(--space-lg);
-        }
-        
-        .loading,
-        .no-results,
-        .error-state {
-            text-align: center;
-            padding: var(--space-2xl);
-        }
-        
-        .pagination {
-            text-align: center;
-            margin-top: var(--space-2xl);
-        }
-        
-        .filter-options {
-            display: grid;
-            gap: var(--space-sm);
-        }
-        
-        .filter-options label {
-            display: flex;
-            align-items: center;
-            gap: var(--space-sm);
-            cursor: pointer;
-        }
-        
-        .btn-close {
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-    </style>
 </body>
 </html>

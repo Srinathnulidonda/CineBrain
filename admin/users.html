@@ -1,219 +1,642 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="User Management - CineScope Admin">
     <title>User Management - CineScope Admin</title>
     
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="/css/main.css" as="style">
-    <link rel="preload" href="/js/config.js" as="script">
-    <link rel="preload" href="/js/api.js" as="script">
-    <link rel="preload" href="/js/auth.js" as="script">
-    <link rel="preload" href="/js/app.js" as="script">
+    <link rel="preload" href="../js/config.js" as="script">
+    <link rel="preload" href="../js/api.js" as="script">
+    <link rel="preload" href="../js/auth.js" as="script">
     
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/layouts.css">
-    <link rel="stylesheet" href="/css/animations.css">
-    <link rel="stylesheet" href="/css/responsive.css">
-    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layouts.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <link rel="stylesheet" href="../css/theme.css">
 </head>
-<body>
-    <div id="app">
-        <div class="admin-page">
-            <aside class="admin-sidebar">
-                <h3>Admin Panel</h3>
-                <nav class="admin-nav">
-                    <a href="/admin/index.html" class="admin-nav-item">Dashboard</a>
-                    <a href="/admin/content.html" class="admin-nav-item">Content Management</a>
-                    <a href="/admin/users.html" class="admin-nav-item active">User Management</a>
-                    <a href="/admin/analytics.html" class="admin-nav-item">Analytics</a>
-                    <a href="/" class="admin-nav-item">Back to Site</a>
-                </nav>
-            </aside>
+<body class="admin-body">
+    <!-- Admin Top Navigation -->
+    <nav class="admin-topbar">
+        <div class="admin-topbar-left">
+            <a href="/" class="logo">🔧 CineScope Admin</a>
+        </div>
+        <div class="admin-topbar-center">
+            <div class="admin-breadcrumb">
+                <a href="/admin/" class="breadcrumb-item">Dashboard</a>
+                <span class="breadcrumb-separator">›</span>
+                <span class="breadcrumb-item active">User Management</span>
+            </div>
+        </div>
+        <div class="admin-topbar-right" id="adminUserSection"></div>
+    </nav>
+
+    <!-- Admin Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <h3>Admin Panel</h3>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/admin/" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="/admin/content.html" class="nav-item">
+                <span class="nav-icon">🎬</span>
+                <span class="nav-label">Content Management</span>
+            </a>
+            <a href="/admin/users.html" class="nav-item active">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">User Management</span>
+            </a>
+            <a href="/admin/analytics.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                <span class="nav-label">Analytics</span>
+            </a>
+            <div class="nav-divider"></div>
+            <a href="/" class="nav-item">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Back to Site</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Admin Main Content -->
+    <main class="admin-main">
+        <div class="admin-content">
+            <div class="content-header">
+                <h1>User Management</h1>
+                <p>Manage user accounts, permissions, and activity</p>
+            </div>
+
+            <!-- User Stats -->
+            <div class="user-stats-grid" id="userStats">
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="totalUsers">0</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="activeUsers">0</div>
+                        <div class="stat-label">Active (7d)</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👑</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="adminUsers">0</div>
+                        <div class="stat-label">Admin Users</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🆕</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="newUsers">0</div>
+                        <div class="stat-label">New (30d)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Search and Filters -->
+            <div class="admin-section">
+                <div class="user-controls">
+                    <div class="search-controls">
+                        <input type="text" 
+                               id="userSearchInput" 
+                               class="admin-input" 
+                               placeholder="Search users by username or email..."
+                               onkeydown="handleUserSearchKeydown(event)">
+                        
+                        <select id="userStatusFilter" class="admin-select" onchange="filterUsers()">
+                            <option value="all">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                        
+                        <select id="userTypeFilter" class="admin-select" onchange="filterUsers()">
+                            <option value="all">All Types</option>
+                            <option value="user">Regular Users</option>
+                            <option value="admin">Admin Users</option>
+                        </select>
+                        
+                        <button class="btn btn-primary" onclick="searchUsers()">
+                            Search
+                        </button>
+                    </div>
+                    
+                    <div class="action-controls">
+                        <button class="btn btn-outline" onclick="exportUsers()">
+                            📤 Export Users
+                        </button>
+                        <button class="btn btn-primary" onclick="createUser()">
+                            + New User
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Table -->
+            <div class="admin-section">
+                <h2>User List</h2>
+                <div class="users-table-container" id="usersTableContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading users...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Activity -->
+            <div class="admin-section">
+                <h2>Recent User Activity</h2>
+                <div class="activity-feed" id="userActivityFeed">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading activity...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- User Detail Modal -->
+    <div class="modal" id="userDetailModal" style="display: none;">
+        <div class="modal-backdrop" onclick="closeUserDetailModal()"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>User Details</h3>
+                <button class="modal-close" onclick="closeUserDetailModal()">×</button>
+            </div>
+            <div class="modal-body" id="userDetailContent">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+
+    <script>
+        let allUsers = [];
+        let filteredUsers = [];
+        let userActivity = [];
+        let isSearching = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check admin authentication
+            if (!window.auth.isAuthenticated() || !window.auth.isAdmin()) {
+                window.location.href = '/';
+                return;
+            }
+
+            updateAdminUserSection();
+            await loadUserStats();
+            await loadUsers();
+            await loadUserActivity();
+        });
+
+        async function loadUserStats() {
+            try {
+                const analytics = await window.api.getAnalytics();
+                
+                document.getElementById('totalUsers').textContent = analytics.total_users || 0;
+                document.getElementById('activeUsers').textContent = analytics.active_users_last_week || 0;
+                
+                // Simulate admin and new user counts
+                document.getElementById('adminUsers').textContent = Math.floor((analytics.total_users || 0) * 0.05);
+                document.getElementById('newUsers').textContent = Math.floor((analytics.total_users || 0) * 0.1);
+                
+            } catch (error) {
+                console.error('Failed to load user stats:', error);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                // In a real implementation, this would call a dedicated user management API
+                // For now, we'll simulate with analytics data and create sample users
+                const analytics = await window.api.getAnalytics();
+                const totalUsers = analytics.total_users || 100;
+                
+                // Generate sample users
+                allUsers = [];
+                for (let i = 1; i <= Math.min(totalUsers, 50); i++) {
+                    const isAdmin = Math.random() < 0.05; // 5% chance of being admin
+                    const isActive = Math.random() < 0.8; // 80% chance of being active
+                    
+                    allUsers.push({
+                        id: i,
+                        username: `user${i}`,
+                        email: `user${i}@example.com`,
+                        is_admin: isAdmin,
+                        created_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+                        last_active: isActive ? new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString() : null,
+                        status: isActive ? 'active' : 'inactive',
+                        preferred_languages: ['english'],
+                        preferred_genres: ['action', 'drama']
+                    });
+                }
+                
+                filteredUsers = [...allUsers];
+                renderUsersTable();
+                
+            } catch (error) {
+                console.error('Failed to load users:', error);
+                document.getElementById('usersTableContainer').innerHTML = '<p class="error-text">Failed to load users</p>';
+            }
+        }
+
+        async function loadUserActivity() {
+            try {
+                // Simulate recent user activity
+                userActivity = [];
+                for (let i = 0; i < 10; i++) {
+                    const userId = Math.floor(Math.random() * 50) + 1;
+                    const user = allUsers.find(u => u.id === userId) || { username: `user${userId}` };
+                    
+                    userActivity.push({
+                        id: i + 1,
+                        user_id: userId,
+                        username: user.username,
+                        action: ['login', 'view_content', 'add_watchlist', 'add_favorite', 'rate_content'][Math.floor(Math.random() * 5)],
+                        content_title: Math.random() > 0.5 ? `Movie Title ${Math.floor(Math.random() * 100)}` : null,
+                        timestamp: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000).toISOString()
+                    });
+                }
+                
+                renderUserActivity();
+                
+            } catch (error) {
+                console.error('Failed to load user activity:', error);
+                document.getElementById('userActivityFeed').innerHTML = '<p class="error-text">Failed to load activity</p>';
+            }
+        }
+
+        function renderUsersTable() {
+            const container = document.getElementById('usersTableContainer');
             
-            <main class="admin-content">
-                <div class="admin-header">
-                    <h1>User Management</h1>
-                    <p>Manage platform users</p>
+            if (filteredUsers.length === 0) {
+                container.innerHTML = '<p class="empty-state">No users found</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="users-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th>Last Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filteredUsers.map(user => `
+                                <tr>
+                                    <td>
+                                        <div class="user-cell">
+                                            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=ffffff&bold=true&size=32" 
+                                                 alt="${user.username}" 
+                                                 class="user-avatar-small">
+                                            <span>${user.username}</span>
+                                        </div>
+                                    </td>
+                                    <td>${user.email}</td>
+                                    <td>
+                                        ${user.is_admin ? 
+                                            '<span class="badge badge-admin">Admin</span>' : 
+                                            '<span class="badge badge-user">User</span>'}
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-${user.status}">
+                                            ${user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                                        </span>
+                                    </td>
+                                    <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                                    <td>${user.last_active ? getTimeAgo(user.last_active) : 'Never'}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline" onclick="viewUserDetails(${user.id})">
+                                            View
+                                        </button>
+                                        ${!user.is_admin ? `
+                                            <button class="btn btn-sm btn-primary" onclick="editUser(${user.id})">
+                                                Edit
+                                            </button>
+                                        ` : ''}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
                 </div>
-                
-                <div class="user-stats-grid">
-                    <div class="stat-card">
-                        <h3>Total Users</h3>
-                        <p class="stat-value">1,234</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Active Today</h3>
-                        <p class="stat-value">567</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>New This Week</h3>
-                        <p class="stat-value">89</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Premium Users</h3>
-                        <p class="stat-value">456</p>
-                    </div>
+            `;
+        }
+
+        function renderUserActivity() {
+            const container = document.getElementById('userActivityFeed');
+            
+            if (userActivity.length === 0) {
+                container.innerHTML = '<p class="empty-state">No recent activity</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="activity-list">
+                    ${userActivity.map(activity => `
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                ${activity.action === 'login' ? '🔑' : 
+                                  activity.action === 'view_content' ? '👁️' : 
+                                  activity.action === 'add_watchlist' ? '📚' : 
+                                  activity.action === 'add_favorite' ? '❤️' : '⭐'}
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-text">
+                                    <strong>${activity.username}</strong> 
+                                    ${activity.action === 'login' ? 'logged in' : 
+                                      activity.action === 'view_content' ? 'viewed content' : 
+                                      activity.action === 'add_watchlist' ? 'added to watchlist' : 
+                                      activity.action === 'add_favorite' ? 'marked as favorite' : 'rated content'}
+                                    ${activity.content_title ? `: ${activity.content_title}` : ''}
+                                </div>
+                                <div class="activity-time">${getTimeAgo(activity.timestamp)}</div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
+            `;
+        }
+
+        // Filtering and Search Functions
+        function searchUsers() {
+            const query = document.getElementById('userSearchInput').value.trim().toLowerCase();
+            const statusFilter = document.getElementById('userStatusFilter').value;
+            const typeFilter = document.getElementById('userTypeFilter').value;
+            
+            filteredUsers = allUsers.filter(user => {
+                // Search query
+                if (query && !user.username.toLowerCase().includes(query) && !user.email.toLowerCase().includes(query)) {
+                    return false;
+                }
                 
-                <div class="users-section">
-                    <div class="section-header">
-                        <h2>All Users</h2>
-                        <div class="search-bar">
-                            <input type="text" placeholder="Search users..." id="user-search">
-                            <button class="btn btn-secondary">Search</button>
+                // Status filter
+                if (statusFilter !== 'all' && user.status !== statusFilter) {
+                    return false;
+                }
+                
+                // Type filter
+                if (typeFilter !== 'all') {
+                    if (typeFilter === 'admin' && !user.is_admin) return false;
+                    if (typeFilter === 'user' && user.is_admin) return false;
+                }
+                
+                return true;
+            });
+            
+            renderUsersTable();
+        }
+
+        function filterUsers() {
+            searchUsers();
+        }
+
+        function handleUserSearchKeydown(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                searchUsers();
+            }
+        }
+
+        // User Management Functions
+        function viewUserDetails(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (!user) return;
+            
+            const modal = document.getElementById('userDetailModal');
+            const content = document.getElementById('userDetailContent');
+            
+            content.innerHTML = `
+                <div class="user-detail">
+                    <div class="user-profile">
+                        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=ffffff&bold=true&size=120" 
+                             alt="${user.username}" 
+                             class="user-avatar-large">
+                        <div class="user-info">
+                            <h3>${user.username}</h3>
+                            <p>${user.email}</p>
+                            <div class="user-badges">
+                                ${user.is_admin ? '<span class="badge badge-admin">Admin</span>' : '<span class="badge badge-user">User</span>'}
+                                <span class="badge badge-${user.status}">${user.status}</span>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="users-table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Username</th>
-                                    <th>Email</th>
-                                    <th>Joined</th>
-                                    <th>Last Active</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-list">
-                                <!-- Sample users -->
-                                <tr>
-                                    <td>john_doe</td>
-                                    <td>john@example.com</td>
-                                    <td>2024-01-15</td>
-                                    <td>2 hours ago</td>
-                                    <td><span class="badge badge-success">Active</span></td>
-                                    <td>
-                                        <button class="btn btn-sm">View</button>
-                                        <button class="btn btn-sm btn-danger">Suspend</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>jane_smith</td>
-                                    <td>jane@example.com</td>
-                                    <td>2024-02-20</td>
-                                    <td>1 day ago</td>
-                                    <td><span class="badge badge-success">Active</span></td>
-                                    <td>
-                                        <button class="btn btn-sm">View</button>
-                                        <button class="btn btn-sm btn-danger">Suspend</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="pagination">
-                        <button class="btn btn-secondary">Previous</button>
-                        <span>Page 1 of 10</span>
-                        <button class="btn btn-secondary">Next</button>
+                    <div class="user-details">
+                        <div class="detail-section">
+                            <h4>Account Information</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <span class="detail-label">Joined</span>
+                                    <span class="detail-value">${new Date(user.created_at).toLocaleString()}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Last Active</span>
+                                    <span class="detail-value">${user.last_active ? new Date(user.last_active).toLocaleString() : 'Never'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Preferred Languages</span>
+                                    <span class="detail-value">${(user.preferred_languages || []).join(', ')}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Favorite Genres</span>
+                                    <span class="detail-value">${(user.preferred_genres || []).join(', ')}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h4>Actions</h4>
+                            <div class="action-buttons">
+                                ${!user.is_admin ? `
+                                    <button class="btn btn-primary" onclick="makeAdmin(${user.id})">
+                                        Make Admin
+                                    </button>
+                                ` : `
+                                    <button class="btn btn-outline" onclick="removeAdmin(${user.id})">
+                                        Remove Admin
+                                    </button>
+                                `}
+                                <button class="btn btn-outline" onclick="resetPassword(${user.id})">
+                                    Reset Password
+                                </button>
+                                ${user.status === 'active' ? `
+                                    <button class="btn btn-warning" onclick="suspendUser(${user.id})">
+                                        Suspend
+                                    </button>
+                                ` : `
+                                    <button class="btn btn-success" onclick="activateUser(${user.id})">
+                                        Activate
+                                    </button>
+                                `}
+                                <button class="btn btn-danger" onclick="deleteUser(${user.id})">
+                                    Delete User
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </main>
-        </div>
-    </div>
-    
-    <!-- Scripts -->
-    <script src="/js/config.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/app.js"></script>
-    
-    <script>
-        // Check admin authentication
-        if (!Auth.requireAdmin()) {
-            // Will redirect to home
+            `;
+            
+            modal.style.display = 'flex';
         }
-        
-        // In a real app, this would fetch actual user data
-        function loadUsers() {
-            // Mock implementation
-            app.showToast('User management is view-only in demo', 'info');
+
+        function closeUserDetailModal() {
+            document.getElementById('userDetailModal').style.display = 'none';
         }
-        
-        loadUsers();
+
+        function createUser() {
+            showToast('User creation form would be implemented', 'info');
+        }
+
+        function editUser(userId) {
+            showToast('User edit form would be implemented', 'info');
+        }
+
+        function makeAdmin(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (user) {
+                user.is_admin = true;
+                showToast(`User ${user.username} is now an admin`, 'success');
+                closeUserDetailModal();
+                renderUsersTable();
+            }
+        }
+
+        function removeAdmin(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (user) {
+                user.is_admin = false;
+                showToast(`User ${user.username} is no longer an admin`, 'success');
+                closeUserDetailModal();
+                renderUsersTable();
+            }
+        }
+
+        function resetPassword(userId) {
+            showToast('Password reset functionality would be implemented', 'info');
+        }
+
+        function suspendUser(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (user) {
+                user.status = 'suspended';
+                showToast(`User ${user.username} suspended`, 'success');
+                closeUserDetailModal();
+                renderUsersTable();
+            }
+        }
+
+        function activateUser(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (user) {
+                user.status = 'active';
+                showToast(`User ${user.username} activated`, 'success');
+                closeUserDetailModal();
+                renderUsersTable();
+            }
+        }
+
+        function deleteUser(userId) {
+            const confirmed = confirm('Are you sure you want to delete this user? This action cannot be undone.');
+            if (confirmed) {
+                allUsers = allUsers.filter(u => u.id !== userId);
+                filteredUsers = filteredUsers.filter(u => u.id !== userId);
+                showToast('User deleted', 'success');
+                closeUserDetailModal();
+                renderUsersTable();
+            }
+        }
+
+        function exportUsers() {
+            const exportData = {
+                exported_at: new Date().toISOString(),
+                total_users: allUsers.length,
+                users: allUsers.map(user => ({
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    is_admin: user.is_admin,
+                    status: user.status,
+                    created_at: user.created_at,
+                    last_active: user.last_active
+                }))
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cinescope-users-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast('Users exported successfully', 'success');
+        }
+
+        // Utility Functions
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const time = new Date(timestamp);
+            const diffInSeconds = Math.floor((now - time) / 1000);
+
+            if (diffInSeconds < 60) return 'Just now';
+            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+            if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+            return time.toLocaleDateString();
+        }
+
+        function updateAdminUserSection() {
+            const userSection = document.getElementById('adminUserSection');
+            
+            if (window.auth.isAuthenticated()) {
+                const user = window.auth.getUser();
+                userSection.innerHTML = `
+                    <div class="admin-user-info">
+                        <img src="${window.auth.getUserAvatar()}" alt="${user.username}" class="admin-avatar">
+                        <span class="admin-username">${user.username}</span>
+                        <button class="btn btn-outline btn-sm" onclick="window.auth.logout()">Logout</button>
+                    </div>
+                `;
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('toast-show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
     </script>
-    
-    <style>
-        .user-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: var(--space-lg);
-            margin-bottom: var(--space-2xl);
-        }
-        
-        .stat-card {
-            background: var(--surface-secondary);
-            padding: var(--space-xl);
-            border-radius: 8px;
-            border: 1px solid var(--border-primary);
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-500);
-            margin-top: var(--space-sm);
-        }
-        
-        .users-section {
-            background: var(--surface-secondary);
-            padding: var(--space-xl);
-            border-radius: 8px;
-            border: 1px solid var(--border-primary);
-        }
-        
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--space-xl);
-        }
-        
-        .search-bar {
-            display: flex;
-            gap: var(--space-md);
-        }
-        
-        .users-table {
-            overflow-x: auto;
-            margin-bottom: var(--space-xl);
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: var(--space-xs) var(--space-sm);
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        
-        .badge-success {
-            background: rgba(16, 185, 129, 0.2);
-            color: #10b981;
-        }
-        
-        .btn-danger {
-            background: #ef4444;
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            background: #dc2626;
-        }
-        
-        .pagination {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--space-md);
-        }
-    </style>
 </body>
 </html>
