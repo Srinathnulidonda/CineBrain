@@ -1,210 +1,283 @@
-// API Client with Caching, Retry Logic, and Service Worker Integration
+// CineScope API Client - Real Backend Integration with Caching & Service Worker
 class APIClient {
-    constructor() {
-        this.cache = new Map();
-        this.pendingRequests = new Map();
-        this.retryConfig = {
-            maxRetries: 3,
-            retryDelay: 1000,
-            backoffMultiplier: 2
-        };
+  constructor() {
+    this.cache = new Map();
+    this.requestQueue = [];
+    this.activeRequests = new Map();
+    this.initServiceWorker();
+  }
+
+  async initServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('/sw.js');
+      } catch (e) {
+        console.warn('Service Worker registration failed:', e);
+      }
+    }
+  }
+
+  getCacheKey(url, params) {
+    return `${url}?${new URLSearchParams(params).toString()}`;
+  }
+
+  isValidCache(cachedData) {
+    if (!cachedData) return false;
+    const age = Date.now() - cachedData.timestamp;
+    return age < APP_CONFIG.CACHE_TTL;
+  }
+
+  async request(url, options = {}) {
+    const { 
+      method = 'GET', 
+      params = {}, 
+      data = null, 
+      headers = {},
+      useCache = true,
+      retry = 3,
+      timeout = APP_CONFIG.API_TIMEOUT 
+    } = options;
+
+    // Check cache for GET requests
+    if (method === 'GET' && useCache) {
+      const cacheKey = this.getCacheKey(url, params);
+      const cachedData = this.cache.get(cacheKey);
+      if (this.isValidCache(cachedData)) {
+        return cachedData.data;
+      }
+
+      // Check if request is already in flight
+      if (this.activeRequests.has(cacheKey)) {
+        return this.activeRequests.get(cacheKey);
+      }
     }
 
-    // Get auth token from localStorage
-    getAuthToken() {
-        return localStorage.getItem('auth_token');
+    // Build request configuration
+    const config = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers
+      }
+    };
+
+    // Add auth token if available
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Build full URL
-    buildUrl(endpoint, params = {}) {
-        const url = new URL(CONFIG.API_BASE_URL + endpoint);
-        Object.keys(params).forEach(key => {
-            if (params[key] !== undefined && params[key] !== null) {
-                url.searchParams.append(key, params[key]);
-            }
+    // Add body for non-GET requests
+    if (data && method !== 'GET') {
+      config.body = JSON.stringify(data);
+    }
+
+    // Build URL with params for GET requests
+    let requestUrl = url;
+    if (method === 'GET' && Object.keys(params).length > 0) {
+      requestUrl += '?' + new URLSearchParams(params).toString();
+    }
+
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    // Make request with retry logic
+    const makeRequest = async (retryCount = 0) => {
+      try {
+        const response = await fetch(requestUrl, {
+          ...config,
+          signal: controller.signal
         });
-        return url.toString();
-    }
 
-    // Cache key generator
-    getCacheKey(url, options = {}) {
-        return `${url}:${JSON.stringify(options)}`;
-    }
+        clearTimeout(timeoutId);
 
-    // Check if cache is valid
-    isCacheValid(cachedData, duration) {
-        return cachedData && (Date.now() - cachedData.timestamp < duration);
-    }
-
-    // Main request method with caching and retry
-    async request(endpoint, options = {}) {
-        const {
-            method = 'GET',
-            params = {},
-            body = null,
-            cache = true,
-            cacheDuration = CONFIG.CACHE_DURATION.CONTENT,
-            retry = true
-        } = options;
-
-        const url = this.buildUrl(endpoint, method === 'GET' ? params : {});
-        const cacheKey = this.getCacheKey(url, { method, body });
-
-        // Check cache for GET requests
-        if (method === 'GET' && cache) {
-            const cachedData = this.cache.get(cacheKey);
-            if (this.isCacheValid(cachedData, cacheDuration)) {
-                return cachedData.data;
-            }
-        }
-
-        // Prevent duplicate requests
-        if (this.pendingRequests.has(cacheKey)) {
-            return this.pendingRequests.get(cacheKey);
-        }
-
-        // Create request promise
-        const requestPromise = this.executeRequest(url, {
-            method,
-            headers: this.buildHeaders(),
-            body: body ? JSON.stringify(body) : null
-        }, retry);
-
-        this.pendingRequests.set(cacheKey, requestPromise);
-
-        try {
-            const data = await requestPromise;
-
-            // Cache successful GET requests
-            if (method === 'GET' && cache && data) {
-                this.cache.set(cacheKey, {
-                    data,
-                    timestamp: Date.now()
-                });
-            }
-
-            return data;
-        } finally {
-            this.pendingRequests.delete(cacheKey);
-        }
-    }
-
-    // Execute request with retry logic
-    async executeRequest(url, options, retry = true, retryCount = 0) {
-        try {
-            const response = await fetch(url, options);
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    // Handle token refresh
-                    await this.handleTokenRefresh();
-                    // Retry with new token
-                    options.headers = this.buildHeaders();
-                    return this.executeRequest(url, options, false);
-                }
-
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            if (retry && retryCount < this.retryConfig.maxRetries) {
-                const delay = this.retryConfig.retryDelay * Math.pow(this.retryConfig.backoffMultiplier, retryCount);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                return this.executeRequest(url, options, retry, retryCount + 1);
-            }
-            throw error;
-        }
-    }
-
-    // Build request headers
-    buildHeaders() {
-        const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        };
-
-        const token = this.getAuthToken();
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        return headers;
-    }
-
-    // Handle token refresh
-    async handleTokenRefresh() {
-        try {
-            const refreshToken = localStorage.getItem('refresh_token');
-            if (!refreshToken) {
-                throw new Error('No refresh token');
-            }
-
-            const response = await fetch(this.buildUrl(CONFIG.API_ENDPOINTS.REFRESH_TOKEN), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refresh_token: refreshToken })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('auth_token', data.token);
-                if (data.refresh_token) {
-                    localStorage.setItem('refresh_token', data.refresh_token);
-                }
-            } else {
-                // Redirect to login
-                window.location.href = '/auth/login.html';
-            }
-        } catch (error) {
+        if (!response.ok) {
+          if (response.status === 401) {
+            // Handle unauthorized - clear auth and redirect
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
             window.location.href = '/auth/login.html';
+            throw new Error('Unauthorized');
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-    }
 
-    // Convenience methods
-    get(endpoint, params = {}, options = {}) {
-        return this.request(endpoint, { ...options, method: 'GET', params });
-    }
+        const data = await response.json();
 
-    post(endpoint, body = {}, options = {}) {
-        return this.request(endpoint, { ...options, method: 'POST', body });
-    }
-
-    put(endpoint, body = {}, options = {}) {
-        return this.request(endpoint, { ...options, method: 'PUT', body });
-    }
-
-    delete(endpoint, options = {}) {
-        return this.request(endpoint, { ...options, method: 'DELETE' });
-    }
-
-    // Clear cache
-    clearCache() {
-        this.cache.clear();
-    }
-
-    // Prefetch data
-    async prefetch(endpoints) {
-        const promises = endpoints.map(endpoint =>
-            this.get(endpoint).catch(err => console.warn(`Prefetch failed for ${endpoint}:`, err))
-        );
-        await Promise.allSettled(promises);
-    }
-
-    // Service Worker integration
-    async syncWithServiceWorker() {
-        if ('serviceWorker' in navigator && CONFIG.FEATURES.SERVICE_WORKER) {
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                if (registration.sync) {
-                    await registration.sync.register('sync-data');
-                }
-            } catch (error) {
-                console.warn('Service Worker sync failed:', error);
-            }
+        // Cache successful GET requests
+        if (method === 'GET' && useCache) {
+          const cacheKey = this.getCacheKey(url, params);
+          this.cache.set(cacheKey, {
+            data,
+            timestamp: Date.now()
+          });
+          this.activeRequests.delete(cacheKey);
         }
+
+        return data;
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timeout');
+        }
+
+        if (retryCount < retry - 1 && error.message !== 'Unauthorized') {
+          // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+          return makeRequest(retryCount + 1);
+        }
+
+        if (method === 'GET' && useCache) {
+          const cacheKey = this.getCacheKey(url, params);
+          this.activeRequests.delete(cacheKey);
+        }
+
+        throw error;
+      }
+    };
+
+    // Store promise for deduplication
+    if (method === 'GET' && useCache) {
+      const cacheKey = this.getCacheKey(url, params);
+      const promise = makeRequest();
+      this.activeRequests.set(cacheKey, promise);
+      return promise;
     }
+
+    return makeRequest();
+  }
+
+  // Specific API methods
+  async getTrending(type = 'all', limit = 20) {
+    return this.request(API_ENDPOINTS.TRENDING, {
+      params: { type, limit }
+    });
+  }
+
+  async getNewReleases(language = null, type = 'movie', limit = 20) {
+    const params = { type, limit };
+    if (language) params.language = language;
+    return this.request(API_ENDPOINTS.NEW_RELEASES, { params });
+  }
+
+  async getCriticsChoice(type = 'movie', limit = 20) {
+    return this.request(API_ENDPOINTS.TOP_RATED, {
+      params: { type, limit }
+    });
+  }
+
+  async getGenreContent(genre, type = 'movie', limit = 20) {
+    return this.request(`${API_ENDPOINTS.GENRES}/${genre}`, {
+      params: { type, limit }
+    });
+  }
+
+  async getRegionalContent(language, type = 'movie', limit = 20) {
+    return this.request(`${API_ENDPOINTS.REGIONAL}/${language}`, {
+      params: { type, limit }
+    });
+  }
+
+  async getAnimeContent(genre = null, limit = 20) {
+    const params = { limit };
+    if (genre) params.genre = genre;
+    return this.request(API_ENDPOINTS.ANIME, { params });
+  }
+
+  async searchContent(query, type = 'multi', page = 1) {
+    return this.request(API_ENDPOINTS.SEARCH, {
+      params: { query, type, page }
+    });
+  }
+
+  async getContentDetails(contentId) {
+    return this.request(`${API_ENDPOINTS.MOVIE_DETAILS}/${contentId}`);
+  }
+
+  async getSimilarContent(contentId, limit = 20) {
+    return this.request(`${API_ENDPOINTS.SIMILAR}/${contentId}`, {
+      params: { limit }
+    });
+  }
+
+  async getPersonalizedRecommendations(limit = 20) {
+    return this.request(API_ENDPOINTS.ML_RECOMMENDATIONS, {
+      params: { limit },
+      useCache: false
+    });
+  }
+
+  async getWatchlist() {
+    return this.request(API_ENDPOINTS.WATCHLIST, {
+      useCache: false
+    });
+  }
+
+  async getFavorites() {
+    return this.request(API_ENDPOINTS.FAVORITES, {
+      useCache: false
+    });
+  }
+
+  async addInteraction(contentId, interactionType, rating = null) {
+    return this.request(API_ENDPOINTS.USER_RATINGS, {
+      method: 'POST',
+      data: {
+        content_id: contentId,
+        interaction_type: interactionType,
+        rating
+      }
+    });
+  }
+
+  async getAdminChoiceContent(limit = 20) {
+    return this.request(API_ENDPOINTS.ADMIN_CHOICE, {
+      params: { limit }
+    });
+  }
+
+  // Clear cache methods
+  clearCache() {
+    this.cache.clear();
+  }
+
+  clearCacheForUrl(url) {
+    const keys = Array.from(this.cache.keys());
+    keys.forEach(key => {
+      if (key.startsWith(url)) {
+        this.cache.delete(key);
+      }
+    });
+  }
+
+  // Prefetch methods for performance
+  async prefetchContent(urls) {
+    const promises = urls.map(url => 
+      this.request(url, { useCache: true }).catch(() => null)
+    );
+    await Promise.all(promises);
+  }
+
+  // Image preloading
+  preloadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  async preloadImages(srcs) {
+    const promises = srcs.map(src => this.preloadImage(src).catch(() => null));
+    await Promise.all(promises);
+  }
 }
 
-// Export singleton instance
-const apiClient = new APIClient();
+// Create global API instance
+const API = new APIClient();
+
+// Export for use in other modules
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = API;
+}

@@ -1,1 +1,333 @@
-<!-- User preferences -->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Settings - CineScope</title>
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/css/main.css" as="style">
+    <link rel="preload" href="/js/config.js" as="script">
+    <link rel="preload" href="/js/api.js" as="script">
+    <link rel="preload" href="/js/auth.js" as="script">
+    <link rel="preload" href="/js/app.js" as="script">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+    <div id="app">
+        <main id="app-content">
+            <div class="user-page container">
+                <div class="page-header">
+                    <h1>Settings</h1>
+                    <p>Manage your account and preferences</p>
+                </div>
+                
+                <div class="settings-sections">
+                    <section class="settings-section">
+                        <h2>Account Information</h2>
+                        <div class="settings-card">
+                            <div class="setting-item">
+                                <label>Username</label>
+                                <input type="text" id="username" readonly>
+                            </div>
+                            <div class="setting-item">
+                                <label>Email</label>
+                                <input type="email" id="email" readonly>
+                            </div>
+                            <div class="setting-item">
+                                <label>Member Since</label>
+                                <input type="text" id="member-since" readonly>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <section class="settings-section">
+                        <h2>Preferences</h2>
+                        <div class="settings-card">
+                            <div class="setting-item">
+                                <label>Preferred Languages</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" name="lang" value="english"> English</label>
+                                    <label><input type="checkbox" name="lang" value="hindi"> Hindi</label>
+                                    <label><input type="checkbox" name="lang" value="telugu"> Telugu</label>
+                                    <label><input type="checkbox" name="lang" value="tamil"> Tamil</label>
+                                    <label><input type="checkbox" name="lang" value="kannada"> Kannada</label>
+                                    <label><input type="checkbox" name="lang" value="malayalam"> Malayalam</label>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Favorite Genres</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" name="genre" value="Action"> Action</label>
+                                    <label><input type="checkbox" name="genre" value="Comedy"> Comedy</label>
+                                    <label><input type="checkbox" name="genre" value="Drama"> Drama</label>
+                                    <label><input type="checkbox" name="genre" value="Horror"> Horror</label>
+                                    <label><input type="checkbox" name="genre" value="Romance"> Romance</label>
+                                    <label><input type="checkbox" name="genre" value="Sci-Fi"> Sci-Fi</label>
+                                    <label><input type="checkbox" name="genre" value="Thriller"> Thriller</label>
+                                    <label><input type="checkbox" name="genre" value="Animation"> Animation</label>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <section class="settings-section">
+                        <h2>Display Settings</h2>
+                        <div class="settings-card">
+                            <div class="setting-item">
+                                <label>Theme</label>
+                                <select id="theme-select">
+                                    <option value="dark">Dark Mode</option>
+                                    <option value="light">Light Mode</option>
+                                </select>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Autoplay Trailers</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="autoplay-trailers">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <section class="settings-section">
+                        <h2>Privacy & Security</h2>
+                        <div class="settings-card">
+                            <div class="setting-item">
+                                <label>Watch History</label>
+                                <button class="btn btn-secondary" onclick="clearHistory()">Clear History</button>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Account</label>
+                                <button class="btn btn-danger" onclick="deleteAccount()">Delete Account</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                
+                <div class="settings-actions">
+                    <button class="btn btn-primary" onclick="saveSettings()">Save Changes</button>
+                    <a href="/user/profile.html" class="btn btn-secondary">Cancel</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+    
+    <script>
+        // Check authentication
+        if (!Auth.requireAuth()) {
+            // Will redirect to login
+        }
+        
+        function loadSettings() {
+            const user = Auth.getUser();
+            if (!user) return;
+            
+            // Load account info
+            document.getElementById('username').value = user.username;
+            document.getElementById('email').value = user.email;
+            document.getElementById('member-since').value = new Date(user.created_at || Date.now()).toLocaleDateString();
+            
+            // Load preferences
+            const languages = user.preferred_languages || ['english'];
+            const genres = user.preferred_genres || [];
+            
+            languages.forEach(lang => {
+                const checkbox = document.querySelector(`input[name="lang"][value="${lang}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+            
+            genres.forEach(genre => {
+                const checkbox = document.querySelector(`input[name="genre"][value="${genre}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+            
+            // Load display settings
+            const currentTheme = localStorage.getItem('theme') || 'dark';
+            document.getElementById('theme-select').value = currentTheme;
+        }
+        
+        async function saveSettings() {
+            // Get selected values
+            const languages = Array.from(document.querySelectorAll('input[name="lang"]:checked'))
+                .map(cb => cb.value);
+            const genres = Array.from(document.querySelectorAll('input[name="genre"]:checked'))
+                .map(cb => cb.value);
+            const theme = document.getElementById('theme-select').value;
+            
+            // Update theme
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            
+            // Update user preferences
+            const success = await Auth.updatePreferences({
+                preferred_languages: languages,
+                preferred_genres: genres
+            });
+            
+            if (success) {
+                app.showToast('Settings saved successfully', 'success');
+            } else {
+                app.showToast('Failed to save settings', 'error');
+            }
+        }
+        
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear your watch history?')) {
+                app.showToast('Watch history cleared', 'success');
+            }
+        }
+        
+        function deleteAccount() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                if (confirm('This will permanently delete all your data. Are you absolutely sure?')) {
+                    app.showToast('Account deletion requested', 'info');
+                    setTimeout(() => {
+                        Auth.logout();
+                    }, 2000);
+                }
+            }
+        }
+        
+        // Theme change handler
+        document.getElementById('theme-select').addEventListener('change', (e) => {
+            document.documentElement.setAttribute('data-theme', e.target.value);
+        });
+        
+        // Load settings on page load
+        loadSettings();
+    </script>
+    
+    <style>
+        .settings-sections {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2xl);
+        }
+        
+        .settings-section h2 {
+            margin-bottom: var(--space-lg);
+        }
+        
+        .settings-card {
+            background: var(--surface-secondary);
+            padding: var(--space-xl);
+            border-radius: 8px;
+            border: 1px solid var(--border-primary);
+        }
+        
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-md) 0;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-item label:first-child {
+            font-weight: 600;
+        }
+        
+        .setting-item input[readonly] {
+            background: var(--surface-tertiary);
+            cursor: not-allowed;
+        }
+        
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: var(--space-sm);
+        }
+        
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-weight: normal;
+            cursor: pointer;
+        }
+        
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: var(--surface-tertiary);
+            transition: all var(--transition-fast);
+            border-radius: 30px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            transition: all var(--transition-fast);
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background: var(--primary-500);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+        
+        .settings-actions {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            margin-top: var(--space-2xl);
+            padding-top: var(--space-2xl);
+            border-top: 1px solid var(--border-primary);
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+    </style>
+</body>
+</html>

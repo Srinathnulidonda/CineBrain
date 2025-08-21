@@ -1,1 +1,260 @@
-<!-- Watch history -->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Activity - CineScope</title>
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/css/main.css" as="style">
+    <link rel="preload" href="/js/config.js" as="script">
+    <link rel="preload" href="/js/api.js" as="script">
+    <link rel="preload" href="/js/auth.js" as="script">
+    <link rel="preload" href="/js/app.js" as="script">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+    <div id="app">
+        <main id="app-content">
+            <div class="user-page container">
+                <div class="page-header">
+                    <h1>Watch History</h1>
+                    <p>Your viewing activity</p>
+                </div>
+                
+                <div class="activity-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">🎬</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="total-watched">0</div>
+                            <div class="stat-label">Total Watched</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="watch-time">0h</div>
+                            <div class="stat-label">Watch Time</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎭</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="fav-genre">-</div>
+                            <div class="stat-label">Favorite Genre</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="activity-timeline">
+                    <h2>Recent Activity</h2>
+                    <div id="activity-list" class="activity-list">
+                        <div class="loading">
+                            <div class="loader-spinner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+    
+    <script>
+        // Check authentication
+        if (!Auth.requireAuth()) {
+            // Will redirect to login
+        }
+        
+        // Mock activity data (in a real app, this would come from the API)
+        const mockActivity = [
+            {
+                id: 1,
+                content: {
+                    id: 1,
+                    title: "Inception",
+                    poster_path: "/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
+                    content_type: "movie",
+                    runtime: 148
+                },
+                timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+                type: "watched"
+            },
+            {
+                id: 2,
+                content: {
+                    id: 2,
+                    title: "The Dark Knight",
+                    poster_path: "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+                    content_type: "movie",
+                    runtime: 152
+                },
+                timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+                type: "watched"
+            }
+        ];
+        
+        function loadActivity() {
+            // Calculate stats
+            const totalWatched = mockActivity.length;
+            const totalMinutes = mockActivity.reduce((sum, item) => 
+                sum + (item.content.runtime || 0), 0
+            );
+            const hours = Math.floor(totalMinutes / 60);
+            
+            // Update stats
+            document.getElementById('total-watched').textContent = totalWatched;
+            document.getElementById('watch-time').textContent = `${hours}h`;
+            document.getElementById('fav-genre').textContent = 'Action';
+            
+            // Display activity
+            const activityList = document.getElementById('activity-list');
+            
+            if (mockActivity.length === 0) {
+                activityList.innerHTML = `
+                    <div class="empty-state">
+                        <p>No activity yet. Start watching to see your history here.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            activityList.innerHTML = mockActivity.map(item => renderActivityItem(item)).join('');
+        }
+        
+        function renderActivityItem(activity) {
+            const posterUrl = activity.content.poster_path 
+                ? `https://image.tmdb.org/t/p/w92${activity.content.poster_path}`
+                : '/images/placeholder.jpg';
+                
+            const timeAgo = getTimeAgo(new Date(activity.timestamp));
+            
+            return `
+                <div class="activity-item">
+                    <div class="activity-poster">
+                        <img src="${posterUrl}" alt="${activity.content.title}">
+                    </div>
+                    <div class="activity-info">
+                        <h4>${activity.content.title}</h4>
+                        <p>${activity.content.content_type} • Watched ${timeAgo}</p>
+                    </div>
+                    <div class="activity-actions">
+                        <a href="/content/details.html?id=${activity.content.id}" class="btn btn-secondary btn-sm">
+                            Watch Again
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            let interval = seconds / 31536000;
+            if (interval > 1) return Math.floor(interval) + " years ago";
+            
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + " months ago";
+            
+            interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + " days ago";
+            
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + " hours ago";
+            
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + " minutes ago";
+            
+            return "Just now";
+        }
+        
+        // Load activity on page load
+        loadActivity();
+    </script>
+    
+    <style>
+        .activity-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-2xl);
+        }
+        
+        .stat-card {
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
+            padding: var(--space-xl);
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-primary);
+        }
+        
+        .stat-icon {
+            font-size: 2.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-500);
+        }
+        
+        .activity-timeline h2 {
+            margin-bottom: var(--space-lg);
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
+            padding: var(--space-lg);
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            margin-bottom: var(--space-md);
+            transition: all var(--transition-fast);
+        }
+        
+        .activity-item:hover {
+            background: var(--surface-tertiary);
+            transform: translateX(4px);
+        }
+        
+        .activity-poster img {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .activity-info {
+            flex: 1;
+        }
+        
+        .activity-info h4 {
+            margin-bottom: var(--space-xs);
+        }
+        
+        .activity-info p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .btn-sm {
+            padding: var(--space-xs) var(--space-md);
+            font-size: 0.875rem;
+        }
+    </style>
+</body>
+</html>

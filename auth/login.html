@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Login - CineScope</title>
-
+    
     <!-- Stylesheets -->
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
@@ -14,118 +13,164 @@
     <link rel="stylesheet" href="/css/responsive.css">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
-
-<body class="app-layout auth-page">
-    <!-- Fixed Topbar -->
-    <header class="topbar" id="topbar">
-        <div class="topbar-container">
-            <a href="/" class="topbar-logo">
-                <img src="/images/logo.svg" alt="CineScope">
-            </a>
-            <div class="topbar-actions">
-                <button class="btn-icon" data-theme-toggle>
-                    <i class="icon-moon"></i>
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="main-content">
+<body>
+    <div class="auth-page">
         <div class="auth-container">
-            <div class="form-container">
-                <h1 class="text-center mb-4">Welcome Back</h1>
-                <p class="text-center text-secondary mb-4">Sign in to continue to CineScope</p>
-
-                <form id="login-form">
+            <div class="auth-card glass">
+                <div class="auth-header">
+                    <a href="/" class="logo">
+                        <span class="logo-text">CineScope</span>
+                    </a>
+                    <h1>Welcome Back</h1>
+                    <p>Sign in to continue your cinematic journey</p>
+                </div>
+                
+                <form id="login-form" class="auth-form">
                     <div class="form-group">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" id="username" name="username" class="form-input" required
-                            autocomplete="username">
-                        <div class="form-error" id="username-error"></div>
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required 
+                               placeholder="Enter your username" autocomplete="username">
                     </div>
-
+                    
                     <div class="form-group">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" id="password" name="password" class="form-input" required
-                            autocomplete="current-password">
-                        <div class="form-error" id="password-error"></div>
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required 
+                               placeholder="Enter your password" autocomplete="current-password">
                     </div>
-
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="remember"> Remember me
-                        </label>
-                    </div>
-
-                    <div class="form-error text-center" id="general-error"></div>
-
+                    
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" id="login-button">
+                        <button type="submit" class="btn btn-primary btn-block">
                             Sign In
                         </button>
                     </div>
+                    
+                    <div class="form-footer">
+                        <a href="/auth/forgot-password.html" class="link">Forgot password?</a>
+                        <span class="separator">•</span>
+                        <a href="/auth/register.html" class="link">Create account</a>
+                    </div>
                 </form>
-
-                <div class="auth-links">
-                    <p class="text-center mt-3">
-                        <a href="/auth/forgot-password.html">Forgot your password?</a>
-                    </p>
-                    <p class="text-center mt-2">
-                        Don't have an account? <a href="/auth/register.html">Sign up</a>
-                    </p>
-                </div>
+                
+                <div id="error-message" class="error-message" style="display: none;"></div>
             </div>
         </div>
-    </main>
-
+    </div>
+    
     <!-- Scripts -->
     <script src="/js/config.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
+    
     <script>
-        // Login form handler
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            const button = document.getElementById('login-button');
-            const generalError = document.getElementById('general-error');
-
-            // Clear errors
-            document.querySelectorAll('.form-error').forEach(el => el.textContent = '');
-
-            // Get form data
+            
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-
-            // Disable button
-            button.disabled = true;
-            button.textContent = 'Signing in...';
-
+            const errorDiv = document.getElementById('error-message');
+            
+            // Show loading
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Signing in...';
+            submitBtn.disabled = true;
+            
             try {
-                const result = await auth.login(username, password);
-
-                if (!result.success) {
-                    generalError.textContent = result.error || 'Invalid credentials';
-                    button.disabled = false;
-                    button.textContent = 'Sign In';
+                const result = await Auth.login(username, password);
+                
+                if (result.success) {
+                    // Redirect to intended destination or profile
+                    Auth.handlePostLoginRedirect();
+                } else {
+                    errorDiv.textContent = result.error || 'Login failed';
+                    errorDiv.style.display = 'block';
                 }
-                // Success redirect handled by auth.login()
             } catch (error) {
-                generalError.textContent = 'An error occurred. Please try again.';
-                button.disabled = false;
-                button.textContent = 'Sign In';
+                errorDiv.textContent = 'An error occurred. Please try again.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
             }
         });
-
-        // Theme toggle
-        document.querySelector('[data-theme-toggle]').addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-        });
     </script>
+    
+    <style>
+        .auth-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-lg);
+            background: var(--gradient-dark), var(--cinema-black);
+        }
+        
+        .auth-container {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .auth-card {
+            padding: var(--space-2xl);
+            border-radius: 8px;
+            box-shadow: var(--shadow-2xl);
+        }
+        
+        .auth-header {
+            text-align: center;
+            margin-bottom: var(--space-2xl);
+        }
+        
+        .auth-header .logo {
+            display: inline-block;
+            margin-bottom: var(--space-lg);
+            font-size: 1.5rem;
+        }
+        
+        .auth-header h1 {
+            font-size: 2rem;
+            margin-bottom: var(--space-sm);
+        }
+        
+        .auth-header p {
+            color: var(--text-secondary);
+        }
+        
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-lg);
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: var(--space-sm);
+            font-weight: 600;
+        }
+        
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .form-footer {
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        
+        .separator {
+            margin: 0 var(--space-sm);
+        }
+        
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: var(--space-md);
+            border-radius: 4px;
+            text-align: center;
+            margin-top: var(--space-lg);
+        }
+    </style>
 </body>
-
 </html>

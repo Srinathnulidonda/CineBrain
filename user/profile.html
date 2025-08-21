@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Profile - CineScope</title>
-
+    
     <!-- Preload Critical Resources -->
+    <link rel="preload" href="/css/main.css" as="style">
     <link rel="preload" href="/js/config.js" as="script">
     <link rel="preload" href="/js/api.js" as="script">
     <link rel="preload" href="/js/auth.js" as="script">
     <link rel="preload" href="/js/app.js" as="script">
-
+    
     <!-- Stylesheets -->
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
@@ -20,242 +20,173 @@
     <link rel="stylesheet" href="/css/responsive.css">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
-
-<body class="app-layout">
-    <!-- Fixed Topbar -->
-    <header class="topbar" id="topbar">
-        <!-- Populated by JavaScript -->
-    </header>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Profile Header -->
-        <section class="profile-header">
-            <div class="profile-info">
-                <div class="profile-avatar">
-                    <img id="profile-avatar" src="" alt="">
-                </div>
-                <div class="profile-details">
-                    <h1 id="profile-username"></h1>
-                    <p id="profile-email"></p>
-                    <div class="profile-stats">
-                        <div class="profile-stat">
-                            <span class="profile-stat-value" id="watchlist-count">0</span>
-                            <span class="profile-stat-label">Watchlist</span>
-                        </div>
-                        <div class="profile-stat">
-                            <span class="profile-stat-value" id="favorites-count">0</span>
-                            <span class="profile-stat-label">Favorites</span>
-                        </div>
-                        <div class="profile-stat">
-                            <span class="profile-stat-value" id="watched-count">0</span>
-                            <span class="profile-stat-label">Watched</span>
+<body>
+    <div id="app">
+        <main id="app-content">
+            <div class="user-page container">
+                <div class="user-header">
+                    <div class="user-avatar-large">
+                        <img id="user-avatar" src="" alt="">
+                    </div>
+                    <div class="user-info">
+                        <h1 id="username"></h1>
+                        <p id="user-email"></p>
+                        <div class="user-stats">
+                            <div class="stat-item">
+                                <div class="stat-value" id="watchlist-count">0</div>
+                                <div class="stat-label">Watchlist</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="favorites-count">0</div>
+                                <div class="stat-label">Favorites</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="watched-count">0</div>
+                                <div class="stat-label">Watched</div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                
+                <div class="profile-sections">
+                    <section class="profile-section">
+                        <h2>Continue Watching</h2>
+                        <div id="continue-watching" class="content-carousel">
+                            <p class="empty-message">No content in progress</p>
+                        </div>
+                    </section>
+                    
+                    <section class="profile-section">
+                        <h2>Recommended for You</h2>
+                        <div id="recommendations" class="content-carousel">
+                            <div class="loading">
+                                <div class="loader-spinner"></div>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <section class="profile-section">
+                        <h2>Recent Activity</h2>
+                        <div id="recent-activity" class="activity-list">
+                            <p class="empty-message">No recent activity</p>
+                        </div>
+                    </section>
+                </div>
+                
                 <div class="profile-actions">
                     <a href="/user/settings.html" class="btn btn-secondary">
                         <i class="icon-settings"></i> Settings
                     </a>
+                    <button class="btn btn-secondary" onclick="logout()">
+                        <i class="icon-logout"></i> Logout
+                    </button>
                 </div>
             </div>
-        </section>
-
-        <!-- Recent Activity -->
-        <section class="content-section">
-            <div class="container">
-                <h2>Recent Activity</h2>
-                <div class="activity-feed" id="recent-activity">
-                    <!-- Populated by JavaScript -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Continue Watching -->
-        <section class="content-section" id="continue-watching">
-            <!-- Populated by JavaScript -->
-        </section>
-
-        <!-- Favorites Preview -->
-        <section class="content-section" id="favorites-preview">
-            <!-- Populated by JavaScript -->
-        </section>
-
-        <!-- Watchlist Preview -->
-        <section class="content-section" id="watchlist-preview">
-            <!-- Populated by JavaScript -->
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <!-- Same footer as index.html -->
-    </footer>
-
-    <!-- Mobile Navigation -->
-    <nav class="mobile-nav" id="mobile-nav">
-        <!-- Populated by JavaScript -->
-    </nav>
-
+        </main>
+    </div>
+    
     <!-- Scripts -->
     <script src="/js/config.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/app.js"></script>
+    
     <script>
-        // Profile page logic
-        class ProfilePage {
-            constructor() {
-                // Check if user is authenticated
-                if (!auth.requireAuth()) return;
-
-                // Validate username in URL
-                const pathMatch = window.location.pathname.match(/^\/([^\/]+)\/profile$/);
-                if (pathMatch) {
-                    const urlUsername = pathMatch[1];
-                    if (!auth.validateUsernameRoute(urlUsername)) {
-                        window.location.href = auth.getProfileUrl();
-                        return;
-                    }
+        // Check authentication
+        if (!Auth.requireAuth()) {
+            // Will redirect to login
+        }
+        
+        async function loadProfile() {
+            const user = Auth.getUser();
+            if (!user) return;
+            
+            // Set user info
+            document.getElementById('username').textContent = user.username;
+            document.getElementById('user-email').textContent = user.email;
+            document.getElementById('user-avatar').src = `https://ui-avatars.com/api/?name=${user.username}&background=3b82f6&color=fff&size=200`;
+            document.getElementById('user-avatar').alt = user.username;
+            
+            // Load user stats
+            try {
+                const [watchlist, favorites, recommendations] = await Promise.all([
+                    API.getWatchlist(),
+                    API.getFavorites(),
+                    API.getPersonalizedRecommendations(10)
+                ]);
+                
+                // Update stats
+                document.getElementById('watchlist-count').textContent = watchlist.watchlist?.length || 0;
+                document.getElementById('favorites-count').textContent = favorites.favorites?.length || 0;
+                
+                // Load recommendations
+                const recDiv = document.getElementById('recommendations');
+                if (recommendations.recommendations && recommendations.recommendations.length > 0) {
+                    recDiv.innerHTML = recommendations.recommendations.map(item => 
+                        app.renderContentCard(item)
+                    ).join('');
+                    app.initializeCarousels();
+                    app.initializeLazyLoading();
+                } else {
+                    recDiv.innerHTML = '<p class="empty-message">No recommendations yet. Watch more content to get personalized suggestions.</p>';
                 }
-
-                this.init();
-            }
-
-            async init() {
-                this.renderUserInfo();
-                await this.loadUserData();
-                await this.loadUserContent();
-            }
-
-            renderUserInfo() {
-                const user = auth.getUser();
-
-                // Update avatar
-                const avatar = document.getElementById('profile-avatar');
-                avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=fff&size=240`;
-                avatar.alt = user.username;
-
-                // Update user details
-                document.getElementById('profile-username').textContent = user.username;
-                document.getElementById('profile-email').textContent = user.email;
-            }
-
-            async loadUserData() {
-                try {
-                    // Load user statistics
-                    const [watchlist, favorites, history] = await Promise.all([
-                        apiClient.get(CONFIG.API_ENDPOINTS.WATCHLIST),
-                        apiClient.get(CONFIG.API_ENDPOINTS.FAVORITES),
-                        apiClient.get(CONFIG.API_ENDPOINTS.WATCH_HISTORY)
-                    ]);
-
-                    // Update counts
-                    document.getElementById('watchlist-count').textContent = watchlist.watchlist?.length || 0;
-                    document.getElementById('favorites-count').textContent = favorites.favorites?.length || 0;
-                    document.getElementById('watched-count').textContent = history.history?.length || 0;
-
-                    // Load recent activity
-                    this.renderRecentActivity(history.history || []);
-
-                } catch (error) {
-                    console.error('Failed to load user data:', error);
-                }
-            }
-
-            async loadUserContent() {
-                // Continue Watching
-                const continueWatching = document.getElementById('continue-watching');
-                const continueCarousel = new app.constructor.prototype.constructor.ContentCarousel(continueWatching, {
-                    endpoint: CONFIG.API_ENDPOINTS.WATCH_HISTORY,
-                    title: 'Continue Watching'
-                });
-                await continueCarousel.load();
-
-                // Favorites Preview
-                const favoritesPreview = document.getElementById('favorites-preview');
-                const favoritesCarousel = new app.constructor.prototype.constructor.ContentCarousel(favoritesPreview, {
-                    endpoint: CONFIG.API_ENDPOINTS.FAVORITES,
-                    title: 'Your Favorites'
-                });
-                await favoritesCarousel.load();
-
-                // Watchlist Preview
-                const watchlistPreview = document.getElementById('watchlist-preview');
-                const watchlistCarousel = new app.constructor.prototype.constructor.ContentCarousel(watchlistPreview, {
-                    endpoint: CONFIG.API_ENDPOINTS.WATCHLIST,
-                    title: 'Your Watchlist'
-                });
-                await watchlistCarousel.load();
-            }
-
-            renderRecentActivity(activities) {
-                const container = document.getElementById('recent-activity');
-
-                if (activities.length === 0) {
-                    container.innerHTML = '<p class="text-secondary">No recent activity</p>';
-                    return;
-                }
-
-                container.innerHTML = activities.slice(0, 10).map(activity => `
-                    <div class="activity-item">
-                        <div class="activity-icon">
-                            <i class="icon-${this.getActivityIcon(activity.type)}"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">
-                                ${this.getActivityTitle(activity)}
-                            </div>
-                            <div class="activity-time">
-                                ${this.formatTime(activity.timestamp)}
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            getActivityIcon(type) {
-                const icons = {
-                    'watch': 'play',
-                    'watchlist': 'bookmark',
-                    'favorite': 'heart',
-                    'rating': 'star'
-                };
-                return icons[type] || 'activity';
-            }
-
-            getActivityTitle(activity) {
-                const titles = {
-                    'watch': `Watched ${activity.content_title}`,
-                    'watchlist': `Added ${activity.content_title} to watchlist`,
-                    'favorite': `Added ${activity.content_title} to favorites`,
-                    'rating': `Rated ${activity.content_title} ${activity.rating}/5`
-                };
-                return titles[activity.type] || 'Activity';
-            }
-
-            formatTime(timestamp) {
-                const date = new Date(timestamp);
-                const now = new Date();
-                const diff = now - date;
-
-                const minutes = Math.floor(diff / 60000);
-                const hours = Math.floor(diff / 3600000);
-                const days = Math.floor(diff / 86400000);
-
-                if (minutes < 60) return `${minutes}m ago`;
-                if (hours < 24) return `${hours}h ago`;
-                if (days < 7) return `${days}d ago`;
-
-                return date.toLocaleDateString();
+                
+            } catch (error) {
+                console.error('Failed to load profile data:', error);
             }
         }
-
-        // Initialize profile page
-        document.addEventListener('DOMContentLoaded', () => {
-            new ProfilePage();
-        });
+        
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                Auth.logout();
+            }
+        }
+        
+        // Load profile on page load
+        loadProfile();
     </script>
+    
+    <style>
+        .user-page {
+            padding-top: var(--space-2xl);
+            min-height: 100vh;
+        }
+        
+        .profile-sections {
+            margin-top: var(--space-2xl);
+        }
+        
+        .profile-section {
+            margin-bottom: var(--space-2xl);
+        }
+        
+        .profile-section h2 {
+            margin-bottom: var(--space-lg);
+        }
+        
+        .empty-message {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: var(--space-xl);
+        }
+        
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+        
+        .profile-actions {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            margin-top: var(--space-2xl);
+            padding-top: var(--space-2xl);
+            border-top: 1px solid var(--border-primary);
+        }
+        
+        .icon-settings::before { content: '⚙️'; }
+        .icon-logout::before { content: '🚪'; }
+    </style>
 </body>
-
 </html>

@@ -1,1 +1,270 @@
-<!-- Standard content card -->
+<div class="content-card" data-content-id="{{contentId}}">
+    <a href="/content/details.html?id={{contentId}}">
+        <div class="card-poster">
+            <img data-src="{{posterUrl}}" alt="{{title}}" class="lazy-image" />
+            <div class="card-overlay">
+                <button class="quick-play-btn" onclick="event.preventDefault(); app.playTrailer('{{trailerUrl}}')">
+                    <i class="icon-play"></i>
+                </button>
+            </div>
+            {{#if rating}}
+            <div class="card-rating">
+                <span>⭐ {{rating}}</span>
+            </div>
+            {{/if}}
+            {{#if isNew}}
+            <div class="card-badge new">NEW</div>
+            {{/if}}
+            {{#if contentType === 'anime'}}
+            <div class="card-badge anime">ANIME</div>
+            {{/if}}
+        </div>
+        <div class="card-info">
+            <h3 class="card-title">{{title}}</h3>
+            <div class="card-meta">
+                <span class="content-type">{{contentType}}</span>
+                {{#if genres}}
+                <span class="genres">{{genres}}</span>
+                {{/if}}
+            </div>
+            {{#if year}}
+            <div class="card-year">{{year}}</div>
+            {{/if}}
+        </div>
+    </a>
+    <div class="card-actions">
+        <button class="action-btn" onclick="app.addToWatchlist({{contentId}})" title="Add to Watchlist">
+            <i class="icon-bookmark"></i>
+        </button>
+        <button class="action-btn" onclick="app.addToFavorites({{contentId}})" title="Add to Favorites">
+            <i class="icon-heart"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+// Component-specific JavaScript for real-time updates
+class ContentCard {
+    constructor(element) {
+        this.element = element;
+        this.contentId = element.dataset.contentId;
+        this.init();
+    }
+    
+    init() {
+        // Load real-time interaction states
+        this.loadInteractionStates();
+        
+        // Intersection observer for lazy loading
+        this.setupLazyLoading();
+        
+        // Real-time rating updates
+        this.setupRatingUpdates();
+    }
+    
+    async loadInteractionStates() {
+        if (!Auth.isAuthenticated()) return;
+        
+        try {
+            // Check if content is in user's watchlist/favorites
+            const [watchlist, favorites] = await Promise.all([
+                API.getWatchlist(),
+                API.getFavorites()
+            ]);
+            
+            const inWatchlist = watchlist.watchlist?.some(item => item.id === parseInt(this.contentId));
+            const inFavorites = favorites.favorites?.some(item => item.id === parseInt(this.contentId));
+            
+            if (inWatchlist) {
+                this.element.querySelector('.icon-bookmark').parentElement.classList.add('active');
+            }
+            if (inFavorites) {
+                this.element.querySelector('.icon-heart').parentElement.classList.add('active');
+            }
+        } catch (error) {
+            console.error('Failed to load interaction states:', error);
+        }
+    }
+    
+    setupLazyLoading() {
+        const img = this.element.querySelector('.lazy-image');
+        if (!img) return;
+        
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.classList.add('loaded');
+                    observer.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: '50px'
+        });
+        
+        imageObserver.observe(img);
+    }
+    
+    setupRatingUpdates() {
+        // Listen for real-time rating updates via WebSocket or polling
+        if (window.WebSocket) {
+            // In production, connect to WebSocket for real-time updates
+            // For now, we'll use periodic polling
+            setInterval(() => {
+                this.updateRating();
+            }, 30000); // Update every 30 seconds
+        }
+    }
+    
+    async updateRating() {
+        try {
+            const details = await API.getContentDetails(this.contentId);
+            const ratingElement = this.element.querySelector('.card-rating span');
+            if (ratingElement && details.rating) {
+                ratingElement.textContent = `⭐ ${details.rating.toFixed(1)}`;
+            }
+        } catch (error) {
+            // Silent fail for rating updates
+        }
+    }
+}
+
+// Auto-initialize all content cards
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.content-card').forEach(card => {
+        new ContentCard(card);
+    });
+});
+</script>
+
+<style>
+.content-card {
+    position: relative;
+    background: var(--theater-dark);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.content-card:hover {
+    transform: scale(1.03);
+    box-shadow: var(--premium-glow);
+}
+
+.card-poster {
+    position: relative;
+    padding-bottom: 150%;
+    overflow: hidden;
+    background: var(--velvet-dark);
+}
+
+.card-poster img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity var(--transition-medium);
+}
+
+.card-poster img.loaded {
+    opacity: 1;
+}
+
+.card-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.content-card:hover .card-overlay {
+    opacity: 1;
+}
+
+.quick-play-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--platinum-blue);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.quick-play-btn:hover {
+    transform: scale(1.1);
+    background: var(--primary-600);
+}
+
+.card-badge {
+    position: absolute;
+    top: var(--space-sm);
+    left: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.card-badge.new {
+    background: var(--vip-gold);
+    color: var(--cinema-black);
+}
+
+.card-badge.anime {
+    background: var(--royal-purple);
+    color: white;
+}
+
+.card-actions {
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    display: flex;
+    gap: var(--space-sm);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.content-card:hover .card-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.action-btn:hover {
+    background: var(--platinum-blue);
+    transform: scale(1.1);
+}
+
+.action-btn.active {
+    background: var(--platinum-blue);
+    color: white;
+}
+
+.icon-play::before { content: '▶'; }
+.icon-bookmark::before { content: '🔖'; }
+.icon-heart::before { content: '❤'; }
+</style>

@@ -1,1 +1,201 @@
-<!-- Regional content -->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Regional Cinema - CineScope</title>
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/css/main.css" as="style">
+    <link rel="preload" href="/js/config.js" as="script">
+    <link rel="preload" href="/js/api.js" as="script">
+    <link rel="preload" href="/js/auth.js" as="script">
+    <link rel="preload" href="/js/app.js" as="script">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+    <div id="app">
+        <main id="app-content">
+            <div class="regional-page container">
+                <div class="page-header">
+                    <h1>Regional Cinema</h1>
+                    <p>Explore movies in your preferred language</p>
+                </div>
+                
+                <div class="language-tabs">
+                    <button class="language-tab active" data-lang="hindi">
+                        <span class="lang-icon">🇮🇳</span>
+                        <span>Hindi</span>
+                    </button>
+                    <button class="language-tab" data-lang="telugu">
+                        <span class="lang-icon">🎬</span>
+                        <span>Telugu</span>
+                    </button>
+                    <button class="language-tab" data-lang="tamil">
+                        <span class="lang-icon">🎭</span>
+                        <span>Tamil</span>
+                    </button>
+                    <button class="language-tab" data-lang="kannada">
+                        <span class="lang-icon">🎪</span>
+                        <span>Kannada</span>
+                    </button>
+                    <button class="language-tab" data-lang="malayalam">
+                        <span class="lang-icon">🎨</span>
+                        <span>Malayalam</span>
+                    </button>
+                </div>
+                
+                <div id="regional-content" class="regional-content">
+                    <div class="loading">
+                        <div class="loader-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+    
+    <script>
+        let currentLanguage = 'hindi';
+        
+        async function loadRegionalContent(language) {
+            currentLanguage = language;
+            const contentDiv = document.getElementById('regional-content');
+            
+            // Show loading
+            contentDiv.innerHTML = '<div class="loading"><div class="loader-spinner"></div></div>';
+            
+            try {
+                const regionalData = await API.getRegionalContent(language, 'movie', 30);
+                
+                if (regionalData.recommendations && regionalData.recommendations.length > 0) {
+                    const languageNames = {
+                        hindi: 'Hindi',
+                        telugu: 'Telugu',
+                        tamil: 'Tamil',
+                        kannada: 'Kannada',
+                        malayalam: 'Malayalam'
+                    };
+                    
+                    contentDiv.innerHTML = `
+                        <section class="regional-section">
+                            <h2>${languageNames[language]} Movies</h2>
+                            <div class="content-grid">
+                                ${regionalData.recommendations.map(item => app.renderContentCard(item)).join('')}
+                            </div>
+                        </section>
+                    `;
+                    
+                    app.initializeLazyLoading();
+                } else {
+                    contentDiv.innerHTML = `
+                        <div class="empty-state">
+                            <h2>No content available</h2>
+                            <p>Check back later for more ${language} movies</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                contentDiv.innerHTML = `
+                    <div class="error-state">
+                        <h2>Failed to load regional content</h2>
+                        <button class="btn btn-primary" onclick="loadRegionalContent('${language}')">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Tab click handlers
+        document.querySelectorAll('.language-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                // Update active state
+                document.querySelectorAll('.language-tab').forEach(t => t.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                
+                // Load content
+                const language = e.currentTarget.dataset.lang;
+                loadRegionalContent(language);
+            });
+        });
+        
+        // Initial load
+        loadRegionalContent('hindi');
+    </script>
+    
+    <style>
+        .regional-page {
+            padding-top: var(--space-2xl);
+            min-height: 100vh;
+        }
+        
+        .language-tabs {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: var(--space-2xl);
+        }
+        
+        .language-tab {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-md) var(--space-xl);
+            background: var(--surface-tertiary);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .language-tab:hover {
+            background: var(--surface-elevated);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+        
+        .language-tab.active {
+            background: var(--primary-500);
+            color: white;
+            border-color: var(--primary-600);
+            box-shadow: var(--glow-primary);
+        }
+        
+        .lang-icon {
+            font-size: 1.5rem;
+        }
+        
+        .regional-section h2 {
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+        }
+        
+        .empty-state,
+        .error-state {
+            text-align: center;
+            padding: var(--space-2xl);
+        }
+    </style>
+</body>
+</html>

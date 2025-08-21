@@ -1,16 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Search - CineScope</title>
-
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/css/main.css" as="style">
     <link rel="preload" href="/js/config.js" as="script">
     <link rel="preload" href="/js/api.js" as="script">
     <link rel="preload" href="/js/auth.js" as="script">
     <link rel="preload" href="/js/app.js" as="script">
-
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/layouts.css">
@@ -18,23 +20,332 @@
     <link rel="stylesheet" href="/css/responsive.css">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
-
 <body>
-    <div id="topbar"></div>
-
-    <main id="main-content">
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
-            <p>Loading search...</p>
+    <div id="app">
+        <main id="app-content">
+            <div class="search-page container">
+                <div class="search-header">
+                    <h1>Search</h1>
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Search movies, TV shows, anime..." 
+                               autocomplete="off" autofocus>
+                        <button class="btn btn-primary" onclick="performSearch()">Search</button>
+                    </div>
+                    
+                    <div class="search-filters">
+                        <select id="type-filter" class="filter-select">
+                            <option value="multi">All Types</option>
+                            <option value="movie">Movies</option>
+                            <option value="tv">TV Shows</option>
+                            <option value="anime">Anime</option>
+                        </select>
+                        
+                        <button class="btn btn-secondary" onclick="showFilterModal()">
+                            More Filters
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="search-results" class="search-results-container">
+                    <!-- Popular searches will be shown initially -->
+                    <div class="popular-searches">
+                        <h2>Popular Searches</h2>
+                        <div class="search-tags">
+                            <button class="search-tag" onclick="searchFor('Action Movies')">Action Movies</button>
+                            <button class="search-tag" onclick="searchFor('Comedy')">Comedy</button>
+                            <button class="search-tag" onclick="searchFor('Anime')">Anime</button>
+                            <button class="search-tag" onclick="searchFor('Telugu Movies')">Telugu Movies</button>
+                            <button class="search-tag" onclick="searchFor('Hindi Movies')">Hindi Movies</button>
+                            <button class="search-tag" onclick="searchFor('Thriller')">Thriller</button>
+                        </div>
+                    </div>
+                    
+                    <div class="trending-searches">
+                        <h2>Trending Now</h2>
+                        <div id="trending-grid" class="content-grid">
+                            <!-- Will be populated with trending content -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Filter Modal -->
+    <div id="filter-modal" class="filter-modal">
+        <div class="filter-header">
+            <h3>Filters</h3>
+            <button class="btn-close" onclick="closeFilterModal()">×</button>
         </div>
-    </main>
-
-    <div id="mobile-nav"></div>
-
+        <div class="filter-content">
+            <div class="filter-group">
+                <h4>Genres</h4>
+                <div class="filter-options">
+                    <label><input type="checkbox" value="Action"> Action</label>
+                    <label><input type="checkbox" value="Comedy"> Comedy</label>
+                    <label><input type="checkbox" value="Drama"> Drama</label>
+                    <label><input type="checkbox" value="Horror"> Horror</label>
+                    <label><input type="checkbox" value="Romance"> Romance</label>
+                    <label><input type="checkbox" value="Sci-Fi"> Sci-Fi</label>
+                </div>
+            </div>
+            
+            <div class="filter-group">
+                <h4>Year</h4>
+                <select id="year-filter">
+                    <option value="">All Years</option>
+                    <option value="2024">2024</option>
+                    <option value="2023">2023</option>
+                    <option value="2022">2022</option>
+                    <option value="2021">2021</option>
+                    <option value="2020">2020</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <h4>Rating</h4>
+                <input type="range" id="rating-filter" min="0" max="10" step="0.5" value="0">
+                <span id="rating-value">0+</span>
+            </div>
+            
+            <button class="btn btn-primary btn-block" onclick="applyFilters()">Apply Filters</button>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
     <script src="/js/config.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/app.js"></script>
+    
+    <script>
+        let currentQuery = '';
+        let currentPage = 1;
+        let isLoading = false;
+        
+        // Initialize trending content
+        async function loadTrending() {
+            try {
+                const trending = await API.getTrending('all', 12);
+                const grid = document.getElementById('trending-grid');
+                
+                if (trending.recommendations && trending.recommendations.length > 0) {
+                    grid.innerHTML = trending.recommendations.map(item => 
+                        app.renderContentCard(item)
+                    ).join('');
+                    app.initializeLazyLoading();
+                }
+            } catch (error) {
+                console.error('Failed to load trending:', error);
+            }
+        }
+        
+        // Search functionality
+        async function performSearch() {
+            const query = document.getElementById('search-input').value.trim();
+            if (!query || query === currentQuery) return;
+            
+            currentQuery = query;
+            currentPage = 1;
+            
+            const resultsContainer = document.getElementById('search-results');
+            resultsContainer.innerHTML = '<div class="loading">Searching...</div>';
+            
+            try {
+                const type = document.getElementById('type-filter').value;
+                const results = await API.searchContent(query, type, currentPage);
+                
+                if (results.results && results.results.length > 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="search-results-header">
+                            <h2>Results for "${query}"</h2>
+                            <p>${results.total_results} results found</p>
+                        </div>
+                        <div class="content-grid">
+                            ${results.results.map(item => app.renderContentCard(item)).join('')}
+                        </div>
+                        ${results.total_pages > 1 ? `
+                            <div class="pagination">
+                                <button class="btn btn-secondary" onclick="loadMore()">Load More</button>
+                            </div>
+                        ` : ''}
+                    `;
+                    app.initializeLazyLoading();
+                } else {
+                    resultsContainer.innerHTML = `
+                        <div class="no-results">
+                            <h2>No results found for "${query}"</h2>
+                            <p>Try searching with different keywords</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsContainer.innerHTML = `
+                    <div class="error-state">
+                        <h2>Something went wrong</h2>
+                        <p>Please try again later</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function searchFor(query) {
+            document.getElementById('search-input').value = query;
+            performSearch();
+        }
+        
+        async function loadMore() {
+            if (isLoading) return;
+            isLoading = true;
+            currentPage++;
+            
+            try {
+                const type = document.getElementById('type-filter').value;
+                const results = await API.searchContent(currentQuery, type, currentPage);
+                
+                if (results.results && results.results.length > 0) {
+                    const grid = document.querySelector('.content-grid');
+                    grid.insertAdjacentHTML('beforeend', 
+                        results.results.map(item => app.renderContentCard(item)).join('')
+                    );
+                    app.initializeLazyLoading();
+                    
+                    // Hide load more if no more pages
+                    if (currentPage >= results.total_pages) {
+                        document.querySelector('.pagination').style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                app.showToast('Failed to load more results', 'error');
+            } finally {
+                isLoading = false;
+            }
+        }
+        
+        function showFilterModal() {
+            document.getElementById('filter-modal').classList.add('open');
+        }
+        
+        function closeFilterModal() {
+            document.getElementById('filter-modal').classList.remove('open');
+        }
+        
+        function applyFilters() {
+            // Implement filter logic
+            closeFilterModal();
+            performSearch();
+        }
+        
+        // Search on enter
+        document.getElementById('search-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+        
+        // Rating slider
+        document.getElementById('rating-filter').addEventListener('input', (e) => {
+            document.getElementById('rating-value').textContent = e.target.value + '+';
+        });
+        
+        // Initialize
+        loadTrending();
+    </script>
+    
+    <style>
+        .search-page {
+            padding-top: var(--space-2xl);
+            min-height: 100vh;
+        }
+        
+        .search-header {
+            margin-bottom: var(--space-2xl);
+        }
+        
+        .search-box {
+            display: flex;
+            gap: var(--space-md);
+            margin: var(--space-lg) 0;
+        }
+        
+        .search-box input {
+            flex: 1;
+            font-size: 1.125rem;
+            padding: var(--space-md) var(--space-lg);
+        }
+        
+        .search-filters {
+            display: flex;
+            gap: var(--space-md);
+            flex-wrap: wrap;
+        }
+        
+        .filter-select {
+            min-width: 150px;
+        }
+        
+        .search-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+        }
+        
+        .search-tag {
+            padding: var(--space-sm) var(--space-md);
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .search-tag:hover {
+            background: var(--primary-500);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .popular-searches,
+        .trending-searches {
+            margin-bottom: var(--space-2xl);
+        }
+        
+        .search-results-header {
+            margin-bottom: var(--space-lg);
+        }
+        
+        .loading,
+        .no-results,
+        .error-state {
+            text-align: center;
+            padding: var(--space-2xl);
+        }
+        
+        .pagination {
+            text-align: center;
+            margin-top: var(--space-2xl);
+        }
+        
+        .filter-options {
+            display: grid;
+            gap: var(--space-sm);
+        }
+        
+        .filter-options label {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            cursor: pointer;
+        }
+        
+        .btn-close {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+    </style>
 </body>
-
 </html>

@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Details - CineScope</title>
-
+    
     <!-- Preload Critical Resources -->
+    <link rel="preload" href="/css/main.css" as="style">
     <link rel="preload" href="/js/config.js" as="script">
     <link rel="preload" href="/js/api.js" as="script">
     <link rel="preload" href="/js/auth.js" as="script">
     <link rel="preload" href="/js/app.js" as="script">
-
+    
     <!-- Stylesheets -->
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
@@ -20,213 +20,298 @@
     <link rel="stylesheet" href="/css/responsive.css">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
-
-<body class="app-layout">
-    <!-- Fixed Topbar -->
-    <header class="topbar" id="topbar">
-        <!-- Populated by JavaScript -->
-    </header>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Hero Section -->
-        <section class="details-hero" id="details-hero">
-            <div class="hero-backdrop" id="hero-backdrop"></div>
-            <div class="hero-overlay"></div>
-            <div class="container">
-                <div class="details-layout">
-                    <div class="details-poster">
-                        <img id="poster-image" src="" alt="">
-                    </div>
-                    <div class="details-info">
-                        <h1 id="content-title"></h1>
-                        <div class="details-meta">
-                            <span class="rating-badge" id="rating"></span>
-                            <span class="type-badge" id="content-type"></span>
-                            <span id="release-date"></span>
-                            <span id="runtime"></span>
-                        </div>
-                        <div class="genre-chips" id="genres"></div>
-                        <p class="details-overview" id="overview"></p>
-                        <div class="details-actions">
-                            <button class="btn btn-primary" id="play-trailer" style="display: none;">
-                                <i class="icon-play"></i> Play Trailer
-                            </button>
-                            <button class="btn btn-secondary" id="add-watchlist">
-                                <i class="icon-bookmark"></i> Add to Watchlist
-                            </button>
-                            <button class="btn btn-secondary" id="add-favorite">
-                                <i class="icon-heart"></i> Add to Favorites
-                            </button>
+<body>
+    <div id="app">
+        <main id="app-content">
+            <div class="details-page">
+                <div id="details-content">
+                    <!-- Content will be loaded dynamically -->
+                    <div class="details-loading">
+                        <div class="skeleton skeleton-hero"></div>
+                        <div class="container">
+                            <div class="skeleton skeleton-content"></div>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- Cast & Crew -->
-        <section class="content-section">
-            <div class="container">
-                <h2>Cast & Crew</h2>
-                <div class="cast-carousel" id="cast-carousel">
-                    <!-- Populated by JavaScript -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Similar Content -->
-        <section class="content-section" id="similar-content">
-            <!-- Populated by JavaScript -->
-        </section>
-
-        <!-- Reviews -->
-        <section class="content-section">
-            <div class="container">
-                <h2>Reviews</h2>
-                <div class="reviews-container" id="reviews">
-                    <!-- Populated by JavaScript -->
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <!-- Same footer as index.html -->
-    </footer>
-
-    <!-- Mobile Navigation -->
-    <nav class="mobile-nav" id="mobile-nav">
-        <!-- Populated by JavaScript -->
-    </nav>
-
+        </main>
+    </div>
+    
     <!-- Scripts -->
     <script src="/js/config.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/app.js"></script>
+    
     <script>
-        // Details page specific logic
-        class DetailsPage {
-            constructor() {
-                this.contentId = new URLSearchParams(window.location.search).get('id');
-                if (!this.contentId) {
-                    window.location.href = '/';
-                    return;
-                }
-                this.init();
+        async function loadContentDetails() {
+            const params = new URLSearchParams(window.location.search);
+            const contentId = params.get('id');
+            
+            if (!contentId) {
+                window.location.href = '/';
+                return;
             }
-
-            async init() {
-                await this.loadContent();
-                this.setupEventListeners();
-            }
-
-            async loadContent() {
-                try {
-                    const details = await apiClient.get(`${CONFIG.API_ENDPOINTS.CONTENT_DETAILS}/${this.contentId}`);
-                    this.renderDetails(details);
-
-                    // Load similar content
-                    const similarContainer = document.getElementById('similar-content');
-                    const carousel = new app.constructor.prototype.constructor.ContentCarousel(similarContainer, {
-                        endpoint: `${CONFIG.API_ENDPOINTS.SIMILAR}/${this.contentId}`,
-                        title: 'More Like This'
-                    });
-                    await carousel.load();
-
-                } catch (error) {
-                    console.error('Failed to load content details:', error);
-                    app.showToast('Failed to load content details', 'error');
-                }
-            }
-
-            renderDetails(details) {
-                // Update page title
-                document.title = `${details.title} - CineScope`;
-
-                // Hero backdrop
-                const backdrop = document.getElementById('hero-backdrop');
-                if (details.backdrop_path) {
-                    backdrop.style.backgroundImage = `url('${details.backdrop_path}')`;
-                }
-
-                // Poster
-                const poster = document.getElementById('poster-image');
-                poster.src = details.poster_path || '/images/placeholder.jpg';
-                poster.alt = details.title;
-
-                // Title and meta
-                document.getElementById('content-title').textContent = details.title;
-                document.getElementById('rating').textContent = `⭐ ${details.rating || 'N/A'}`;
-                document.getElementById('content-type').textContent = details.content_type.toUpperCase();
-                document.getElementById('release-date').textContent = details.release_date ? new Date(details.release_date).getFullYear() : '';
-                document.getElementById('runtime').textContent = details.runtime ? `${details.runtime} min` : '';
-
-                // Genres
-                const genresContainer = document.getElementById('genres');
-                if (details.genres && details.genres.length > 0) {
-                    genresContainer.innerHTML = details.genres.map(genre =>
-                        `<span class="genre-chip">${genre}</span>`
-                    ).join('');
-                }
-
-                // Overview
-                document.getElementById('overview').textContent = details.overview || 'No description available.';
-
-                // Trailer button
-                if (details.youtube_trailer) {
-                    const trailerBtn = document.getElementById('play-trailer');
-                    trailerBtn.style.display = 'inline-flex';
-                    trailerBtn.dataset.trailerId = details.youtube_trailer.split('v=')[1];
-                }
-
-                // Cast
-                if (details.cast && details.cast.length > 0) {
-                    this.renderCast(details.cast);
-                }
-            }
-
-            renderCast(cast) {
-                const container = document.getElementById('cast-carousel');
-                container.innerHTML = `
-                    <div class="carousel-track">
-                        ${cast.slice(0, 10).map(person => `
-                            <div class="cast-card">
-                                <img src="${person.profile_path ? `https://image.tmdb.org/t/p/w200${person.profile_path}` : '/images/person-placeholder.jpg'}" 
-                                     alt="${person.name}"
-                                     loading="lazy">
-                                <h4>${person.name}</h4>
-                                <p>${person.character || person.job || ''}</p>
-                            </div>
-                        `).join('')}
+            
+            try {
+                const [details, similar] = await Promise.all([
+                    API.getContentDetails(contentId),
+                    API.getSimilarContent(contentId, 10)
+                ]);
+                
+                renderDetailsPage(details, similar.recommendations || []);
+            } catch (error) {
+                console.error('Failed to load content details:', error);
+                document.getElementById('details-content').innerHTML = `
+                    <div class="error-state">
+                        <h2>Failed to load content</h2>
+                        <a href="/" class="btn btn-primary">Go Back Home</a>
                     </div>
                 `;
             }
-
-            setupEventListeners() {
-                // Play trailer
-                document.getElementById('play-trailer').addEventListener('click', () => {
-                    app.playTrailer(this.contentId);
-                });
-
-                // Add to watchlist
-                document.getElementById('add-watchlist').addEventListener('click', () => {
-                    app.toggleWatchlist(this.contentId);
-                });
-
-                // Add to favorites
-                document.getElementById('add-favorite').addEventListener('click', () => {
-                    app.toggleFavorite(this.contentId);
-                });
+        }
+        
+        function renderDetailsPage(details, similar) {
+            const backdropUrl = details.backdrop_path 
+                ? (details.backdrop_path.startsWith('http') 
+                    ? details.backdrop_path 
+                    : `https://image.tmdb.org/t/p/w1280${details.backdrop_path}`)
+                : details.poster_path;
+                
+            const posterUrl = details.poster_path 
+                ? (details.poster_path.startsWith('http') 
+                    ? details.poster_path 
+                    : `https://image.tmdb.org/t/p/w500${details.poster_path}`)
+                : '/images/placeholder.jpg';
+            
+            document.getElementById('details-content').innerHTML = `
+                <div class="details-hero" style="background-image: url('${backdropUrl}')">
+                    <div class="hero-gradient"></div>
+                </div>
+                
+                <div class="details-content container">
+                    <div class="details-info">
+                        <div class="details-poster">
+                            <img src="${posterUrl}" alt="${details.title}">
+                        </div>
+                        
+                        <div class="details-main">
+                            <h1 class="details-title">${details.title}</h1>
+                            ${details.original_title && details.original_title !== details.title ? 
+                                `<p class="original-title">${details.original_title}</p>` : ''}
+                            
+                            <div class="details-meta">
+                                ${details.rating ? `
+                                    <div class="rating-badge">
+                                        <span>⭐ ${details.rating.toFixed(1)}</span>
+                                    </div>
+                                ` : ''}
+                                <span class="type-badge">${details.content_type}</span>
+                                ${details.release_date ? `
+                                    <span class="release-year">${new Date(details.release_date).getFullYear()}</span>
+                                ` : ''}
+                                ${details.runtime ? `
+                                    <span class="runtime">${Math.floor(details.runtime / 60)}h ${details.runtime % 60}m</span>
+                                ` : ''}
+                            </div>
+                            
+                            ${details.genres && details.genres.length > 0 ? `
+                                <div class="genre-chips">
+                                    ${details.genres.map(genre => 
+                                        `<span class="genre-chip">${genre}</span>`
+                                    ).join('')}
+                                </div>
+                            ` : ''}
+                            
+                            <div class="details-actions">
+                                ${details.youtube_trailer ? `
+                                    <button class="btn btn-primary" onclick="app.playTrailer('${details.youtube_trailer}')">
+                                        <i class="icon-play"></i> Watch Trailer
+                                    </button>
+                                ` : ''}
+                                ${Auth.isAuthenticated() ? `
+                                    <button class="btn btn-secondary" onclick="addToWatchlist(${details.id})">
+                                        <i class="icon-bookmark"></i> Add to Watchlist
+                                    </button>
+                                    <button class="btn btn-icon" onclick="addToFavorites(${details.id})">
+                                        <i class="icon-heart"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                            
+                            ${details.overview ? `
+                                <div class="details-overview">
+                                    <h2>Synopsis</h2>
+                                    <p>${details.overview}</p>
+                                </div>
+                            ` : ''}
+                            
+                            ${details.languages && details.languages.length > 0 ? `
+                                <div class="details-languages">
+                                    <h3>Languages</h3>
+                                    <p>${details.languages.join(', ')}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    ${details.cast && details.cast.length > 0 ? `
+                        <div class="cast-section">
+                            <h2>Cast</h2>
+                            <div class="cast-list">
+                                ${details.cast.slice(0, 10).map(person => `
+                                    <div class="cast-member">
+                                        <img src="${person.profile_path ? 
+                                            `https://image.tmdb.org/t/p/w185${person.profile_path}` : 
+                                            `https://ui-avatars.com/api/?name=${person.name}&background=3b82f6&color=fff`}" 
+                                            alt="${person.name}">
+                                        <p class="cast-name">${person.name}</p>
+                                        <p class="cast-character">${person.character || person.job || ''}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${similar.length > 0 ? `
+                        <div class="similar-section">
+                            <h2>More Like This</h2>
+                            <div class="content-carousel">
+                                ${similar.map(item => app.renderContentCard(item)).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Update page title
+            document.title = `${details.title} - CineScope`;
+            
+            // Initialize components
+            app.initializeCarousels();
+            app.initializeLazyLoading();
+        }
+        
+        async function addToWatchlist(contentId) {
+            try {
+                await API.addInteraction(contentId, 'watchlist');
+                app.showToast('Added to watchlist', 'success');
+            } catch (error) {
+                app.showToast('Failed to add to watchlist', 'error');
             }
         }
-
-        // Initialize details page
-        document.addEventListener('DOMContentLoaded', () => {
-            new DetailsPage();
-        });
+        
+        async function addToFavorites(contentId) {
+            try {
+                await API.addInteraction(contentId, 'favorite');
+                app.showToast('Added to favorites', 'success');
+            } catch (error) {
+                app.showToast('Failed to add to favorites', 'error');
+            }
+        }
+        
+        // Load content on page load
+        loadContentDetails();
     </script>
+    
+    <style>
+        .details-loading {
+            min-height: 100vh;
+        }
+        
+        .skeleton-hero {
+            height: 70vh;
+            min-height: 500px;
+        }
+        
+        .skeleton-content {
+            height: 400px;
+            margin-top: -100px;
+            border-radius: 20px 20px 0 0;
+        }
+        
+        .original-title {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-md);
+        }
+        
+        .details-meta {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+            flex-wrap: wrap;
+        }
+        
+        .release-year,
+        .runtime {
+            color: var(--text-secondary);
+        }
+        
+        .details-overview {
+            margin-top: var(--space-xl);
+        }
+        
+        .details-overview h2 {
+            margin-bottom: var(--space-md);
+        }
+        
+        .details-languages {
+            margin-top: var(--space-lg);
+        }
+        
+        .details-languages h3 {
+            margin-bottom: var(--space-sm);
+        }
+        
+        .cast-section,
+        .similar-section {
+            margin-top: var(--space-2xl);
+        }
+        
+        .cast-list {
+            display: flex;
+            gap: var(--space-lg);
+            overflow-x: auto;
+            padding: var(--space-md) 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .cast-member {
+            flex-shrink: 0;
+            text-align: center;
+            width: 120px;
+        }
+        
+        .cast-member img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: var(--space-sm);
+        }
+        
+        .cast-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: var(--space-xs);
+        }
+        
+        .cast-character {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .error-state {
+            text-align: center;
+            padding: var(--space-2xl);
+            min-height: 50vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 </body>
-
 </html>

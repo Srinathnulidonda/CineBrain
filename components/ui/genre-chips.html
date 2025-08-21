@@ -1,1 +1,112 @@
-<!-- Genre tags -->
+<div class="genre-chips" data-genres="{{genres}}">
+    <!-- Genres will be dynamically inserted -->
+</div>
+
+<script>
+class GenreChips {
+    constructor(element) {
+        this.element = element;
+        this.genres = JSON.parse(element.dataset.genres || '[]');
+        this.init();
+    }
+    
+    init() {
+        this.renderChips();
+        this.setupClickHandlers();
+    }
+    
+    renderChips() {
+        const chipsHTML = this.genres.map(genre => `
+            <a href="/content/genre.html?genre=${genre.toLowerCase()}" 
+               class="genre-chip" 
+               data-genre="${genre}">
+                ${genre}
+            </a>
+        `).join('');
+        
+        this.element.innerHTML = chipsHTML;
+    }
+    
+    setupClickHandlers() {
+        this.element.querySelectorAll('.genre-chip').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.preventDefault();
+                const genre = chip.dataset.genre;
+                
+                // Navigate to genre page with animation
+                app.navigate(`/content/genre.html?genre=${genre.toLowerCase()}`);
+            });
+            
+            // Add hover effect
+            chip.addEventListener('mouseenter', () => {
+                this.preloadGenreContent(chip.dataset.genre);
+            });
+        });
+    }
+    
+    async preloadGenreContent(genre) {
+        // Preload genre content for faster navigation
+        try {
+            await API.prefetchContent([
+                `${API_ENDPOINTS.GENRES}/${genre.toLowerCase()}?limit=10`
+            ]);
+        } catch (error) {
+            // Silent fail for preloading
+        }
+    }
+}
+
+// Auto-initialize
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.genre-chips').forEach(chips => {
+        new GenreChips(chips);
+    });
+});
+</script>
+
+<style>
+.genre-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.genre-chip {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-md);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.genre-chip:hover {
+    background: var(--platinum-blue);
+    border-color: var(--platinum-blue);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.genre-chip:active {
+    transform: translateY(0);
+}
+
+/* Genre-specific colors */
+.genre-chip[data-genre="Action"] { --chip-color: #ef4444; }
+.genre-chip[data-genre="Comedy"] { --chip-color: #f59e0b; }
+.genre-chip[data-genre="Drama"] { --chip-color: #3b82f6; }
+.genre-chip[data-genre="Horror"] { --chip-color: #6b7280; }
+.genre-chip[data-genre="Romance"] { --chip-color: #ec4899; }
+.genre-chip[data-genre="Sci-Fi"] { --chip-color: #8b5cf6; }
+.genre-chip[data-genre="Thriller"] { --chip-color: #10b981; }
+
+.genre-chip:hover {
+    background: var(--chip-color, var(--platinum-blue));
+    border-color: var(--chip-color, var(--platinum-blue));
+}
+</style>

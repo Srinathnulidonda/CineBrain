@@ -1,1 +1,272 @@
-<!-- Favorites -->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Favorites - CineScope</title>
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/css/main.css" as="style">
+    <link rel="preload" href="/js/config.js" as="script">
+    <link rel="preload" href="/js/api.js" as="script">
+    <link rel="preload" href="/js/auth.js" as="script">
+    <link rel="preload" href="/js/app.js" as="script">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+    <div id="app">
+        <main id="app-content">
+            <div class="user-page container">
+                <div class="page-header">
+                    <h1>My Favorites</h1>
+                    <p>Your most loved movies and shows</p>
+                </div>
+                
+                <div class="view-toggle">
+                    <button class="view-btn active" data-view="grid">
+                        <i class="icon-grid"></i> Grid
+                    </button>
+                    <button class="view-btn" data-view="list">
+                        <i class="icon-list"></i> List
+                    </button>
+                </div>
+                
+                <div id="favorites-content" class="favorites-content">
+                    <div class="loading">
+                        <div class="loader-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+    
+    <script>
+        // Check authentication
+        if (!Auth.requireAuth()) {
+            // Will redirect to login
+        }
+        
+        let favorites = [];
+        let currentView = 'grid';
+        
+        async function loadFavorites() {
+            try {
+                const response = await API.getFavorites();
+                favorites = response.favorites || [];
+                
+                displayFavorites();
+            } catch (error) {
+                console.error('Failed to load favorites:', error);
+                document.getElementById('favorites-content').innerHTML = `
+                    <div class="error-state">
+                        <h2>Failed to load favorites</h2>
+                        <button class="btn btn-primary" onclick="loadFavorites()">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+        
+        function displayFavorites() {
+            const contentDiv = document.getElementById('favorites-content');
+            
+            if (favorites.length === 0) {
+                contentDiv.innerHTML = `
+                    <div class="empty-state">
+                        <h2>No favorites yet</h2>
+                        <p>Heart the content you love to see it here</p>
+                        <a href="/" class="btn btn-primary">Discover Content</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (currentView === 'grid') {
+                contentDiv.innerHTML = `
+                    <div class="content-grid">
+                        ${favorites.map(item => `
+                            <div class="favorite-item">
+                                ${app.renderContentCard(item)}
+                                <button class="heart-btn active" onclick="removeFromFavorites(${item.id})">
+                                    ❤️
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                contentDiv.innerHTML = `
+                    <div class="content-list">
+                        ${favorites.map(item => renderListItem(item)).join('')}
+                    </div>
+                `;
+            }
+            
+            app.initializeLazyLoading();
+        }
+        
+        function renderListItem(item) {
+            const posterUrl = item.poster_path 
+                ? (item.poster_path.startsWith('http') 
+                    ? item.poster_path 
+                    : `https://image.tmdb.org/t/p/w92${item.poster_path}`)
+                : '/images/placeholder.jpg';
+                
+            return `
+                <div class="list-item">
+                    <img src="${posterUrl}" alt="${item.title}" class="list-poster">
+                    <div class="list-info">
+                        <h3>${item.title}</h3>
+                        <p>${item.content_type} • ${item.genres ? item.genres.join(', ') : ''}</p>
+                        ${item.rating ? `<span class="rating">⭐ ${item.rating.toFixed(1)}</span>` : ''}
+                    </div>
+                    <div class="list-actions">
+                        <a href="/content/details.html?id=${item.id}" class="btn btn-secondary">View</a>
+                        <button class="btn btn-icon active" onclick="removeFromFavorites(${item.id})">
+                            ❤️
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function removeFromFavorites(contentId) {
+            try {
+                // In a real app, this would call an API to remove the item
+                favorites = favorites.filter(item => item.id !== contentId);
+                displayFavorites();
+                app.showToast('Removed from favorites', 'success');
+            } catch (error) {
+                app.showToast('Failed to remove from favorites', 'error');
+            }
+        }
+        
+        // View toggle handlers
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                currentView = e.currentTarget.dataset.view;
+                displayFavorites();
+            });
+        });
+        
+        // Load favorites on page load
+        loadFavorites();
+    </script>
+    
+    <style>
+        .view-toggle {
+            display: flex;
+            gap: var(--space-sm);
+            justify-content: center;
+            margin-bottom: var(--space-2xl);
+        }
+        
+        .view-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-lg);
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .view-btn:hover {
+            background: var(--surface-elevated);
+            color: var(--text-primary);
+        }
+        
+        .view-btn.active {
+            background: var(--primary-500);
+            color: white;
+            border-color: var(--primary-500);
+        }
+        
+        .favorite-item {
+            position: relative;
+        }
+        
+        .heart-btn {
+            position: absolute;
+            top: var(--space-sm);
+            right: var(--space-sm);
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .heart-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .heart-btn.active {
+            filter: none;
+        }
+        
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
+            padding: var(--space-lg);
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            transition: all var(--transition-fast);
+        }
+        
+        .list-item:hover {
+            background: var(--surface-tertiary);
+            transform: translateX(4px);
+        }
+        
+        .list-poster {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .list-info {
+            flex: 1;
+        }
+        
+        .list-info h3 {
+            margin-bottom: var(--space-xs);
+        }
+        
+        .list-info p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .list-actions {
+            display: flex;
+            gap: var(--space-sm);
+        }
+        
+        .icon-grid::before { content: '⊞'; }
+        .icon-list::before { content: '☰'; }
+    </style>
+</body>
+</html>

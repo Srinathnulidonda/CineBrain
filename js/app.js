@@ -1,880 +1,537 @@
-// Main Application Controller with Router, Components, and Performance
-class CineScope {
+// CineScope Main Application - Router, Controllers, Components
+class CineScopeApp {
   constructor() {
     this.currentPage = null;
     this.components = new Map();
-    this.observers = new Map();
-    this.performanceMarks = new Map();
+    this.virtualScrollInstances = new Map();
+    this.carousels = new Map();
+    this.searchDebounce = null;
     this.init();
   }
 
-  // Initialize application
   async init() {
-    this.markPerformance('app-init-start');
-
-    // Register service worker
-    await this.registerServiceWorker();
-
+    // Mark performance
+    performance.mark('app-init-start');
+    
     // Initialize router
     this.initRouter();
-
-    // Initialize global components
-    this.initGlobalComponents();
-
-    // Load current page
-    await this.loadPage();
-
-    // Setup global event listeners
-    this.setupEventListeners();
-
-    // Prefetch critical data
-    this.prefetchData();
-
-    this.markPerformance('app-init-end');
-    this.logPerformance();
+    
+    // Load components
+    await this.loadComponents();
+    
+    // Initialize UI
+    this.initializeUI();
+    
+    // Register service worker
+    this.registerServiceWorker();
+    
+    // Mark performance
+    performance.mark('app-init-end');
+    performance.measure('app-init', 'app-init-start', 'app-init-end');
+    
+    // Preload critical resources
+    this.preloadCriticalResources();
   }
 
-  // Performance marking
-  markPerformance(name) {
-    if (window.performance && window.performance.mark) {
-      window.performance.mark(name);
-      this.performanceMarks.set(name, performance.now());
-    }
-  }
-
-  // Log performance metrics
-  logPerformance() {
-    if (window.performance && window.performance.measure) {
-      try {
-        window.performance.measure('app-init', 'app-init-start', 'app-init-end');
-        const measure = window.performance.getEntriesByName('app-init')[0];
-        console.log(`App initialization: ${measure.duration.toFixed(2)}ms`);
-      } catch (e) {
-        // Ignore errors
-      }
-    }
-  }
-
-  // Service Worker Registration
-  async registerServiceWorker() {
-    if ('serviceWorker' in navigator && CONFIG.FEATURES.SERVICE_WORKER) {
-      try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        console.log('Service Worker registered:', registration);
-      } catch (error) {
-        console.warn('Service Worker registration failed:', error);
-      }
-    }
-  }
-
-  // Router initialization
   initRouter() {
-    this.router = {
-      routes: {
-        '/': 'HomePage',
-        '/auth/login.html': 'LoginPage',
-        '/auth/register.html': 'RegisterPage',
-        '/auth/forgot-password.html': 'ForgotPasswordPage',
-        '/content/search.html': 'SearchPage',
-        '/content/details.html': 'DetailsPage',
-        '/content/anime.html': 'AnimePage',
-        '/content/genre.html': 'GenrePage',
-        '/content/regional.html': 'RegionalPage',
-        '/content/trending.html': 'TrendingPage',
-        '/user/profile.html': 'ProfilePage',
-        '/user/watchlist.html': 'WatchlistPage',
-        '/user/favorites.html': 'FavoritesPage',
-        '/user/activity.html': 'ActivityPage',
-        '/user/settings.html': 'SettingsPage',
-        '/admin/index.html': 'AdminDashboard',
-        '/admin/content.html': 'AdminContent',
-        '/admin/users.html': 'AdminUsers',
-        '/admin/analytics.html': 'AdminAnalytics'
-      },
+    // Handle navigation
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('a');
+      if (link && link.href && link.href.startsWith(window.location.origin)) {
+        e.preventDefault();
+        this.navigate(link.href);
+      }
+    });
 
-      getCurrentRoute() {
-        const path = window.location.pathname;
-        // Handle username-based routes
-        const userRouteMatch = path.match(/^\/([^\/]+)\/(profile|watchlist|favorites|activity|settings)$/);
-        if (userRouteMatch) {
-          return `/user/${userRouteMatch[2]}.html`;
+    // Handle back/forward
+    window.addEventListener('popstate', () => {
+      this.loadPage();
+    });
+
+    // Initial page load
+    this.loadPage();
+  }
+
+  navigate(url) {
+    window.history.pushState(null, '', url);
+    this.loadPage();
+  }
+
+  async loadPage() {
+    const path = window.location.pathname;
+    const page = this.getPageFromPath(path);
+    
+    if (page !== this.currentPage) {
+      // Clean up previous page
+      this.cleanup();
+      
+      // Load new page
+      this.currentPage = page;
+      await this.loadPageContent(page);
+    }
+  }
+
+  getPageFromPath(path) {
+    // Route mapping
+    if (path === '/' || path === '/index.html') return 'home';
+    if (path.startsWith('/auth/')) return path.substring(6).replace('.html', '');
+    if (path.startsWith('/content/')) return path.substring(9).replace('.html', '');
+    if (path.startsWith('/admin/')) return path.substring(7).replace('.html', '');
+    
+    // User routes
+    const userMatch = path.match(/^\/([^\/]+)\/(profile|watchlist|favorites|activity|settings)/);
+    if (userMatch) {
+      return `user-${userMatch[2]}`;
+    }
+    
+    return 'home';
+  }
+
+  async loadPageContent(page) {
+    const contentArea = document.getElementById('app-content');
+    if (!contentArea) return;
+
+    // Show loading
+    this.showLoading();
+
+    try {
+      switch (page) {
+        case 'home':
+          await this.loadHomePage();
+          break;
+        case 'login':
+        case 'register':
+          await this.loadAuthPage(page);
+          break;
+        case 'search':
+          await this.loadSearchPage();
+          break;
+        case 'details':
+          await this.loadDetailsPage();
+          break;
+        case 'trending':
+          await this.loadTrendingPage();
+          break;
+        case 'genre':
+          await this.loadGenrePage();
+          break;
+        case 'regional':
+          await this.loadRegionalPage();
+          break;
+        case 'anime':
+          await this.loadAnimePage();
+          break;
+        case 'user-profile':
+        case 'user-watchlist':
+        case 'user-favorites':
+        case 'user-activity':
+        case 'user-settings':
+          await this.loadUserPage(page.replace('user-', ''));
+          break;
+        case 'admin':
+        case 'content':
+        case 'users':
+        case 'analytics':
+          await this.loadAdminPage(page);
+          break;
+        default:
+          await this.load404Page();
+      }
+    } catch (error) {
+      console.error('Page load error:', error);
+      this.showError('Failed to load page');
+    } finally {
+      this.hideLoading();
+    }
+  }
+
+  // Page Controllers
+  async loadHomePage() {
+    const isAuthenticated = Auth.isAuthenticated();
+    const content = document.getElementById('app-content');
+    
+    if (isAuthenticated) {
+      // Personalized homepage
+      const [recommendations, watchlist, trending] = await Promise.all([
+        API.getPersonalizedRecommendations(20),
+        API.getWatchlist(),
+        API.getTrending('all', 10)
+      ]);
+
+      content.innerHTML = this.renderPersonalizedHomepage({
+        recommendations: recommendations.recommendations || [],
+        watchlist: watchlist.watchlist || [],
+        trending: trending.recommendations || []
+      });
+    } else {
+      // Public homepage
+      const [trending, newReleases, criticsChoice, regionalHindi, regionalTelugu, anime] = await Promise.all([
+        API.getTrending('all', 20),
+        API.getNewReleases(null, 'movie', 20),
+        API.getCriticsChoice('movie', 20),
+        API.getRegionalContent('hindi', 'movie', 10),
+        API.getRegionalContent('telugu', 'movie', 10),
+        API.getAnimeContent(null, 10)
+      ]);
+
+      content.innerHTML = this.renderPublicHomepage({
+        trending: trending.recommendations || [],
+        newReleases: newReleases.recommendations || [],
+        criticsChoice: criticsChoice.recommendations || [],
+        regional: {
+          hindi: regionalHindi.recommendations || [],
+          telugu: regionalTelugu.recommendations || []
+        },
+        anime: anime.recommendations || []
+      });
+    }
+
+    // Initialize carousels
+    this.initializeCarousels();
+    
+    // Initialize lazy loading
+    this.initializeLazyLoading();
+  }
+
+  async loadSearchPage() {
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get('q') || '';
+    const type = params.get('type') || 'multi';
+    const page = parseInt(params.get('page')) || 1;
+
+    const content = document.getElementById('app-content');
+    
+    if (query) {
+      const results = await API.searchContent(query, type, page);
+      content.innerHTML = this.renderSearchResults(query, results);
+    } else {
+      content.innerHTML = this.renderSearchPage();
+    }
+
+    // Initialize search functionality
+    this.initializeSearch();
+  }
+
+  async loadDetailsPage() {
+    const params = new URLSearchParams(window.location.search);
+    const contentId = params.get('id');
+    
+    if (!contentId) {
+      this.navigate('/');
+      return;
+    }
+
+    const content = document.getElementById('app-content');
+    
+    const [details, similar] = await Promise.all([
+      API.getContentDetails(contentId),
+      API.getSimilarContent(contentId, 10)
+    ]);
+
+    content.innerHTML = this.renderDetailsPage(details, similar.recommendations || []);
+    
+    // Initialize video player
+    this.initializeVideoPlayer();
+    
+    // Initialize interactions
+    this.initializeInteractions(contentId);
+  }
+
+  // Component Loading
+  async loadComponents() {
+    // Load reusable components
+    const componentPaths = [
+      '/components/layout/topbar.html',
+      '/components/layout/mobile-nav.html',
+      '/components/cards/content-card.html',
+      '/components/ui/rating-badge.html'
+    ];
+
+    const loadPromises = componentPaths.map(async (path) => {
+      try {
+        const response = await fetch(path);
+        const html = await response.text();
+        const name = path.split('/').pop().replace('.html', '');
+        this.components.set(name, html);
+      } catch (error) {
+        console.error(`Failed to load component ${path}:`, error);
+      }
+    });
+
+    await Promise.all(loadPromises);
+  }
+
+  // UI Initialization
+  initializeUI() {
+    // Initialize theme
+    this.initializeTheme();
+    
+    // Initialize navigation
+    this.initializeNavigation();
+    
+    // Initialize global search
+    this.initializeGlobalSearch();
+    
+    // Initialize scroll behavior
+    this.initializeScrollBehavior();
+    
+    // Initialize touch gestures
+    this.initializeTouchGestures();
+  }
+
+  initializeTheme() {
+    const theme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+
+  initializeNavigation() {
+    // Fixed topbar
+    const topbar = document.createElement('div');
+    topbar.id = 'topbar';
+    topbar.className = 'topbar';
+    topbar.innerHTML = this.components.get('topbar') || this.renderTopbar();
+    document.body.insertBefore(topbar, document.body.firstChild);
+
+    // Mobile bottom navigation
+    if (window.innerWidth <= APP_CONFIG.BREAKPOINTS.tablet) {
+      const mobileNav = document.createElement('div');
+      mobileNav.id = 'mobile-nav';
+      mobileNav.className = 'mobile-nav';
+      mobileNav.innerHTML = this.components.get('mobile-nav') || this.renderMobileNav();
+      document.body.appendChild(mobileNav);
+    }
+
+    // Update active states
+    this.updateNavigationStates();
+  }
+
+  initializeGlobalSearch() {
+    const searchInput = document.getElementById('global-search');
+    if (!searchInput) return;
+
+    let autocompleteContainer = document.getElementById('search-autocomplete');
+    if (!autocompleteContainer) {
+      autocompleteContainer = document.createElement('div');
+      autocompleteContainer.id = 'search-autocomplete';
+      autocompleteContainer.className = 'search-autocomplete';
+      searchInput.parentElement.appendChild(autocompleteContainer);
+    }
+
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(this.searchDebounce);
+      const query = e.target.value.trim();
+      
+      if (query.length < 2) {
+        autocompleteContainer.style.display = 'none';
+        return;
+      }
+
+      this.searchDebounce = setTimeout(async () => {
+        const results = await API.searchContent(query, 'multi', 1);
+        if (results.results && results.results.length > 0) {
+          autocompleteContainer.innerHTML = this.renderAutocomplete(results.results.slice(0, 5));
+          autocompleteContainer.style.display = 'block';
+        } else {
+          autocompleteContainer.style.display = 'none';
         }
-        return path;
+      }, 300);
+    });
+
+    // Close autocomplete on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-container')) {
+        autocompleteContainer.style.display = 'none';
+      }
+    });
+  }
+
+  // Carousel Management
+  initializeCarousels() {
+    const carousels = document.querySelectorAll('.content-carousel');
+    carousels.forEach((carousel, index) => {
+      const instance = new ContentCarousel(carousel);
+      this.carousels.set(`carousel-${index}`, instance);
+    });
+  }
+
+  // Virtual Scrolling for Performance
+  initializeVirtualScroll(container, items, renderItem) {
+    const instance = new VirtualScroll(container, items, renderItem);
+    this.virtualScrollInstances.set(container.id, instance);
+    return instance;
+  }
+
+  // Lazy Loading
+  initializeLazyLoading() {
+    const images = document.querySelectorAll('img[data-src]');
+    const imageObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          img.src = img.dataset.src;
+          img.removeAttribute('data-src');
+          imageObserver.unobserve(img);
+        }
+      });
+    });
+
+    images.forEach(img => imageObserver.observe(img));
+  }
+
+  // Touch Gestures
+  initializeTouchGestures() {
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    document.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    });
+
+    document.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      this.handleSwipe();
+    });
+
+    this.handleSwipe = () => {
+      const swipeThreshold = 50;
+      const diff = touchStartX - touchEndX;
+      
+      if (Math.abs(diff) > swipeThreshold) {
+        if (diff > 0) {
+          // Swipe left
+          this.handleSwipeLeft();
+        } else {
+          // Swipe right
+          this.handleSwipeRight();
+        }
       }
     };
   }
 
-  // Load current page
-  async loadPage() {
-    const route = this.router.getCurrentRoute();
-    const pageClass = this.router.routes[route];
+  // Performance Optimization
+  async preloadCriticalResources() {
+    // Preload critical API data
+    const preloadUrls = [
+      API_ENDPOINTS.TRENDING,
+      API_ENDPOINTS.NEW_RELEASES
+    ];
 
-    if (pageClass && this[`init${pageClass}`]) {
-      this.currentPage = pageClass;
-      await this[`init${pageClass}`]();
+    await API.prefetchContent(preloadUrls);
+
+    // Preload critical images
+    const criticalImages = [
+      '/images/logo.png',
+      '/images/placeholder.jpg'
+    ];
+
+    await API.preloadImages(criticalImages);
+  }
+
+  // Service Worker
+  async registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('/sw.js');
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+      }
     }
   }
 
-  // Initialize global components
-  initGlobalComponents() {
-    // Initialize navigation
-    this.initNavigation();
-
-    // Initialize theme manager
-    this.initThemeManager();
-
-    // Initialize lazy loading
-    this.initLazyLoading();
-
-    // Initialize infinite scroll
-    this.initInfiniteScroll();
-
-    // Initialize toast notifications
-    this.initToastNotifications();
-  }
-
-  // Navigation initialization
-  initNavigation() {
-    // Desktop navigation
-    const topbar = document.getElementById('topbar');
-    if (topbar) {
-      this.components.set('topbar', new TopbarComponent(topbar));
-    }
-
-    // Mobile navigation
-    const mobileNav = document.getElementById('mobile-nav');
-    if (mobileNav) {
-      this.components.set('mobileNav', new MobileNavComponent(mobileNav));
-    }
-  }
-
-  // Theme manager
-  initThemeManager() {
-    const theme = localStorage.getItem('theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', theme);
-
-    // Theme toggle handler
-    document.querySelectorAll('[data-theme-toggle]').forEach(toggle => {
-      toggle.addEventListener('click', () => {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-      });
-    });
-  }
-
-  // Lazy loading with Intersection Observer
-  initLazyLoading() {
-    const lazyImages = document.querySelectorAll('[data-lazy]');
-
-    if ('IntersectionObserver' in window) {
-      const imageObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const img = entry.target;
-            img.src = img.dataset.lazy;
-            img.removeAttribute('data-lazy');
-            imageObserver.unobserve(img);
-          }
-        });
-      }, {
-        rootMargin: `${CONFIG.LAZY_LOAD_OFFSET}px`
-      });
-
-      lazyImages.forEach(img => imageObserver.observe(img));
-      this.observers.set('lazyImages', imageObserver);
-    }
-  }
-
-  // Infinite scroll
-  initInfiniteScroll() {
-    const scrollContainers = document.querySelectorAll('[data-infinite-scroll]');
-
-    scrollContainers.forEach(container => {
-      const scrollObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const loadMore = container.dataset.infiniteScroll;
-            if (this[loadMore]) {
-              this[loadMore]();
-            }
-          }
-        });
-      }, {
-        rootMargin: `${CONFIG.INFINITE_SCROLL_THRESHOLD}px`
-      });
-
-      const sentinel = document.createElement('div');
-      sentinel.className = 'infinite-scroll-sentinel';
-      container.appendChild(sentinel);
-      scrollObserver.observe(sentinel);
-
-      this.observers.set(`infiniteScroll-${container.id}`, scrollObserver);
-    });
-  }
-
-  // Toast notifications
-  initToastNotifications() {
-    if (!document.getElementById('toast-container')) {
-      const toastContainer = document.createElement('div');
-      toastContainer.id = 'toast-container';
-      toastContainer.className = 'toast-container';
-      document.body.appendChild(toastContainer);
-    }
-  }
-
-  // Show toast notification
+  // Toast Notifications
   showToast(message, type = 'info', duration = 3000) {
-    const toastContainer = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
-
-    toastContainer.appendChild(toast);
-
-    // Animate in
-    requestAnimationFrame(() => {
-      toast.classList.add('toast-visible');
-    });
-
-    // Remove after duration
+    
+    document.body.appendChild(toast);
+    
     setTimeout(() => {
-      toast.classList.remove('toast-visible');
-      setTimeout(() => toast.remove(), CONFIG.ANIMATION_DURATION);
+      toast.classList.add('show');
+    }, 100);
+    
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
     }, duration);
   }
 
-  // Setup global event listeners
-  setupEventListeners() {
-    // Search functionality
-    this.setupSearch();
-
-    // Haptic feedback for mobile
-    if (CONFIG.FEATURES.HAPTIC_FEEDBACK && 'vibrate' in navigator) {
-      document.querySelectorAll('button, a, [data-haptic]').forEach(element => {
-        element.addEventListener('touchstart', () => {
-          navigator.vibrate(10);
-        });
-      });
-    }
-
-    // Pull to refresh
-    this.setupPullToRefresh();
-
-    // Keyboard shortcuts
-    this.setupKeyboardShortcuts();
-  }
-
-  // Search setup
-  setupSearch() {
-    const searchInputs = document.querySelectorAll('[data-search-input]');
-    const searchResults = document.querySelector('[data-search-results]');
-
-    searchInputs.forEach(input => {
-      let debounceTimer;
-
-      input.addEventListener('input', (e) => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(async () => {
-          const query = e.target.value.trim();
-          if (query.length >= 2) {
-            await this.performSearch(query, searchResults);
-          } else if (searchResults) {
-            searchResults.innerHTML = '';
-            searchResults.classList.remove('active');
-          }
-        }, CONFIG.DEBOUNCE_DELAY);
-      });
-    });
-  }
-
-  // Perform search with real API
-  async performSearch(query, resultsContainer) {
-    try {
-      const results = await apiClient.get(CONFIG.API_ENDPOINTS.SEARCH, {
-        query,
-        limit: 5
-      });
-
-      if (resultsContainer && results.results) {
-        this.renderSearchResults(results.results, resultsContainer);
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-    }
-  }
-
-  // Render search results
-  renderSearchResults(results, container) {
-    container.innerHTML = results.map(item => `
-      <a href="/content/details.html?id=${item.id}" class="search-result-item">
-        <img src="${item.poster_path || '/images/placeholder.jpg'}" 
-             alt="${item.title}" 
-             loading="lazy">
-        <div class="search-result-info">
-          <h4>${item.title}</h4>
-          <p>${item.content_type} • ${item.rating ? `⭐ ${item.rating}` : 'Not rated'}</p>
-        </div>
-      </a>
-    `).join('');
-
-    container.classList.add('active');
-  }
-
-  // Pull to refresh
-  setupPullToRefresh() {
-    if (!('ontouchstart' in window)) return;
-
-    let startY = 0;
-    let currentY = 0;
-    let pulling = false;
-
-    document.addEventListener('touchstart', (e) => {
-      if (window.scrollY === 0) {
-        startY = e.touches[0].pageY;
-        pulling = true;
-      }
-    });
-
-    document.addEventListener('touchmove', (e) => {
-      if (!pulling) return;
-
-      currentY = e.touches[0].pageY;
-      const pullDistance = currentY - startY;
-
-      if (pullDistance > 0 && pullDistance < 150) {
-        e.preventDefault();
-        document.body.style.transform = `translateY(${pullDistance}px)`;
-      }
-    });
-
-    document.addEventListener('touchend', async () => {
-      if (!pulling) return;
-
-      const pullDistance = currentY - startY;
-      pulling = false;
-
-      if (pullDistance > 100) {
-        document.body.style.transform = 'translateY(50px)';
-        await this.refreshCurrentPage();
-      }
-
-      document.body.style.transform = '';
-    });
-  }
-
-  // Refresh current page
-  async refreshCurrentPage() {
-    apiClient.clearCache();
-    await this.loadPage();
-    this.showToast('Content refreshed', 'success');
-  }
-
-  // Keyboard shortcuts
-  setupKeyboardShortcuts() {
-    document.addEventListener('keydown', (e) => {
-      // Ctrl/Cmd + K for search
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        const searchInput = document.querySelector('[data-search-input]');
-        if (searchInput) searchInput.focus();
-      }
-
-      // Escape to close modals
-      if (e.key === 'Escape') {
-        this.closeAllModals();
-      }
-    });
-  }
-
-  // Close all modals
-  closeAllModals() {
-    document.querySelectorAll('.modal.active').forEach(modal => {
-      modal.classList.remove('active');
-    });
-  }
-
-  // Prefetch critical data
-  async prefetchData() {
-    if (auth.isAuthenticated()) {
-      apiClient.prefetch([
-        CONFIG.API_ENDPOINTS.RECOMMENDATIONS,
-        CONFIG.API_ENDPOINTS.WATCHLIST,
-        CONFIG.API_ENDPOINTS.FAVORITES
-      ]);
-    } else {
-      apiClient.prefetch([
-        CONFIG.API_ENDPOINTS.TRENDING,
-        CONFIG.API_ENDPOINTS.POPULAR
-      ]);
-    }
-  }
-
-  // Page initializers
-  async initHomePage() {
-    const isAuthenticated = auth.isAuthenticated();
-
-    if (isAuthenticated) {
-      await this.loadPersonalizedHome();
-    } else {
-      await this.loadPublicHome();
-    }
-  }
-
-  async loadPublicHome() {
-    // Load hero section
-    const hero = new HeroCarousel(document.getElementById('hero-carousel'));
-    await hero.load();
-
-    // Load content sections
-    const sections = [
-      { id: 'trending', endpoint: CONFIG.API_ENDPOINTS.TRENDING, title: "What's Hot 🔥" },
-      { id: 'new-releases', endpoint: CONFIG.API_ENDPOINTS.NEW_RELEASES, title: 'New Releases' },
-      { id: 'critics-choice', endpoint: CONFIG.API_ENDPOINTS.CRITICS_CHOICE, title: "Critics' Choice" },
-      { id: 'admin-choice', endpoint: CONFIG.API_ENDPOINTS.ADMIN_CHOICE, title: "Admin's Picks" }
-    ];
-
-    for (const section of sections) {
-      const container = document.getElementById(section.id);
-      if (container) {
-        const carousel = new ContentCarousel(container, {
-          endpoint: section.endpoint,
-          title: section.title
-        });
-        await carousel.load();
-        this.components.set(section.id, carousel);
-      }
-    }
-
-    // Load genre sections
-    const genres = ['Action', 'Comedy', 'Drama', 'Thriller', 'Romance', 'Sci-Fi'];
-    for (const genre of genres) {
-      const container = document.getElementById(`genre-${genre.toLowerCase()}`);
-      if (container) {
-        const carousel = new ContentCarousel(container, {
-          endpoint: `${CONFIG.API_ENDPOINTS.GENRES}/${genre.toLowerCase()}`,
-          title: genre
-        });
-        await carousel.load();
-      }
-    }
-
-    // Load regional content
-    const regions = ['Telugu', 'Hindi', 'Tamil', 'Kannada'];
-    for (const region of regions) {
-      const container = document.getElementById(`regional-${region.toLowerCase()}`);
-      if (container) {
-        const carousel = new ContentCarousel(container, {
-          endpoint: `${CONFIG.API_ENDPOINTS.REGIONAL}/${region.toLowerCase()}`,
-          title: `${region} Cinema`
-        });
-        await carousel.load();
-      }
-    }
-  }
-
-  async loadPersonalizedHome() {
-    const user = auth.getUser();
-
-    // Update welcome message
-    const welcomeMessage = document.getElementById('welcome-message');
-    if (welcomeMessage) {
-      welcomeMessage.textContent = `Welcome back, ${user.username}!`;
-    }
-
-    // Load personalized hero
-    const hero = new HeroCarousel(document.getElementById('hero-carousel'), {
-      personalized: true
-    });
-    await hero.load();
-
-    // Load personalized sections
-    const sections = [
-      { id: 'recommended', endpoint: CONFIG.API_ENDPOINTS.ML_RECOMMENDATIONS, title: 'Recommended for You' },
-      { id: 'continue-watching', endpoint: CONFIG.API_ENDPOINTS.WATCH_HISTORY, title: 'Continue Watching' },
-      { id: 'watchlist-preview', endpoint: CONFIG.API_ENDPOINTS.WATCHLIST, title: 'From Your Watchlist' },
-      { id: 'trending-genres', endpoint: CONFIG.API_ENDPOINTS.TRENDING, title: 'Trending in Your Genres' }
-    ];
-
-    for (const section of sections) {
-      const container = document.getElementById(section.id);
-      if (container) {
-        const carousel = new ContentCarousel(container, {
-          endpoint: section.endpoint,
-          title: section.title,
-          personalized: true
-        });
-        await carousel.load();
-        this.components.set(section.id, carousel);
-      }
-    }
-
-    // Load "Because you liked" sections
-    await this.loadSimilarRecommendations();
-  }
-
-  async loadSimilarRecommendations() {
-    try {
-      const favorites = await apiClient.get(CONFIG.API_ENDPOINTS.FAVORITES, { limit: 3 });
-
-      if (favorites.favorites && favorites.favorites.length > 0) {
-        const container = document.getElementById('similar-recommendations');
-
-        for (const favorite of favorites.favorites) {
-          const section = document.createElement('section');
-          section.className = 'content-section';
-          section.innerHTML = `<h2>Because you liked ${favorite.title}</h2>`;
-
-          const carousel = document.createElement('div');
-          carousel.className = 'content-carousel';
-          section.appendChild(carousel);
-          container.appendChild(section);
-
-          const similarCarousel = new ContentCarousel(carousel, {
-            endpoint: `${CONFIG.API_ENDPOINTS.SIMILAR}/${favorite.id}`,
-            title: ''
-          });
-          await similarCarousel.load();
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load similar recommendations:', error);
-    }
-  }
-
-  // Component Classes
-}
-
-// Hero Carousel Component
-class HeroCarousel {
-  constructor(container, options = {}) {
-    this.container = container;
-    this.options = options;
-    this.currentIndex = 0;
-    this.items = [];
-    this.autoPlayInterval = null;
-  }
-
-  async load() {
-    try {
-      const endpoint = this.options.personalized
-        ? CONFIG.API_ENDPOINTS.ML_RECOMMENDATIONS
-        : CONFIG.API_ENDPOINTS.TRENDING;
-
-      const data = await apiClient.get(endpoint, { limit: 5, content_type: 'movie' });
-      this.items = data.recommendations || data.results || [];
-
-      if (this.items.length > 0) {
-        this.render();
-        this.startAutoPlay();
-      }
-    } catch (error) {
-      console.error('Failed to load hero carousel:', error);
-    }
-  }
-
-  render() {
-    this.container.innerHTML = `
-      <div class="hero-slides">
-        ${this.items.map((item, index) => `
-          <div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
-            <div class="hero-backdrop" style="background-image: url('${item.backdrop_path || item.poster_path}')"></div>
-            <div class="hero-content">
-              <h1 class="hero-title">${item.title}</h1>
-              <div class="hero-meta">
-                <span class="hero-rating">⭐ ${item.rating || 'N/A'}</span>
-                <span class="hero-type">${item.content_type}</span>
-                ${item.genres ? `<span class="hero-genres">${item.genres.slice(0, 3).join(', ')}</span>` : ''}
-              </div>
-              <p class="hero-overview">${item.overview || ''}</p>
-              <div class="hero-actions">
-                <button class="btn btn-primary" onclick="app.playTrailer(${item.id})">
-                  <i class="icon-play"></i> Play Trailer
-                </button>
-                <button class="btn btn-secondary" onclick="app.showDetails(${item.id})">
-                  <i class="icon-info"></i> More Info
-                </button>
-                <button class="btn btn-icon" onclick="app.addToWatchlist(${item.id})" data-haptic>
-                  <i class="icon-plus"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="hero-indicators">
-        ${this.items.map((_, index) => `
-          <button class="hero-indicator ${index === 0 ? 'active' : ''}" 
-                  onclick="app.components.get('hero').goToSlide(${index})"
-                  data-index="${index}"></button>
-        `).join('')}
-      </div>
-    `;
-  }
-
-  startAutoPlay() {
-    this.autoPlayInterval = setInterval(() => {
-      this.nextSlide();
-    }, 5000);
-  }
-
-  stopAutoPlay() {
-    if (this.autoPlayInterval) {
-      clearInterval(this.autoPlayInterval);
-      this.autoPlayInterval = null;
-    }
-  }
-
-  nextSlide() {
-    this.goToSlide((this.currentIndex + 1) % this.items.length);
-  }
-
-  goToSlide(index) {
-    const slides = this.container.querySelectorAll('.hero-slide');
-    const indicators = this.container.querySelectorAll('.hero-indicator');
-
-    slides[this.currentIndex].classList.remove('active');
-    indicators[this.currentIndex].classList.remove('active');
-
-    this.currentIndex = index;
-
-    slides[this.currentIndex].classList.add('active');
-    indicators[this.currentIndex].classList.add('active');
-  }
-}
-
-// Content Carousel Component
-class ContentCarousel {
-  constructor(container, options = {}) {
-    this.container = container;
-    this.options = options;
-    this.items = [];
-    this.currentPage = 1;
-    this.loading = false;
-  }
-
-  async load() {
-    if (this.loading) return;
-
-    this.loading = true;
-    this.showLoading();
-
-    try {
-      const params = {
-        page: this.currentPage,
-        limit: 20
-      };
-
-      if (this.options.personalized) {
-        params.personalized = true;
-      }
-
-      const data = await apiClient.get(this.options.endpoint, params);
-      this.items = data.recommendations || data.results || data.watchlist || data.favorites || [];
-
-      this.render();
-    } catch (error) {
-      console.error('Failed to load carousel:', error);
-      this.showError();
-    } finally {
-      this.loading = false;
-    }
-  }
-
-  render() {
-    this.container.innerHTML = `
-      ${this.options.title ? `<h2 class="section-title">${this.options.title}</h2>` : ''}
-      <div class="carousel-wrapper">
-        <button class="carousel-nav carousel-nav-prev" onclick="this.parentElement.scrollBy(-300, 0)">
-          <i class="icon-chevron-left"></i>
-        </button>
-        <div class="carousel-track">
-          ${this.items.map(item => this.renderCard(item)).join('')}
-        </div>
-        <button class="carousel-nav carousel-nav-next" onclick="this.parentElement.scrollBy(300, 0)">
-          <i class="icon-chevron-right"></i>
-        </button>
-      </div>
-    `;
-
-    // Setup horizontal scroll with mouse wheel
-    const track = this.container.querySelector('.carousel-track');
-    track.addEventListener('wheel', (e) => {
-      if (e.deltaY !== 0) {
-        e.preventDefault();
-        track.scrollBy(e.deltaY, 0);
-      }
-    });
-  }
-
-  renderCard(item) {
-    return `
-      <div class="content-card" data-id="${item.id}">
-        <a href="/content/details.html?id=${item.id}" class="content-card-link">
-          <div class="content-card-image">
-            <img src="${item.poster_path || '/images/placeholder.jpg'}" 
-                 alt="${item.title}"
-                 loading="lazy">
-            ${item.youtube_trailer ? `
-              <button class="content-card-play" onclick="event.preventDefault(); app.playTrailer(${item.id})">
-                <i class="icon-play"></i>
-              </button>
-            ` : ''}
-          </div>
-          <div class="content-card-info">
-            <h3 class="content-card-title">${item.title}</h3>
-            <div class="content-card-meta">
-              ${item.rating ? `<span class="rating-badge">⭐ ${item.rating}</span>` : ''}
-              <span class="type-badge">${item.content_type}</span>
-            </div>
-          </div>
-        </a>
-        <div class="content-card-actions">
-          <button class="btn-icon" onclick="app.toggleWatchlist(${item.id})" title="Add to Watchlist" data-haptic>
-            <i class="icon-bookmark"></i>
-          </button>
-          <button class="btn-icon" onclick="app.toggleFavorite(${item.id})" title="Add to Favorites" data-haptic>
-            <i class="icon-heart"></i>
-          </button>
-        </div>
-      </div>
-    `;
-  }
-
+  // Loading States
   showLoading() {
-    this.container.innerHTML = `
-      <div class="carousel-loading">
-        ${Array(5).fill(0).map(() => `
-          <div class="skeleton-card">
-            <div class="skeleton skeleton-image"></div>
-            <div class="skeleton skeleton-title"></div>
-            <div class="skeleton skeleton-meta"></div>
-          </div>
-        `).join('')}
-      </div>
-    `;
+    const loader = document.getElementById('app-loader');
+    if (loader) loader.style.display = 'flex';
   }
 
-  showError() {
-    this.container.innerHTML = `
-      <div class="error-message">
-        <p>Failed to load content. Please try again.</p>
-        <button class="btn btn-primary" onclick="location.reload()">Retry</button>
-      </div>
-    `;
-  }
-}
-
-// Navigation Components
-class TopbarComponent {
-  constructor(element) {
-    this.element = element;
-    this.init();
+  hideLoading() {
+    const loader = document.getElementById('app-loader');
+    if (loader) loader.style.display = 'none';
   }
 
-  init() {
-    this.render();
-    this.setupSearch();
-    this.updateUserAvatar();
+  showError(message) {
+    this.showToast(message, 'error');
   }
 
-  render() {
-    const user = auth.getUser();
+  // Cleanup
+  cleanup() {
+    // Clear carousels
+    this.carousels.forEach(carousel => carousel.destroy());
+    this.carousels.clear();
+    
+    // Clear virtual scroll instances
+    this.virtualScrollInstances.forEach(instance => instance.destroy());
+    this.virtualScrollInstances.clear();
+    
+    // Clear event listeners
+    clearTimeout(this.searchDebounce);
+  }
 
-    this.element.innerHTML = `
-      <div class="topbar-container">
-        <a href="/" class="topbar-logo">
-          <img src="/images/logo.svg" alt="CineScope">
+  // Render Methods
+  renderTopbar() {
+    const user = Auth.getUser();
+    return `
+      <div class="topbar-content">
+        <a href="/" class="logo">
+          <span class="logo-text">CineScope</span>
         </a>
         
-        <div class="topbar-search">
-          <input type="text" 
-                 class="search-input" 
-                 placeholder="Search movies, shows, anime..."
-                 data-search-input>
+        <div class="search-container">
+          <input type="text" id="global-search" placeholder="Search movies, shows, anime..." />
           <i class="icon-search"></i>
         </div>
         
         <div class="topbar-actions">
           ${user ? `
-            <a href="${auth.getProfileUrl()}" class="topbar-avatar">
-              <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=fff" 
-                   alt="${user.username}">
+            <a href="${Auth.getUserRoute('/profile')}" class="user-avatar">
+              <img src="https://ui-avatars.com/api/?name=${user.username}&background=3b82f6&color=fff" alt="${user.username}" />
             </a>
           ` : `
             <a href="/auth/login.html" class="btn btn-primary">Sign In</a>
           `}
-          <button class="btn-icon" data-theme-toggle>
-            <i class="icon-moon"></i>
-          </button>
         </div>
       </div>
-      <div class="search-results" data-search-results></div>
     `;
   }
 
-  setupSearch() {
-    const searchInput = this.element.querySelector('[data-search-input]');
-    const searchResults = this.element.querySelector('[data-search-results]');
-
-    if (searchInput) {
-      searchInput.addEventListener('focus', () => {
-        this.element.classList.add('search-active');
-      });
-
-      document.addEventListener('click', (e) => {
-        if (!this.element.contains(e.target)) {
-          this.element.classList.remove('search-active');
-        }
-      });
-    }
-  }
-
-  updateUserAvatar() {
-    const user = auth.getUser();
-    if (user) {
-      const avatar = this.element.querySelector('.topbar-avatar img');
-      if (avatar) {
-        avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=fff&cache=${Date.now()}`;
-      }
-    }
-  }
-}
-
-class MobileNavComponent {
-  constructor(element) {
-    this.element = element;
-    this.init();
-  }
-
-  init() {
-    this.render();
-    this.updateActiveTab();
-  }
-
-  render() {
-    const user = auth.getUser();
-
-    this.element.innerHTML = `
-      <nav class="mobile-nav-container">
-        <a href="/" class="mobile-nav-item" data-nav="home">
+  renderMobileNav() {
+    return `
+      <nav class="mobile-nav-content">
+        <a href="/" class="nav-item ${this.currentPage === 'home' ? 'active' : ''}">
           <i class="icon-home"></i>
           <span>Home</span>
         </a>
-        <a href="/content/search.html" class="mobile-nav-item" data-nav="search">
+        <a href="/content/search.html" class="nav-item ${this.currentPage === 'search' ? 'active' : ''}">
           <i class="icon-search"></i>
           <span>Search</span>
         </a>
-        <a href="${user ? '/user/watchlist.html' : '/auth/login.html'}" class="mobile-nav-item" data-nav="watchlist">
+        <a href="${Auth.getUserRoute('/watchlist')}" class="nav-item ${this.currentPage === 'user-watchlist' ? 'active' : ''}">
           <i class="icon-bookmark"></i>
           <span>Watchlist</span>
         </a>
-        <a href="${user ? '/user/favorites.html' : '/auth/login.html'}" class="mobile-nav-item" data-nav="favorites">
+        <a href="${Auth.getUserRoute('/favorites')}" class="nav-item ${this.currentPage === 'user-favorites' ? 'active' : ''}">
           <i class="icon-heart"></i>
           <span>Favorites</span>
         </a>
-        <a href="${user ? auth.getProfileUrl() : '/auth/login.html'}" class="mobile-nav-item" data-nav="profile">
+        <a href="${Auth.getUserRoute('/profile')}" class="nav-item ${this.currentPage === 'user-profile' ? 'active' : ''}">
           <i class="icon-user"></i>
           <span>Profile</span>
         </a>
@@ -882,121 +539,392 @@ class MobileNavComponent {
     `;
   }
 
-  updateActiveTab() {
-    const currentPath = window.location.pathname;
-    const items = this.element.querySelectorAll('.mobile-nav-item');
+  renderPublicHomepage(data) {
+    return `
+      <div class="homepage">
+        ${this.renderHeroSection(data.trending[0])}
+        
+        <section class="content-section">
+          <h2 class="section-title">What's Hot</h2>
+          <div class="content-carousel">
+            ${data.trending.map(item => this.renderContentCard(item)).join('')}
+          </div>
+        </section>
+        
+        <section class="content-section">
+          <h2 class="section-title">New Releases</h2>
+          <div class="content-carousel">
+            ${data.newReleases.map(item => this.renderContentCard(item)).join('')}
+          </div>
+        </section>
+        
+        <section class="content-section">
+          <h2 class="section-title">Critics' Choice</h2>
+          <div class="content-carousel">
+            ${data.criticsChoice.map(item => this.renderContentCard(item)).join('')}
+          </div>
+        </section>
+        
+        <section class="content-section">
+          <h2 class="section-title">Regional Cinema</h2>
+          <div class="tabs">
+            <button class="tab active" data-tab="hindi">Hindi</button>
+            <button class="tab" data-tab="telugu">Telugu</button>
+          </div>
+          <div class="tab-content">
+            <div class="tab-pane active" id="hindi">
+              <div class="content-carousel">
+                ${data.regional.hindi.map(item => this.renderContentCard(item)).join('')}
+              </div>
+            </div>
+            <div class="tab-pane" id="telugu">
+              <div class="content-carousel">
+                ${data.regional.telugu.map(item => this.renderContentCard(item)).join('')}
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <section class="content-section">
+          <h2 class="section-title">Anime Collection</h2>
+          <div class="content-carousel">
+            ${data.anime.map(item => this.renderContentCard(item)).join('')}
+          </div>
+        </section>
+      </div>
+    `;
+  }
 
-    items.forEach(item => {
-      item.classList.remove('active');
-      const href = item.getAttribute('href');
-      if (href === currentPath || (currentPath === '/' && item.dataset.nav === 'home')) {
+  renderHeroSection(content) {
+    if (!content) return '';
+    
+    const backdropUrl = content.backdrop_path 
+      ? `https://image.tmdb.org/t/p/w1280${content.backdrop_path}`
+      : content.poster_path;
+      
+    return `
+      <section class="hero-section" style="background-image: url('${backdropUrl}')">
+        <div class="hero-gradient">
+          <div class="hero-content">
+            <h1 class="hero-title">${content.title}</h1>
+            <div class="hero-meta">
+              ${content.rating ? `<span class="rating">⭐ ${content.rating.toFixed(1)}</span>` : ''}
+              ${content.genres ? `<span class="genres">${content.genres.slice(0, 3).join(', ')}</span>` : ''}
+            </div>
+            <p class="hero-overview">${content.overview || ''}</p>
+            <div class="hero-actions">
+              <button class="btn btn-primary" onclick="app.playTrailer('${content.youtube_trailer}')">
+                <i class="icon-play"></i> Play Trailer
+              </button>
+              <a href="/content/details.html?id=${content.id}" class="btn btn-secondary">
+                <i class="icon-info"></i> More Info
+              </a>
+              ${Auth.isAuthenticated() ? `
+                <button class="btn btn-icon" onclick="app.addToWatchlist(${content.id})">
+                  <i class="icon-bookmark"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  renderContentCard(content) {
+    const posterUrl = content.poster_path 
+      ? (content.poster_path.startsWith('http') 
+          ? content.poster_path 
+          : `https://image.tmdb.org/t/p/w300${content.poster_path}`)
+      : '/images/placeholder.jpg';
+      
+    return `
+      <div class="content-card">
+        <a href="/content/details.html?id=${content.id}">
+          <div class="card-poster">
+            <img data-src="${posterUrl}" alt="${content.title}" class="lazy" />
+            ${content.rating ? `
+              <div class="card-rating">
+                <span>⭐ ${content.rating.toFixed(1)}</span>
+              </div>
+            ` : ''}
+          </div>
+          <div class="card-info">
+            <h3 class="card-title">${content.title}</h3>
+            <p class="card-meta">${content.content_type} • ${content.genres ? content.genres.slice(0, 2).join(', ') : ''}</p>
+          </div>
+        </a>
+      </div>
+    `;
+  }
+
+  renderAutocomplete(results) {
+    return results.map(item => `
+      <a href="/content/details.html?id=${item.id}" class="autocomplete-item">
+        <img src="${item.poster_path ? `https://image.tmdb.org/t/p/w92${item.poster_path}` : '/images/placeholder.jpg'}" alt="${item.title}" />
+        <div class="autocomplete-info">
+          <div class="autocomplete-title">${item.title}</div>
+          <div class="autocomplete-meta">${item.content_type} • ${item.rating ? `⭐ ${item.rating.toFixed(1)}` : 'N/A'}</div>
+        </div>
+      </a>
+    `).join('');
+  }
+
+  // Public methods for inline handlers
+  playTrailer(trailerUrl) {
+    if (!trailerUrl) {
+      this.showToast('Trailer not available', 'error');
+      return;
+    }
+    
+    // Open trailer in modal
+    const modal = document.createElement('div');
+    modal.className = 'trailer-modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <button class="modal-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        <iframe src="${trailerUrl.replace('watch?v=', 'embed/')}" frameborder="0" allowfullscreen></iframe>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  async addToWatchlist(contentId) {
+    if (!Auth.isAuthenticated()) {
+      this.navigate('/auth/login.html');
+      return;
+    }
+    
+    try {
+      await API.addInteraction(contentId, 'watchlist');
+      this.showToast('Added to watchlist', 'success');
+    } catch (error) {
+      this.showToast('Failed to add to watchlist', 'error');
+    }
+  }
+
+  async addToFavorites(contentId) {
+    if (!Auth.isAuthenticated()) {
+      this.navigate('/auth/login.html');
+      return;
+    }
+    
+    try {
+      await API.addInteraction(contentId, 'favorite');
+      this.showToast('Added to favorites', 'success');
+    } catch (error) {
+      this.showToast('Failed to add to favorites', 'error');
+    }
+  }
+
+  updateNavigationStates() {
+    // Update topbar
+    const topbarLinks = document.querySelectorAll('.topbar a');
+    topbarLinks.forEach(link => {
+      if (link.href === window.location.href) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
+
+    // Update mobile nav
+    const mobileNavItems = document.querySelectorAll('.mobile-nav .nav-item');
+    mobileNavItems.forEach(item => {
+      if (item.href === window.location.href) {
         item.classList.add('active');
+      } else {
+        item.classList.remove('active');
       }
     });
   }
+
+  handleSwipeLeft() {
+    // Navigate to next item in carousel if focused
+    const activeCarousel = document.querySelector('.content-carousel:hover');
+    if (activeCarousel) {
+      const carouselId = Array.from(this.carousels.keys()).find(key => 
+        this.carousels.get(key).container === activeCarousel
+      );
+      if (carouselId) {
+        this.carousels.get(carouselId).next();
+      }
+    }
+  }
+
+  handleSwipeRight() {
+    // Navigate to previous item in carousel if focused
+    const activeCarousel = document.querySelector('.content-carousel:hover');
+    if (activeCarousel) {
+      const carouselId = Array.from(this.carousels.keys()).find(key => 
+        this.carousels.get(key).container === activeCarousel
+      );
+      if (carouselId) {
+        this.carousels.get(carouselId).prev();
+      }
+    }
+  }
 }
 
-// Application methods for global actions
-CineScope.prototype.playTrailer = async function (contentId) {
-  try {
-    const details = await apiClient.get(`${CONFIG.API_ENDPOINTS.CONTENT_DETAILS}/${contentId}`);
-
-    if (details.youtube_trailer) {
-      this.showTrailerModal(details);
-    } else {
-      this.showToast('Trailer not available', 'warning');
-    }
-  } catch (error) {
-    this.showToast('Failed to load trailer', 'error');
+// Content Carousel Class
+class ContentCarousel {
+  constructor(container) {
+    this.container = container;
+    this.items = container.querySelectorAll('.content-card');
+    this.currentIndex = 0;
+    this.itemsPerPage = this.calculateItemsPerPage();
+    this.init();
   }
-};
 
-CineScope.prototype.showTrailerModal = function (content) {
-  const modal = document.createElement('div');
-  modal.className = 'modal trailer-modal active';
-  modal.innerHTML = `
-    <div class="modal-backdrop" onclick="app.closeModal(this.parentElement)"></div>
-    <div class="modal-content">
-      <button class="modal-close" onclick="app.closeModal(this.closest('.modal'))">
-        <i class="icon-x"></i>
-      </button>
-      <div class="video-wrapper">
-        <iframe src="https://www.youtube.com/embed/${content.youtube_trailer.split('v=')[1]}?autoplay=1" 
-                frameborder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowfullscreen></iframe>
-      </div>
-      <div class="modal-info">
-        <h2>${content.title}</h2>
-        <p>${content.overview}</p>
-      </div>
-    </div>
-  `;
+  init() {
+    // Add navigation buttons
+    this.prevBtn = document.createElement('button');
+    this.prevBtn.className = 'carousel-nav carousel-prev';
+    this.prevBtn.innerHTML = '‹';
+    this.prevBtn.onclick = () => this.prev();
+    
+    this.nextBtn = document.createElement('button');
+    this.nextBtn.className = 'carousel-nav carousel-next';
+    this.nextBtn.innerHTML = '›';
+    this.nextBtn.onclick = () => this.next();
+    
+    this.container.appendChild(this.prevBtn);
+    this.container.appendChild(this.nextBtn);
+    
+    // Setup touch support
+    this.setupTouch();
+    
+    // Update on resize
+    window.addEventListener('resize', () => {
+      this.itemsPerPage = this.calculateItemsPerPage();
+      this.updatePosition();
+    });
+  }
 
-  document.body.appendChild(modal);
-  document.body.style.overflow = 'hidden';
-};
+  calculateItemsPerPage() {
+    const containerWidth = this.container.offsetWidth;
+    const itemWidth = 200; // Base item width
+    return Math.floor(containerWidth / itemWidth);
+  }
 
-CineScope.prototype.closeModal = function (modal) {
-  modal.classList.remove('active');
-  setTimeout(() => modal.remove(), CONFIG.ANIMATION_DURATION);
-  document.body.style.overflow = '';
-};
+  prev() {
+    this.currentIndex = Math.max(0, this.currentIndex - this.itemsPerPage);
+    this.updatePosition();
+  }
 
-CineScope.prototype.showDetails = function (contentId) {
-  window.location.href = `/content/details.html?id=${contentId}`;
-};
+  next() {
+    const maxIndex = Math.max(0, this.items.length - this.itemsPerPage);
+    this.currentIndex = Math.min(maxIndex, this.currentIndex + this.itemsPerPage);
+    this.updatePosition();
+  }
 
-CineScope.prototype.toggleWatchlist = async function (contentId) {
-  if (!auth.requireAuth()) return;
+  updatePosition() {
+    const offset = this.currentIndex * (100 / this.itemsPerPage);
+    this.container.style.transform = `translateX(-${offset}%)`;
+    
+    // Update button states
+    this.prevBtn.disabled = this.currentIndex === 0;
+    this.nextBtn.disabled = this.currentIndex >= this.items.length - this.itemsPerPage;
+  }
 
-  try {
-    await apiClient.post(CONFIG.API_ENDPOINTS.INTERACTIONS, {
-      content_id: contentId,
-      interaction_type: 'watchlist'
+  setupTouch() {
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+
+    this.container.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      isDragging = true;
     });
 
-    this.showToast('Added to watchlist', 'success');
-    this.updateCardState(contentId, 'watchlist', true);
-  } catch (error) {
-    this.showToast('Failed to update watchlist', 'error');
-  }
-};
-
-CineScope.prototype.toggleFavorite = async function (contentId) {
-  if (!auth.requireAuth()) return;
-
-  try {
-    await apiClient.post(CONFIG.API_ENDPOINTS.INTERACTIONS, {
-      content_id: contentId,
-      interaction_type: 'favorite'
+    this.container.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      currentX = e.touches[0].clientX;
+      const diff = startX - currentX;
+      this.container.style.transform = `translateX(calc(-${this.currentIndex * (100 / this.itemsPerPage)}% - ${diff}px))`;
     });
 
-    this.showToast('Added to favorites', 'success');
-    this.updateCardState(contentId, 'favorite', true);
-  } catch (error) {
-    this.showToast('Failed to update favorites', 'error');
+    this.container.addEventListener('touchend', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      const diff = startX - currentX;
+      
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) {
+          this.next();
+        } else {
+          this.prev();
+        }
+      } else {
+        this.updatePosition();
+      }
+    });
   }
-};
 
-CineScope.prototype.updateCardState = function (contentId, type, state) {
-  const card = document.querySelector(`[data-id="${contentId}"]`);
-  if (card) {
-    const button = card.querySelector(type === 'watchlist' ? '.icon-bookmark' : '.icon-heart');
-    if (button) {
-      button.parentElement.classList.toggle('active', state);
+  destroy() {
+    // Cleanup
+    this.prevBtn.remove();
+    this.nextBtn.remove();
+  }
+}
+
+// Virtual Scroll Class for Performance
+class VirtualScroll {
+  constructor(container, items, renderItem) {
+    this.container = container;
+    this.items = items;
+    this.renderItem = renderItem;
+    this.itemHeight = 300; // Estimated height
+    this.visibleItems = [];
+    this.init();
+  }
+
+  init() {
+    this.container.style.position = 'relative';
+    this.container.style.height = `${this.items.length * this.itemHeight}px`;
+    
+    this.viewport = document.createElement('div');
+    this.viewport.className = 'virtual-scroll-viewport';
+    this.container.appendChild(this.viewport);
+    
+    this.container.addEventListener('scroll', () => this.handleScroll());
+    this.render();
+  }
+
+  handleScroll() {
+    cancelAnimationFrame(this.scrollFrame);
+    this.scrollFrame = requestAnimationFrame(() => this.render());
+  }
+
+  render() {
+    const scrollTop = this.container.scrollTop;
+    const containerHeight = this.container.clientHeight;
+    
+    const startIndex = Math.floor(scrollTop / this.itemHeight);
+    const endIndex = Math.ceil((scrollTop + containerHeight) / this.itemHeight);
+    
+    // Clear previous items
+    this.visibleItems.forEach(item => item.remove());
+    this.visibleItems = [];
+    
+    // Render visible items
+    for (let i = startIndex; i < endIndex && i < this.items.length; i++) {
+      const itemEl = this.renderItem(this.items[i], i);
+      itemEl.style.position = 'absolute';
+      itemEl.style.top = `${i * this.itemHeight}px`;
+      this.viewport.appendChild(itemEl);
+      this.visibleItems.push(itemEl);
     }
   }
-};
 
-// Initialize app on DOM ready
-let app;
-document.addEventListener('DOMContentLoaded', () => {
-  app = new CineScope();
-  window.app = app; // Make available globally
-});
+  destroy() {
+    this.container.removeEventListener('scroll', this.handleScroll);
+    this.viewport.remove();
+  }
+}
 
-// Handle navigation for SPAs
-window.addEventListener('popstate', () => {
-  app.loadPage();
-});
+// Initialize app
+const app = new CineScopeApp();
+
+// Export for global access
+window.app = app;

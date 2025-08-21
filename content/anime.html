@@ -1,1 +1,255 @@
-<!-- Anime category -->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Anime - CineScope</title>
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/css/main.css" as="style">
+    <link rel="preload" href="/js/config.js" as="script">
+    <link rel="preload" href="/js/api.js" as="script">
+    <link rel="preload" href="/js/auth.js" as="script">
+    <link rel="preload" href="/js/app.js" as="script">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+    <div id="app">
+        <main id="app-content">
+            <div class="anime-page container">
+                <div class="page-header">
+                    <h1>Anime Collection</h1>
+                    <p>Explore the best of Japanese animation</p>
+                    
+                    <div class="anime-genres">
+                        <button class="genre-btn active" data-genre="">All Anime</button>
+                        <button class="genre-btn" data-genre="shonen">Shonen</button>
+                        <button class="genre-btn" data-genre="shojo">Shojo</button>
+                        <button class="genre-btn" data-genre="seinen">Seinen</button>
+                        <button class="genre-btn" data-genre="josei">Josei</button>
+                    </div>
+                </div>
+                
+                <div id="anime-sections" class="anime-sections">
+                    <!-- Dynamic content will be loaded here -->
+                    <div class="loading">
+                        <div class="loader-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+    
+    <script>
+        let currentGenre = '';
+        
+        async function loadAnimeContent(genre = '') {
+            currentGenre = genre;
+            const sectionsDiv = document.getElementById('anime-sections');
+            
+            // Show loading
+            sectionsDiv.innerHTML = '<div class="loading"><div class="loader-spinner"></div></div>';
+            
+            try {
+                if (genre) {
+                    // Load specific genre
+                    const animeData = await API.getAnimeContent(genre, 20);
+                    
+                    if (animeData.recommendations && animeData.recommendations.length > 0) {
+                        sectionsDiv.innerHTML = `
+                            <section class="anime-section">
+                                <h2>${genre.charAt(0).toUpperCase() + genre.slice(1)} Anime</h2>
+                                <div class="content-grid">
+                                    ${animeData.recommendations.map(item => renderAnimeCard(item)).join('')}
+                                </div>
+                            </section>
+                        `;
+                    } else {
+                        sectionsDiv.innerHTML = `
+                            <div class="empty-state">
+                                <h2>No anime found in this category</h2>
+                                <p>Try exploring other genres</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    // Load all categories
+                    const [trending, shonen, seinen] = await Promise.all([
+                        API.getAnimeContent(null, 10),
+                        API.getAnimeContent('shonen', 10),
+                        API.getAnimeContent('seinen', 10)
+                    ]);
+                    
+                    sectionsDiv.innerHTML = `
+                        ${trending.recommendations && trending.recommendations.length > 0 ? `
+                            <section class="anime-section">
+                                <h2>Trending Anime</h2>
+                                <div class="content-carousel">
+                                    ${trending.recommendations.map(item => renderAnimeCard(item)).join('')}
+                                </div>
+                            </section>
+                        ` : ''}
+                        
+                        ${shonen.recommendations && shonen.recommendations.length > 0 ? `
+                            <section class="anime-section">
+                                <h2>Popular Shonen</h2>
+                                <div class="content-carousel">
+                                    ${shonen.recommendations.map(item => renderAnimeCard(item)).join('')}
+                                </div>
+                            </section>
+                        ` : ''}
+                        
+                        ${seinen.recommendations && seinen.recommendations.length > 0 ? `
+                            <section class="anime-section">
+                                <h2>Top Seinen</h2>
+                                <div class="content-carousel">
+                                    ${seinen.recommendations.map(item => renderAnimeCard(item)).join('')}
+                                </div>
+                            </section>
+                        ` : ''}
+                    `;
+                }
+                
+                // Initialize components
+                app.initializeCarousels();
+                app.initializeLazyLoading();
+                
+            } catch (error) {
+                sectionsDiv.innerHTML = `
+                    <div class="error-state">
+                        <h2>Failed to load anime content</h2>
+                        <button class="btn btn-primary" onclick="loadAnimeContent('${genre}')">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderAnimeCard(anime) {
+            const posterUrl = anime.poster_path || '/images/placeholder.jpg';
+            
+            return `
+                <div class="anime-card content-card">
+                    <a href="/content/details.html?id=${anime.id}">
+                        <div class="card-poster">
+                            <img data-src="${posterUrl}" alt="${anime.title}" class="lazy" />
+                            ${anime.rating ? `
+                                <div class="card-rating">
+                                    <span>⭐ ${anime.rating.toFixed(1)}</span>
+                                </div>
+                            ` : ''}
+                            <div class="anime-badge">ANIME</div>
+                        </div>
+                        <div class="card-info">
+                            <h3 class="card-title">${anime.title}</h3>
+                            ${anime.original_title && anime.original_title !== anime.title ? 
+                                `<p class="original-title">${anime.original_title}</p>` : ''}
+                            <p class="card-meta">
+                                ${anime.genres ? anime.genres.slice(0, 2).join(', ') : 'Anime'}
+                            </p>
+                        </div>
+                    </a>
+                </div>
+            `;
+        }
+        
+        // Genre button handlers
+        document.querySelectorAll('.genre-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Update active state
+                document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // Load content
+                const genre = e.target.dataset.genre;
+                loadAnimeContent(genre);
+            });
+        });
+        
+        // Initial load
+        loadAnimeContent();
+    </script>
+    
+    <style>
+        .anime-page {
+            padding-top: var(--space-2xl);
+            min-height: 100vh;
+        }
+        
+        .anime-genres {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .genre-btn {
+            padding: var(--space-sm) var(--space-lg);
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 24px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .genre-btn:hover {
+            background: var(--surface-elevated);
+            color: var(--text-primary);
+        }
+        
+        .genre-btn.active {
+            background: var(--royal-purple);
+            color: white;
+            border-color: var(--royal-purple);
+        }
+        
+        .anime-section {
+            margin-bottom: var(--space-2xl);
+        }
+        
+        .anime-section h2 {
+            margin-bottom: var(--space-lg);
+        }
+        
+        .anime-badge {
+            position: absolute;
+            top: var(--space-sm);
+            left: var(--space-sm);
+            background: var(--royal-purple);
+            color: white;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .anime-card .original-title {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-top: var(--space-xs);
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+        }
+    </style>
+</body>
+</html>

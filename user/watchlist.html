@@ -1,16 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Watchlist - CineScope</title>
-
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/css/main.css" as="style">
     <link rel="preload" href="/js/config.js" as="script">
     <link rel="preload" href="/js/api.js" as="script">
     <link rel="preload" href="/js/auth.js" as="script">
     <link rel="preload" href="/js/app.js" as="script">
-
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/layouts.css">
@@ -18,61 +20,195 @@
     <link rel="stylesheet" href="/css/responsive.css">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
-
 <body>
-    <div id="topbar"></div>
-
-    <main id="main-content">
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
-            <p>Loading your watchlist...</p>
-        </div>
-    </main>
-
-    <div id="mobile-nav"></div>
-
+    <div id="app">
+        <main id="app-content">
+            <div class="user-page container">
+                <div class="page-header">
+                    <h1>My Watchlist</h1>
+                    <p>Movies and shows you want to watch</p>
+                </div>
+                
+                <div class="watchlist-filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="movie">Movies</button>
+                    <button class="filter-btn" data-filter="tv">TV Shows</button>
+                    <button class="filter-btn" data-filter="anime">Anime</button>
+                </div>
+                
+                <div id="watchlist-content" class="watchlist-content">
+                    <div class="loading">
+                        <div class="loader-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Scripts -->
     <script src="/js/config.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/app.js"></script>
+    
     <script>
-        // Page-specific logic for watchlist
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (!Auth.isAuthenticated()) {
-                window.location.href = '/auth/login.html';
-                return;
-            }
-
+        // Check authentication
+        if (!Auth.requireAuth()) {
+            // Will redirect to login
+        }
+        
+        let allItems = [];
+        let currentFilter = 'all';
+        
+        async function loadWatchlist() {
             try {
-                const watchlist = await API.user.getWatchlist();
-                const mainContent = document.querySelector('#main-content');
-
-                if (watchlist.watchlist && watchlist.watchlist.length > 0) {
-                    mainContent.innerHTML = `
-                        <div class="container">
-                            <h1>My Watchlist</h1>
-                            <div class="content-grid">
-                                ${watchlist.watchlist.map(item =>
-                        App.components.render('content-card', item)
-                    ).join('')}
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    mainContent.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">📺</div>
-                            <h3>Your watchlist is empty</h3>
-                            <p>Start adding movies and shows you want to watch!</p>
-                            <a href="/" class="btn-primary">Browse Content</a>
-                        </div>
-                    `;
-                }
+                const response = await API.getWatchlist();
+                allItems = response.watchlist || [];
+                
+                displayWatchlist();
             } catch (error) {
                 console.error('Failed to load watchlist:', error);
+                document.getElementById('watchlist-content').innerHTML = `
+                    <div class="error-state">
+                        <h2>Failed to load watchlist</h2>
+                        <button class="btn btn-primary" onclick="loadWatchlist()">Try Again</button>
+                    </div>
+                `;
             }
+        }
+        
+        function displayWatchlist() {
+            const contentDiv = document.getElementById('watchlist-content');
+            
+            // Filter items
+            const filteredItems = currentFilter === 'all' 
+                ? allItems 
+                : allItems.filter(item => item.content_type === currentFilter);
+            
+            if (filteredItems.length === 0) {
+                contentDiv.innerHTML = `
+                    <div class="empty-state">
+                        <h2>${currentFilter === 'all' ? 'Your watchlist is empty' : `No ${currentFilter}s in your watchlist`}</h2>
+                        <p>Add movies and shows you want to watch later</p>
+                        <a href="/content/trending.html" class="btn btn-primary">Browse Trending</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            contentDiv.innerHTML = `
+                <div class="content-grid">
+                    ${filteredItems.map(item => `
+                        <div class="watchlist-item">
+                            ${app.renderContentCard(item)}
+                            <button class="remove-btn" onclick="removeFromWatchlist(${item.id})">
+                                Remove
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            app.initializeLazyLoading();
+        }
+        
+        async function removeFromWatchlist(contentId) {
+            if (!confirm('Remove from watchlist?')) return;
+            
+            try {
+                // In a real app, this would call an API to remove the item
+                allItems = allItems.filter(item => item.id !== contentId);
+                displayWatchlist();
+                app.showToast('Removed from watchlist', 'success');
+            } catch (error) {
+                app.showToast('Failed to remove from watchlist', 'error');
+            }
+        }
+        
+        // Filter handlers
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentFilter = e.target.dataset.filter;
+                displayWatchlist();
+            });
         });
+        
+        // Load watchlist on page load
+        loadWatchlist();
     </script>
+    
+    <style>
+        .watchlist-filters {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            margin-bottom: var(--space-2xl);
+        }
+        
+        .filter-btn {
+            padding: var(--space-sm) var(--space-lg);
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 24px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .filter-btn:hover {
+            background: var(--surface-elevated);
+            color: var(--text-primary);
+        }
+        
+        .filter-btn.active {
+            background: var(--primary-500);
+            color: white;
+            border-color: var(--primary-500);
+        }
+        
+        .watchlist-item {
+            position: relative;
+        }
+        
+        .remove-btn {
+            position: absolute;
+            top: var(--space-sm);
+            right: var(--space-sm);
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            padding: var(--space-xs) var(--space-md);
+            border-radius: 4px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+        
+        .watchlist-item:hover .remove-btn {
+            opacity: 1;
+        }
+        
+        .remove-btn:hover {
+            background: #dc2626;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--space-2xl);
+        }
+        
+        .empty-state h2 {
+            margin-bottom: var(--space-md);
+        }
+        
+        .empty-state p {
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xl);
+        }
+    </style>
 </body>
-
 </html>

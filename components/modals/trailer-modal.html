@@ -1,1 +1,267 @@
-<!-- Trailer modal -->
+<div class="trailer-modal" id="trailer-modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeTrailerModal()"></div>
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeTrailerModal()">×</button>
+        <div class="video-container">
+            <iframe id="trailer-iframe" 
+                    src="" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+            </iframe>
+        </div>
+        <div class="trailer-info">
+            <h3 id="trailer-title"></h3>
+            <div class="trailer-actions">
+                <button class="btn btn-primary" id="watch-now-btn">
+                    Watch Full Movie
+                </button>
+                <button class="btn btn-secondary" id="add-watchlist-btn">
+                    Add to Watchlist
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+class TrailerModal {
+    constructor() {
+        this.modal = document.getElementById('trailer-modal');
+        this.iframe = document.getElementById('trailer-iframe');
+        this.titleElement = document.getElementById('trailer-title');
+        this.watchNowBtn = document.getElementById('watch-now-btn');
+        this.addWatchlistBtn = document.getElementById('add-watchlist-btn');
+        
+        this.currentContent = null;
+        this.init();
+    }
+    
+    init() {
+        // Keyboard events
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isOpen()) {
+                this.close();
+            }
+        });
+        
+        // Prevent scroll when modal is open
+        this.modal.addEventListener('wheel', (e) => {
+            e.preventDefault();
+        });
+    }
+    
+    async open(trailerUrl, contentId = null) {
+        // Convert YouTube URL to embed format
+        const videoId = this.extractYouTubeId(trailerUrl);
+        if (!videoId) {
+            app.showToast('Invalid trailer URL', 'error');
+            return;
+        }
+        
+        // Set iframe source with autoplay
+        this.iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+        
+        // Load content details if ID provided
+        if (contentId) {
+            try {
+                this.currentContent = await API.getContentDetails(contentId);
+                this.titleElement.textContent = this.currentContent.title;
+                
+                // Setup action buttons
+                this.setupActionButtons();
+            } catch (error) {
+                console.error('Failed to load content details:', error);
+            }
+        }
+        
+        // Show modal
+        this.modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // Analytics
+        this.trackTrailerView(contentId);
+    }
+    
+    close() {
+        // Stop video
+        this.iframe.src = '';
+        
+        // Hide modal
+        this.modal.style.display = 'none';
+        document.body.style.overflow = '';
+        
+        // Clear content
+        this.currentContent = null;
+        this.titleElement.textContent = '';
+    }
+    
+    isOpen() {
+        return this.modal.style.display !== 'none';
+    }
+    
+    extractYouTubeId(url) {
+        const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/;
+        const match = url.match(regex);
+        return match ? match[1] : null;
+    }
+    
+    setupActionButtons() {
+        if (!this.currentContent) return;
+        
+        // Watch now button
+        this.watchNowBtn.onclick = () => {
+            if (Auth.isAuthenticated()) {
+                // In a real app, this would start playback
+                app.showToast('Full playback coming soon!', 'info');
+            } else {
+                sessionStorage.setItem('redirectAfterLogin', `/content/details.html?id=${this.currentContent.id}`);
+                window.location.href = '/auth/login.html';
+            }
+        };
+        
+        // Add to watchlist button
+        this.addWatchlistBtn.onclick = async () => {
+            if (Auth.isAuthenticated()) {
+                try {
+                    await API.addInteraction(this.currentContent.id, 'watchlist');
+                    app.showToast('Added to watchlist', 'success');
+                    this.addWatchlistBtn.textContent = 'In Watchlist';
+                    this.addWatchlistBtn.disabled = true;
+                } catch (error) {
+                    app.showToast('Failed to add to watchlist', 'error');
+                }
+            } else {
+                sessionStorage.setItem('redirectAfterLogin', window.location.href);
+                window.location.href = '/auth/login.html';
+            }
+        };
+    }
+    
+    async trackTrailerView(contentId) {
+        if (!contentId) return;
+        
+        try {
+            // Track trailer view
+            await API.request(`${BASE_URL}/interactions`, {
+                method: 'POST',
+                data: {
+                    content_id: contentId,
+                    interaction_type: 'trailer_view'
+                }
+            });
+        } catch (error) {
+            // Silent fail for analytics
+        }
+    }
+}
+
+// Create global instance
+window.trailerModal = new TrailerModal();
+
+// Global functions for inline handlers
+function closeTrailerModal() {
+    window.trailerModal.close();
+}
+
+function playTrailer(url, contentId) {
+    window.trailerModal.open(url, contentId);
+}
+</script>
+
+<style>
+.trailer-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: var(--space-xl);
+    animation: fadeIn var(--transition-fast);
+}
+
+.modal-overlay {
+    position: absolute;
+    inset: 0;
+}
+
+.modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    background: var(--theater-dark);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-2xl);
+}
+
+.modal-close {
+    position: absolute;
+    top: var(--space-md);
+    right: var(--space-md);
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 1;
+    transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: rotate(90deg);
+}
+
+.video-container {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.trailer-info {
+    padding: var(--space-xl);
+    background: var(--theater-dark);
+}
+
+.trailer-info h3 {
+    margin-bottom: var(--space-md);
+}
+
+.trailer-actions {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .trailer-modal {
+        padding: 0;
+    }
+    
+    .modal-content {
+        border-radius: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .video-container {
+        flex: 1;
+    }
+}
+</style>
