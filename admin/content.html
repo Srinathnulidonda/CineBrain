@@ -3,457 +3,246 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Content Management - CineScope Admin</title>
 
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="/assets/css/base.css" rel="stylesheet">
-    <link href="/assets/css/components.css" rel="stylesheet">
-    <link href="/assets/css/layouts.css" rel="stylesheet">
-    <link href="/assets/css/animations.css" rel="stylesheet">
-    <link href="/assets/css/responsive.css" rel="stylesheet">
-    <link href="/assets/css/utilities.css" rel="stylesheet">
+    <link rel="preload" href="/js/config.js" as="script">
+    <link rel="preload" href="/js/api.js" as="script">
+    <link rel="preload" href="/js/auth.js" as="script">
+    <link rel="preload" href="/js/app.js" as="script">
+
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
+
+    <style>
+        .admin-search-section {
+            background: var(--theater-dark);
+            padding: var(--spacing-xl);
+            border-radius: 12px;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .search-form {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .search-form input {
+            flex: 1;
+        }
+
+        .external-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .external-item {
+            background: var(--velvet-dark);
+            padding: var(--spacing-md);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .external-item img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .recommendation-form {
+            background: var(--theater-dark);
+            padding: var(--spacing-xl);
+            border-radius: 12px;
+            margin-top: var(--spacing-xl);
+        }
+    </style>
 </head>
 
 <body>
-    <div class="app-layout">
-        <!-- Navigation -->
-        <nav class="navbar">
-            <div class="container navbar__container">
-                <a href="/" class="navbar__logo">CineScope Admin</a>
+    <div id="topbar"></div>
 
-                <div class="navbar__menu">
-                    <a href="/admin/index.html" class="navbar__link">Dashboard</a>
-                    <a href="/admin/content.html" class="navbar__link navbar__link--active">Content</a>
-                    <a href="/admin/recommendations.html" class="navbar__link">Recommendations</a>
-                    <a href="/admin/analytics.html" class="navbar__link">Analytics</a>
+    <main id="main-content">
+        <div class="container">
+            <h1>Content Management</h1>
+
+            <div class="admin-search-section">
+                <h2>Search External Content</h2>
+                <div class="search-form">
+                    <input type="text" id="external-search" class="form-input"
+                        placeholder="Search movies, TV shows, anime...">
+                    <select id="search-source" class="form-input" style="width: auto;">
+                        <option value="tmdb">TMDB</option>
+                        <option value="anime">Anime (MAL)</option>
+                    </select>
+                    <button class="btn-primary" onclick="searchExternal()">Search</button>
                 </div>
+                <div id="external-results"></div>
+            </div>
 
-                <div class="navbar__user">
-                    <span class="text-sm text-muted me-md">Admin Panel</span>
-                    <button class="btn btn-sm btn-secondary" onclick="auth.logout()">
-                        <i class="bi bi-box-arrow-right"></i> Logout
-                    </button>
+            <div id="recommendation-section" style="display: none;">
+                <div class="recommendation-form">
+                    <h2>Create Admin Recommendation</h2>
+                    <form id="recommendation-form">
+                        <input type="hidden" id="content-id">
+                        <div class="form-group">
+                            <label class="form-label">Content Title</label>
+                            <input type="text" id="content-title" class="form-input" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Recommendation Type</label>
+                            <select id="rec-type" class="form-input">
+                                <option value="admin_choice">Admin's Choice</option>
+                                <option value="hidden_gem">Hidden Gem</option>
+                                <option value="must_watch">Must Watch</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea id="rec-description" class="form-input" rows="4"
+                                placeholder="Why do you recommend this?"></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">Create Recommendation & Post to Telegram</button>
+                    </form>
                 </div>
             </div>
-        </nav>
 
-        <!-- Admin Layout -->
-        <div class="admin-layout">
-            <!-- Sidebar -->
-            <aside class="admin-sidebar">
-                <div class="sidebar__section">
-                    <h3 class="sidebar__title">Quick Actions</h3>
-                    <nav class="sidebar__nav">
-                        <a href="#" onclick="showAddContentModal()" class="sidebar__link">
-                            <i class="bi bi-plus-circle"></i> Add Content
-                        </a>
-                        <a href="#" onclick="showBulkImportModal()" class="sidebar__link">
-                            <i class="bi bi-cloud-upload"></i> Bulk Import
-                        </a>
-                    </nav>
-                </div>
-
-                <div class="sidebar__section">
-                    <h3 class="sidebar__title">Navigation</h3>
-                    <nav class="sidebar__nav">
-                        <a href="/admin/index.html" class="sidebar__link">
-                            <i class="bi bi-speedometer2"></i> Dashboard
-                        </a>
-                        <a href="/admin/content.html" class="sidebar__link sidebar__link--active">
-                            <i class="bi bi-collection-play"></i> Content Management
-                        </a>
-                        <a href="/admin/recommendations.html" class="sidebar__link">
-                            <i class="bi bi-award"></i> Recommendations
-                        </a>
-                        <a href="/admin/analytics.html" class="sidebar__link">
-                            <i class="bi bi-graph-up"></i> Analytics
-                        </a>
-                    </nav>
-                </div>
-            </aside>
-
-            <!-- Main Content -->
-            <main class="admin-content">
-                <div class="admin-header">
-                    <h1>Content Management</h1>
-                    <div class="d-flex gap-sm">
-                        <button class="btn btn-primary" onclick="showAddContentModal()">
-                            <i class="bi bi-plus"></i> Add Content
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Search and Filters -->
-                <div class="bg-secondary rounded-lg p-lg mb-lg">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <input type="text" class="form-control" placeholder="Search content..." id="searchInput">
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-control" id="typeFilter">
-                                <option value="">All Types</option>
-                                <option value="movie">Movies</option>
-                                <option value="tv">TV Shows</option>
-                                <option value="anime">Anime</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-control" id="statusFilter">
-                                <option value="">All Status</option>
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="pending">Pending</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <button class="btn btn-secondary w-100" onclick="applyFilters()">
-                                <i class="bi bi-funnel"></i> Apply Filters
-                            </button>
-                        </div>
-                        <div class="col-md-2">
-                            <button class="btn btn-secondary w-100" onclick="resetFilters()">
-                                <i class="bi bi-arrow-clockwise"></i> Reset
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Content Stats -->
-                <div class="row mb-lg">
-                    <div class="col-md-3">
-                        <div class="admin-stat-card">
-                            <div class="admin-stat-card__label">Total Content</div>
-                            <div class="admin-stat-card__value" id="totalContent">0</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="admin-stat-card">
-                            <div class="admin-stat-card__label">Movies</div>
-                            <div class="admin-stat-card__value" id="totalMovies">0</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="admin-stat-card">
-                            <div class="admin-stat-card__label">TV Shows</div>
-                            <div class="admin-stat-card__value" id="totalShows">0</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="admin-stat-card">
-                            <div class="admin-stat-card__label">Anime</div>
-                            <div class="admin-stat-card__value" id="totalAnime">0</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Content Table -->
-                <div class="bg-secondary rounded-lg p-lg">
-                    <div class="table-responsive">
-                        <table class="table table-dark">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Title</th>
-                                    <th>Type</th>
-                                    <th>Rating</th>
-                                    <th>Release Date</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="contentTableBody">
-                                <tr>
-                                    <td colspan="7" class="text-center">
-                                        <div class="spinner mx-auto"></div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Pagination -->
-                    <div class="pagination justify-center mt-lg" id="pagination">
-                        <!-- Dynamic pagination -->
-                    </div>
-                </div>
-            </main>
-        </div>
-    </div>
-
-    <!-- Add Content Modal -->
-    <div class="modal" id="addContentModal">
-        <div class="modal__content" style="max-width: 600px;">
-            <div class="modal__header">
-                <h3 class="modal__title">Add New Content</h3>
-                <button class="modal__close" onclick="hideAddContentModal()">
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="modal__body">
-                <form id="addContentForm">
-                    <div class="row">
-                        <div class="col-md-6 mb-lg">
-                            <label class="auth-form__label">Source</label>
-                            <select class="form-control" id="contentSource" required>
-                                <option value="tmdb">TMDB</option>
-                                <option value="anime">Anime (Jikan)</option>
-                                <option value="manual">Manual Entry</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-lg">
-                            <label class="auth-form__label">Content Type</label>
-                            <select class="form-control" id="contentType" required>
-                                <option value="movie">Movie</option>
-                                <option value="tv">TV Show</option>
-                                <option value="anime">Anime</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mb-lg">
-                        <label class="auth-form__label">Search / Title</label>
-                        <input type="text" class="form-control" id="contentSearchInput"
-                            placeholder="Search for content or enter title" required>
-                    </div>
-
-                    <div id="searchResults" class="mb-lg">
-                        <!-- Dynamic search results -->
-                    </div>
-
-                    <div class="d-flex gap-sm">
-                        <button type="submit" class="btn btn-primary">
-                            Add Content
-                        </button>
-                        <button type="button" class="btn btn-secondary" onclick="hideAddContentModal()">
-                            Cancel
-                        </button>
-                    </div>
-                </form>
+            <div class="page-section">
+                <h2>Recent Admin Recommendations</h2>
+                <div id="recent-recommendations"></div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
+    <div id="mobile-nav"></div>
 
-    <!-- Scripts -->
-    <script src="/assets/js/core/config.js"></script>
-    <script src="/assets/js/core/storage.js"></script>
-    <script src="/assets/js/core/api.js"></script>
-    <script src="/assets/js/core/auth.js"></script>
-    <script src="/assets/js/core/router.js"></script>
-
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
     <script>
-        // Check admin authentication
-        if (!auth.requireAdmin()) {
-            // Will redirect if not admin
-        }
+        let selectedContent = null;
 
-        let contentData = [];
-        let currentPage = 1;
+        async function searchExternal() {
+            const query = document.getElementById('external-search').value;
+            const source = document.getElementById('search-source').value;
 
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', () => {
-            loadContentData();
-            setupSearch();
-        });
-
-        async function loadContentData() {
-            // Simulate loading content data
-            // In production, this would fetch from API
-            const mockData = [
-                { id: 1, title: 'Avatar: The Way of Water', type: 'movie', rating: 8.2, release_date: '2022-12-16', status: 'active' },
-                { id: 2, title: 'The Last of Us', type: 'tv', rating: 8.9, release_date: '2023-01-15', status: 'active' },
-                { id: 3, title: 'Attack on Titan', type: 'anime', rating: 9.0, release_date: '2013-04-07', status: 'active' },
-                { id: 4, title: 'Oppenheimer', type: 'movie', rating: 8.5, release_date: '2023-07-21', status: 'active' },
-                { id: 5, title: 'Breaking Bad', type: 'tv', rating: 9.5, release_date: '2008-01-20', status: 'inactive' }
-            ];
-
-            contentData = mockData;
-            updateStats();
-            renderTable();
-        }
-
-        function updateStats() {
-            document.getElementById('totalContent').textContent = contentData.length;
-            document.getElementById('totalMovies').textContent = contentData.filter(c => c.type === 'movie').length;
-            document.getElementById('totalShows').textContent = contentData.filter(c => c.type === 'tv').length;
-            document.getElementById('totalAnime').textContent = contentData.filter(c => c.type === 'anime').length;
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('contentTableBody');
-
-            if (contentData.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="text-center text-muted">No content found</td>
-                    </tr>
-                `;
-                return;
-            }
-
-            tbody.innerHTML = contentData.map(item => `
-                <tr>
-                    <td>${item.id}</td>
-                    <td>
-                        <strong>${item.title}</strong>
-                    </td>
-                    <td>
-                        <span class="badge bg-gradient-primary">${item.type.toUpperCase()}</span>
-                    </td>
-                    <td>
-                        <i class="bi bi-star-fill text-gold"></i> ${item.rating}
-                    </td>
-                    <td>${new Date(item.release_date).toLocaleDateString()}</td>
-                    <td>
-                        <span class="badge ${item.status === 'active' ? 'bg-success' : 'bg-secondary'}">
-                            ${item.status}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="d-flex gap-xs">
-                            <button class="btn btn-sm btn-secondary" onclick="editContent(${item.id})">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-secondary" onclick="viewContent(${item.id})">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-secondary text-error" onclick="deleteContent(${item.id})">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function setupSearch() {
-            let searchTimeout;
-
-            document.getElementById('contentSearchInput').addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                const query = e.target.value.trim();
-
-                if (query.length >= 2) {
-                    searchTimeout = setTimeout(() => {
-                        searchExternalContent(query);
-                    }, 500);
-                }
-            });
-        }
-
-        async function searchExternalContent(query) {
-            const source = document.getElementById('contentSource').value;
-            const resultsDiv = document.getElementById('searchResults');
-
-            resultsDiv.innerHTML = '<div class="spinner mx-auto"></div>';
+            if (!query) return;
 
             try {
-                const response = await api.adminSearch(query, source);
+                const results = await API.admin.searchExternal(query, source);
+                const resultsContainer = document.getElementById('external-results');
 
-                if (response.results.length === 0) {
-                    resultsDiv.innerHTML = '<p class="text-muted">No results found</p>';
-                    return;
+                if (results.results && results.results.length > 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="external-results">
+                            ${results.results.map(item => `
+                                <div class="external-item">
+                                    <img src="${item.poster_path || '/images/placeholder.jpg'}" alt="${item.title}">
+                                    <h4>${item.title}</h4>
+                                    <p>${item.content_type} • ${item.rating || 'N/A'} ⭐</p>
+                                    <button class="btn-primary" onclick="selectContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                        Select
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = '<p>No results found</p>';
                 }
+            } catch (error) {
+                App.showToast('Search failed', 'error');
+            }
+        }
 
-                resultsDiv.innerHTML = `
-                    <div class="content-search-results">
-                        ${response.results.slice(0, 5).map(item => `
-                            <div class="search-result-item p-sm bg-tertiary rounded mb-sm cursor-pointer"
-                                 onclick="selectContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                                <div class="d-flex gap-md">
-                                    <img src="${item.poster_path || '/assets/images/placeholder-poster.jpg'}" 
-                                         style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;">
-                                    <div>
-                                        <p class="font-weight-semibold mb-xs">${item.title}</p>
-                                        <p class="text-xs text-muted">${item.release_date || 'N/A'} • ${item.content_type}</p>
+        async function selectContent(content) {
+            selectedContent = content;
+
+            // First save the content
+            try {
+                const savedContent = await API.admin.saveContent(content);
+
+                document.getElementById('content-id').value = savedContent.content_id;
+                document.getElementById('content-title').value = content.title;
+                document.getElementById('recommendation-section').style.display = 'block';
+
+                // Scroll to recommendation form
+                document.getElementById('recommendation-section').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                App.showToast('Failed to save content', 'error');
+            }
+        }
+
+        async function loadRecentRecommendations() {
+            try {
+                const recommendations = await API.admin.getRecommendations();
+                const container = document.getElementById('recent-recommendations');
+
+                if (recommendations.recommendations && recommendations.recommendations.length > 0) {
+                    container.innerHTML = `
+                        <div class="content-grid">
+                            ${recommendations.recommendations.map(rec => `
+                                <div class="content-card">
+                                    <div class="card-poster">
+                                        <img src="${rec.content.poster_path}" alt="${rec.content.title}">
+                                    </div>
+                                    <div class="card-info">
+                                        <h3 class="card-title">${rec.content.title}</h3>
+                                        <p class="text-muted">${rec.recommendation_type}</p>
+                                        <p>${rec.description}</p>
+                                        <p class="text-muted">By ${rec.admin_name} on ${new Date(rec.created_at).toLocaleDateString()}</p>
                                     </div>
                                 </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '<p>No recommendations yet</p>';
+                }
             } catch (error) {
-                resultsDiv.innerHTML = '<p class="text-error">Search failed</p>';
+                console.error('Failed to load recommendations:', error);
             }
         }
 
-        function selectContent(item) {
-            document.getElementById('contentSearchInput').value = item.title;
-            document.getElementById('searchResults').innerHTML = `
-                <div class="alert alert-success">
-                    <i class="bi bi-check-circle"></i> Selected: ${item.title}
-                </div>
-            `;
-        }
-
-        function showAddContentModal() {
-            document.getElementById('addContentModal').classList.add('modal--open');
-        }
-
-        function hideAddContentModal() {
-            document.getElementById('addContentModal').classList.remove('modal--open');
-            document.getElementById('addContentForm').reset();
-            document.getElementById('searchResults').innerHTML = '';
-        }
-
-        function showBulkImportModal() {
-            showToast('Bulk import feature coming soon!', 'info');
-        }
-
-        function editContent(id) {
-            showToast(`Edit content ${id}`, 'info');
-        }
-
-        function viewContent(id) {
-            navigateToContentDetails(id);
-        }
-
-        function deleteContent(id) {
-            if (confirm('Are you sure you want to delete this content?')) {
-                contentData = contentData.filter(c => c.id !== id);
-                updateStats();
-                renderTable();
-                showToast('Content deleted successfully', 'success');
-            }
-        }
-
-        function applyFilters() {
-            showToast('Filters applied', 'success');
-        }
-
-        function resetFilters() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('typeFilter').value = '';
-            document.getElementById('statusFilter').value = '';
-            loadContentData();
-            showToast('Filters reset', 'success');
-        }
-
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast toast--${type} animate-slideInRight`;
-            toast.innerHTML = `
-                <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'x-circle' : 'info-circle'} toast__icon"></i>
-                <span class="toast__message">${message}</span>
-                <i class="bi bi-x toast__close" onclick="this.parentElement.remove()"></i>
-            `;
-
-            document.getElementById('toastContainer').appendChild(toast);
-            setTimeout(() => toast.classList.add('toast--visible'), 10);
-            setTimeout(() => toast.remove(), 5000);
-        }
-
-        // Setup form submission
-        document.getElementById('addContentForm').addEventListener('submit', (e) => {
+        document.getElementById('recommendation-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            showToast('Content added successfully!', 'success');
-            hideAddContentModal();
-            loadContentData();
+
+            const data = {
+                content_id: document.getElementById('content-id').value,
+                recommendation_type: document.getElementById('rec-type').value,
+                description: document.getElementById('rec-description').value
+            };
+
+            try {
+                const result = await API.admin.createRecommendation(data);
+                App.showToast('Recommendation created and posted to Telegram!', 'success');
+
+                // Reset form
+                document.getElementById('recommendation-form').reset();
+                document.getElementById('recommendation-section').style.display = 'none';
+
+                // Reload recommendations
+                loadRecentRecommendations();
+            } catch (error) {
+                App.showToast('Failed to create recommendation', 'error');
+            }
+        });
+
+        // Load recent recommendations on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.isAdmin()) {
+                window.location.href = '/';
+                return;
+            }
+            loadRecentRecommendations();
         });
     </script>
 </body>
