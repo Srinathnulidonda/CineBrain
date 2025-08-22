@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Search Movies, TV Shows, and Anime - CineBrain">
+  <title id="page-title">Search - CineBrain</title>
+  
+  <!-- Critical CSS -->
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layouts.css">
+  <link rel="stylesheet" href="/css/animations.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  
+  <!-- Preload -->
+  <link rel="dns-prefetch" href="//backend-app-970m.onrender.com">
+  <link rel="preconnect" href="https://backend-app-970m.onrender.com">
+</head>
+<body>
+  <!-- Fixed Topbar -->
+  <div id="topbar"></div>
+
+  <!-- Main Content -->
+  <div class="page-layout">
+    <main class="page-main">
+      <div class="search-layout">
+        <!-- Search Header -->
+        <div class="search-header">
+          <h1 class="text-4xl font-bold text-center mb-8">Discover Your Next Favorite</h1>
+          
+          <!-- Main Search Form -->
+          <div class="search-form">
+            <div class="search-bar">
+              <span class="search-icon">🔍</span>
+              <input 
+                type="text" 
+                id="main-search-input" 
+                class="search-input"
+                placeholder="Search movies, TV shows, anime..."
+                autocomplete="off"
+              >
+              <button id="search-button" class="btn btn-primary absolute right-2 top-2">Search</button>
+            </div>
+          </div>
+          
+          <!-- Quick Filters -->
+          <div class="search-filters">
+            <button class="filter-chip active" data-type="multi" onclick="setContentType('multi')">All</button>
+            <button class="filter-chip" data-type="movie" onclick="setContentType('movie')">Movies</button>
+            <button class="filter-chip" data-type="tv" onclick="setContentType('tv')">TV Shows</button>
+            <button class="filter-chip" data-type="anime" onclick="setContentType('anime')">Anime</button>
+          </div>
+        </div>
+
+        <!-- Advanced Filters (Collapsible) -->
+        <div class="bg-elevated rounded-xl p-6 mb-8" id="advanced-filters" style="display: none;">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Advanced Filters</h3>
+            <button class="btn btn-ghost btn-sm" onclick="clearAllFilters()">Clear All</button>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Genre Filter -->
+            <div>
+              <label class="form-label">Genres</label>
+              <div class="space-y-2 max-h-32 overflow-y-auto" id="genre-checkboxes">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+            
+            <!-- Year Range -->
+            <div>
+              <label class="form-label">Release Year</label>
+              <div class="flex gap-2">
+                <input type="number" id="year-from" class="form-input" placeholder="From" min="1900" max="2024">
+                <input type="number" id="year-to" class="form-input" placeholder="To" min="1900" max="2024">
+              </div>
+            </div>
+            
+            <!-- Rating Filter -->
+            <div>
+              <label class="form-label">Minimum Rating</label>
+              <div class="flex items-center gap-3">
+                <input type="range" id="rating-filter" min="0" max="10" step="0.1" value="0" class="flex-1">
+                <span id="rating-display" class="text-sm font-medium">0.0+</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex gap-3 mt-6">
+            <button class="btn btn-primary" onclick="applyAdvancedFilters()">Apply Filters</button>
+            <button class="btn btn-outline" onclick="toggleAdvancedFilters()">Hide Filters</button>
+          </div>
+        </div>
+
+        <!-- Search Results Header -->
+        <div class="search-results-header" id="results-header" style="display: none;">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h2 class="text-2xl font-bold">Search Results</h2>
+              <p class="text-muted" id="results-count">0 results found</p>
+            </div>
+            <div class="flex gap-3">
+              <button class="btn btn-ghost btn-sm" onclick="toggleAdvancedFilters()">
+                🔧 Advanced Filters
+              </button>
+              <select id="sort-select" class="form-input" onchange="applySorting()">
+                <option value="relevance">Sort by Relevance</option>
+                <option value="rating">Sort by Rating</option>
+                <option value="year">Sort by Year</option>
+                <option value="popularity">Sort by Popularity</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search Results Grid -->
+        <div class="content-grid" id="search-results" style="display: none;">
+          <!-- Real search results loaded here -->
+        </div>
+
+        <!-- Loading State -->
+        <div class="text-center py-12" id="search-loading" style="display: none;">
+          <div class="loading-spinner mx-auto mb-4"></div>
+          <p class="text-muted">Searching for amazing content...</p>
+        </div>
+
+        <!-- No Results State -->
+        <div class="empty-state" id="no-results" style="display: none;">
+          <h3>🔍 No Results Found</h3>
+          <p>Try adjusting your search terms or filters</p>
+          <button class="btn btn-primary mt-4" onclick="clearSearchAndFilters()">Clear Search</button>
+        </div>
+
+        <!-- Popular Searches (Default State) -->
+        <div id="popular-searches">
+          <section class="content-section">
+            <h2 class="section-title">Popular Searches</h2>
+            <div class="flex flex-wrap gap-3 mb-8">
+              <button class="btn btn-outline btn-sm" onclick="performQuickSearch('Marvel')">Marvel</button>
+              <button class="btn btn-outline btn-sm" onclick="performQuickSearch('Star Wars')">Star Wars</button>
+              <button class="btn btn-outline btn-sm" onclick="performQuickSearch('Studio Ghibli')">Studio Ghibli</button>
+              <button class="btn btn-outline btn-sm" onclick="performQuickSearch('Netflix')">Netflix Originals</button>
+              <button class="btn btn-outline btn-sm" onclick="performQuickSearch('Action')">Action Movies</button>
+              <button class="btn btn-outline btn-sm" onclick="performQuickSearch('Anime')">Anime</button>
+            </div>
+          </section>
+
+          <!-- Trending Searches -->
+          <section class="content-section">
+            <h2 class="section-title">Trending Now</h2>
+            <div class="content-grid" id="trending-content">
+              <!-- Real trending content loaded here -->
+            </div>
+          </section>
+        </div>
+
+        <!-- Infinite Scroll Sentinel -->
+        <div class="scroll-sentinel" id="scroll-sentinel" style="display: none;"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Mobile Navigation -->
+  <div id="mobile-nav"></div>
+
+  <!-- Scripts -->
+  <script type="module" src="/js/config.js"></script>
+  <script type="module" src="/js/api.js"></script>
+  <script type="module" src="/js/auth.js"></script>
+  <script type="module" src="/js/app.js"></script>
+
+  <!-- Page-Specific Logic -->
+  <script>
+    let currentQuery = '';
+    let currentType = 'multi';
+    let currentPage = 1;
+    let isLoading = false;
+    let hasMoreResults = true;
+    let searchTimeout;
+    let currentFilters = {};
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadComponents();
+      
+      window.addEventListener('appReady', function() {
+        initializeSearchPage();
+      });
+      
+      if (window.app && window.app.isInitialized) {
+        initializeSearchPage();
+      }
+    });
+
+    async function loadComponents() {
+      try {
+        const topbarResponse = await fetch('/components/layout/topbar.html');
+        const topbarHTML = await topbarResponse.text();
+        document.getElementById('topbar').innerHTML = topbarHTML;
+
+        const mobileNavResponse = await fetch('/components/layout/mobile-nav.html');
+        const mobileNavHTML = await mobileNavResponse.text();
+        document.getElementById('mobile-nav').innerHTML = mobileNavHTML;
+      } catch (error) {
+        console.error('Error loading components:', error);
+      }
+    }
+
+    function initializeSearchPage() {
+      // Check for search query in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const query = urlParams.get('query');
+      
+      if (query) {
+        document.getElementById('main-search-input').value = query;
+        performSearch(query);
+      } else {
+        loadDefaultContent();
+      }
+      
+      setupSearchForm();
+      setupAdvancedFilters();
+      setupInfiniteScroll();
+      
+      console.log('🔍 Search page initialized');
+    }
+
+    function setupSearchForm() {
+      const searchInput = document.getElementById('main-search-input');
+      const searchButton = document.getElementById('search-button');
+      
+      // Real-time search with debouncing
+      searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length > 2) {
+          searchTimeout = setTimeout(() => {
+            performSearch(query);
+          }, 300);
+        } else if (query.length === 0) {
+          showDefaultContent();
+        }
+      });
+      
+      // Search button
+      searchButton.addEventListener('click', function() {
+        const query = searchInput.value.trim();
+        if (query) {
+          performSearch(query);
+        }
+      });
+      
+      // Enter key
+      searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const query = this.value.trim();
+          if (query) {
+            performSearch(query);
+          }
+        }
+      });
+      
+      // Focus search input
+      searchInput.focus();
+    }
+
+    function setupAdvancedFilters() {
+      // Populate genre checkboxes
+      const genres = [
+        'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary',
+        'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music',
+        'Mystery', 'Romance', 'Science Fiction', 'Thriller', 'War', 'Western'
+      ];
+      
+      const genreContainer = document.getElementById('genre-checkboxes');
+      genreContainer.innerHTML = genres.map(genre => `
+        <label class="flex items-center">
+          <input type="checkbox" value="${genre}" class="mr-2 genre-checkbox">
+          <span class="text-sm">${genre}</span>
+        </label>
+      `).join('');
+      
+      // Rating slider
+      const ratingSlider = document.getElementById('rating-filter');
+      const ratingDisplay = document.getElementById('rating-display');
+      
+      ratingSlider.addEventListener('input', function() {
+        ratingDisplay.textContent = parseFloat(this.value).toFixed(1) + '+';
+      });
+    }
+
+    function setupInfiniteScroll() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !isLoading && hasMoreResults && currentQuery) {
+            loadMoreResults();
+          }
+        });
+      }, { threshold: 0.1 });
+      
+      const sentinel = document.getElementById('scroll-sentinel');
+      observer.observe(sentinel);
+    }
+
+    async function performSearch(query, resetPage = true) {
+      if (resetPage) {
+        currentPage = 1;
+        hasMoreResults = true;
+      }
+      
+      currentQuery = query;
+      updateURL(query);
+      
+      showLoading(true);
+      hideDefaultContent();
+      
+      try {
+        const results = await ContentAPI.search(query, currentType, currentPage);
+        
+        if (resetPage) {
+          displaySearchResults(results);
+        } else {
+          appendSearchResults(results);
+        }
+        
+        document.getElementById('page-title').textContent = `"${query}" - Search Results - CineBrain`;
+        
+      } catch (error) {
+        console.error('Search error:', error);
+        showError('Search failed. Please try again.');
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function displaySearchResults(results) {
+      const resultsGrid = document.getElementById('search-results');
+      const resultsHeader = document.getElementById('results-header');
+      const resultsCount = document.getElementById('results-count');
+      const noResults = document.getElementById('no-results');
+      
+      resultsGrid.innerHTML = '';
+      
+      if (results.results && results.results.length > 0) {
+        // Show results
+        resultsHeader.style.display = 'block';
+        resultsGrid.style.display = 'grid';
+        noResults.style.display = 'none';
+        
+        // Update count
+        resultsCount.textContent = `${results.total_results || results.results.length} results found`;
+        
+        // Render results
+        results.results.forEach(item => {
+          const card = app.createContentCard(item);
+          resultsGrid.appendChild(card);
+        });
+        
+        // Check if more pages available
+        hasMoreResults = results.total_pages ? currentPage < results.total_pages : false;
+        
+        // Show infinite scroll sentinel if more results
+        document.getElementById('scroll-sentinel').style.display = hasMoreResults ? 'block' : 'none';
+        
+      } else {
+        // No results
+        resultsHeader.style.display = 'none';
+        resultsGrid.style.display = 'none';
+        noResults.style.display = 'block';
+        hasMoreResults = false;
+      }
+    }
+
+    function appendSearchResults(results) {
+      const resultsGrid = document.getElementById('search-results');
+      
+      if (results.results && results.results.length > 0) {
+        results.results.forEach(item => {
+          const card = app.createContentCard(item);
+          resultsGrid.appendChild(card);
+        });
+        
+        hasMoreResults = results.total_pages ? currentPage < results.total_pages : false;
+        document.getElementById('scroll-sentinel').style.display = hasMoreResults ? 'block' : 'none';
+      } else {
+        hasMoreResults = false;
+        document.getElementById('scroll-sentinel').style.display = 'none';
+      }
+    }
+
+    async function loadMoreResults() {
+      if (isLoading || !hasMoreResults || !currentQuery) return;
+      
+      isLoading = true;
+      currentPage++;
+      
+      try {
+        await performSearch(currentQuery, false);
+      } catch (error) {
+        console.error('Load more error:', error);
+        currentPage--; // Revert page increment
+      }
+      
+      isLoading = false;
+    }
+
+    async function loadDefaultContent() {
+      try {
+        const trendingData = await ContentAPI.getTrending('all', 12);
+        const trending = trendingData.recommendations || trendingData;
+        
+        const trendingContainer = document.getElementById('trending-content');
+        trendingContainer.innerHTML = '';
+        
+        trending.forEach(item => {
+          const card = app.createContentCard(item);
+          trendingContainer.appendChild(card);
+        });
+        
+      } catch (error) {
+        console.error('Default content error:', error);
+      }
+    }
+
+    function showDefaultContent() {
+      document.getElementById('popular-searches').style.display = 'block';
+      document.getElementById('results-header').style.display = 'none';
+      document.getElementById('search-results').style.display = 'none';
+      document.getElementById('no-results').style.display = 'none';
+      document.getElementById('scroll-sentinel').style.display = 'none';
+      currentQuery = '';
+    }
+
+    function hideDefaultContent() {
+      document.getElementById('popular-searches').style.display = 'none';
+    }
+
+    function showLoading(show) {
+      document.getElementById('search-loading').style.display = show ? 'block' : 'none';
+    }
+
+    function showError(message) {
+      showToast(message, 'error');
+      showDefaultContent();
+    }
+
+    function updateURL(query) {
+      const url = new URL(window.location);
+      url.searchParams.set('query', query);
+      window.history.pushState({}, '', url);
+    }
+
+    // Filter and control functions
+    function setContentType(type) {
+      currentType = type;
+      
+      // Update active filter
+      document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.remove('active');
+      });
+      document.querySelector(`[data-type="${type}"]`).classList.add('active');
+      
+      // Re-search if there's a query
+      if (currentQuery) {
+        performSearch(currentQuery);
+      }
+    }
+
+    function toggleAdvancedFilters() {
+      const filters = document.getElementById('advanced-filters');
+      filters.style.display = filters.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function applyAdvancedFilters() {
+      const selectedGenres = Array.from(document.querySelectorAll('.genre-checkbox:checked'))
+        .map(cb => cb.value);
+      
+      const yearFrom = document.getElementById('year-from').value;
+      const yearTo = document.getElementById('year-to').value;
+      const minRating = document.getElementById('rating-filter').value;
+      
+      currentFilters = {
+        genres: selectedGenres,
+        yearFrom: yearFrom || null,
+        yearTo: yearTo || null,
+        minRating: parseFloat(minRating) || 0
+      };
+      
+      if (currentQuery) {
+        performSearch(currentQuery);
+      }
+      
+      showToast('Filters applied', 'success');
+    }
+
+    function clearAllFilters() {
+      // Clear checkboxes
+      document.querySelectorAll('.genre-checkbox').forEach(cb => cb.checked = false);
+      
+      // Clear year inputs
+      document.getElementById('year-from').value = '';
+      document.getElementById('year-to').value = '';
+      
+      // Reset rating
+      document.getElementById('rating-filter').value = 0;
+      document.getElementById('rating-display').textContent = '0.0+';
+      
+      currentFilters = {};
+      
+      if (currentQuery) {
+        performSearch(currentQuery);
+      }
+      
+      showToast('Filters cleared', 'info');
+    }
+
+    function applySorting() {
+      const sortBy = document.getElementById('sort-select').value;
+      
+      if (currentQuery) {
+        // Re-search with sorting
+        performSearch(currentQuery);
+      }
+    }
+
+    function clearSearchAndFilters() {
+      document.getElementById('main-search-input').value = '';
+      clearAllFilters();
+      showDefaultContent();
+      window.history.pushState({}, '', window.location.pathname);
+    }
+
+    function performQuickSearch(query) {
+      document.getElementById('main-search-input').value = query;
+      performSearch(query);
+    }
+  </script>
+</body>
+</html>

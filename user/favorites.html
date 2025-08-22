@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="My Favorites - CineBrain">
+  <title>My Favorites - CineBrain</title>
+  
+  <!-- Critical CSS -->
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layouts.css">
+  <link rel="stylesheet" href="/css/animations.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+  <!-- Fixed Topbar -->
+  <div id="topbar"></div>
+
+  <!-- Main Content -->
+  <div class="page-layout">
+    <main class="page-main">
+      <div class="container py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+          <div>
+            <h1 class="text-4xl font-bold mb-2">My Favorites</h1>
+            <p class="text-muted" id="favorites-count">0 favorites</p>
+          </div>
+          <div class="flex gap-3">
+            <select id="sort-select" class="form-input" onchange="sortFavorites()">
+              <option value="recent">Recently Added</option>
+              <option value="title">Title A-Z</option>
+              <option value="rating">Highest Rated</option>
+              <option value="year">Release Year</option>
+            </select>
+            <button class="btn btn-outline" onclick="clearFavorites()">Clear All</button>
+          </div>
+        </div>
+
+        <!-- Favorites Grid -->
+        <div class="content-grid" id="favorites-grid">
+          <!-- Real favorites content loaded here -->
+          <div class="loading-skeleton skeleton-card"></div>
+          <div class="loading-skeleton skeleton-card"></div>
+          <div class="loading-skeleton skeleton-card"></div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-favorites" style="display: none;">
+          <h3>❤️ No Favorites Yet</h3>
+          <p>Mark your favorite movies, TV shows, and anime</p>
+          <button class="btn btn-primary mt-4" onclick="exploreContent()">Discover Content</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Mobile Navigation -->
+  <div id="mobile-nav"></div>
+
+  <!-- Scripts -->
+  <script type="module" src="/js/config.js"></script>
+  <script type="module" src="/js/api.js"></script>
+  <script type="module" src="/js/auth.js"></script>
+  <script type="module" src="/js/app.js"></script>
+
+  <!-- Page-Specific Logic -->
+  <script>
+    let favoritesData = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadComponents();
+      
+      window.addEventListener('appReady', function() {
+        initializeFavoritesPage();
+      });
+      
+      if (window.app && window.app.isInitialized) {
+        initializeFavoritesPage();
+      }
+    });
+
+    async function loadComponents() {
+      try {
+        const topbarResponse = await fetch('/components/layout/topbar.html');
+        const topbarHTML = await topbarResponse.text();
+        document.getElementById('topbar').innerHTML = topbarHTML;
+
+        const mobileNavResponse = await fetch('/components/layout/mobile-nav.html');
+        const mobileNavHTML = await mobileNavResponse.text();
+        document.getElementById('mobile-nav').innerHTML = mobileNavHTML;
+      } catch (error) {
+        console.error('Error loading components:', error);
+      }
+    }
+
+    function initializeFavoritesPage() {
+      if (!Auth.requireAuth()) {
+        return;
+      }
+      
+      loadFavorites();
+      
+      console.log('❤️ Favorites page initialized');
+    }
+
+    async function loadFavorites() {
+      try {
+        favoritesData = await Auth.getUserFavorites();
+        
+        updateFavoritesDisplay();
+        
+      } catch (error) {
+        console.error('Favorites loading error:', error);
+        showToast('Failed to load favorites', 'error');
+      }
+    }
+
+    function updateFavoritesDisplay() {
+      const grid = document.getElementById('favorites-grid');
+      const emptyState = document.getElementById('empty-favorites');
+      const countElement = document.getElementById('favorites-count');
+      
+      countElement.textContent = `${favoritesData.length} favorite${favoritesData.length !== 1 ? 's' : ''}`;
+      
+      if (favoritesData.length > 0) {
+        grid.style.display = 'grid';
+        emptyState.style.display = 'none';
+        
+        grid.innerHTML = '';
+        favoritesData.forEach(item => {
+          const card = createFavoriteCard(item);
+          grid.appendChild(card);
+        });
+      } else {
+        grid.style.display = 'none';
+        emptyState.style.display = 'block';
+      }
+    }
+
+    function createFavoriteCard(content) {
+      const card = app.createContentCard(content);
+      
+      // Add remove button
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'action-btn absolute top-2 right-2 bg-red-500 hover:bg-red-600';
+      removeBtn.innerHTML = '💔';
+      removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        removeFromFavorites(content.id);
+      };
+      
+      card.querySelector('.card-poster-wrapper').appendChild(removeBtn);
+      
+      return card;
+    }
+
+    async function removeFromFavorites(contentId) {
+      try {
+        // Record removal interaction
+        await Auth.recordInteraction(contentId, 'favorite_remove');
+        
+        // Update local data
+        favoritesData = favoritesData.filter(item => item.id !== contentId);
+        updateFavoritesDisplay();
+        
+        showToast('Removed from favorites', 'success');
+        
+      } catch (error) {
+        console.error('Remove from favorites error:', error);
+        showToast('Failed to remove item', 'error');
+      }
+    }
+
+    function sortFavorites() {
+      const sortBy = document.getElementById('sort-select').value;
+      
+      switch (sortBy) {
+        case 'title':
+          favoritesData.sort((a, b) => a.title.localeCompare(b.title));
+          break;
+        case 'rating':
+          favoritesData.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          break;
+        case 'year':
+          favoritesData.sort((a, b) => {
+            const yearA = a.release_date ? new Date(a.release_date).getFullYear() : 0;
+            const yearB = b.release_date ? new Date(b.release_date).getFullYear() : 0;
+            return yearB - yearA;
+          });
+          break;
+        default: // recent
+          break;
+      }
+      
+      updateFavoritesDisplay();
+    }
+
+    async function clearFavorites() {
+      if (favoritesData.length === 0) return;
+      
+      const confirmed = confirm(`Are you sure you want to remove all ${favoritesData.length} items from your favorites?`);
+      
+      if (confirmed) {
+        try {
+          for (const item of favoritesData) {
+            await Auth.recordInteraction(item.id, 'favorite_remove');
+          }
+          
+          favoritesData = [];
+          updateFavoritesDisplay();
+          
+          showToast('Favorites cleared', 'success');
+          
+        } catch (error) {
+          console.error('Clear favorites error:', error);
+          showToast('Failed to clear favorites', 'error');
+        }
+      }
+    }
+
+    function exploreContent() {
+      window.location.href = '/content/search.html';
+    }
+  </script>
+</body>
+</html>

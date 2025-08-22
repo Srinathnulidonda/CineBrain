@@ -1,0 +1,115 @@
+<!-- Global Trailer Modal -->
+<div class="modal trailer-modal" id="global-trailer-modal">
+  <div class="modal-backdrop" onclick="closeTrailerModal()"></div>
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeTrailerModal()">×</button>
+    <div class="trailer-container">
+      <iframe id="trailer-iframe" src="" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+    </div>
+  </div>
+</div>
+
+<style>
+.trailer-modal {
+  z-index: 1050;
+}
+
+.trailer-modal .modal-content {
+  max-width: 90vw;
+  max-height: 90vh;
+  aspect-ratio: 16/9;
+  padding: 0;
+  background: black;
+}
+
+.trailer-modal .modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1051;
+  background: rgba(0,0,0,0.7);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.trailer-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.trailer-container iframe {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+@media (max-width: 768px) {
+  .trailer-modal .modal-content {
+    max-width: 95vw;
+    max-height: 60vh;
+  }
+}
+</style>
+
+<script>
+function showTrailerModal(trailerUrl, title) {
+  const modal = document.getElementById('global-trailer-modal');
+  const iframe = document.getElementById('trailer-iframe');
+  
+  // Convert YouTube URL to embed format with autoplay
+  let embedUrl = trailerUrl;
+  if (trailerUrl.includes('youtube.com/watch')) {
+    const videoId = trailerUrl.split('v=')[1]?.split('&')[0];
+    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+  } else if (trailerUrl.includes('youtu.be/')) {
+    const videoId = trailerUrl.split('youtu.be/')[1]?.split('?')[0];
+    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+  }
+  
+  iframe.src = embedUrl;
+  modal.classList.add('show');
+  
+  // Pause other videos
+  document.querySelectorAll('video, iframe[src*="youtube"]').forEach(video => {
+    if (video !== iframe) {
+      if (video.pause) video.pause();
+      if (video.tagName === 'IFRAME') {
+        const src = video.src;
+        video.src = '';
+        video.src = src;
+      }
+    }
+  });
+  
+  // Prevent body scroll
+  document.body.style.overflow = 'hidden';
+}
+
+function closeTrailerModal() {
+  const modal = document.getElementById('global-trailer-modal');
+  const iframe = document.getElementById('trailer-iframe');
+  
+  modal.classList.remove('show');
+  iframe.src = '';
+  
+  // Restore body scroll
+  document.body.style.overflow = '';
+}
+
+// Close on escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeTrailerModal();
+  }
+});
+
+// Export for global use
+window.showTrailerModal = showTrailerModal;
+window.closeTrailerModal = closeTrailerModal;
+</script>

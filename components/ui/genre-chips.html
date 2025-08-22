@@ -1,0 +1,151 @@
+<!-- Genre Chips Component -->
+<div class="genre-chips-component" data-genres='["Action", "Sci-Fi", "Adventure"]'>
+  <div class="genre-chips-container">
+    <!-- Genres will be rendered here -->
+  </div>
+</div>
+
+<style>
+.genre-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.genre-chip {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--platinum-blue);
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.genre-chip:hover {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: var(--platinum-blue);
+  transform: scale(1.05);
+}
+
+.genre-chip.genre-action {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.genre-chip.genre-action:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: #ef4444;
+}
+
+.genre-chip.genre-comedy {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.genre-chip.genre-drama {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+.genre-chip.genre-horror {
+  background: rgba(75, 85, 99, 0.2);
+  color: #cbd5e1;
+}
+
+.genre-chip.genre-romance {
+  background: rgba(236, 72, 153, 0.2);
+  color: #ec4899;
+}
+
+.genre-chip.genre-scifi,
+.genre-chip.genre-science-fiction {
+  background: rgba(14, 165, 233, 0.2);
+  color: #0ea5e9;
+}
+
+.genre-chip.genre-anime {
+  background: rgba(168, 85, 247, 0.2);
+  color: #a855f7;
+}
+
+.genre-chip.clickable {
+  cursor: pointer;
+}
+
+.genre-chip.clickable:active {
+  transform: scale(0.95);
+}
+</style>
+
+<script>
+function createGenreChips(genres, options = {}) {
+  const container = document.createElement('div');
+  container.className = 'genre-chips-container';
+  
+  genres.forEach(genre => {
+    const chip = createGenreChip(genre, options);
+    container.appendChild(chip);
+  });
+  
+  return container;
+}
+
+function createGenreChip(genre, options = {}) {
+  const chip = document.createElement('span');
+  const genreClass = genre.toLowerCase().replace(/[^a-z0-9]/g, '');
+  
+  chip.className = `genre-chip genre-${genreClass}`;
+  chip.textContent = genre;
+  
+  if (options.clickable) {
+    chip.classList.add('clickable');
+    chip.addEventListener('click', () => {
+      if (options.onClick) {
+        options.onClick(genre);
+      } else {
+        // Default action - navigate to genre page
+        window.location.href = `/content/genre.html?genre=${encodeURIComponent(genre.toLowerCase())}`;
+      }
+    });
+  }
+  
+  if (options.limit && options.index >= options.limit) {
+    chip.style.display = 'none';
+  }
+  
+  return chip;
+}
+
+// Update existing genre chips on the page
+function updateGenreChips() {
+  document.querySelectorAll('.genre-chips-component').forEach(component => {
+    try {
+      const genres = JSON.parse(component.getAttribute('data-genres') || '[]');
+      const container = component.querySelector('.genre-chips-container');
+      
+      if (container && genres.length > 0) {
+        container.innerHTML = '';
+        const chips = createGenreChips(genres, { clickable: true });
+        container.appendChild(...chips.children);
+      }
+    } catch (error) {
+      console.error('Error parsing genres:', error);
+    }
+  });
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', updateGenreChips);
+} else {
+  updateGenreChips();
+}
+
+// Export for global use
+window.createGenreChips = createGenreChips;
+window.createGenreChip = createGenreChip;
+</script>

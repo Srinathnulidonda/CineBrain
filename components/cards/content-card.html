@@ -1,0 +1,320 @@
+<!-- Standard Content Card with Real-Time Data -->
+<div class="content-card" data-content-id="">
+  <div class="card-poster-wrapper">
+    <img class="card-poster" src="" alt="" loading="lazy">
+    <div class="card-overlay">
+      <div class="card-actions">
+        <button class="action-btn play-btn" onclick="playTrailer(this)">▶️</button>
+        <button class="action-btn wishlist-btn" onclick="toggleWishlist(this)">📋</button>
+        <button class="action-btn favorite-btn" onclick="toggleFavorite(this)">❤️</button>
+      </div>
+      <div class="card-info-overlay">
+        <h3 class="card-title"></h3>
+        <div class="card-meta">
+          <span class="card-rating">⭐ <span class="rating-value"></span></span>
+          <span class="card-type"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-details">
+    <h3 class="card-title-full"></h3>
+    <div class="card-genres"></div>
+  </div>
+</div>
+
+<style>
+.content-card {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(30, 30, 35, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  min-width: 200px;
+  max-width: 280px;
+  height: 380px;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+}
+
+.card-poster-wrapper {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+.card-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.content-card:hover .card-poster {
+  transform: scale(1.05);
+}
+
+.card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, 
+    rgba(0,0,0,0) 0%, 
+    rgba(0,0,0,0.3) 50%, 
+    rgba(0,0,0,0.8) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  padding: 16px;
+}
+
+.content-card:hover .card-overlay {
+  opacity: 1;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  align-self: flex-end;
+}
+
+.action-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: rgba(59, 130, 246, 0.8);
+  transform: scale(1.1);
+}
+
+.card-info-overlay {
+  align-self: flex-start;
+  width: 100%;
+}
+
+.card-info-overlay .card-title {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.card-details {
+  padding: 16px;
+  background: rgba(20, 20, 24, 0.9);
+}
+
+.card-title-full {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.card-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.genre-chip {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.card-rating .rating-value {
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .content-card {
+    min-width: 160px;
+    max-width: 200px;
+    height: 300px;
+  }
+  
+  .card-details {
+    padding: 12px;
+  }
+}
+</style>
+
+<script>
+// Content card functionality with real-time data
+function createContentCard(contentData) {
+  const template = document.querySelector('.content-card').cloneNode(true);
+  
+  // Populate card with real data
+  template.setAttribute('data-content-id', contentData.id);
+  template.querySelector('.card-poster').src = contentData.poster_path || '/images/placeholder-poster.jpg';
+  template.querySelector('.card-poster').alt = contentData.title;
+  
+  // Set title in both overlay and details
+  const titleElements = template.querySelectorAll('.card-title, .card-title-full');
+  titleElements.forEach(el => el.textContent = contentData.title);
+  
+  // Set rating
+  const ratingElement = template.querySelector('.rating-value');
+  if (contentData.rating) {
+    ratingElement.textContent = contentData.rating.toFixed(1);
+  } else {
+    template.querySelector('.card-rating').style.display = 'none';
+  }
+  
+  // Set content type
+  template.querySelector('.card-type').textContent = contentData.content_type.toUpperCase();
+  
+  // Set genres
+  const genresContainer = template.querySelector('.card-genres');
+  if (contentData.genres && contentData.genres.length > 0) {
+    genresContainer.innerHTML = contentData.genres.slice(0, 3).map(genre => 
+      `<span class="genre-chip">${genre}</span>`
+    ).join('');
+  }
+  
+  // Add click handler for navigation
+  template.addEventListener('click', function(e) {
+    if (!e.target.closest('.action-btn')) {
+      window.location.href = `/content/details.html?id=${contentData.id}`;
+    }
+  });
+  
+  return template;
+}
+
+function playTrailer(button) {
+  const card = button.closest('.content-card');
+  const contentId = card.getAttribute('data-content-id');
+  
+  // Add loading state
+  button.innerHTML = '⏳';
+  button.disabled = true;
+  
+  // Fetch content details to get trailer
+  API.get(`/content/${contentId}`)
+    .then(content => {
+      if (content.youtube_trailer) {
+        showTrailerModal(content.youtube_trailer, content.title);
+      } else {
+        showToast('Trailer not available', 'warning');
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching trailer:', error);
+      showToast('Failed to load trailer', 'error');
+    })
+    .finally(() => {
+      button.innerHTML = '▶️';
+      button.disabled = false;
+    });
+}
+
+async function toggleWishlist(button) {
+  const card = button.closest('.content-card');
+  const contentId = card.getAttribute('data-content-id');
+  
+  try {
+    button.innerHTML = '⏳';
+    
+    await API.post('/interactions', {
+      content_id: parseInt(contentId),
+      interaction_type: 'watchlist'
+    });
+    
+    button.innerHTML = '✅';
+    showToast('Added to watchlist', 'success');
+    
+    setTimeout(() => {
+      button.innerHTML = '📋';
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Error toggling watchlist:', error);
+    showToast('Failed to update watchlist', 'error');
+    button.innerHTML = '📋';
+  }
+}
+
+async function toggleFavorite(button) {
+  const card = button.closest('.content-card');
+  const contentId = card.getAttribute('data-content-id');
+  
+  try {
+    button.innerHTML = '⏳';
+    
+    await API.post('/interactions', {
+      content_id: parseInt(contentId),
+      interaction_type: 'favorite'
+    });
+    
+    button.innerHTML = '💖';
+    showToast('Added to favorites', 'success');
+    
+    setTimeout(() => {
+      button.innerHTML = '❤️';
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    showToast('Failed to update favorites', 'error');
+    button.innerHTML = '❤️';
+  }
+}
+
+// Utility function to render multiple content cards
+function renderContentCards(containerSelector, contentArray, limit = null) {
+  const container = document.querySelector(containerSelector);
+  if (!container) return;
+  
+  const itemsToRender = limit ? contentArray.slice(0, limit) : contentArray;
+  
+  container.innerHTML = '';
+  
+  itemsToRender.forEach(content => {
+    const card = createContentCard(content);
+    container.appendChild(card);
+  });
+}
+</script>
