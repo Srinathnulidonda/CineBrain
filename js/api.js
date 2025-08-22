@@ -1,9 +1,12 @@
-// CineScope API Client - Real Backend Integration with Caching & Service Worker
+import { buildUrl, APP_CONFIG } from './config.js';
+
 class APIClient {
   constructor() {
     this.cache = new Map();
-    this.requestQueue = [];
-    this.activeRequests = new Map();
+    this.retryCount = 3;
+    this.baseDelay = 1000;
+    this.preloadedData = new Map();
+    this.pendingRequests = new Map();
     this.initServiceWorker();
   }
 
@@ -11,273 +14,333 @@ class APIClient {
     if ('serviceWorker' in navigator) {
       try {
         await navigator.serviceWorker.register('/sw.js');
-      } catch (e) {
-        console.warn('Service Worker registration failed:', e);
+      } catch (error) {
+        console.warn('Service Worker registration failed:', error);
       }
     }
   }
 
-  getCacheKey(url, params) {
-    return `${url}?${new URLSearchParams(params).toString()}`;
+  getCacheKey(url, options = {}) {
+    return `${url}:${JSON.stringify(options)}`;
   }
 
-  isValidCache(cachedData) {
-    if (!cachedData) return false;
-    const age = Date.now() - cachedData.timestamp;
-    return age < APP_CONFIG.CACHE_TTL;
+  isValidCache(item) {
+    return item && (Date.now() - item.timestamp) < item.ttl;
+  }
+
+  setCache(key, data, ttl = APP_CONFIG.CACHE_DURATION.DYNAMIC) {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl
+    });
+  }
+
+  getCache(key) {
+    const item = this.cache.get(key);
+    if (this.isValidCache(item)) {
+      return item.data;
+    }
+    this.cache.delete(key);
+    return null;
   }
 
   async request(url, options = {}) {
-    const { 
-      method = 'GET', 
-      params = {}, 
-      data = null, 
-      headers = {},
-      useCache = true,
-      retry = 3,
-      timeout = APP_CONFIG.API_TIMEOUT 
-    } = options;
-
-    // Check cache for GET requests
-    if (method === 'GET' && useCache) {
-      const cacheKey = this.getCacheKey(url, params);
-      const cachedData = this.cache.get(cacheKey);
-      if (this.isValidCache(cachedData)) {
-        return cachedData.data;
-      }
-
-      // Check if request is already in flight
-      if (this.activeRequests.has(cacheKey)) {
-        return this.activeRequests.get(cacheKey);
-      }
+    const cacheKey = this.getCacheKey(url, options);
+    
+    // Check cache first
+    const cached = this.getCache(cacheKey);
+    if (cached && !options.bypassCache) {
+      return cached;
     }
 
-    // Build request configuration
+    // Check if request is already pending
+    if (this.pendingRequests.has(cacheKey)) {
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    const requestPromise = this._makeRequest(url, options);
+    this.pendingRequests.set(cacheKey, requestPromise);
+
+    try {
+      const result = await requestPromise;
+      this.pendingRequests.delete(cacheKey);
+      
+      // Cache successful responses
+      if (result && !result.error) {
+        const ttl = options.ttl || (options.method === 'GET' ? APP_CONFIG.CACHE_DURATION.DYNAMIC : 0);
+        if (ttl > 0) {
+          this.setCache(cacheKey, result, ttl);
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      this.pendingRequests.delete(cacheKey);
+      throw error;
+    }
+  }
+
+  async _makeRequest(url, options = {}) {
     const config = {
-      method,
+      method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
-        ...headers
-      }
+        ...options.headers
+      },
+      ...options
     };
 
-    // Add auth token if available
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    if (config.body && typeof config.body === 'object') {
+      config.body = JSON.stringify(config.body);
     }
 
-    // Add body for non-GET requests
-    if (data && method !== 'GET') {
-      config.body = JSON.stringify(data);
-    }
-
-    // Build URL with params for GET requests
-    let requestUrl = url;
-    if (method === 'GET' && Object.keys(params).length > 0) {
-      requestUrl += '?' + new URLSearchParams(params).toString();
-    }
-
-    // Create abort controller for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    // Make request with retry logic
-    const makeRequest = async (retryCount = 0) => {
+    let lastError;
+    
+    for (let attempt = 0; attempt < this.retryCount; attempt++) {
       try {
-        const response = await fetch(requestUrl, {
-          ...config,
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
+        const startTime = performance.now();
+        const response = await fetch(url, config);
+        const endTime = performance.now();
+        
+        // Log performance
+        if (endTime - startTime > 100) {
+          console.warn(`Slow API call: ${url} took ${(endTime - startTime).toFixed(2)}ms`);
+        }
 
         if (!response.ok) {
-          if (response.status === 401) {
-            // Handle unauthorized - clear auth and redirect
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
-            window.location.href = '/auth/login.html';
-            throw new Error('Unauthorized');
+          if (response.status >= 400 && response.status < 500) {
+            // Client errors - don't retry
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP ${response.status}`);
           }
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`HTTP ${response.status}`);
         }
 
         const data = await response.json();
-
-        // Cache successful GET requests
-        if (method === 'GET' && useCache) {
-          const cacheKey = this.getCacheKey(url, params);
-          this.cache.set(cacheKey, {
-            data,
-            timestamp: Date.now()
-          });
-          this.activeRequests.delete(cacheKey);
-        }
-
         return data;
+        
       } catch (error) {
-        if (error.name === 'AbortError') {
-          throw new Error('Request timeout');
+        lastError = error;
+        
+        if (attempt < this.retryCount - 1) {
+          const delay = this.baseDelay * Math.pow(2, attempt);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
-
-        if (retryCount < retry - 1 && error.message !== 'Unauthorized') {
-          // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
-          return makeRequest(retryCount + 1);
-        }
-
-        if (method === 'GET' && useCache) {
-          const cacheKey = this.getCacheKey(url, params);
-          this.activeRequests.delete(cacheKey);
-        }
-
-        throw error;
       }
-    };
-
-    // Store promise for deduplication
-    if (method === 'GET' && useCache) {
-      const cacheKey = this.getCacheKey(url, params);
-      const promise = makeRequest();
-      this.activeRequests.set(cacheKey, promise);
-      return promise;
     }
-
-    return makeRequest();
+    
+    throw lastError;
   }
 
-  // Specific API methods
-  async getTrending(type = 'all', limit = 20) {
-    return this.request(API_ENDPOINTS.TRENDING, {
-      params: { type, limit }
-    });
+  // Preload critical data
+  async preloadCriticalData() {
+    const preloadPromises = [
+      this.getTrending({ limit: 10 }),
+      this.getAdminChoice({ limit: 5 }),
+      this.getNewReleases({ limit: 5, type: 'movie' }),
+      this.getCriticsChoice({ limit: 5, type: 'movie' })
+    ];
+
+    try {
+      const results = await Promise.allSettled(preloadPromises);
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          console.log(`Preloaded data ${index + 1}`);
+        }
+      });
+    } catch (error) {
+      console.warn('Preload failed:', error);
+    }
   }
 
-  async getNewReleases(language = null, type = 'movie', limit = 20) {
-    const params = { type, limit };
-    if (language) params.language = language;
-    return this.request(API_ENDPOINTS.NEW_RELEASES, { params });
-  }
-
-  async getCriticsChoice(type = 'movie', limit = 20) {
-    return this.request(API_ENDPOINTS.TOP_RATED, {
-      params: { type, limit }
-    });
-  }
-
-  async getGenreContent(genre, type = 'movie', limit = 20) {
-    return this.request(`${API_ENDPOINTS.GENRES}/${genre}`, {
-      params: { type, limit }
-    });
-  }
-
-  async getRegionalContent(language, type = 'movie', limit = 20) {
-    return this.request(`${API_ENDPOINTS.REGIONAL}/${language}`, {
-      params: { type, limit }
-    });
-  }
-
-  async getAnimeContent(genre = null, limit = 20) {
-    const params = { limit };
-    if (genre) params.genre = genre;
-    return this.request(API_ENDPOINTS.ANIME, { params });
-  }
-
-  async searchContent(query, type = 'multi', page = 1) {
-    return this.request(API_ENDPOINTS.SEARCH, {
-      params: { query, type, page }
-    });
-  }
-
-  async getContentDetails(contentId) {
-    return this.request(`${API_ENDPOINTS.MOVIE_DETAILS}/${contentId}`);
-  }
-
-  async getSimilarContent(contentId, limit = 20) {
-    return this.request(`${API_ENDPOINTS.SIMILAR}/${contentId}`, {
-      params: { limit }
-    });
-  }
-
-  async getPersonalizedRecommendations(limit = 20) {
-    return this.request(API_ENDPOINTS.ML_RECOMMENDATIONS, {
-      params: { limit },
-      useCache: false
-    });
-  }
-
-  async getWatchlist() {
-    return this.request(API_ENDPOINTS.WATCHLIST, {
-      useCache: false
-    });
-  }
-
-  async getFavorites() {
-    return this.request(API_ENDPOINTS.FAVORITES, {
-      useCache: false
-    });
-  }
-
-  async addInteraction(contentId, interactionType, rating = null) {
-    return this.request(API_ENDPOINTS.USER_RATINGS, {
+  // Authentication
+  async login(credentials) {
+    return this.request(buildUrl.login(), {
       method: 'POST',
-      data: {
-        content_id: contentId,
-        interaction_type: interactionType,
-        rating
-      }
+      body: credentials,
+      ttl: 0
     });
   }
 
-  async getAdminChoiceContent(limit = 20) {
-    return this.request(API_ENDPOINTS.ADMIN_CHOICE, {
-      params: { limit }
+  async register(userData) {
+    return this.request(buildUrl.register(), {
+      method: 'POST',
+      body: userData,
+      ttl: 0
     });
   }
 
-  // Clear cache methods
+  // Content Discovery
+  async getTrending(params = {}) {
+    return this.request(buildUrl.trending(params), {
+      ttl: APP_CONFIG.CACHE_DURATION.DYNAMIC
+    });
+  }
+
+  async getNewReleases(params = {}) {
+    return this.request(buildUrl.newReleases(params), {
+      ttl: APP_CONFIG.CACHE_DURATION.DYNAMIC
+    });
+  }
+
+  async getCriticsChoice(params = {}) {
+    return this.request(buildUrl.topRated(params), {
+      ttl: APP_CONFIG.CACHE_DURATION.DYNAMIC
+    });
+  }
+
+  async getRegionalContent(language, params = {}) {
+    return this.request(buildUrl.regional(language, params), {
+      ttl: APP_CONFIG.CACHE_DURATION.DYNAMIC
+    });
+  }
+
+  async getGenreContent(genre, params = {}) {
+    return this.request(buildUrl.genreRecs(genre, params), {
+      ttl: APP_CONFIG.CACHE_DURATION.DYNAMIC
+    });
+  }
+
+  async getAnimeContent(params = {}) {
+    return this.request(buildUrl.anime(params), {
+      ttl: APP_CONFIG.CACHE_DURATION.DYNAMIC
+    });
+  }
+
+  async getAdminChoice(params = {}) {
+    return this.request(buildUrl.adminChoice(params), {
+      ttl: APP_CONFIG.CACHE_DURATION.DYNAMIC
+    });
+  }
+
+  async getAnonymousRecommendations(params = {}) {
+    return this.request(buildUrl.anonymousRecs(params), {
+      ttl: APP_CONFIG.CACHE_DURATION.DYNAMIC
+    });
+  }
+
+  // Search
+  async search(params = {}) {
+    return this.request(buildUrl.search(params), {
+      ttl: APP_CONFIG.CACHE_DURATION.DYNAMIC
+    });
+  }
+
+  // Content Details
+  async getContentDetails(id) {
+    return this.request(buildUrl.contentDetails(id), {
+      ttl: APP_CONFIG.CACHE_DURATION.STATIC
+    });
+  }
+
+  async getSimilarContent(id, params = {}) {
+    return this.request(buildUrl.similar(id, params), {
+      ttl: APP_CONFIG.CACHE_DURATION.STATIC
+    });
+  }
+
+  // User Features (require auth)
+  async getPersonalizedRecommendations(token, params = {}) {
+    return this.request(`${buildUrl.BASE_URL}/recommendations/personalized?${new URLSearchParams(params)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      ttl: APP_CONFIG.CACHE_DURATION.USER_DATA
+    });
+  }
+
+  async getMLRecommendations(token, params = {}) {
+    return this.request(`${buildUrl.BASE_URL}/recommendations/ml-personalized?${new URLSearchParams(params)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      ttl: APP_CONFIG.CACHE_DURATION.USER_DATA
+    });
+  }
+
+  async getWatchlist(token) {
+    return this.request(buildUrl.watchlist(), {
+      headers: { Authorization: `Bearer ${token}` },
+      ttl: APP_CONFIG.CACHE_DURATION.USER_DATA
+    });
+  }
+
+  async getFavorites(token) {
+    return this.request(buildUrl.favorites(), {
+      headers: { Authorization: `Bearer ${token}` },
+      ttl: APP_CONFIG.CACHE_DURATION.USER_DATA
+    });
+  }
+
+  async recordInteraction(token, interaction) {
+    return this.request(buildUrl.userRatings(), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: interaction,
+      ttl: 0
+    });
+  }
+
+  // Admin Features
+  async adminSearch(token, params = {}) {
+    return this.request(buildUrl.adminSearch(params), {
+      headers: { Authorization: `Bearer ${token}` },
+      ttl: 0
+    });
+  }
+
+  async adminSaveContent(token, content) {
+    return this.request(buildUrl.adminContent(), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: content,
+      ttl: 0
+    });
+  }
+
+  async adminCreateRecommendation(token, recommendation) {
+    return this.request(buildUrl.adminRecommendations(), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: recommendation,
+      ttl: 0
+    });
+  }
+
+  async getAdminAnalytics(token) {
+    return this.request(buildUrl.adminAnalytics(), {
+      headers: { Authorization: `Bearer ${token}` },
+      ttl: APP_CONFIG.CACHE_DURATION.USER_DATA
+    });
+  }
+
+  async getMLServiceCheck(token) {
+    return this.request(buildUrl.adminMLCheck(), {
+      headers: { Authorization: `Bearer ${token}` },
+      ttl: 0
+    });
+  }
+
+  // Utility methods
   clearCache() {
     this.cache.clear();
   }
 
-  clearCacheForUrl(url) {
-    const keys = Array.from(this.cache.keys());
-    keys.forEach(key => {
-      if (key.startsWith(url)) {
+  clearUserCache() {
+    for (const [key, value] of this.cache.entries()) {
+      if (key.includes('user') || key.includes('personalized') || key.includes('watchlist') || key.includes('favorites')) {
         this.cache.delete(key);
       }
+    }
+  }
+
+  getHealthStatus() {
+    return this.request(`${buildUrl.BASE_URL}/health`, {
+      ttl: 30000 // 30 seconds
     });
-  }
-
-  // Prefetch methods for performance
-  async prefetchContent(urls) {
-    const promises = urls.map(url => 
-      this.request(url, { useCache: true }).catch(() => null)
-    );
-    await Promise.all(promises);
-  }
-
-  // Image preloading
-  preloadImage(src) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = src;
-    });
-  }
-
-  async preloadImages(srcs) {
-    const promises = srcs.map(src => this.preloadImage(src).catch(() => null));
-    await Promise.all(promises);
   }
 }
 
-// Create global API instance
-const API = new APIClient();
+// Create global instance
+const apiClient = new APIClient();
 
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = API;
-}
+// Export default instance and class
+export { APIClient };
+export default apiClient;

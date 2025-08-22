@@ -1,591 +1,408 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="description" content="CineScope - Premium streaming platform with personalized recommendations">
-    <meta name="theme-color" content="#0a0a0b">
-    <title>CineScope - Premium Streaming Experience</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineScope - Premium Movie & TV Recommendations</title>
+    <meta name="description" content="Discover your next favorite movie or TV show with CineScope's ML-powered recommendations. Premium streaming platform with personalized content discovery.">
     
-    <!-- Preload critical resources -->
-    <link rel="preload" href="js/config.js" as="script">
-    <link rel="preload" href="js/api.js" as="script">
-    <link rel="preload" href="js/auth.js" as="script">
-    <link rel="preload" href="js/app.js" as="script">
-    <link rel="preload" href="css/main.css" as="style">
+    <!-- Preload Critical CSS -->
+    <link rel="preload" href="/css/main.css" as="style">
+    <link rel="preload" href="/css/components.css" as="style">
+    <link rel="preload" href="/css/layouts.css" as="style">
     
-    <!-- Critical CSS (inlined for performance) -->
-    <style>
-        body{margin:0;padding:0;background:#0a0a0b;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-        .topbar{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,11,0.95);backdrop-filter:blur(20px);height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem}
-        .loading{display:flex;align-items:center;justify-content:center;height:100vh}
-        .spinner{width:40px;height:40px;border:3px solid #1e1e23;border-top:3px solid #3b82f6;border-radius:50%;animation:spin 1s linear infinite}
-        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-    </style>
+    <!-- Critical CSS -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
     
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/layouts.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/responsive.css">
-    <link rel="stylesheet" href="css/theme.css">
+    <!-- Preload Critical JS -->
+    <link rel="modulepreload" href="/js/config.js">
+    <link rel="modulepreload" href="/js/api.js">
+    <link rel="modulepreload" href="/js/auth.js">
+    <link rel="modulepreload" href="/js/app.js">
     
-    <!-- PWA Support -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- PWA Meta -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     
-    <!-- iOS Safe Area -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- Performance -->
+    <link rel="dns-prefetch" href="https://backend-app-970m.onrender.com">
+    <link rel="preconnect" href="https://image.tmdb.org" crossorigin>
+    <link rel="preconnect" href="https://ui-avatars.com" crossorigin>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Fixed Top Navigation -->
-    <nav class="topbar" id="topbar">
-        <div class="topbar-left">
-            <a href="/" class="logo" onclick="window.location.href='/'">CineScope</a>
+    <!-- Page Loader -->
+    <div class="page-loader">
+        <div class="spinner"></div>
+        <div style="margin-top: 1rem; color: var(--text-secondary);">Loading CineScope...</div>
+    </div>
+
+    <!-- Fixed Top Bar -->
+    <header class="topbar" id="topbar">
+        <div class="topbar-logo" onclick="app.router.navigate('/')">
+            CineScope
+        </div>
+        
+        <div class="topbar-search">
+            <div class="search-icon">🔍</div>
+            <input type="text" class="search-input" placeholder="Search movies, TV shows, anime..." />
+            <div class="search-results" id="search-results"></div>
+        </div>
+        
+        <div class="topbar-actions">
+            <button class="theme-toggle" title="Toggle theme"></button>
             
-            <!-- Desktop Navigation -->
-            <div class="desktop-nav" style="display: none;">
-                <a href="/" class="nav-link active">Home</a>
-                <a href="/content/search.html" class="nav-link">Browse</a>
-                <a href="/content/trending.html" class="nav-link">Trending</a>
-                <a href="/content/anime.html" class="nav-link">Anime</a>
+            <!-- Show when not logged in -->
+            <button class="login-btn user-only-hide" onclick="app.showModal('login', getLoginModalContent())">
+                Sign In
+            </button>
+            
+            <!-- Show when logged in -->
+            <img class="user-avatar user-only-show" style="display: none;" alt="User Avatar" onclick="toggleUserMenu()" />
+            
+            <!-- User Menu (hidden by default) -->
+            <div class="user-menu" style="display: none;">
+                <div class="user-menu-dropdown">
+                    <a href="#" onclick="app.router.navigate(`/${authManager.getUser()?.username}/profile`)">Profile</a>
+                    <a href="#" onclick="app.router.navigate('/user/watchlist.html')">Watchlist</a>
+                    <a href="#" onclick="app.router.navigate('/user/favorites.html')">Favorites</a>
+                    <a href="#" onclick="app.router.navigate('/user/settings.html')">Settings</a>
+                    <div class="admin-only" style="display: none;">
+                        <hr>
+                        <a href="#" onclick="app.router.navigate('/admin/index.html')">Admin Panel</a>
+                    </div>
+                    <hr>
+                    <a href="#" onclick="authManager.logout()">Sign Out</a>
+                </div>
             </div>
         </div>
-        
-        <!-- Search Bar -->
-        <div class="search-container">
-            <input type="text" 
-                   class="search-input" 
-                   placeholder="Search movies, shows, anime..." 
-                   id="globalSearch"
-                   autocomplete="off">
-            <div class="search-suggestions" id="searchSuggestions"></div>
-        </div>
-        
-        <!-- User Section -->
-        <div class="topbar-right">
-            <div class="user-section" id="userSection">
-                <!-- Will be populated by auth.js -->
-            </div>
-        </div>
-    </nav>
+    </header>
 
     <!-- Main Content -->
-    <main id="mainContent">
-        <!-- Initial Loading State -->
-        <div class="loading" id="initialLoader">
-            <div class="spinner"></div>
-        </div>
+    <main class="main-content" id="main-content">
+        <!-- Content will be dynamically loaded here -->
+        <div class="loading-skeleton" style="height: 400px; margin: 2rem; border-radius: 8px;"></div>
+        <div class="loading-skeleton" style="height: 200px; margin: 2rem; border-radius: 8px;"></div>
+        <div class="loading-skeleton" style="height: 200px; margin: 2rem; border-radius: 8px;"></div>
     </main>
 
-    <!-- Fixed Mobile Navigation -->
-    <nav class="mobile-nav" id="mobileNav">
-        <a href="/" class="mobile-nav-item active" data-page="home">
-            <span class="mobile-nav-icon">🏠</span>
-            <span class="mobile-nav-label">Home</span>
+    <!-- Fixed Bottom Navigation (Mobile) -->
+    <nav class="mobile-nav" id="mobile-nav">
+        <a href="/" class="mobile-nav-item" data-page="home">
+            <div class="mobile-nav-icon">🏠</div>
+            <span>Home</span>
         </a>
         <a href="/content/search.html" class="mobile-nav-item" data-page="search">
-            <span class="mobile-nav-icon">🔍</span>
-            <span class="mobile-nav-label">Search</span>
+            <div class="mobile-nav-icon">🔍</div>
+            <span>Search</span>
         </a>
-        <a href="#" class="mobile-nav-item" data-page="watchlist" onclick="window.requireAuth(() => window.location.href = `/${window.auth.getUser()?.username}/watchlist`)">
-            <span class="mobile-nav-icon">📚</span>
-            <span class="mobile-nav-label">Watchlist</span>
+        <a href="/user/watchlist.html" class="mobile-nav-item user-only-show" data-page="watchlist" style="display: none;">
+            <div class="mobile-nav-icon">📋</div>
+            <span>Watchlist</span>
         </a>
-        <a href="#" class="mobile-nav-item" data-page="favorites" onclick="window.requireAuth(() => window.location.href = `/${window.auth.getUser()?.username}/favorites`)">
-            <span class="mobile-nav-icon">❤️</span>
-            <span class="mobile-nav-label">Favorites</span>
+        <a href="/user/favorites.html" class="mobile-nav-item user-only-show" data-page="favorites" style="display: none;">
+            <div class="mobile-nav-icon">❤️</div>
+            <span>Favorites</span>
         </a>
-        <a href="#" class="mobile-nav-item" data-page="profile" onclick="window.requireAuth(() => window.location.href = `/${window.auth.getUser()?.username}/profile`)">
-            <span class="mobile-nav-icon">👤</span>
-            <span class="mobile-nav-label">Profile</span>
+        <a href="#" class="mobile-nav-item" data-page="profile" onclick="handleProfileClick()">
+            <div class="mobile-nav-icon">👤</div>
+            <span>Profile</span>
         </a>
     </nav>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <!-- Load JavaScript Modules -->
+    <script type="module">
+        // Import and initialize the app
+        import app from '/js/app.js';
+        import authManager from '/js/auth.js';
+        import apiClient from '/js/api.js';
+        
+        // Make available globally for onclick handlers
+        window.app = app;
+        window.authManager = authManager;
+        window.apiClient = apiClient;
+        
+        // Page-specific functions
+        window.toggleUserMenu = function() {
+            const menu = document.querySelector('.user-menu');
+            const isVisible = menu.style.display !== 'none';
+            menu.style.display = isVisible ? 'none' : 'block';
+        };
+        
+        window.handleProfileClick = function() {
+            if (authManager.isLoggedIn()) {
+                const username = authManager.getUser().username;
+                app.router.navigate(`/${username}/profile`);
+            } else {
+                app.showModal('login', getLoginModalContent());
+            }
+        };
+        
+        window.getLoginModalContent = function() {
+            return `
+                <div class="auth-card" style="background: var(--theater-dark); margin: 0;">
+                    <div class="auth-header">
+                        <div class="auth-logo">CineScope</div>
+                        <h2 class="auth-title">Welcome Back</h2>
+                        <p class="auth-subtitle">Sign in to your account</p>
+                    </div>
+                    
+                    <form class="auth-form" onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" class="form-input" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-input" required />
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline" onclick="app.closeModal('login')">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Sign In</button>
+                        </div>
+                    </form>
+                    
+                    <div class="auth-footer">
+                        <p>Don't have an account? <a href="#" onclick="showRegisterModal()">Sign up</a></p>
+                    </div>
+                </div>
+            `;
+        };
+        
+        window.getRegisterModalContent = function() {
+            return `
+                <div class="auth-card" style="background: var(--theater-dark); margin: 0;">
+                    <div class="auth-header">
+                        <div class="auth-logo">CineScope</div>
+                        <h2 class="auth-title">Create Account</h2>
+                        <p class="auth-subtitle">Join the premium experience</p>
+                    </div>
+                    
+                    <form class="auth-form" onsubmit="handleRegister(event)">
+                        <div class="form-group">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" class="form-input" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-input" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-input" required />
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline" onclick="app.closeModal('register')">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Create Account</button>
+                        </div>
+                    </form>
+                    
+                    <div class="auth-footer">
+                        <p>Already have an account? <a href="#" onclick="showLoginModal()">Sign in</a></p>
+                    </div>
+                </div>
+            `;
+        };
+        
+        window.showLoginModal = function() {
+            app.closeModal('register');
+            app.showModal('login', getLoginModalContent());
+        };
+        
+        window.showRegisterModal = function() {
+            app.closeModal('login');
+            app.showModal('register', getRegisterModalContent());
+        };
+        
+        window.handleLogin = async function(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const credentials = {
+                username: formData.get('username'),
+                password: formData.get('password')
+            };
+            
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Signing in...';
+            submitBtn.disabled = true;
+            
+            try {
+                const result = await authManager.login(credentials);
+                if (result.success) {
+                    app.closeModal('login');
+                } else {
+                    app.showToast(result.error, 'error');
+                }
+            } catch (error) {
+                app.showToast('Login failed', 'error');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        };
+        
+        window.handleRegister = async function(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const userData = {
+                username: formData.get('username'),
+                email: formData.get('email'),
+                password: formData.get('password')
+            };
+            
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Creating account...';
+            submitBtn.disabled = true;
+            
+            try {
+                const result = await authManager.register(userData);
+                if (result.success) {
+                    app.closeModal('register');
+                } else {
+                    app.showToast(result.error, 'error');
+                }
+            } catch (error) {
+                app.showToast('Registration failed', 'error');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        };
+        
+        // Initialize search functionality
+        const searchInput = document.querySelector('.search-input');
+        const searchResults = document.getElementById('search-results');
+        let searchTimeout;
+        
+        searchInput?.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+            
+            if (!query) {
+                searchResults.style.display = 'none';
+                return;
+            }
+            
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const results = await apiClient.search({ query, limit: 8 });
+                    displaySearchResults(results.results || []);
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
+        });
+        
+        function displaySearchResults(results) {
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="no-results">No results found</div>';
+                searchResults.style.display = 'block';
+                return;
+            }
+            
+            searchResults.innerHTML = results.map(item => `
+                <div class="search-result-item" onclick="app.showContentDetails(${item.id}); searchResults.style.display='none';">
+                    <img src="${item.poster_path || '/assets/default-poster.jpg'}" alt="${item.title}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;" />
+                    <div style="flex: 1; margin-left: 0.75rem;">
+                        <div style="font-weight: 600; font-size: 0.875rem;">${item.title}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.75rem;">
+                            ${item.content_type?.toUpperCase()} ${item.rating ? `• ★ ${item.rating.toFixed(1)}` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            searchResults.style.display = 'block';
+        }
+        
+        // Hide search results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!searchInput?.contains(e.target) && !searchResults?.contains(e.target)) {
+                searchResults.style.display = 'none';
+            }
+        });
+        
+        // Update mobile nav active state
+        function updateMobileNavActive() {
+            const path = window.location.pathname;
+            document.querySelectorAll('.mobile-nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (path === '/' && item.dataset.page === 'home') {
+                    item.classList.add('active');
+                } else if (path.includes(item.dataset.page)) {
+                    item.classList.add('active');
+                }
+            });
+        }
+        
+        // Update nav on route change
+        window.addEventListener('popstate', updateMobileNavActive);
+        updateMobileNavActive();
+        
+        // Handle topbar scroll effects
+        let lastScrollY = 0;
+        window.addEventListener('scroll', () => {
+            const topbar = document.getElementById('topbar');
+            const currentScrollY = window.scrollY;
+            
+            if (currentScrollY > 50) {
+                topbar.classList.add('scrolled');
+            } else {
+                topbar.classList.remove('scrolled');
+            }
+            
+            lastScrollY = currentScrollY;
+        });
+        
+        // Performance monitoring
+        if (performance.mark) {
+            performance.mark('app-start');
+        }
+        
+        // Initialize app when ready
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                document.body.classList.add('app-ready');
+                if (performance.mark) {
+                    performance.mark('app-ready');
+                    performance.measure('app-load-time', 'app-start', 'app-ready');
+                }
+            }, 100);
+        });
+    </script>
 
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(console.warn);
-        }
-    </script>
-
-    <!-- Core JavaScript (Load in specific order) -->
-    <script src="js/config.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/app.js"></script>
-
-    <!-- Initialize Homepage -->
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Performance mark
-            performance.mark('page-start');
-            
-            // Initialize auth state
-            await window.auth.checkAuthStatus();
-            
-            // Update UI based on auth state
-            updateUserSection();
-            
-            // Load homepage content
-            await loadHomepageContent();
-            
-            // Setup search functionality
-            setupGlobalSearch();
-            
-            // Setup mobile navigation
-            setupMobileNavigation();
-            
-            // Hide initial loader
-            document.getElementById('initialLoader').style.display = 'none';
-            
-            // Performance mark
-            performance.mark('page-ready');
-            performance.measure('page-load', 'page-start', 'page-ready');
-        });
-
-        // Update user section based on auth state
-        function updateUserSection() {
-            const userSection = document.getElementById('userSection');
-            
-            if (window.auth.isAuthenticated()) {
-                const user = window.auth.getUser();
-                userSection.innerHTML = `
-                    <div class="user-menu">
-                        <img src="${window.auth.getUserAvatar()}" 
-                             alt="${user.username}" 
-                             class="user-avatar"
-                             onclick="toggleUserMenu()">
-                        <div class="user-dropdown" id="userDropdown">
-                            <a href="/${user.username}/profile" class="dropdown-item">Profile</a>
-                            <a href="/${user.username}/settings" class="dropdown-item">Settings</a>
-                            ${user.is_admin ? '<a href="/admin/" class="dropdown-item">Admin</a>' : ''}
-                            <hr>
-                            <a href="#" onclick="window.auth.logout()" class="dropdown-item">Logout</a>
-                        </div>
-                    </div>
-                `;
-            } else {
-                userSection.innerHTML = `
-                    <div class="auth-buttons">
-                        <a href="/auth/login.html" class="btn btn-outline btn-sm">Login</a>
-                        <a href="/auth/register.html" class="btn btn-primary btn-sm">Sign Up</a>
-                    </div>
-                `;
-            }
-        }
-
-        // Load homepage content with real API data
-        async function loadHomepageContent() {
-            try {
-                const mainContent = document.getElementById('mainContent');
-                const isAuthenticated = window.auth.isAuthenticated();
-                
-                // Show loading skeleton
-                mainContent.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-                
-                // Load content sections in parallel
-                const promises = [];
-                
-                if (isAuthenticated) {
-                    promises.push(
-                        window.api.getPersonalizedRecommendations({ limit: 15 }),
-                        window.api.getWatchlist(),
-                        window.api.getFavorites()
-                    );
-                }
-                
-                promises.push(
-                    window.api.getTrending({ limit: 20 }),
-                    window.api.getNewReleases({ limit: 15 }),
-                    window.api.getCriticsChoice({ limit: 12 }),
-                    window.api.getAdminChoice({ limit: 8 }),
-                    window.api.getRegionalContent('hindi', { limit: 10 }),
-                    window.api.getGenreRecommendations('action', { limit: 10 })
-                );
-
-                const results = await Promise.allSettled(promises);
-                
-                // Process results
-                let index = 0;
-                let personalizedRecs = [];
-                let watchlist = [];
-                let favorites = [];
-                
-                if (isAuthenticated) {
-                    personalizedRecs = results[index++]?.value?.recommendations || [];
-                    watchlist = results[index++]?.value?.watchlist || [];
-                    favorites = results[index++]?.value?.favorites || [];
-                }
-                
-                const trending = results[index++]?.value?.recommendations || [];
-                const newReleases = results[index++]?.value?.recommendations || [];
-                const criticsChoice = results[index++]?.value?.recommendations || [];
-                const adminChoice = results[index++]?.value?.recommendations || [];
-                const regional = results[index++]?.value?.recommendations || [];
-                const actionMovies = results[index++]?.value?.recommendations || [];
-
-                // Render content
-                mainContent.innerHTML = `
-                    <div class="home-container">
-                        ${renderHeroSection(trending[0] || newReleases[0])}
-                        ${isAuthenticated ? renderPersonalizedSections(personalizedRecs, watchlist, favorites) : ''}
-                        ${renderPublicSections(trending, newReleases, criticsChoice, adminChoice, regional, actionMovies)}
-                    </div>
-                `;
-                
-                // Initialize carousels
-                initializeCarousels();
-                
-                // Performance mark
-                performance.mark('content-loaded');
-                
-            } catch (error) {
-                console.error('Failed to load homepage content:', error);
-                showErrorContent();
-            }
-        }
-
-        // Render hero section with real data
-        function renderHeroSection(heroContent) {
-            if (!heroContent) return '';
-
-            return `
-                <section class="hero-section">
-                    <div class="hero-backdrop" style="background-image: url('${heroContent.backdrop_path || heroContent.poster_path}')">
-                        <div class="hero-overlay"></div>
-                        <div class="hero-content">
-                            <h1 class="hero-title">${heroContent.title}</h1>
-                            <p class="hero-description">${heroContent.overview || 'Discover amazing content on CineScope'}</p>
-                            <div class="hero-metadata">
-                                <span class="rating">★ ${heroContent.rating || 'N/A'}</span>
-                                <span class="type">${heroContent.content_type?.toUpperCase() || 'MOVIE'}</span>
-                                <span class="genres">${heroContent.genres?.slice(0, 3).join(', ') || ''}</span>
-                            </div>
-                            <div class="hero-actions">
-                                <button class="btn btn-primary" onclick="playTrailer(${heroContent.id})">
-                                    ▶ Play Trailer
-                                </button>
-                                <button class="btn btn-secondary" onclick="showDetails(${heroContent.id})">
-                                    ⓘ More Info
-                                </button>
-                                <button class="btn btn-outline" onclick="addToWatchlist(${heroContent.id})">
-                                    + My List
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `;
-        }
-
-        // Render personalized sections for authenticated users
-        function renderPersonalizedSections(personalizedRecs, watchlist, favorites) {
-            return `
-                ${renderCarouselSection('Recommended for You', personalizedRecs, 'personalized')}
-                ${renderCarouselSection('Continue Watching', watchlist?.slice(0, 8), 'continue')}
-                ${renderCarouselSection('Your Favorites', favorites?.slice(0, 8), 'favorites')}
-            `;
-        }
-
-        // Render public sections
-        function renderPublicSections(trending, newReleases, criticsChoice, adminChoice, regional, actionMovies) {
-            return `
-                ${renderCarouselSection('Trending Now', trending, 'trending')}
-                ${renderCarouselSection('New Releases', newReleases, 'new-releases')}
-                ${renderCarouselSection('Critics Choice', criticsChoice, 'critics')}
-                ${renderCarouselSection('Staff Picks', adminChoice, 'admin')}
-                ${renderCarouselSection('Popular in India', regional, 'regional')}
-                ${renderCarouselSection('Action Movies', actionMovies, 'action')}
-            `;
-        }
-
-        // Render carousel section
-        function renderCarouselSection(title, items, id) {
-            if (!items || items.length === 0) return '';
-
-            return `
-                <section class="content-section" data-section="${id}">
-                    <div class="section-header">
-                        <h2 class="section-title">${title}</h2>
-                        <button class="section-more" onclick="showMore('${id}')">See All</button>
-                    </div>
-                    <div class="carousel-container" data-carousel="${id}">
-                        <div class="carousel-track">
-                            ${items.map(item => renderContentCard(item)).join('')}
-                        </div>
-                        <button class="carousel-btn carousel-prev" data-direction="prev">‹</button>
-                        <button class="carousel-btn carousel-next" data-direction="next">›</button>
-                    </div>
-                </section>
-            `;
-        }
-
-        // Render individual content card
-        function renderContentCard(item) {
-            return `
-                <div class="content-card" data-id="${item.id}" onclick="showDetails(${item.id})">
-                    <div class="card-image">
-                        <img src="${item.poster_path}" alt="${item.title}" loading="lazy" />
-                        <div class="card-overlay">
-                            <button class="play-btn" onclick="event.stopPropagation(); playTrailer(${item.id})">▶</button>
-                        </div>
-                    </div>
-                    <div class="card-info">
-                        <h3 class="card-title">${item.title}</h3>
-                        <div class="card-metadata">
-                            <span class="rating">★ ${item.rating || 'N/A'}</span>
-                            <span class="type">${item.content_type || 'movie'}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Initialize carousel functionality
-        function initializeCarousels() {
-            document.querySelectorAll('.carousel-container').forEach(container => {
-                const track = container.querySelector('.carousel-track');
-                const prevBtn = container.querySelector('.carousel-prev');
-                const nextBtn = container.querySelector('.carousel-next');
-                const cards = container.querySelectorAll('.content-card');
-                
-                let currentIndex = 0;
-                const itemsPerView = getItemsPerView();
-                
-                function updateCarousel() {
-                    const translateX = -(currentIndex * (100 / itemsPerView));
-                    track.style.transform = `translateX(${translateX}%)`;
-                    
-                    prevBtn.style.display = currentIndex === 0 ? 'none' : 'block';
-                    nextBtn.style.display = currentIndex >= cards.length - itemsPerView ? 'none' : 'block';
-                }
-                
-                prevBtn.addEventListener('click', () => {
-                    currentIndex = Math.max(0, currentIndex - itemsPerView);
-                    updateCarousel();
-                });
-                
-                nextBtn.addEventListener('click', () => {
-                    currentIndex = Math.min(cards.length - itemsPerView, currentIndex + itemsPerView);
-                    updateCarousel();
-                });
-                
-                updateCarousel();
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
             });
         }
-
-        // Get items per view based on screen size
-        function getItemsPerView() {
-            const width = window.innerWidth;
-            if (width >= 1400) return 7;
-            if (width >= 992) return 5;
-            if (width >= 768) return 3;
-            return 2;
-        }
-
-        // Setup global search functionality
-        function setupGlobalSearch() {
-            const searchInput = document.getElementById('globalSearch');
-            const suggestionsContainer = document.getElementById('searchSuggestions');
-            let searchTimeout;
-
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.trim();
-                
-                clearTimeout(searchTimeout);
-                
-                if (query.length < 2) {
-                    suggestionsContainer.style.display = 'none';
-                    return;
-                }
-                
-                searchTimeout = setTimeout(async () => {
-                    try {
-                        const results = await window.api.autocomplete(query);
-                        showSearchSuggestions(results.results || []);
-                    } catch (error) {
-                        console.error('Search autocomplete error:', error);
-                    }
-                }, 300);
-            });
-
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    const query = e.target.value.trim();
-                    if (query) {
-                        window.location.href = `/content/search.html?q=${encodeURIComponent(query)}`;
-                    }
-                }
-            });
-        }
-
-        // Show search suggestions
-        function showSearchSuggestions(results) {
-            const suggestionsContainer = document.getElementById('searchSuggestions');
-            
-            if (results.length === 0) {
-                suggestionsContainer.style.display = 'none';
-                return;
-            }
-            
-            suggestionsContainer.innerHTML = results.slice(0, 5).map(item => `
-                <div class="suggestion-item" onclick="showDetails(${item.id})">
-                    <img src="${item.poster_path}" alt="${item.title}" class="suggestion-poster">
-                    <div class="suggestion-info">
-                        <div class="suggestion-title">${item.title}</div>
-                        <div class="suggestion-meta">${item.content_type} • ★ ${item.rating || 'N/A'}</div>
-                    </div>
-                </div>
-            `).join('');
-            
-            suggestionsContainer.style.display = 'block';
-        }
-
-        // Setup mobile navigation
-        function setupMobileNavigation() {
-            document.querySelectorAll('.mobile-nav-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    // Update active state
-                    document.querySelectorAll('.mobile-nav-item').forEach(nav => nav.classList.remove('active'));
-                    e.currentTarget.classList.add('active');
-                });
-            });
-        }
-
-        // Action functions
-        async function showDetails(contentId) {
-            window.location.href = `/content/details.html?id=${contentId}`;
-        }
-
-        async function playTrailer(contentId) {
-            try {
-                const content = await window.api.getContentDetails(contentId);
-                
-                if (content.youtube_trailer) {
-                    // Create modal for trailer
-                    const modal = document.createElement('div');
-                    modal.className = 'modal modal-large';
-                    modal.innerHTML = `
-                        <div class="modal-backdrop" onclick="closeModal(this)"></div>
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h3>${content.title} - Trailer</h3>
-                                <button class="modal-close" onclick="closeModal(this)">×</button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="trailer-player">
-                                    <iframe 
-                                        src="https://www.youtube.com/embed/${content.youtube_trailer_id}?autoplay=1"
-                                        frameborder="0" 
-                                        allowfullscreen
-                                        width="100%" 
-                                        height="400">
-                                    </iframe>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    document.body.appendChild(modal);
-                    modal.style.display = 'flex';
-                    
-                    // Record interaction
-                    if (window.auth.isAuthenticated()) {
-                        window.api.recordInteraction({
-                            content_id: contentId,
-                            interaction_type: 'trailer_view'
-                        }).catch(console.warn);
-                    }
-                } else {
-                    showToast('Trailer not available', 'warning');
-                }
-            } catch (error) {
-                console.error('Failed to play trailer:', error);
-                showToast('Failed to load trailer', 'error');
-            }
-        }
-
-        async function addToWatchlist(contentId) {
-            if (!window.auth.isAuthenticated()) {
-                window.location.href = '/auth/login.html';
-                return;
-            }
-
-            try {
-                await window.api.recordInteraction({
-                    content_id: contentId,
-                    interaction_type: 'watchlist'
-                });
-                
-                showToast('Added to watchlist', 'success');
-            } catch (error) {
-                console.error('Failed to add to watchlist:', error);
-                showToast('Failed to add to watchlist', 'error');
-            }
-        }
-
-        function showMore(sectionId) {
-            // Navigate to appropriate section page
-            const sectionMap = {
-                'trending': '/content/trending.html',
-                'new-releases': '/content/trending.html?filter=new',
-                'critics': '/content/trending.html?filter=critics',
-                'admin': '/content/trending.html?filter=admin',
-                'regional': '/content/regional.html',
-                'action': '/content/genre.html?genre=action'
-            };
-            
-            window.location.href = sectionMap[sectionId] || '/content/search.html';
-        }
-
-        function closeModal(element) {
-            const modal = element.closest('.modal');
-            modal.remove();
-        }
-
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = message;
-            
-            document.body.appendChild(toast);
-            
-            setTimeout(() => toast.classList.add('toast-show'), 100);
-            setTimeout(() => {
-                toast.classList.remove('toast-show');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        function showErrorContent() {
-            document.getElementById('mainContent').innerHTML = `
-                <div class="error-message">
-                    <h3>Unable to load content</h3>
-                    <p>Please check your internet connection and try again.</p>
-                    <button class="btn btn-primary" onclick="location.reload()">Retry</button>
-                </div>
-            `;
-        }
-
-        function toggleUserMenu() {
-            const dropdown = document.getElementById('userDropdown');
-            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-        }
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.user-menu')) {
-                const dropdown = document.getElementById('userDropdown');
-                if (dropdown) dropdown.style.display = 'none';
-            }
-            
-            if (!e.target.closest('.search-container')) {
-                document.getElementById('searchSuggestions').style.display = 'none';
-            }
-        });
     </script>
 </body>
 </html>

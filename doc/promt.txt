@@ -7,6 +7,7 @@
 2. **Only 6 CSS Files (Global):**
    * No extra `.css` files beyond `main.css`, `components.css`, `layouts.css`, `animations.css`, `responsive.css`, `theme.css`.
    * Page-specific styles → inline inside `.html`.
+   * simple vercel.json file should be provide 
 3. **Zero Placeholder Policy:**
    * No mock, dummy, or static placeholder content.
    * Every component must fetch **live data** from `https://backend-app-970m.onrender.com/api`.
@@ -143,7 +144,7 @@ frontend/
 
 ### BACKEND INTEGRATION REQUIREMENTS:
 ```javascript
-// MANDATORY: All data must come from these real endpoints
+// Real API endpoints from your Flask backend (backend/app.py)
 export const API_ENDPOINTS = {
   BASE_URL: 'https://backend-app-970m.onrender.com/api',
 
@@ -253,123 +254,6 @@ export const buildUrl = {
   watchlist: () => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.WATCHLIST}`,
   favorites: () => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.FAVORITES}`,
   userRatings: () => `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.USER_RATINGS}`,
-};
-
-// Minimal token getter (customize if needed)
-const getAuthToken = () => localStorage.getItem('auth_token');
-
-// Simple in-memory cache for preloading
-const __cache = new Map(); // key -> { data, expiresAt, promise }
-const defaultTTL = 60_000; // 60s
-
-const now = () => Date.now();
-const isFresh = (entry) => entry && entry.expiresAt && entry.expiresAt > now();
-
-// Generic real API fetcher with preloading and SWR-like caching
-export const fetchRealData = async (
-  urlOrEndpoint, 
-  {
-    method = 'GET',
-    params,
-    body,
-    token = getAuthToken(),
-    headers = {},
-    ttl = defaultTTL,
-    prefetch = false,
-    transform, // optional (data) => any
-    signal,
-  } = {}
-) => {
-  // Allow passing endpoint path (e.g., '/recommendations/trending') or a full URL
-  const isFullUrl = /^https?:\/\//i.test(urlOrEndpoint);
-  const base = isFullUrl ? '' : API_ENDPOINTS.BASE_URL;
-  const qs = params && Object.keys(params).length ? `?${new URLSearchParams(params).toString()}` : '';
-  const url = `${base}${urlOrEndpoint}${qs}`;
-
-  // If cached and fresh, return immediately
-  const cached = __cache.get(url);
-  if (!prefetch && isFresh(cached) && cached.data !== undefined) {
-    return cached.data;
-  }
-  if (!prefetch && cached?.promise) {
-    // Share in-flight request
-    const data = await cached.promise;
-    return transform ? transform(data) : data;
-  }
-
-  const controller = new AbortController();
-  const combinedSignal = signal
-    ? new AbortController()
-    : null;
-
-  if (combinedSignal) {
-    // Link signals if provided
-    const onAbort = () => controller.abort();
-    signal.addEventListener('abort', onAbort, { once: true });
-  }
-
-  const fetchPromise = fetch(url, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: controller.signal,
-  }).then(async (res) => {
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      const err = new Error(`HTTP ${res.status} ${res.statusText}: ${text || url}`);
-      err.status = res.status;
-      throw err;
-    }
-    return res.json();
-  });
-
-  // Store in cache immediately to share in-flight promise
-  __cache.set(url, {
-    promise: fetchPromise,
-    data: cached?.data,
-    expiresAt: now() + ttl,
-  });
-
-  try {
-    const data = await fetchPromise;
-    const finalData = transform ? transform(data) : data;
-
-    __cache.set(url, {
-      promise: null,
-      data: finalData,
-      expiresAt: now() + ttl,
-    });
-
-    return prefetch ? undefined : finalData;
-  } catch (e) {
-    // On error, clear promise but keep any stale data if available
-    __cache.set(url, {
-      promise: null,
-      data: cached?.data,
-      expiresAt: now() + ttl / 4,
-    });
-    if (prefetch) return undefined;
-    throw e;
-  }
-};
-
-// Convenience transformers (client-side) where the backend bundles data together
-export const transformers = {
-  castCrew: (contentDetails) => ({
-    cast: contentDetails?.cast ?? [],
-    crew: contentDetails?.crew ?? [],
-  }),
-  similarFromContent: (contentDetails) => contentDetails?.similar_content ?? [],
-  recommendationsList: (payload) => payload?.recommendations ?? [],
-};
-
-// EVERY component must fetch real data with preloading
-const fetchRealData = async (endpoint, params = {}) => {
-  // Implementation with real API integration
 };
 -----------------------
 ## 🏆 SUCCESS METRICS (Non-Negotiable)

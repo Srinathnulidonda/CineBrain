@@ -1,713 +1,1066 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="Movie and TV show details - CineScope">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Content Details - CineScope</title>
+    <meta name="description" content="Detailed information about movies, TV shows, and anime on CineScope.">
     
-    <link rel="preload" href="../js/config.js" as="script">
-    <link rel="preload" href="../js/api.js" as="script">
-    <link rel="preload" href="../js/auth.js" as="script">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
     
-    <link rel="stylesheet" href="../css/main.css">
-    <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/layouts.css">
-    <link rel="stylesheet" href="../css/responsive.css">
-    <link rel="stylesheet" href="../css/theme.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Top Navigation -->
-    <nav class="topbar" id="topbar">
-        <div class="topbar-left">
-            <a href="/" class="logo">CineScope</a>
-            <button class="back-btn" onclick="history.back()">← Back</button>
+    <!-- Fixed Top Bar -->
+    <header class="topbar" id="topbar">
+        <div class="topbar-logo" onclick="window.location.href='/'">
+            CineScope
         </div>
-        <div class="search-container">
-            <input type="text" class="search-input" placeholder="Search..." id="headerSearch">
+        
+        <div class="topbar-search">
+            <div class="search-icon">🔍</div>
+            <input type="text" class="search-input" placeholder="Search..." />
         </div>
-        <div class="topbar-right" id="userSection"></div>
-    </nav>
+        
+        <div class="topbar-actions">
+            <button class="theme-toggle" title="Toggle theme" onclick="toggleTheme()"></button>
+            <img class="user-avatar user-only-show" style="display: none;" alt="User Avatar" />
+            <button class="login-btn user-only-hide" onclick="window.location.href='/auth/login.html'">Sign In</button>
+        </div>
+    </header>
 
-    <main id="mainContent">
-        <div class="loading" id="loadingState">
-            <div class="spinner"></div>
-            <p>Loading content details...</p>
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="detail-layout">
+            <!-- Loading State -->
+            <div id="loadingState" class="detail-loading">
+                <div class="loading-spinner animate-spin"></div>
+                <p>Loading content details...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="detail-error" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <h2>Content Not Found</h2>
+                <p>The content you're looking for could not be found or may have been removed.</p>
+                <div class="error-actions">
+                    <button class="btn btn-primary" onclick="window.history.back()">Go Back</button>
+                    <button class="btn btn-outline" onclick="window.location.href='/'">Home</button>
+                </div>
+            </div>
+
+            <!-- Content Details -->
+            <div id="contentDetails" style="display: none;">
+                <!-- Hero Section -->
+                <div class="detail-hero" id="detailHero">
+                    <div class="detail-hero-overlay"></div>
+                    <div class="detail-hero-content">
+                        <div class="hero-meta" id="heroMeta"></div>
+                        <h1 class="hero-title" id="heroTitle"></h1>
+                        <div class="hero-rating" id="heroRating"></div>
+                        <p class="hero-overview" id="heroOverview"></p>
+                        <div class="hero-actions" id="heroActions"></div>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="detail-content">
+                    <div class="detail-main">
+                        <!-- Synopsis Section -->
+                        <section class="detail-section" id="synopsisSection">
+                            <h2>Synopsis</h2>
+                            <div class="synopsis-content" id="synopsisContent"></div>
+                        </section>
+
+                        <!-- Cast & Crew Section -->
+                        <section class="detail-section" id="castSection" style="display: none;">
+                            <h2>Cast & Crew</h2>
+                            <div class="cast-tabs">
+                                <button class="tab-btn active" data-tab="cast">Cast</button>
+                                <button class="tab-btn" data-tab="crew">Crew</button>
+                            </div>
+                            <div class="cast-content">
+                                <div id="castGrid" class="cast-grid"></div>
+                                <div id="crewGrid" class="crew-grid" style="display: none;"></div>
+                            </div>
+                        </section>
+
+                        <!-- Similar Content Section -->
+                        <section class="detail-section" id="similarSection" style="display: none;">
+                            <h2>More Like This</h2>
+                            <div class="similar-grid" id="similarGrid"></div>
+                        </section>
+
+                        <!-- Reviews Section (placeholder for future implementation) -->
+                        <section class="detail-section" id="reviewsSection" style="display: none;">
+                            <h2>User Reviews</h2>
+                            <div class="reviews-container" id="reviewsContainer">
+                                <p class="reviews-placeholder">User reviews feature coming soon!</p>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Sidebar -->
+                    <div class="detail-sidebar">
+                        <div class="sidebar-content">
+                            <!-- Poster -->
+                            <div class="sidebar-poster" id="sidebarPoster"></div>
+
+                            <!-- Quick Info -->
+                            <div class="quick-info" id="quickInfo"></div>
+
+                            <!-- Actions -->
+                            <div class="sidebar-actions" id="sidebarActions"></div>
+
+                            <!-- Additional Info -->
+                            <div class="additional-info" id="additionalInfo"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
-    <!-- Mobile Navigation -->
-    <nav class="mobile-nav" id="mobileNav">
+    <!-- Fixed Bottom Navigation (Mobile) -->
+    <nav class="mobile-nav">
         <a href="/" class="mobile-nav-item">
-            <span class="mobile-nav-icon">🏠</span>
-            <span class="mobile-nav-label">Home</span>
+            <div class="mobile-nav-icon">🏠</div>
+            <span>Home</span>
         </a>
         <a href="/content/search.html" class="mobile-nav-item">
-            <span class="mobile-nav-icon">🔍</span>
-            <span class="mobile-nav-label">Search</span>
+            <div class="mobile-nav-icon">🔍</div>
+            <span>Search</span>
         </a>
-        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToWatchlist())">
-            <span class="mobile-nav-icon">📚</span>
-            <span class="mobile-nav-label">Watchlist</span>
+        <a href="/user/watchlist.html" class="mobile-nav-item user-only-show" style="display: none;">
+            <div class="mobile-nav-icon">📋</div>
+            <span>Watchlist</span>
         </a>
-        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToFavorites())">
-            <span class="mobile-nav-icon">❤️</span>
-            <span class="mobile-nav-label">Favorites</span>
+        <a href="/user/favorites.html" class="mobile-nav-item user-only-show" style="display: none;">
+            <div class="mobile-nav-icon">❤️</div>
+            <span>Favorites</span>
         </a>
-        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToProfile())">
-            <span class="mobile-nav-icon">👤</span>
-            <span class="mobile-nav-label">Profile</span>
+        <a href="#" class="mobile-nav-item" onclick="handleProfileClick()">
+            <div class="mobile-nav-icon">👤</div>
+            <span>Profile</span>
         </a>
     </nav>
 
-    <!-- Trailer Modal -->
-    <div class="modal" id="trailerModal" style="display: none;">
-        <div class="modal-backdrop" onclick="closeTrailerModal()"></div>
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <h3 id="trailerTitle">Trailer</h3>
-                <button class="modal-close" onclick="closeTrailerModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="trailer-player" id="trailerPlayer"></div>
-            </div>
-        </div>
-    </div>
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
 
-    <script src="../js/config.js"></script>
-    <script src="../js/api.js"></script>
-    <script src="../js/auth.js"></script>
+    <script type="module">
+        import apiClient from '/js/api.js';
+        import authManager from '/js/auth.js';
 
-    <script>
+        // Page state
         let currentContent = null;
-        let similarContent = [];
+        let contentId = null;
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Initialize auth and UI
-            updateUserSection();
-            setupHeaderSearch();
-            
-            // Get content ID from URL
-            const params = new URLSearchParams(window.location.search);
-            const contentId = params.get('id');
-            
-            if (!contentId) {
-                showError('Content not found');
-                return;
-            }
+        // DOM elements
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const contentDetails = document.getElementById('contentDetails');
 
-            // Load content details
-            await loadContentDetails(contentId);
-        });
-
-        async function loadContentDetails(contentId) {
-            try {
-                const loadingState = document.getElementById('loadingState');
-                loadingState.style.display = 'flex';
-
-                // Load content details and similar content in parallel
-                const [contentDetails, similarResponse] = await Promise.all([
-                    window.api.getContentDetails(contentId),
-                    window.api.getSimilarContent(contentId, { limit: 12 })
-                ]);
-
-                currentContent = contentDetails;
-                similarContent = similarResponse.recommendations || [];
-
-                // Update page title and meta
-                document.title = `${currentContent.title} - CineScope`;
-                
-                // Render content
-                renderContentDetails();
-                
-                loadingState.style.display = 'none';
-
-                // Record view interaction
-                if (window.auth.isAuthenticated()) {
-                    window.api.recordInteraction({
-                        content_id: contentId,
-                        interaction_type: 'view'
-                    }).catch(console.warn);
-                }
-
-            } catch (error) {
-                console.error('Failed to load content details:', error);
-                showError('Failed to load content details');
-            }
-        }
-
-        function renderContentDetails() {
-            const main = document.getElementById('mainContent');
-            
-            main.innerHTML = `
-                <div class="content-details">
-                    ${renderHeroSection()}
-                    ${renderContentInfo()}
-                    ${renderCastCrew()}
-                    ${renderSimilarContent()}
+        // Show toast function
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type} show`;
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <span class="toast-message">${message}</span>
+                    <button class="toast-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
                 </div>
             `;
-
-            // Initialize interactions
-            setupContentInteractions();
-            initializeSimilarCarousel();
+            document.querySelector('.toast-container').appendChild(toast);
+            
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 200);
+                }
+            }, 3000);
         }
 
-        function renderHeroSection() {
-            const backdropUrl = currentContent.backdrop_path || currentContent.poster_path;
-            const genres = currentContent.genres || [];
-            const languages = currentContent.languages || [];
-
-            return `
-                <section class="content-hero">
-                    <div class="hero-backdrop" style="background-image: url('${backdropUrl}')">
-                        <div class="hero-overlay"></div>
-                        <div class="hero-content">
-                            <div class="hero-poster">
-                                <img src="${currentContent.poster_path}" alt="${currentContent.title}" class="poster-image">
-                            </div>
-                            <div class="hero-info">
-                                <h1 class="content-title">${currentContent.title}</h1>
-                                ${currentContent.original_title && currentContent.original_title !== currentContent.title ? 
-                                    `<p class="original-title">${currentContent.original_title}</p>` : ''}
-                                
-                                <div class="content-metadata">
-                                    <span class="rating">★ ${currentContent.rating || 'N/A'}</span>
-                                    <span class="type">${(currentContent.content_type || 'movie').toUpperCase()}</span>
-                                    ${currentContent.release_date ? 
-                                        `<span class="year">${new Date(currentContent.release_date).getFullYear()}</span>` : ''}
-                                    ${currentContent.runtime ? 
-                                        `<span class="runtime">${currentContent.runtime} min</span>` : ''}
-                                </div>
-
-                                <div class="content-genres">
-                                    ${genres.slice(0, 4).map(genre => 
-                                        `<span class="genre-chip">${genre}</span>`
-                                    ).join('')}
-                                </div>
-
-                                <p class="content-overview">${currentContent.overview || 'No description available.'}</p>
-
-                                <div class="content-actions">
-                                    ${currentContent.youtube_trailer ? 
-                                        `<button class="btn btn-primary" onclick="playTrailer()">
-                                            ▶ Play Trailer
-                                        </button>` : ''}
-                                    <button class="btn btn-outline" onclick="toggleWatchlist()" id="watchlistBtn">
-                                        <span id="watchlistIcon">+</span> My List
-                                    </button>
-                                    <button class="btn btn-outline" onclick="toggleFavorite()" id="favoriteBtn">
-                                        <span id="favoriteIcon">♡</span> Favorite
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="shareContent()">
-                                        📤 Share
-                                    </button>
-                                </div>
-
-                                <div class="content-badges">
-                                    ${currentContent.is_trending ? '<span class="badge badge-trending">🔥 Trending</span>' : ''}
-                                    ${currentContent.is_new_release ? '<span class="badge badge-new">✨ New Release</span>' : ''}
-                                    ${currentContent.is_critics_choice ? '<span class="badge badge-critics">🏆 Critics Choice</span>' : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `;
+        // Get content ID from URL
+        function getContentIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
         }
 
-        function renderContentInfo() {
-            const cast = currentContent.cast || [];
-            const crew = currentContent.crew || [];
-            const languages = currentContent.languages || [];
-
-            return `
-                <section class="content-info">
-                    <div class="container">
-                        <div class="info-grid">
-                            <div class="info-main">
-                                <div class="info-section">
-                                    <h3>Synopsis</h3>
-                                    <p class="synopsis-text">${currentContent.overview || 'No synopsis available.'}</p>
-                                </div>
-
-                                ${currentContent.anime_genres ? `
-                                    <div class="info-section">
-                                        <h3>Anime Categories</h3>
-                                        <div class="anime-genres">
-                                            ${currentContent.anime_genres.map(genre => 
-                                                `<span class="anime-genre-chip">${genre}</span>`
-                                            ).join('')}
-                                        </div>
-                                    </div>
-                                ` : ''}
-                            </div>
-
-                            <div class="info-sidebar">
-                                <div class="info-section">
-                                    <h3>Details</h3>
-                                    <div class="detail-item">
-                                        <span class="detail-label">Type:</span>
-                                        <span class="detail-value">${(currentContent.content_type || 'movie').toUpperCase()}</span>
-                                    </div>
-                                    ${currentContent.release_date ? `
-                                        <div class="detail-item">
-                                            <span class="detail-label">Release Date:</span>
-                                            <span class="detail-value">${new Date(currentContent.release_date).toLocaleDateString()}</span>
-                                        </div>
-                                    ` : ''}
-                                    ${currentContent.runtime ? `
-                                        <div class="detail-item">
-                                            <span class="detail-label">Runtime:</span>
-                                            <span class="detail-value">${currentContent.runtime} minutes</span>
-                                        </div>
-                                    ` : ''}
-                                    <div class="detail-item">
-                                        <span class="detail-label">Rating:</span>
-                                        <span class="detail-value">★ ${currentContent.rating || 'N/A'}/10</span>
-                                    </div>
-                                    ${currentContent.vote_count ? `
-                                        <div class="detail-item">
-                                            <span class="detail-label">Votes:</span>
-                                            <span class="detail-value">${currentContent.vote_count.toLocaleString()}</span>
-                                        </div>
-                                    ` : ''}
-                                    ${languages.length > 0 ? `
-                                        <div class="detail-item">
-                                            <span class="detail-label">Languages:</span>
-                                            <span class="detail-value">${languages.join(', ')}</span>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `;
-        }
-
-        function renderCastCrew() {
-            const cast = currentContent.cast || [];
-            const crew = currentContent.crew || [];
-
-            if (cast.length === 0 && crew.length === 0) return '';
-
-            return `
-                <section class="cast-crew">
-                    <div class="container">
-                        ${cast.length > 0 ? `
-                            <div class="cast-section">
-                                <h3>Cast</h3>
-                                <div class="cast-grid">
-                                    ${cast.slice(0, 8).map(person => `
-                                        <div class="cast-member">
-                                            ${person.profile_path ? 
-                                                `<img src="https://image.tmdb.org/t/p/w185${person.profile_path}" alt="${person.name}" class="cast-photo">` :
-                                                `<div class="cast-photo-placeholder">${person.name.charAt(0)}</div>`
-                                            }
-                                            <div class="cast-info">
-                                                <div class="cast-name">${person.name}</div>
-                                                <div class="cast-character">${person.character || person.role || ''}</div>
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-
-                        ${crew.length > 0 ? `
-                            <div class="crew-section">
-                                <h3>Crew</h3>
-                                <div class="crew-grid">
-                                    ${crew.slice(0, 6).map(person => `
-                                        <div class="crew-member">
-                                            <div class="crew-name">${person.name}</div>
-                                            <div class="crew-job">${person.job || person.role || ''}</div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                </section>
-            `;
-        }
-
-        function renderSimilarContent() {
-            if (similarContent.length === 0) return '';
-
-            return `
-                <section class="similar-content">
-                    <div class="container">
-                        <div class="section-header">
-                            <h3>More Like This</h3>
-                        </div>
-                        <div class="carousel-container" id="similarCarousel">
-                            <div class="carousel-track">
-                                ${similarContent.map(item => `
-                                    <div class="content-card" onclick="navigateToContent(${item.id})">
-                                        <div class="card-image">
-                                            <img src="${item.poster_path}" alt="${item.title}" loading="lazy">
-                                            <div class="card-overlay">
-                                                <button class="play-btn" onclick="event.stopPropagation(); playContentTrailer(${item.id})">▶</button>
-                                            </div>
-                                        </div>
-                                        <div class="card-info">
-                                            <h4 class="card-title">${item.title}</h4>
-                                            <div class="card-metadata">
-                                                <span class="rating">★ ${item.rating || 'N/A'}</span>
-                                                <span class="type">${item.content_type}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                            <button class="carousel-btn carousel-prev" onclick="scrollSimilarCarousel(-1)">‹</button>
-                            <button class="carousel-btn carousel-next" onclick="scrollSimilarCarousel(1)">›</button>
-                        </div>
-                    </div>
-                </section>
-            `;
-        }
-
-        function setupContentInteractions() {
-            // Check if content is in user's lists
-            if (window.auth.isAuthenticated()) {
-                checkUserLists();
-            }
-        }
-
-        async function checkUserLists() {
+        // Load content details
+        async function loadContentDetails(id) {
             try {
-                const [watchlist, favorites] = await Promise.all([
-                    window.api.getWatchlist(),
-                    window.api.getFavorites()
-                ]);
-
-                // Update watchlist button
-                const isInWatchlist = watchlist.watchlist?.some(item => item.id === currentContent.id);
-                const watchlistBtn = document.getElementById('watchlistBtn');
-                const watchlistIcon = document.getElementById('watchlistIcon');
+                showLoading();
                 
-                if (isInWatchlist) {
-                    watchlistBtn.classList.add('btn-active');
-                    watchlistIcon.textContent = '✓';
+                // Real API call to get content details
+                const content = await apiClient.getContentDetails(id);
+                
+                if (!content) {
+                    showError();
+                    return;
                 }
 
-                // Update favorite button
-                const isInFavorites = favorites.favorites?.some(item => item.id === currentContent.id);
-                const favoriteBtn = document.getElementById('favoriteBtn');
-                const favoriteIcon = document.getElementById('favoriteIcon');
+                currentContent = content;
                 
-                if (isInFavorites) {
-                    favoriteBtn.classList.add('btn-active');
-                    favoriteIcon.textContent = '♥';
+                // Update page title
+                document.title = `${content.title} - CineScope`;
+                
+                // Update meta description
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc && content.overview) {
+                    metaDesc.content = content.overview.substring(0, 150) + '...';
+                }
+
+                // Display content
+                displayContent(content);
+                
+                // Load similar content
+                loadSimilarContent(id);
+                
+                // Record view interaction if user is logged in
+                if (authManager.isLoggedIn()) {
+                    try {
+                        await apiClient.recordInteraction(authManager.getToken(), {
+                            content_id: id,
+                            interaction_type: 'view'
+                        });
+                    } catch (error) {
+                        console.log('Failed to record interaction:', error);
+                    }
                 }
 
             } catch (error) {
-                console.warn('Failed to check user lists:', error);
+                console.error('Error loading content details:', error);
+                showError();
             }
         }
 
-        function initializeSimilarCarousel() {
-            const carousel = document.getElementById('similarCarousel');
-            if (!carousel) return;
+        // Display content details
+        function displayContent(content) {
+            // Hide loading, show content
+            loadingState.style.display = 'none';
+            errorState.style.display = 'none';
+            contentDetails.style.display = 'block';
 
-            const track = carousel.querySelector('.carousel-track');
-            const cards = carousel.querySelectorAll('.content-card');
+            // Update hero section
+            updateHeroSection(content);
             
-            if (cards.length === 0) return;
-
-            let currentIndex = 0;
-            const itemsPerView = getItemsPerView();
-
-            function updateCarousel() {
-                const translateX = -(currentIndex * (100 / itemsPerView));
-                track.style.transform = `translateX(${translateX}%)`;
-                
-                const prevBtn = carousel.querySelector('.carousel-prev');
-                const nextBtn = carousel.querySelector('.carousel-next');
-                
-                prevBtn.style.display = currentIndex === 0 ? 'none' : 'block';
-                nextBtn.style.display = currentIndex >= cards.length - itemsPerView ? 'none' : 'block';
+            // Update sidebar
+            updateSidebar(content);
+            
+            // Update synopsis
+            updateSynopsis(content);
+            
+            // Update cast & crew
+            updateCastAndCrew(content);
+            
+            // Show sections
+            document.getElementById('synopsisSection').style.display = 'block';
+            if (content.cast && content.cast.length > 0) {
+                document.getElementById('castSection').style.display = 'block';
             }
-
-            window.scrollSimilarCarousel = (direction) => {
-                const itemsPerView = getItemsPerView();
-                
-                if (direction === -1) {
-                    currentIndex = Math.max(0, currentIndex - itemsPerView);
-                } else {
-                    currentIndex = Math.min(cards.length - itemsPerView, currentIndex + itemsPerView);
-                }
-                
-                updateCarousel();
-            };
-
-            updateCarousel();
         }
 
-        function getItemsPerView() {
-            const width = window.innerWidth;
-            if (width >= 1400) return 6;
-            if (width >= 992) return 4;
-            if (width >= 768) return 3;
-            return 2;
-        }
-
-        // Action Functions
-        function playTrailer() {
-            if (!currentContent.youtube_trailer_id) {
-                showToast('Trailer not available', 'warning');
-                return;
+        // Update hero section
+        function updateHeroSection(content) {
+            const hero = document.getElementById('detailHero');
+            const backdropUrl = content.backdrop_path || content.poster_path;
+            
+            if (backdropUrl) {
+                hero.style.backgroundImage = `url('${backdropUrl}')`;
             }
 
-            const modal = document.getElementById('trailerModal');
-            const title = document.getElementById('trailerTitle');
-            const player = document.getElementById('trailerPlayer');
+            // Meta information
+            const metaItems = [];
+            if (content.release_date) {
+                metaItems.push(new Date(content.release_date).getFullYear());
+            }
+            if (content.runtime) {
+                metaItems.push(`${content.runtime} min`);
+            }
+            metaItems.push((content.content_type || 'movie').toUpperCase());
+            
+            document.getElementById('heroMeta').innerHTML = metaItems.join(' • ');
+            
+            // Title
+            document.getElementById('heroTitle').textContent = content.title;
+            
+            // Rating
+            const ratingHtml = content.rating ? 
+                `<div class="rating-display">
+                    <span class="rating-star">★</span>
+                    <span class="rating-value">${content.rating.toFixed(1)}</span>
+                    <span class="rating-max">/10</span>
+                    ${content.vote_count ? `<span class="rating-count">(${content.vote_count.toLocaleString()} votes)</span>` : ''}
+                </div>` : '';
+            document.getElementById('heroRating').innerHTML = ratingHtml;
+            
+            // Overview
+            document.getElementById('heroOverview').textContent = content.overview || 'No description available.';
+            
+            // Action buttons
+            const actionsHtml = `
+                ${content.youtube_trailer ? `
+                    <button class="btn btn-primary" onclick="playTrailer('${content.youtube_trailer}')">
+                        <i class="icon-play"></i> Play Trailer
+                    </button>
+                ` : ''}
+                <button class="btn btn-secondary" onclick="addToWatchlist(${content.id})">
+                    <i class="icon-plus"></i> Add to Watchlist
+                </button>
+                <button class="btn btn-outline" onclick="addToFavorites(${content.id})">
+                    <i class="icon-heart"></i> Favorite
+                </button>
+            `;
+            document.getElementById('heroActions').innerHTML = actionsHtml;
+        }
 
-            title.textContent = `${currentContent.title} - Trailer`;
-            player.innerHTML = `
-                <iframe 
-                    src="https://www.youtube.com/embed/${currentContent.youtube_trailer_id}?autoplay=1&rel=0"
-                    frameborder="0" 
-                    allowfullscreen
-                    width="100%" 
-                    height="400"
-                    allow="autoplay; encrypted-media">
-                </iframe>
+        // Update sidebar
+        function updateSidebar(content) {
+            // Poster
+            const posterUrl = content.poster_path || '/assets/default-poster.jpg';
+            document.getElementById('sidebarPoster').innerHTML = `
+                <img src="${posterUrl}" alt="${content.title}" class="poster-image" />
             `;
 
-            modal.style.display = 'flex';
+            // Quick info
+            const quickInfoItems = [];
+            if (content.genres && content.genres.length > 0) {
+                quickInfoItems.push(`<div class="info-item"><label>Genres:</label> ${content.genres.join(', ')}</div>`);
+            }
+            if (content.languages && content.languages.length > 0) {
+                quickInfoItems.push(`<div class="info-item"><label>Languages:</label> ${content.languages.join(', ')}</div>`);
+            }
+            if (content.release_date) {
+                quickInfoItems.push(`<div class="info-item"><label>Release Date:</label> ${new Date(content.release_date).toLocaleDateString()}</div>`);
+            }
+            if (content.content_type === 'anime' && content.anime_genres && content.anime_genres.length > 0) {
+                quickInfoItems.push(`<div class="info-item"><label>Anime Type:</label> ${content.anime_genres.join(', ')}</div>`);
+            }
+            
+            document.getElementById('quickInfo').innerHTML = quickInfoItems.join('');
 
-            // Record interaction
-            if (window.auth.isAuthenticated()) {
-                window.api.recordInteraction({
-                    content_id: currentContent.id,
-                    interaction_type: 'trailer_view'
-                }).catch(console.warn);
+            // Sidebar actions
+            const sidebarActionsHtml = `
+                <button class="btn btn-outline btn-full" onclick="shareContent()">
+                    <i class="icon-share"></i> Share
+                </button>
+                <button class="btn btn-outline btn-full" onclick="reportContent()">
+                    <i class="icon-flag"></i> Report
+                </button>
+            `;
+            document.getElementById('sidebarActions').innerHTML = sidebarActionsHtml;
+
+            // Additional info
+            const additionalInfoItems = [];
+            if (content.tmdb_id) {
+                additionalInfoItems.push(`<div class="info-item"><label>TMDB ID:</label> ${content.tmdb_id}</div>`);
+            }
+            if (content.mal_id) {
+                additionalInfoItems.push(`<div class="info-item"><label>MAL ID:</label> ${content.mal_id}</div>`);
+            }
+            if (content.is_trending) {
+                additionalInfoItems.push(`<div class="badge badge-trending">Trending</div>`);
+            }
+            if (content.is_new_release) {
+                additionalInfoItems.push(`<div class="badge badge-new">New Release</div>`);
+            }
+            if (content.is_critics_choice) {
+                additionalInfoItems.push(`<div class="badge badge-critics">Critics' Choice</div>`);
+            }
+            
+            document.getElementById('additionalInfo').innerHTML = additionalInfoItems.join('');
+        }
+
+        // Update synopsis section
+        function updateSynopsis(content) {
+            const synopsisHtml = content.overview ? 
+                `<p class="synopsis-text">${content.overview}</p>` :
+                `<p class="synopsis-empty">No synopsis available for this content.</p>`;
+            
+            document.getElementById('synopsisContent').innerHTML = synopsisHtml;
+        }
+
+        // Update cast and crew
+        function updateCastAndCrew(content) {
+            const castGrid = document.getElementById('castGrid');
+            const crewGrid = document.getElementById('crewGrid');
+
+            // Cast
+            if (content.cast && content.cast.length > 0) {
+                const castHtml = content.cast.slice(0, 12).map(person => `
+                    <div class="cast-member">
+                        <div class="cast-photo">
+                            <img src="${person.profile_path ? `https://image.tmdb.org/t/p/w185${person.profile_path}` : '/assets/default-avatar.jpg'}" 
+                                 alt="${person.name}" loading="lazy" />
+                        </div>
+                        <div class="cast-info">
+                            <div class="cast-name">${person.name}</div>
+                            <div class="cast-character">${person.character || person.job || ''}</div>
+                        </div>
+                    </div>
+                `).join('');
+                castGrid.innerHTML = castHtml;
+            } else {
+                castGrid.innerHTML = '<p class="cast-empty">No cast information available.</p>';
+            }
+
+            // Crew
+            if (content.crew && content.crew.length > 0) {
+                const crewHtml = content.crew.slice(0, 8).map(person => `
+                    <div class="crew-member">
+                        <div class="crew-photo">
+                            <img src="${person.profile_path ? `https://image.tmdb.org/t/p/w185${person.profile_path}` : '/assets/default-avatar.jpg'}" 
+                                 alt="${person.name}" loading="lazy" />
+                        </div>
+                        <div class="crew-info">
+                            <div class="crew-name">${person.name}</div>
+                            <div class="crew-job">${person.job || person.character || ''}</div>
+                        </div>
+                    </div>
+                `).join('');
+                crewGrid.innerHTML = crewHtml;
+            } else {
+                crewGrid.innerHTML = '<p class="crew-empty">No crew information available.</p>';
+            }
+
+            // Tab functionality
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.cast-grid, .crew-grid').forEach(g => g.style.display = 'none');
+                    
+                    // Activate clicked tab
+                    btn.classList.add('active');
+                    const tab = btn.dataset.tab;
+                    document.getElementById(tab + 'Grid').style.display = 'grid';
+                });
+            });
+        }
+
+        // Load similar content
+        async function loadSimilarContent(contentId) {
+            try {
+                const similarResponse = await apiClient.getSimilarContent(contentId, { limit: 8 });
+                
+                if (similarResponse && similarResponse.recommendations && similarResponse.recommendations.length > 0) {
+                    const similarHtml = similarResponse.recommendations.map(item => createSimilarCard(item)).join('');
+                    document.getElementById('similarGrid').innerHTML = similarHtml;
+                    document.getElementById('similarSection').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading similar content:', error);
             }
         }
 
-        function closeTrailerModal() {
-            const modal = document.getElementById('trailerModal');
-            const player = document.getElementById('trailerPlayer');
+        // Create similar content card
+        function createSimilarCard(item) {
+            const posterUrl = item.poster_path || '/assets/default-poster.jpg';
+            const rating = item.rating ? `★ ${item.rating.toFixed(1)}` : '';
             
-            modal.style.display = 'none';
-            player.innerHTML = '';
+            return `
+                <div class="similar-card" onclick="loadContentDetails(${item.id})">
+                    <div class="similar-poster">
+                        <img src="${posterUrl}" alt="${item.title}" loading="lazy" />
+                        <div class="similar-overlay">
+                            <button class="similar-play">▶</button>
+                        </div>
+                    </div>
+                    <div class="similar-info">
+                        <h4 class="similar-title">${item.title}</h4>
+                        <div class="similar-meta">
+                            ${rating}
+                            <span class="similar-type">${(item.content_type || 'movie').toUpperCase()}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
-        async function toggleWatchlist() {
-            if (!window.auth.isAuthenticated()) {
-                window.location.href = '/auth/login.html';
+        // Action functions
+        window.playTrailer = function(trailerUrl) {
+            if (trailerUrl.includes('youtube.com/watch?v=')) {
+                const videoId = trailerUrl.split('v=')[1].split('&')[0];
+                const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+                
+                // Create trailer modal
+                const modal = document.createElement('div');
+                modal.className = 'modal show';
+                modal.innerHTML = `
+                    <div class="modal-backdrop" onclick="this.parentElement.remove()"></div>
+                    <div class="modal-dialog">
+                        <div class="trailer-modal">
+                            <button class="modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</button>
+                            <div class="trailer-container">
+                                <iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } else {
+                window.open(trailerUrl, '_blank');
+            }
+        };
+
+        window.addToWatchlist = async function(contentId) {
+            if (!authManager.isLoggedIn()) {
+                showToast('Please sign in to add to watchlist', 'warning');
                 return;
             }
-
+            
             try {
-                const watchlistBtn = document.getElementById('watchlistBtn');
-                const watchlistIcon = document.getElementById('watchlistIcon');
-                const isActive = watchlistBtn.classList.contains('btn-active');
-
-                await window.api.recordInteraction({
-                    content_id: currentContent.id,
+                await apiClient.recordInteraction(authManager.getToken(), {
+                    content_id: contentId,
                     interaction_type: 'watchlist'
                 });
-
-                if (isActive) {
-                    watchlistBtn.classList.remove('btn-active');
-                    watchlistIcon.textContent = '+';
-                    showToast('Removed from watchlist', 'info');
-                } else {
-                    watchlistBtn.classList.add('btn-active');
-                    watchlistIcon.textContent = '✓';
-                    showToast('Added to watchlist', 'success');
-                }
-
+                showToast('Added to watchlist', 'success');
             } catch (error) {
-                console.error('Failed to toggle watchlist:', error);
-                showToast('Failed to update watchlist', 'error');
+                showToast('Failed to add to watchlist', 'error');
             }
-        }
+        };
 
-        async function toggleFavorite() {
-            if (!window.auth.isAuthenticated()) {
-                window.location.href = '/auth/login.html';
+        window.addToFavorites = async function(contentId) {
+            if (!authManager.isLoggedIn()) {
+                showToast('Please sign in to add to favorites', 'warning');
                 return;
             }
-
+            
             try {
-                const favoriteBtn = document.getElementById('favoriteBtn');
-                const favoriteIcon = document.getElementById('favoriteIcon');
-                const isActive = favoriteBtn.classList.contains('btn-active');
-
-                await window.api.recordInteraction({
-                    content_id: currentContent.id,
+                await apiClient.recordInteraction(authManager.getToken(), {
+                    content_id: contentId,
                     interaction_type: 'favorite'
                 });
-
-                if (isActive) {
-                    favoriteBtn.classList.remove('btn-active');
-                    favoriteIcon.textContent = '♡';
-                    showToast('Removed from favorites', 'info');
-                } else {
-                    favoriteBtn.classList.add('btn-active');
-                    favoriteIcon.textContent = '♥';
-                    showToast('Added to favorites', 'success');
-                }
-
+                showToast('Added to favorites', 'success');
             } catch (error) {
-                console.error('Failed to toggle favorite:', error);
-                showToast('Failed to update favorites', 'error');
+                showToast('Failed to add to favorites', 'error');
             }
-        }
+        };
 
-        function shareContent() {
-            if (navigator.share) {
+        window.shareContent = function() {
+            if (navigator.share && currentContent) {
                 navigator.share({
                     title: currentContent.title,
-                    text: `Check out ${currentContent.title} on CineScope!`,
+                    text: currentContent.overview || `Check out ${currentContent.title} on CineScope`,
                     url: window.location.href
-                }).catch(console.warn);
+                });
             } else {
-                // Fallback: copy to clipboard
+                // Fallback to clipboard
                 navigator.clipboard.writeText(window.location.href).then(() => {
                     showToast('Link copied to clipboard', 'success');
                 }).catch(() => {
                     showToast('Failed to copy link', 'error');
                 });
             }
+        };
+
+        window.reportContent = function() {
+            showToast('Content reported. Thank you for your feedback.', 'info');
+        };
+
+        // Utility functions
+        function showLoading() {
+            loadingState.style.display = 'flex';
+            errorState.style.display = 'none';
+            contentDetails.style.display = 'none';
         }
 
-        function navigateToContent(contentId) {
-            window.location.href = `/content/details.html?id=${contentId}`;
+        function showError() {
+            loadingState.style.display = 'none';
+            errorState.style.display = 'flex';
+            contentDetails.style.display = 'none';
         }
 
-        async function playContentTrailer(contentId) {
-            try {
-                const content = await window.api.getContentDetails(contentId);
-                
-                if (content.youtube_trailer_id) {
-                    const modal = document.getElementById('trailerModal');
-                    const title = document.getElementById('trailerTitle');
-                    const player = document.getElementById('trailerPlayer');
+        // Theme toggle
+        window.toggleTheme = function() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('cinescope_theme', newTheme);
+        };
 
-                    title.textContent = `${content.title} - Trailer`;
-                    player.innerHTML = `
-                        <iframe 
-                            src="https://www.youtube.com/embed/${content.youtube_trailer_id}?autoplay=1&rel=0"
-                            frameborder="0" 
-                            allowfullscreen
-                            width="100%" 
-                            height="400"
-                            allow="autoplay; encrypted-media">
-                        </iframe>
-                    `;
-
-                    modal.style.display = 'flex';
-                } else {
-                    showToast('Trailer not available', 'warning');
-                }
-            } catch (error) {
-                console.error('Failed to play trailer:', error);
-                showToast('Failed to load trailer', 'error');
-            }
-        }
-
-        // Utility Functions
-        function updateUserSection() {
-            const userSection = document.getElementById('userSection');
-            
-            if (window.auth.isAuthenticated()) {
-                const user = window.auth.getUser();
-                userSection.innerHTML = `
-                    <img src="${window.auth.getUserAvatar()}" 
-                         alt="${user.username}" 
-                         class="user-avatar"
-                         onclick="window.location.href='/${user.username}/profile'">
-                `;
-            } else {
-                userSection.innerHTML = `
-                    <a href="/auth/login.html" class="btn btn-outline btn-sm">Login</a>
-                `;
-            }
-        }
-
-        function setupHeaderSearch() {
-            const searchInput = document.getElementById('headerSearch');
-            
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    const query = e.target.value.trim();
-                    if (query) {
-                        window.location.href = `/content/search.html?q=${encodeURIComponent(query)}`;
-                    }
-                }
-            });
-        }
-
-        function goToWatchlist() {
-            const user = window.auth.getUser();
-            window.location.href = `/${user.username}/watchlist`;
-        }
-
-        function goToFavorites() {
-            const user = window.auth.getUser();
-            window.location.href = `/${user.username}/favorites`;
-        }
-
-        function goToProfile() {
-            const user = window.auth.getUser();
-            window.location.href = `/${user.username}/profile`;
-        }
-
-        function requireAuth(callback) {
-            if (window.auth.isAuthenticated()) {
-                callback();
+        // Handle profile click
+        window.handleProfileClick = function() {
+            if (authManager.isLoggedIn()) {
+                const username = authManager.getUser().username;
+                window.location.href = `/${username}/profile`;
             } else {
                 window.location.href = '/auth/login.html';
             }
-        }
+        };
 
-        function showError(message) {
-            document.getElementById('mainContent').innerHTML = `
-                <div class="error-message">
-                    <h3>Error</h3>
-                    <p>${message}</p>
-                    <button class="btn btn-primary" onclick="history.back()">Go Back</button>
-                </div>
-            `;
-        }
-
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = message;
+        // Update auth UI
+        function updateAuthUI() {
+            const isLoggedIn = authManager.isLoggedIn();
             
-            document.body.appendChild(toast);
+            document.querySelectorAll('.user-only-show').forEach(el => {
+                el.style.display = isLoggedIn ? 'block' : 'none';
+            });
             
-            setTimeout(() => toast.classList.add('toast-show'), 100);
-            setTimeout(() => {
-                toast.classList.remove('toast-show');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            document.querySelectorAll('.user-only-hide').forEach(el => {
+                el.style.display = isLoggedIn ? 'none' : 'block';
+            });
+
+            if (isLoggedIn) {
+                const user = authManager.getUser();
+                const avatar = document.querySelector('.user-avatar');
+                if (avatar) {
+                    avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=fff&size=40`;
+                }
+            }
         }
 
-        // Close modal when clicking outside
-        document.addEventListener('click', (e) => {
-            if (e.target.matches('.modal-backdrop')) {
-                closeTrailerModal();
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            contentId = getContentIdFromUrl();
+            
+            if (!contentId) {
+                showError();
+                return;
+            }
+
+            updateAuthUI();
+            loadContentDetails(contentId);
+            
+            // Performance mark
+            if (performance.mark) {
+                performance.mark('details-page-ready');
             }
         });
 
-        // Handle browser back/forward
-        window.addEventListener('popstate', () => {
-            const params = new URLSearchParams(window.location.search);
-            const contentId = params.get('id');
-            
-            if (contentId && contentId !== currentContent?.id) {
-                loadContentDetails(contentId);
-            }
-        });
+        // Handle auth state changes
+        authManager.onLogin(updateAuthUI);
+        authManager.onLogout(updateAuthUI);
     </script>
+
+    <style>
+        .detail-loading,
+        .detail-error {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 50vh;
+            text-align: center;
+            padding: var(--spacing-xl);
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--velvet-dark);
+            border-top: 3px solid var(--platinum-blue);
+            border-radius: 50%;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .error-icon {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .error-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+        }
+
+        .detail-hero {
+            position: relative;
+            height: 60vh;
+            min-height: 400px;
+            background-size: cover;
+            background-position: center;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .detail-hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                135deg,
+                rgba(0, 0, 0, 0.6) 0%,
+                rgba(0, 0, 0, 0.3) 50%,
+                rgba(0, 0, 0, 0.8) 100%
+            );
+        }
+
+        .detail-hero-content {
+            position: relative;
+            z-index: 2;
+            padding: var(--spacing-2xl);
+            max-width: 800px;
+        }
+
+        .hero-meta {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: var(--spacing-md);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .rating-display {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .rating-star {
+            color: var(--vip-gold);
+            font-size: 1.25rem;
+        }
+
+        .rating-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .rating-max {
+            color: var(--text-secondary);
+        }
+
+        .rating-count {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .hero-overview {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: var(--spacing-xl);
+            max-width: 600px;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .detail-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--spacing-2xl);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .detail-section {
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .detail-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .synopsis-text {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .synopsis-empty,
+        .cast-empty,
+        .crew-empty {
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            padding: var(--spacing-xl);
+        }
+
+        .cast-tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            color: var(--platinum-blue);
+            border-bottom-color: var(--platinum-blue);
+        }
+
+        .cast-grid,
+        .crew-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .cast-member,
+        .crew-member {
+            text-align: center;
+        }
+
+        .cast-photo,
+        .crew-photo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto var(--spacing-sm);
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        .cast-photo img,
+        .crew-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .cast-name,
+        .crew-name {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .cast-character,
+        .crew-job {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .similar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .similar-card {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .similar-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .similar-poster {
+            position: relative;
+            aspect-ratio: 2/3;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .similar-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .similar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .similar-card:hover .similar-overlay {
+            opacity: 1;
+        }
+
+        .similar-play {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--platinum-blue);
+            color: white;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+        }
+
+        .similar-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .similar-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .detail-sidebar {
+            position: sticky;
+            top: calc(70px + var(--spacing-lg));
+            height: fit-content;
+        }
+
+        .sidebar-content {
+            background: var(--theater-dark);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .poster-image {
+            width: 100%;
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .quick-info {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .info-item {
+            margin-bottom: var(--spacing-md);
+            font-size: 0.875rem;
+        }
+
+        .info-item label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: var(--spacing-xs) var(--spacing-xs) var(--spacing-xs) 0;
+        }
+
+        .badge-trending {
+            background: var(--vip-gold);
+            color: var(--cinema-black);
+        }
+
+        .badge-new {
+            background: var(--success);
+            color: white;
+        }
+
+        .badge-critics {
+            background: var(--royal-purple);
+            color: white;
+        }
+
+        .sidebar-actions {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .btn-full {
+            width: 100%;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .trailer-modal {
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 16/9;
+            background: black;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .trailer-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .trailer-container iframe {
+            width: 100%;
+            height: 100%;
+        }
+
+        @media (max-width: 1200px) {
+            .detail-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .detail-sidebar {
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+            
+            .hero-actions {
+                flex-direction: column;
+            }
+            
+            .cast-grid,
+            .crew-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .similar-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .detail-hero-content {
+                padding: var(--spacing-lg);
+            }
+            
+            .hero-title {
+                font-size: 1.5rem;
+            }
+            
+            .cast-grid,
+            .crew-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
 </body>
 </html>

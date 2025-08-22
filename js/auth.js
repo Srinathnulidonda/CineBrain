@@ -1,272 +1,290 @@
-// CineScope Authentication - JWT with Username Routing
-class CineScopeAuth {
-    constructor() {
-        this.token = localStorage.getItem('cinescope_token');
-        this.user = this.getStoredUser();
-        this.setupEventListeners();
-        this.checkAuthStatus();
-        performance.mark(window.CineScope.PERF_MARKS.AUTH_READY);
+import apiClient from './api.js';
+import { APP_CONFIG } from './config.js';
+
+class AuthManager {
+  constructor() {
+    this.currentUser = null;
+    this.token = localStorage.getItem('cinescope_token');
+    this.refreshTimer = null;
+    this.loginCallbacks = [];
+    this.logoutCallbacks = [];
+    this.init();
+  }
+
+  init() {
+    if (this.token) {
+      this.validateToken();
     }
+    this.updateUI();
+  }
 
-    setupEventListeners() {
-        // Handle auth state changes
-        window.addEventListener('auth:logout', () => {
-            this.handleLogout();
-        });
-
-        // Handle page navigation
-        window.addEventListener('popstate', () => {
-            this.handleRouteChange();
-        });
-
-        // Check auth on visibility change
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && this.isAuthenticated()) {
-                this.validateToken();
-            }
-        });
+  async validateToken() {
+    try {
+      const userData = this.parseJWT(this.token);
+      if (userData && userData.exp > Date.now() / 1000) {
+        this.currentUser = userData;
+        return true;
+      } else {
+        this.logout();
+        return false;
+      }
+    } catch (error) {
+      this.logout();
+      return false;
     }
+  }
 
-    // Real JWT token validation with backend
-    async validateToken() {
-        if (!this.token) return false;
-
-        try {
-            // Verify token is not expired
-            const payload = this.decodeJWT(this.token);
-            if (payload.exp * 1000 < Date.now()) {
-                this.clearAuth();
-                return false;
-            }
-
-            // Validate with backend by making an authenticated request
-            const response = await window.api.getWatchlist();
-            return true;
-        } catch (error) {
-            if (error.message.includes('Authentication')) {
-                this.clearAuth();
-                return false;
-            }
-            return true; // Network error, assume valid
-        }
+  parseJWT(token) {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      return null;
     }
+  }
 
-    async login(credentials) {
-        try {
-            const response = await window.api.login(credentials);
-            
-            if (response.token && response.user) {
-                this.setAuth(response.token, response.user);
-                this.navigateToUserProfile();
-                return { success: true, user: response.user };
-            }
-            
-            return { success: false, error: 'Invalid response format' };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
-
-    async register(userData) {
-        try {
-            const response = await window.api.register(userData);
-            
-            if (response.token && response.user) {
-                this.setAuth(response.token, response.user);
-                this.navigateToUserProfile();
-                return { success: true, user: response.user };
-            }
-            
-            return { success: false, error: 'Registration failed' };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
-
-    logout() {
-        this.clearAuth();
-        this.navigateToHome();
-        window.dispatchEvent(new CustomEvent('auth:stateChanged', { 
-            detail: { authenticated: false } 
-        }));
-    }
-
-    setAuth(token, user) {
-        this.token = token;
-        this.user = user;
-        localStorage.setItem('cinescope_token', token);
-        localStorage.setItem('cinescope_user', JSON.stringify(user));
+  async login(credentials) {
+    try {
+      const response = await apiClient.login(credentials);
+      
+      if (response.token && response.user) {
+        this.token = response.token;
+        this.currentUser = response.user;
         
-        window.dispatchEvent(new CustomEvent('auth:stateChanged', { 
-            detail: { authenticated: true, user } 
-        }));
-    }
-
-    clearAuth() {
-        this.token = null;
-        this.user = null;
-        localStorage.removeItem('cinescope_token');
-        localStorage.removeItem('cinescope_user');
-        window.api.clearCache();
-    }
-
-    getStoredUser() {
-        try {
-            const userData = localStorage.getItem('cinescope_user');
-            return userData ? JSON.parse(userData) : null;
-        } catch {
-            return null;
-        }
-    }
-
-    isAuthenticated() {
-        return !!(this.token && this.user);
-    }
-
-    isAdmin() {
-        return this.user?.is_admin === true;
-    }
-
-    getUser() {
-        return this.user;
-    }
-
-    getToken() {
-        return this.token;
-    }
-
-    // Username-based routing
-    navigateToUserProfile() {
-        if (this.user?.username) {
-            this.navigate(`/${this.user.username}/profile`);
-        }
-    }
-
-    navigateToHome() {
-        this.navigate('/');
-    }
-
-    navigate(path) {
-        window.history.pushState({}, '', path);
-        this.handleRouteChange();
-    }
-
-    // Route handling with authentication
-    handleRouteChange() {
-        const path = window.location.pathname;
-        const segments = path.split('/').filter(Boolean);
-
-        // Check if this is a protected route
-        if (this.isProtectedRoute(path)) {
-            if (!this.isAuthenticated()) {
-                this.redirectToLogin(path);
-                return;
-            }
-
-            // Validate username in URL matches current user
-            if (segments.length >= 2 && segments[1] === 'profile') {
-                const urlUsername = segments[0];
-                if (this.user?.username !== urlUsername) {
-                    this.navigateToUserProfile();
-                    return;
-                }
-            }
-        }
-
-        // Check admin routes
-        if (path.startsWith('/admin')) {
-            if (!this.isAuthenticated() || !this.isAdmin()) {
-                this.navigate('/');
-                window.app?.showToast('Admin access required', 'error');
-                return;
-            }
-        }
-
-        // Trigger route change event
-        window.dispatchEvent(new CustomEvent('route:changed', { 
-            detail: { path, segments } 
-        }));
-    }
-
-    isProtectedRoute(path) {
-        const protectedPatterns = [
-            /^\/[^\/]+\/profile/,
-            /^\/[^\/]+\/watchlist/,
-            /^\/[^\/]+\/favorites/,
-            /^\/[^\/]+\/activity/,
-            /^\/[^\/]+\/settings/,
-            /^\/admin/
-        ];
-
-        return protectedPatterns.some(pattern => pattern.test(path));
-    }
-
-    redirectToLogin(intendedPath) {
-        localStorage.setItem('cinescope_intended_path', intendedPath);
-        this.navigate('/auth/login.html');
-    }
-
-    handleSuccessfulAuth() {
-        const intendedPath = localStorage.getItem('cinescope_intended_path');
-        localStorage.removeItem('cinescope_intended_path');
+        localStorage.setItem('cinescope_token', this.token);
+        localStorage.setItem('cinescope_user', JSON.stringify(this.currentUser));
         
-        if (intendedPath) {
-            this.navigate(intendedPath);
-        } else {
-            this.navigateToUserProfile();
-        }
-    }
-
-    checkAuthStatus() {
-        if (this.isAuthenticated()) {
-            this.validateToken().then(isValid => {
-                if (!isValid) {
-                    this.logout();
-                }
-            });
-        }
+        apiClient.clearUserCache();
+        this.updateUI();
+        this.notifyLoginCallbacks();
         
-        this.handleRouteChange();
+        // Redirect to user profile
+        this.redirectToProfile();
+        
+        return { success: true, user: this.currentUser };
+      } else {
+        throw new Error(response.error || 'Login failed');
+      }
+    } catch (error) {
+      return { success: false, error: error.message };
     }
+  }
 
-    // JWT helper
-    decodeJWT(token) {
-        try {
-            const payload = token.split('.')[1];
-            return JSON.parse(atob(payload));
-        } catch {
-            return {};
+  async register(userData) {
+    try {
+      const response = await apiClient.register(userData);
+      
+      if (response.token && response.user) {
+        this.token = response.token;
+        this.currentUser = response.user;
+        
+        localStorage.setItem('cinescope_token', this.token);
+        localStorage.setItem('cinescope_user', JSON.stringify(this.currentUser));
+        
+        this.updateUI();
+        this.notifyLoginCallbacks();
+        
+        // Redirect to user profile
+        this.redirectToProfile();
+        
+        return { success: true, user: this.currentUser };
+      } else {
+        throw new Error(response.error || 'Registration failed');
+      }
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  logout() {
+    this.token = null;
+    this.currentUser = null;
+    
+    localStorage.removeItem('cinescope_token');
+    localStorage.removeItem('cinescope_user');
+    
+    apiClient.clearUserCache();
+    this.updateUI();
+    this.notifyLogoutCallbacks();
+    
+    // Redirect to home
+    if (window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+      if (window.app && window.app.router) {
+        window.app.router.navigate('/');
+      }
+    }
+  }
+
+  isLoggedIn() {
+    return !!this.token && !!this.currentUser;
+  }
+
+  isAdmin() {
+    return this.isLoggedIn() && this.currentUser.is_admin;
+  }
+
+  getToken() {
+    return this.token;
+  }
+
+  getUser() {
+    return this.currentUser;
+  }
+
+  redirectToProfile() {
+    if (this.currentUser) {
+      const profileUrl = `/${this.currentUser.username}/profile`;
+      window.history.pushState({}, '', profileUrl);
+      if (window.app && window.app.router) {
+        window.app.router.navigate(profileUrl);
+      }
+    }
+  }
+
+  updateUI() {
+    this.updateTopBar();
+    this.updateNavigation();
+  }
+
+  updateTopBar() {
+    const userAvatar = document.querySelector('.user-avatar');
+    const loginBtn = document.querySelector('.login-btn');
+    const userMenu = document.querySelector('.user-menu');
+    
+    if (this.isLoggedIn()) {
+      if (userAvatar) {
+        const avatarUrl = `${APP_CONFIG.AVATAR_API}?name=${encodeURIComponent(this.currentUser.username)}&background=3b82f6&color=fff&size=40`;
+        userAvatar.src = avatarUrl;
+        userAvatar.style.display = 'block';
+      }
+      if (loginBtn) loginBtn.style.display = 'none';
+      if (userMenu) userMenu.style.display = 'block';
+    } else {
+      if (userAvatar) userAvatar.style.display = 'none';
+      if (loginBtn) loginBtn.style.display = 'block';
+      if (userMenu) userMenu.style.display = 'none';
+    }
+  }
+
+  updateNavigation() {
+    const adminLinks = document.querySelectorAll('.admin-only');
+    const userLinks = document.querySelectorAll('.user-only');
+    
+    adminLinks.forEach(link => {
+      link.style.display = this.isAdmin() ? 'block' : 'none';
+    });
+    
+    userLinks.forEach(link => {
+      link.style.display = this.isLoggedIn() ? 'block' : 'none';
+    });
+  }
+
+  onLogin(callback) {
+    this.loginCallbacks.push(callback);
+  }
+
+  onLogout(callback) {
+    this.logoutCallbacks.push(callback);
+  }
+
+  notifyLoginCallbacks() {
+    this.loginCallbacks.forEach(callback => {
+      try {
+        callback(this.currentUser);
+      } catch (error) {
+        console.error('Login callback error:', error);
+      }
+    });
+  }
+
+  notifyLogoutCallbacks() {
+    this.logoutCallbacks.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.error('Logout callback error:', error);
+      }
+    });
+  }
+
+  requireAuth() {
+    if (!this.isLoggedIn()) {
+      this.showLoginModal();
+      return false;
+    }
+    return true;
+  }
+
+  requireAdmin() {
+    if (!this.isAdmin()) {
+      this.showToast('Admin access required', 'error');
+      return false;
+    }
+    return true;
+  }
+
+  showLoginModal() {
+    if (window.app && window.app.showModal) {
+      window.app.showModal('login');
+    } else {
+      window.location.href = '/auth/login.html';
+    }
+  }
+
+  showToast(message, type = 'info') {
+    if (window.app && window.app.showToast) {
+      window.app.showToast(message, type);
+    } else {
+      alert(message);
+    }
+  }
+
+  // Route protection
+  protectRoute() {
+    const path = window.location.pathname;
+    const username = this.currentUser?.username;
+    
+    // Check if this is a user-specific route
+    if (path.includes('/profile') || path.includes('/watchlist') || 
+        path.includes('/favorites') || path.includes('/settings') || 
+        path.includes('/activity')) {
+      
+      if (!this.isLoggedIn()) {
+        this.showLoginModal();
+        return false;
+      }
+      
+      // Check if accessing own profile
+      if (path.startsWith('/') && path.includes('/')) {
+        const pathUsername = path.split('/')[1];
+        if (pathUsername !== username && pathUsername !== 'auth' && 
+            pathUsername !== 'content' && pathUsername !== 'admin') {
+          // Redirect to own profile
+          this.redirectToProfile();
+          return false;
         }
+      }
     }
-
-    // Avatar generation
-    getUserAvatar(username = null) {
-        const user = username || this.user?.username || 'User';
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(user)}&background=3b82f6&color=ffffff&bold=true&size=40`;
+    
+    // Check admin routes
+    if (path.startsWith('/admin/')) {
+      if (!this.requireAdmin()) {
+        return false;
+      }
     }
-
-    getUserAvatarLarge(username = null) {
-        const user = username || this.user?.username || 'User';
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(user)}&background=3b82f6&color=ffffff&bold=true&size=120`;
-    }
+    
+    return true;
+  }
 }
 
-// Initialize global auth instance
-window.auth = new CineScopeAuth();
+// Create global instance
+const authManager = new AuthManager();
 
-// Export auth utilities
-window.requireAuth = (callback) => {
-    if (window.auth.isAuthenticated()) {
-        callback();
-    } else {
-        window.auth.redirectToLogin(window.location.pathname);
-    }
-};
-
-window.requireAdmin = (callback) => {
-    if (window.auth.isAuthenticated() && window.auth.isAdmin()) {
-        callback();
-    } else {
-        window.location.href = '/';
-    }
-};
+// Export both class and instance
+export { AuthManager };
+export default authManager;

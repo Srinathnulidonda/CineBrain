@@ -1,620 +1,562 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="Anime Collection - CineScope">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anime - CineScope</title>
+    <meta name="description" content="Discover the best anime series and movies on CineScope.">
     
-    <link rel="preload" href="../js/config.js" as="script">
-    <link rel="preload" href="../js/api.js" as="script">
-    <link rel="preload" href="../js/auth.js" as="script">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
     
-    <link rel="stylesheet" href="../css/main.css">
-    <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/layouts.css">
-    <link rel="stylesheet" href="../css/responsive.css">
-    <link rel="stylesheet" href="../css/theme.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Top Navigation -->
-    <nav class="topbar">
-        <div class="topbar-left">
-            <a href="/" class="logo">CineScope</a>
-            <button class="back-btn" onclick="history.back()">← Back</button>
+    <!-- Fixed Top Bar -->
+    <header class="topbar">
+        <div class="topbar-logo" onclick="window.location.href='/'">CineScope</div>
+        <div class="topbar-search">
+            <div class="search-icon">🔍</div>
+            <input type="text" class="search-input" placeholder="Search anime..." />
         </div>
-        <div class="search-container">
-            <input type="text" class="search-input" placeholder="Search anime..." id="headerSearch">
+        <div class="topbar-actions">
+            <button class="theme-toggle" onclick="toggleTheme()"></button>
+            <img class="user-avatar user-only-show" style="display: none;" alt="User Avatar" />
+            <button class="login-btn user-only-hide" onclick="window.location.href='/auth/login.html'">Sign In</button>
         </div>
-        <div class="topbar-right" id="userSection"></div>
-    </nav>
+    </header>
 
-    <main class="anime-page">
-        <div class="container">
-            <!-- Anime Header -->
-            <div class="anime-header">
-                <div class="header-content">
-                    <h1 class="page-title">🎌 Anime Collection</h1>
-                    <p class="page-description">Discover amazing anime series and movies</p>
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="page-layout">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title">Anime Collection</h1>
+                <p class="page-subtitle">Discover the best anime series and movies from Japan and around the world</p>
+            </div>
+
+            <!-- Genre Filters -->
+            <div class="anime-filters">
+                <h3>Browse by Genre</h3>
+                <div class="genre-chips" id="genreChips">
+                    <button class="genre-chip active" data-genre="">All Anime</button>
+                    <button class="genre-chip" data-genre="shonen">Shonen</button>
+                    <button class="genre-chip" data-genre="shojo">Shojo</button>
+                    <button class="genre-chip" data-genre="seinen">Seinen</button>
+                    <button class="genre-chip" data-genre="josei">Josei</button>
+                    <button class="genre-chip" data-genre="action">Action</button>
+                    <button class="genre-chip" data-genre="romance">Romance</button>
+                    <button class="genre-chip" data-genre="comedy">Comedy</button>
+                    <button class="genre-chip" data-genre="drama">Drama</button>
+                    <button class="genre-chip" data-genre="fantasy">Fantasy</button>
+                    <button class="genre-chip" data-genre="slice-of-life">Slice of Life</button>
+                    <button class="genre-chip" data-genre="supernatural">Supernatural</button>
                 </div>
-                <div class="header-stats" id="animeStats">
-                    <div class="loading">
-                        <div class="spinner"></div>
+            </div>
+
+            <!-- Featured Anime -->
+            <section class="content-section" id="featuredSection">
+                <h2>Featured Anime</h2>
+                <div class="loading-placeholder" id="featuredLoading">
+                    <div class="loading-spinner animate-spin"></div>
+                    <p>Loading featured anime...</p>
+                </div>
+                <div class="featured-grid" id="featuredGrid" style="display: none;"></div>
+            </section>
+
+            <!-- Popular This Season -->
+            <section class="content-section" id="popularSection">
+                <h2>Popular This Season</h2>
+                <div class="loading-placeholder" id="popularLoading">
+                    <div class="loading-spinner animate-spin"></div>
+                    <p>Loading popular anime...</p>
+                </div>
+                <div class="carousel" id="popularCarousel" style="display: none;">
+                    <button class="carousel-btn carousel-prev" onclick="scrollCarousel('popular', 'left')">‹</button>
+                    <div class="carousel-track-container">
+                        <div class="carousel-track" id="popularTrack"></div>
                     </div>
+                    <button class="carousel-btn carousel-next" onclick="scrollCarousel('popular', 'right')">›</button>
                 </div>
-            </div>
+            </section>
 
-            <!-- Anime Categories -->
-            <div class="anime-categories" id="animeCategories">
-                <a href="#" class="category-tab active" data-category="all" onclick="switchAnimeCategory('all')">
-                    All Anime
-                </a>
-                <a href="#" class="category-tab" data-category="shonen" onclick="switchAnimeCategory('shonen')">
-                    Shonen
-                </a>
-                <a href="#" class="category-tab" data-category="shojo" onclick="switchAnimeCategory('shojo')">
-                    Shojo
-                </a>
-                <a href="#" class="category-tab" data-category="seinen" onclick="switchAnimeCategory('seinen')">
-                    Seinen
-                </a>
-                <a href="#" class="category-tab" data-category="josei" onclick="switchAnimeCategory('josei')">
-                    Josei
-                </a>
-                <a href="#" class="category-tab" data-category="kodomomuke" onclick="switchAnimeCategory('kodomomuke')">
-                    Kids
-                </a>
-            </div>
-
-            <!-- Anime Filters -->
-            <div class="anime-filters" id="animeFilters">
-                <div class="filters-left">
-                    <select id="sortSelect" class="filter-select" onchange="sortAnime()">
-                        <option value="popularity">Most Popular</option>
-                        <option value="rating">Highest Rated</option>
-                        <option value="title">Title A-Z</option>
-                        <option value="year">Release Year</option>
-                        <option value="episodes">Episode Count</option>
-                    </select>
-                    
-                    <select id="statusFilter" class="filter-select" onchange="filterAnime()">
-                        <option value="all">All Status</option>
-                        <option value="airing">Currently Airing</option>
-                        <option value="completed">Completed</option>
-                        <option value="upcoming">Upcoming</option>
-                    </select>
-
-                    <select id="typeFilter" class="filter-select" onchange="filterAnime()">
-                        <option value="all">All Types</option>
-                        <option value="tv">TV Series</option>
-                        <option value="movie">Movies</option>
-                        <option value="ova">OVA</option>
-                        <option value="special">Special</option>
-                    </select>
+            <!-- Top Rated -->
+            <section class="content-section" id="topRatedSection">
+                <h2>Top Rated Anime</h2>
+                <div class="loading-placeholder" id="topRatedLoading">
+                    <div class="loading-spinner animate-spin"></div>
+                    <p>Loading top rated anime...</p>
                 </div>
-
-                <div class="filters-right">
-                    <div class="view-toggle">
-                        <button class="view-btn active" data-view="grid" onclick="switchView('grid')">
-                            <span class="view-icon">⊞</span> Grid
-                        </button>
-                        <button class="view-btn" data-view="list" onclick="switchView('list')">
-                            <span class="view-icon">☰</span> List
-                        </button>
-                        <button class="view-btn" data-view="compact" onclick="switchView('compact')">
-                            <span class="view-icon">≡</span> Compact
-                        </button>
+                <div class="carousel" id="topRatedCarousel" style="display: none;">
+                    <button class="carousel-btn carousel-prev" onclick="scrollCarousel('topRated', 'left')">‹</button>
+                    <div class="carousel-track-container">
+                        <div class="carousel-track" id="topRatedTrack"></div>
                     </div>
+                    <button class="carousel-btn carousel-next" onclick="scrollCarousel('topRated', 'right')">›</button>
                 </div>
-            </div>
+            </section>
 
-            <!-- Anime Content -->
-            <div class="anime-content" id="animeContent">
-                <div class="loading" id="loadingState">
-                    <div class="spinner"></div>
-                    <p>Loading anime collection...</p>
-                </div>
+            <!-- Genre-based Sections -->
+            <div id="genreSections">
+                <!-- Dynamic genre sections will be loaded here -->
             </div>
 
             <!-- Load More -->
             <div class="load-more-section" id="loadMoreSection" style="display: none;">
-                <button class="btn btn-outline" onclick="loadMoreAnime()" id="loadMoreBtn">
-                    Load More Anime
-                </button>
+                <button class="btn btn-outline" id="loadMoreBtn">Load More Anime</button>
             </div>
         </div>
     </main>
 
-    <!-- Mobile Navigation -->
+    <!-- Fixed Bottom Navigation (Mobile) -->
     <nav class="mobile-nav">
         <a href="/" class="mobile-nav-item">
-            <span class="mobile-nav-icon">🏠</span>
-            <span class="mobile-nav-label">Home</span>
+            <div class="mobile-nav-icon">🏠</div>
+            <span>Home</span>
         </a>
         <a href="/content/search.html" class="mobile-nav-item">
-            <span class="mobile-nav-icon">🔍</span>
-            <span class="mobile-nav-label">Search</span>
+            <div class="mobile-nav-icon">🔍</div>
+            <span>Search</span>
         </a>
-        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToWatchlist())">
-            <span class="mobile-nav-icon">📚</span>
-            <span class="mobile-nav-label">Watchlist</span>
+        <a href="/user/watchlist.html" class="mobile-nav-item user-only-show" style="display: none;">
+            <div class="mobile-nav-icon">📋</div>
+            <span>Watchlist</span>
         </a>
-        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToFavorites())">
-            <span class="mobile-nav-icon">❤️</span>
-            <span class="mobile-nav-label">Favorites</span>
+        <a href="/user/favorites.html" class="mobile-nav-item user-only-show" style="display: none;">
+            <div class="mobile-nav-icon">❤️</div>
+            <span>Favorites</span>
         </a>
-        <a href="#" class="mobile-nav-item" onclick="requireAuth(() => goToProfile())">
-            <span class="mobile-nav-icon">👤</span>
-            <span class="mobile-nav-label">Profile</span>
+        <a href="#" class="mobile-nav-item" onclick="handleProfileClick()">
+            <div class="mobile-nav-icon">👤</div>
+            <span>Profile</span>
         </a>
     </nav>
 
-    <script src="../js/config.js"></script>
-    <script src="../js/api.js"></script>
-    <script src="../js/auth.js"></script>
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
 
-    <script>
-        let allAnime = [];
-        let filteredAnime = [];
-        let currentCategory = 'all';
-        let currentView = 'grid';
-        let currentPage = 1;
+    <script type="module">
+        import apiClient from '/js/api.js';
+        import authManager from '/js/auth.js';
+
+        // Page state
+        let currentGenre = '';
+        let loadedAnime = [];
         let isLoading = false;
+        let currentPage = 1;
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            updateUserSection();
-            setupHeaderSearch();
-            await loadAnimeContent();
-        });
+        // Show toast function
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type} show`;
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <span class="toast-message">${message}</span>
+                    <button class="toast-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                </div>
+            `;
+            document.querySelector('.toast-container').appendChild(toast);
+            
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 200);
+                }
+            }, 3000);
+        }
 
+        // Load anime content
         async function loadAnimeContent() {
             if (isLoading) return;
-            
             isLoading = true;
-            const loadingState = document.getElementById('loadingState');
-            loadingState.style.display = 'flex';
 
             try {
-                // Load anime based on category
-                let response;
-                if (currentCategory === 'all') {
-                    response = await window.api.getAnimeRecommendations({ limit: 50 });
+                // Load different sections simultaneously
+                const [featured, popular, topRated] = await Promise.allSettled([
+                    apiClient.getAnimeContent({ limit: 12 }),
+                    apiClient.getAnimeContent({ limit: 20, type: 'popular' }),
+                    apiClient.getAnimeContent({ limit: 20, type: 'top_rated' })
+                ]);
+
+                // Display featured anime
+                if (featured.status === 'fulfilled' && featured.value?.recommendations) {
+                    displayFeaturedAnime(featured.value.recommendations);
                 } else {
-                    response = await window.api.getAnimeRecommendations({ 
-                        genre: currentCategory, 
-                        limit: 50 
-                    });
+                    showError('featuredLoading', 'Failed to load featured anime');
                 }
 
-                allAnime = response.recommendations || [];
-                filteredAnime = [...allAnime];
+                // Display popular anime
+                if (popular.status === 'fulfilled' && popular.value?.recommendations) {
+                    displayCarouselContent('popular', popular.value.recommendations);
+                } else {
+                    showError('popularLoading', 'Failed to load popular anime');
+                }
 
-                renderAnimeStats();
-                renderAnimeContent();
-                
-                loadingState.style.display = 'none';
-                document.getElementById('loadMoreSection').style.display = 
-                    allAnime.length >= 20 ? 'block' : 'none';
+                // Display top rated anime
+                if (topRated.status === 'fulfilled' && topRated.value?.recommendations) {
+                    displayCarouselContent('topRated', topRated.value.recommendations);
+                } else {
+                    showError('topRatedLoading', 'Failed to load top rated anime');
+                }
+
+                // Load genre-specific content
+                await loadGenreSections();
 
             } catch (error) {
-                console.error('Failed to load anime:', error);
-                showError('Failed to load anime collection');
-                loadingState.style.display = 'none';
+                console.error('Error loading anime content:', error);
+                showToast('Failed to load anime content', 'error');
             } finally {
                 isLoading = false;
             }
         }
 
-        function renderAnimeStats() {
-            const statsContainer = document.getElementById('animeStats');
-            
-            if (allAnime.length === 0) {
-                statsContainer.innerHTML = '';
+        // Display featured anime in grid
+        function displayFeaturedAnime(animeList) {
+            const featuredGrid = document.getElementById('featuredGrid');
+            const featuredLoading = document.getElementById('featuredLoading');
+
+            if (!animeList || animeList.length === 0) {
+                showError('featuredLoading', 'No featured anime available');
                 return;
             }
 
-            const typeCount = {};
-            let totalEpisodes = 0;
-            let avgRating = 0;
-            let ratedCount = 0;
-
-            allAnime.forEach(anime => {
-                const type = anime.content_type || 'anime';
-                typeCount[type] = (typeCount[type] || 0) + 1;
-                
-                if (anime.episodes) totalEpisodes += anime.episodes;
-                if (anime.rating) {
-                    avgRating += anime.rating;
-                    ratedCount++;
-                }
-            });
-
-            avgRating = ratedCount > 0 ? (avgRating / ratedCount).toFixed(1) : 'N/A';
-
-            statsContainer.innerHTML = `
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-number">${allAnime.length}</div>
-                        <div class="stat-label">Total Anime</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">${avgRating}</div>
-                        <div class="stat-label">Avg Rating</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">${Object.keys(typeCount).length}</div>
-                        <div class="stat-label">Types</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">${totalEpisodes}</div>
-                        <div class="stat-label">Total Episodes</div>
-                    </div>
-                </div>
-            `;
+            const gridHtml = animeList.map(anime => createAnimeCard(anime, 'large')).join('');
+            featuredGrid.innerHTML = gridHtml;
+            
+            featuredLoading.style.display = 'none';
+            featuredGrid.style.display = 'grid';
         }
 
-        function switchAnimeCategory(category) {
-            if (category === currentCategory) return;
-            
-            currentCategory = category;
-            currentPage = 1;
-            
-            // Update active tab
-            document.querySelectorAll('.category-tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelector(`[data-category="${category}"]`).classList.add('active');
-            
-            loadAnimeContent();
-        }
+        // Display carousel content
+        function displayCarouselContent(carouselId, animeList) {
+            const track = document.getElementById(`${carouselId}Track`);
+            const carousel = document.getElementById(`${carouselId}Carousel`);
+            const loading = document.getElementById(`${carouselId}Loading`);
 
-        function renderAnimeContent() {
-            const container = document.getElementById('animeContent');
-            
-            if (filteredAnime.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-results">
-                        <div class="empty-icon">🎌</div>
-                        <h3>No anime found</h3>
-                        <p>Try adjusting your filters or explore different categories.</p>
-                        <button class="btn btn-outline" onclick="clearFilters()">Clear Filters</button>
-                    </div>
-                `;
+            if (!animeList || animeList.length === 0) {
+                showError(`${carouselId}Loading`, 'No anime available');
                 return;
             }
 
-            switch (currentView) {
-                case 'grid':
-                    container.innerHTML = `
-                        <div class="anime-grid">
-                            ${filteredAnime.map(anime => renderGridItem(anime)).join('')}
-                        </div>
-                    `;
-                    break;
-                case 'list':
-                    container.innerHTML = `
-                        <div class="anime-list">
-                            ${filteredAnime.map(anime => renderListItem(anime)).join('')}
-                        </div>
-                    `;
-                    break;
-                case 'compact':
-                    container.innerHTML = `
-                        <div class="anime-compact">
-                            ${filteredAnime.map(anime => renderCompactItem(anime)).join('')}
-                        </div>
-                    `;
-                    break;
-            }
+            const trackHtml = animeList.map(anime => createAnimeCard(anime, 'small')).join('');
+            track.innerHTML = trackHtml;
+            
+            loading.style.display = 'none';
+            carousel.style.display = 'block';
+
+            // Initialize carousel
+            initializeCarousel(carouselId);
         }
 
-        function renderGridItem(anime) {
+        // Create anime card
+        function createAnimeCard(anime, size = 'small') {
+            const posterUrl = anime.poster_path || '/assets/default-poster.jpg';
+            const rating = anime.rating ? `★ ${anime.rating.toFixed(1)}` : '';
+            const year = anime.release_date ? new Date(anime.release_date).getFullYear() : '';
+            const cardClass = size === 'large' ? 'anime-card-large' : 'anime-card';
+            
             return `
-                <div class="anime-card" data-id="${anime.id}" onclick="viewContent(${anime.id})">
+                <div class="${cardClass}" onclick="showAnimeDetails(${anime.id})">
                     <div class="card-image">
-                        <img src="${anime.poster_path}" alt="${anime.title}" loading="lazy">
+                        <img src="${posterUrl}" alt="${anime.title}" loading="lazy" />
                         <div class="card-overlay">
-                            <button class="play-btn" onclick="event.stopPropagation(); playTrailer(${anime.id})">▶</button>
-                        </div>
-                        <div class="card-badges">
-                            ${anime.rating ? `<span class="rating-badge">★ ${anime.rating}</span>` : ''}
-                            ${anime.episodes ? `<span class="episodes-badge">${anime.episodes} EP</span>` : ''}
-                            ${anime.status === 'airing' ? '<span class="airing-badge">🔴 Airing</span>' : ''}
+                            <div class="card-actions">
+                                ${anime.youtube_trailer ? `
+                                    <button class="card-action" onclick="event.stopPropagation(); playTrailer('${anime.youtube_trailer}')">
+                                        <i class="icon-play"></i>
+                                    </button>
+                                ` : ''}
+                                <button class="card-action" onclick="event.stopPropagation(); addToWatchlist(${anime.id})">
+                                    <i class="icon-plus"></i>
+                                </button>
+                                <button class="card-action" onclick="event.stopPropagation(); addToFavorites(${anime.id})">
+                                    <i class="icon-heart"></i>
+                                </button>
+                            </div>
+                            ${anime.anime_genres && anime.anime_genres.length > 0 ? `
+                                <div class="anime-badges">
+                                    ${anime.anime_genres.slice(0, 2).map(genre => `
+                                        <span class="anime-badge">${genre}</span>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
-                    <div class="card-info">
+                    <div class="card-content">
                         <h3 class="card-title">${anime.title}</h3>
-                        ${anime.original_title && anime.original_title !== anime.title ? 
-                            `<p class="card-subtitle">${anime.original_title}</p>` : ''}
                         <div class="card-meta">
-                            ${anime.release_date ? `<span class="year">${new Date(anime.release_date).getFullYear()}</span>` : ''}
-                            ${anime.type ? `<span class="type">${anime.type}</span>` : ''}
+                            ${rating ? `<span class="card-rating">${rating}</span>` : ''}
+                            ${year ? `<span class="card-year">${year}</span>` : ''}
+                            <span class="card-type">ANIME</span>
                         </div>
-                        <div class="card-genres">
-                            ${(anime.genres || []).slice(0, 3).map(genre => 
-                                `<span class="genre-chip">${genre}</span>`
-                            ).join('')}
-                        </div>
-                        <div class="card-actions">
-                            <button class="btn btn-sm btn-outline" onclick="event.stopPropagation(); addToWatchlist(${anime.id})">
-                                + Watchlist
-                            </button>
-                            <button class="btn btn-sm btn-outline" onclick="event.stopPropagation(); addToFavorites(${anime.id})">
-                                ♡ Favorite
-                            </button>
-                        </div>
+                        ${anime.genres && anime.genres.length > 0 ? `
+                            <div class="card-genres">${anime.genres.slice(0, 2).join(', ')}</div>
+                        ` : ''}
+                        ${size === 'large' && anime.overview ? `
+                            <p class="card-overview">${anime.overview.substring(0, 120)}${anime.overview.length > 120 ? '...' : ''}</p>
+                        ` : ''}
                     </div>
                 </div>
             `;
         }
 
-        function renderListItem(anime) {
-            return `
-                <div class="anime-list-item" data-id="${anime.id}">
-                    <div class="list-poster" onclick="viewContent(${anime.id})">
-                        <img src="${anime.poster_path}" alt="${anime.title}" loading="lazy">
-                    </div>
+        // Load genre-specific sections
+        async function loadGenreSections() {
+            const genres = ['action', 'romance', 'comedy', 'drama'];
+            const genreSections = document.getElementById('genreSections');
+
+            for (const genre of genres) {
+                try {
+                    const response = await apiClient.getAnimeContent({ genre, limit: 15 });
                     
-                    <div class="list-content">
-                        <div class="list-header">
-                            <h3 class="list-title" onclick="viewContent(${anime.id})">${anime.title}</h3>
-                            ${anime.original_title && anime.original_title !== anime.title ? 
-                                `<p class="list-subtitle">${anime.original_title}</p>` : ''}
-                            <div class="list-badges">
-                                ${anime.rating ? `<span class="rating-badge">★ ${anime.rating}</span>` : ''}
-                                ${anime.episodes ? `<span class="episodes-badge">${anime.episodes} Episodes</span>` : ''}
-                                ${anime.status === 'airing' ? '<span class="airing-badge">🔴 Currently Airing</span>' : ''}
-                            </div>
-                        </div>
+                    if (response?.recommendations && response.recommendations.length > 0) {
+                        const sectionHtml = `
+                            <section class="content-section genre-section">
+                                <h2>${genre.charAt(0).toUpperCase() + genre.slice(1)} Anime</h2>
+                                <div class="carousel" id="${genre}Carousel">
+                                    <button class="carousel-btn carousel-prev" onclick="scrollCarousel('${genre}', 'left')">‹</button>
+                                    <div class="carousel-track-container">
+                                        <div class="carousel-track" id="${genre}Track">
+                                            ${response.recommendations.map(anime => createAnimeCard(anime, 'small')).join('')}
+                                        </div>
+                                    </div>
+                                    <button class="carousel-btn carousel-next" onclick="scrollCarousel('${genre}', 'right')">›</button>
+                                </div>
+                            </section>
+                        `;
                         
-                        <div class="list-meta">
-                            ${anime.release_date ? `<span class="year">${new Date(anime.release_date).getFullYear()}</span>` : ''}
-                            ${anime.type ? `<span class="type">${anime.type}</span>` : ''}
-                            ${anime.studio ? `<span class="studio">Studio: ${anime.studio}</span>` : ''}
-                        </div>
-                        
-                        <div class="list-genres">
-                            ${(anime.genres || []).map(genre => 
-                                `<span class="genre-chip">${genre}</span>`
-                            ).join('')}
-                        </div>
-                        
-                        <p class="list-synopsis">${anime.overview || 'No synopsis available.'}</p>
-                        
-                        <div class="list-actions">
-                            <button class="btn btn-sm btn-primary" onclick="playTrailer(${anime.id})">
-                                ▶ Watch Trailer
-                            </button>
-                            <button class="btn btn-sm btn-outline" onclick="addToWatchlist(${anime.id})">
-                                + Add to Watchlist
-                            </button>
-                            <button class="btn btn-sm btn-outline" onclick="addToFavorites(${anime.id})">
-                                ♡ Add to Favorites
-                            </button>
-                            <button class="btn btn-sm btn-secondary" onclick="viewContent(${anime.id})">
-                                View Details
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderCompactItem(anime) {
-            return `
-                <div class="anime-compact-item" onclick="viewContent(${anime.id})">
-                    <div class="compact-poster">
-                        <img src="${anime.poster_path}" alt="${anime.title}" loading="lazy">
-                    </div>
-                    <div class="compact-info">
-                        <h4 class="compact-title">${anime.title}</h4>
-                        <div class="compact-meta">
-                            ${anime.rating ? `<span class="rating">★ ${anime.rating}</span>` : ''}
-                            ${anime.release_date ? `<span class="year">${new Date(anime.release_date).getFullYear()}</span>` : ''}
-                            ${anime.episodes ? `<span class="episodes">${anime.episodes} EP</span>` : ''}
-                        </div>
-                    </div>
-                    <div class="compact-actions">
-                        <button class="btn-icon" onclick="event.stopPropagation(); addToWatchlist(${anime.id})" title="Add to Watchlist">📚</button>
-                        <button class="btn-icon" onclick="event.stopPropagation(); addToFavorites(${anime.id})" title="Add to Favorites">❤️</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Filtering and Sorting Functions
-        function sortAnime() {
-            const sortValue = document.getElementById('sortSelect').value;
-            
-            switch (sortValue) {
-                case 'rating':
-                    filteredAnime.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-                    break;
-                case 'title':
-                    filteredAnime.sort((a, b) => a.title.localeCompare(b.title));
-                    break;
-                case 'year':
-                    filteredAnime.sort((a, b) => {
-                        const yearA = a.release_date ? new Date(a.release_date).getFullYear() : 0;
-                        const yearB = b.release_date ? new Date(b.release_date).getFullYear() : 0;
-                        return yearB - yearA;
-                    });
-                    break;
-                case 'episodes':
-                    filteredAnime.sort((a, b) => (b.episodes || 0) - (a.episodes || 0));
-                    break;
-                default: // popularity
-                    // Keep original order
-                    break;
+                        genreSections.insertAdjacentHTML('beforeend', sectionHtml);
+                        initializeCarousel(genre);
+                    }
+                } catch (error) {
+                    console.error(`Error loading ${genre} anime:`, error);
+                }
             }
-            
-            renderAnimeContent();
         }
 
-        function filterAnime() {
-            const statusFilter = document.getElementById('statusFilter').value;
-            const typeFilter = document.getElementById('typeFilter').value;
+        // Initialize carousel functionality
+        function initializeCarousel(carouselId) {
+            const track = document.getElementById(`${carouselId}Track`);
+            const prevBtn = document.querySelector(`#${carouselId}Carousel .carousel-prev`);
+            const nextBtn = document.querySelector(`#${carouselId}Carousel .carousel-next`);
             
-            filteredAnime = allAnime.filter(anime => {
-                // Status filter
-                if (statusFilter !== 'all' && anime.status !== statusFilter) {
-                    return false;
+            if (!track || !prevBtn || !nextBtn) return;
+
+            const cards = track.querySelectorAll('.anime-card, .anime-card-large');
+            if (cards.length === 0) return;
+
+            const cardWidth = cards[0].offsetWidth + 16; // including gap
+            const container = track.parentElement;
+            const visibleCards = Math.floor(container.offsetWidth / cardWidth);
+            const maxScroll = Math.max(0, cards.length - visibleCards);
+            
+            let currentScroll = 0;
+
+            function updateCarousel() {
+                const translateX = currentScroll * cardWidth;
+                track.style.transform = `translateX(-${translateX}px)`;
+                
+                prevBtn.disabled = currentScroll === 0;
+                nextBtn.disabled = currentScroll >= maxScroll;
+            }
+
+            prevBtn.onclick = () => {
+                if (currentScroll > 0) {
+                    currentScroll--;
+                    updateCarousel();
                 }
-                
-                // Type filter
-                if (typeFilter !== 'all' && anime.type !== typeFilter) {
-                    return false;
+            };
+
+            nextBtn.onclick = () => {
+                if (currentScroll < maxScroll) {
+                    currentScroll++;
+                    updateCarousel();
                 }
-                
-                return true;
-            });
-            
-            sortAnime();
+            };
+
+            updateCarousel();
         }
 
-        function clearFilters() {
-            document.getElementById('sortSelect').value = 'popularity';
-            document.getElementById('statusFilter').value = 'all';
-            document.getElementById('typeFilter').value = 'all';
+        // Global carousel scroll function
+        window.scrollCarousel = function(carouselId, direction) {
+            const prevBtn = document.querySelector(`#${carouselId}Carousel .carousel-prev`);
+            const nextBtn = document.querySelector(`#${carouselId}Carousel .carousel-next`);
             
-            filteredAnime = [...allAnime];
-            renderAnimeContent();
-        }
+            if (direction === 'left' && prevBtn) {
+                prevBtn.click();
+            } else if (direction === 'right' && nextBtn) {
+                nextBtn.click();
+            }
+        };
 
-        function switchView(view) {
-            currentView = view;
+        // Handle genre filter
+        function handleGenreFilter() {
+            const genreChips = document.querySelectorAll('.genre-chip');
             
-            // Update button states
-            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`[data-view="${view}"]`).classList.add('active');
-            
-            renderAnimeContent();
-        }
-
-        async function loadMoreAnime() {
-            if (isLoading) return;
-            
-            const loadMoreBtn = document.getElementById('loadMoreBtn');
-            loadMoreBtn.textContent = 'Loading...';
-            loadMoreBtn.disabled = true;
-
-            // In a real implementation, this would load the next page
-            setTimeout(() => {
-                document.getElementById('loadMoreSection').style.display = 'none';
-                showToast('All available anime loaded', 'info');
-            }, 1000);
-        }
-
-        // Action Functions
-        async function viewContent(contentId) {
-            window.location.href = `/content/details.html?id=${contentId}`;
-        }
-
-        async function playTrailer(contentId) {
-            try {
-                const content = await window.api.getContentDetails(contentId);
-                
-                if (content.youtube_trailer) {
-                    const modal = document.createElement('div');
-                    modal.className = 'modal modal-large';
-                    modal.innerHTML = `
-                        <div class="modal-backdrop" onclick="this.parentElement.remove()"></div>
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h3>${content.title} - Trailer</h3>
-                                <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
-                            </div>
-                            <div class="modal-body">
-                                <iframe 
-                                    src="https://www.youtube.com/embed/${content.youtube_trailer_id}?autoplay=1"
-                                    frameborder="0" 
-                                    allowfullscreen
-                                    width="100%" 
-                                    height="400">
-                                </iframe>
-                            </div>
-                        </div>
-                    `;
+            genreChips.forEach(chip => {
+                chip.addEventListener('click', async () => {
+                    // Update active state
+                    genreChips.forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
                     
-                    document.body.appendChild(modal);
-                    modal.style.display = 'flex';
+                    const genre = chip.dataset.genre;
+                    currentGenre = genre;
+                    
+                    // Load filtered content
+                    await loadFilteredAnime(genre);
+                });
+            });
+        }
+
+        // Load filtered anime
+        async function loadFilteredAnime(genre) {
+            const featuredGrid = document.getElementById('featuredGrid');
+            const featuredLoading = document.getElementById('featuredLoading');
+            
+            // Show loading
+            featuredGrid.style.display = 'none';
+            featuredLoading.style.display = 'flex';
+            featuredLoading.innerHTML = `
+                <div class="loading-spinner animate-spin"></div>
+                <p>Loading ${genre || 'all'} anime...</p>
+            `;
+
+            try {
+                const params = genre ? { genre, limit: 24 } : { limit: 24 };
+                const response = await apiClient.getAnimeContent(params);
+                
+                if (response?.recommendations && response.recommendations.length > 0) {
+                    displayFeaturedAnime(response.recommendations);
                 } else {
-                    showToast('Trailer not available', 'warning');
+                    showError('featuredLoading', `No ${genre || ''} anime found`);
                 }
             } catch (error) {
-                console.error('Failed to play trailer:', error);
-                showToast('Failed to load trailer', 'error');
+                console.error('Error loading filtered anime:', error);
+                showError('featuredLoading', 'Failed to load anime');
             }
         }
 
-        async function addToWatchlist(contentId) {
-            if (!window.auth.isAuthenticated()) {
-                window.location.href = '/auth/login.html';
+        // Show error state
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = `
+                    <div class="error-state">
+                        <div class="error-icon">⚠️</div>
+                        <p>${message}</p>
+                        <button class="btn btn-outline" onclick="window.location.reload()">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Action functions
+        window.showAnimeDetails = function(animeId) {
+            window.location.href = `/content/details.html?id=${animeId}`;
+        };
+
+        window.playTrailer = function(trailerUrl) {
+            if (trailerUrl) {
+                window.open(trailerUrl, '_blank');
+            }
+        };
+
+        window.addToWatchlist = async function(animeId) {
+            if (!authManager.isLoggedIn()) {
+                showToast('Please sign in to add to watchlist', 'warning');
                 return;
             }
-
+            
             try {
-                await window.api.recordInteraction({
-                    content_id: contentId,
+                await apiClient.recordInteraction(authManager.getToken(), {
+                    content_id: animeId,
                     interaction_type: 'watchlist'
                 });
-                
                 showToast('Added to watchlist', 'success');
             } catch (error) {
-                console.error('Failed to add to watchlist:', error);
                 showToast('Failed to add to watchlist', 'error');
             }
-        }
+        };
 
-        async function addToFavorites(contentId) {
-            if (!window.auth.isAuthenticated()) {
-                window.location.href = '/auth/login.html';
+        window.addToFavorites = async function(animeId) {
+            if (!authManager.isLoggedIn()) {
+                showToast('Please sign in to add to favorites', 'warning');
                 return;
             }
-
+            
             try {
-                await window.api.recordInteraction({
-                    content_id: contentId,
+                await apiClient.recordInteraction(authManager.getToken(), {
+                    content_id: animeId,
                     interaction_type: 'favorite'
                 });
-                
                 showToast('Added to favorites', 'success');
             } catch (error) {
-                console.error('Failed to add to favorites:', error);
                 showToast('Failed to add to favorites', 'error');
             }
-        }
+        };
 
-        // Utility Functions
-        function updateUserSection() {
-            const userSection = document.getElementById('userSection');
-            
-            if (window.auth.isAuthenticated()) {
-                const user = window.auth.getUser();
-                userSection.innerHTML = `
-                    <img src="${window.auth.getUserAvatar()}" 
-                         alt="${user.username}" 
-                         class="user-avatar"
-                         onclick="toggleUserMenu()">
-                    <div class="user-dropdown" id="userDropdown" style="display: none;">
-                        <a href="/${user.username}/profile" class="dropdown-item">Profile</a>
-                        <a href="/${user.username}/watchlist" class="dropdown-item">Watchlist</a>
-                        <a href="/${user.username}/favorites" class="dropdown-item">Favorites</a>
-                        <a href="/${user.username}/settings" class="dropdown-item">Settings</a>
-                        ${user.is_admin ? '<a href="/admin/" class="dropdown-item">Admin</a>' : ''}
-                        <hr>
-                        <a href="#" onclick="window.auth.logout()" class="dropdown-item">Logout</a>
-                    </div>
-                `;
+        // Theme toggle
+        window.toggleTheme = function() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('cinescope_theme', newTheme);
+        };
+
+        // Handle profile click
+        window.handleProfileClick = function() {
+            if (authManager.isLoggedIn()) {
+                const username = authManager.getUser().username;
+                window.location.href = `/${username}/profile`;
             } else {
-                userSection.innerHTML = `
-                    <a href="/auth/login.html" class="btn btn-outline btn-sm">Login</a>
-                `;
+                window.location.href = '/auth/login.html';
+            }
+        };
+
+        // Update auth UI
+        function updateAuthUI() {
+            const isLoggedIn = authManager.isLoggedIn();
+            
+            document.querySelectorAll('.user-only-show').forEach(el => {
+                el.style.display = isLoggedIn ? 'block' : 'none';
+            });
+            
+            document.querySelectorAll('.user-only-hide').forEach(el => {
+                el.style.display = isLoggedIn ? 'none' : 'block';
+            });
+
+            if (isLoggedIn) {
+                const user = authManager.getUser();
+                const avatar = document.querySelector('.user-avatar');
+                if (avatar) {
+                    avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=fff&size=40`;
+                }
             }
         }
 
-        function setupHeaderSearch() {
-            const searchInput = document.getElementById('headerSearch');
+        // Search functionality
+        function initSearch() {
+            const searchInput = document.querySelector('.search-input');
+            let searchTimeout;
             
-            searchInput.addEventListener('keydown', (e) => {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value.trim();
+                
+                if (query.length >= 2) {
+                    searchTimeout = setTimeout(() => {
+                        window.location.href = `/content/search.html?q=${encodeURIComponent(query)}&type=anime`;
+                    }, 1000);
+                }
+            });
+
+            searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     const query = e.target.value.trim();
                     if (query) {
@@ -624,65 +566,238 @@
             });
         }
 
-        function toggleUserMenu() {
-            const dropdown = document.getElementById('userDropdown');
-            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-        }
-
-        function goToWatchlist() {
-            const user = window.auth.getUser();
-            window.location.href = `/${user.username}/watchlist`;
-        }
-
-        function goToFavorites() {
-            const user = window.auth.getUser();
-            window.location.href = `/${user.username}/favorites`;
-        }
-
-        function goToProfile() {
-            const user = window.auth.getUser();
-            window.location.href = `/${user.username}/profile`;
-        }
-
-        function requireAuth(callback) {
-            if (window.auth.isAuthenticated()) {
-                callback();
-            } else {
-                window.location.href = '/auth/login.html';
-            }
-        }
-
-        function showError(message) {
-            document.getElementById('animeContent').innerHTML = `
-                <div class="error-message">
-                    <h3>Error</h3>
-                    <p>${message}</p>
-                    <button class="btn btn-primary" onclick="location.reload()">Retry</button>
-                </div>
-            `;
-        }
-
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = message;
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            updateAuthUI();
+            handleGenreFilter();
+            initSearch();
+            loadAnimeContent();
             
-            document.body.appendChild(toast);
-            
-            setTimeout(() => toast.classList.add('toast-show'), 100);
-            setTimeout(() => {
-                toast.classList.remove('toast-show');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.topbar-right')) {
-                const dropdown = document.getElementById('userDropdown');
-                if (dropdown) dropdown.style.display = 'none';
+            // Performance mark
+            if (performance.mark) {
+                performance.mark('anime-page-ready');
             }
         });
+
+        // Handle auth state changes
+        authManager.onLogin(updateAuthUI);
+        authManager.onLogout(updateAuthUI);
     </script>
+
+    <style>
+        .anime-filters {
+            margin-bottom: var(--spacing-2xl);
+            padding: var(--spacing-xl);
+            background: var(--theater-dark);
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .anime-filters h3 {
+            margin-bottom: var(--spacing-md);
+            color: var(--text-primary);
+        }
+
+        .featured-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--spacing-xl);
+        }
+
+        .anime-card-large {
+            background: var(--theater-dark);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .anime-card-large:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl), var(--premium-glow);
+        }
+
+        .anime-card {
+            min-width: 200px;
+            max-width: 200px;
+            background: var(--theater-dark);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .anime-card:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-lg), var(--premium-glow);
+        }
+
+        .anime-card .card-image,
+        .anime-card-large .card-image {
+            position: relative;
+            aspect-ratio: 2/3;
+            overflow: hidden;
+        }
+
+        .anime-badges {
+            position: absolute;
+            top: var(--spacing-sm);
+            left: var(--spacing-sm);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .anime-badge {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: var(--vip-gold);
+            color: var(--cinema-black);
+            border-radius: var(--radius-sm);
+            font-size: 0.625rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .card-overview {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-top: var(--spacing-sm);
+        }
+
+        .loading-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-2xl);
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--velvet-dark);
+            border-top: 3px solid var(--platinum-blue);
+            border-radius: 50%;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .error-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-2xl);
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .genre-section {
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .carousel {
+            position: relative;
+        }
+
+        .carousel-track-container {
+            overflow: hidden;
+            margin: 0 60px;
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: var(--spacing-md);
+            transition: transform 0.3s ease;
+        }
+
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s ease;
+        }
+
+        .carousel-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .carousel-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .carousel-prev {
+            left: 0;
+        }
+
+        .carousel-next {
+            right: 0;
+        }
+
+        @media (max-width: 768px) {
+            .featured-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: var(--spacing-md);
+            }
+
+            .anime-card {
+                min-width: 150px;
+                max-width: 150px;
+            }
+
+            .carousel-track-container {
+                margin: 0 40px;
+            }
+
+            .carousel-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.25rem;
+            }
+
+            .genre-chips {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .featured-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .anime-card {
+                min-width: 120px;
+                max-width: 120px;
+            }
+
+            .carousel-track-container {
+                margin: 0 30px;
+            }
+
+            .carousel-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
+            }
+        }
+    </style>
 </body>
 </html>
