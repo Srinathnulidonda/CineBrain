@@ -1,148 +1,305 @@
-class AuthManager {
-  constructor() {
-    this.token = localStorage.getItem('cinebrain_token');
-    this.user = JSON.parse(localStorage.getItem('cinebrain_user') || 'null');
-    this.isAuthenticated = !!this.token;
-  }
-  
-  async login(username, password) {
-    try {
-      const response = await fetch(`${CineBrain.API_BASE_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        this.token = data.token;
-        this.user = data.user;
-        this.isAuthenticated = true;
+// CineBrain Authentication System
+class CineBrainAuth {
+    constructor() {
+        this.token = localStorage.getItem('cinebrain_token');
+        this.user = JSON.parse(localStorage.getItem('cinebrain_user') || 'null');
+        this.refreshTimer = null;
+        this.init();
+    }
+
+    init() {
+        this.setupTokenRefresh();
+        this.checkAuthOnLoad();
+    }
+
+    checkAuthOnLoad() {
+        if (this.token && this.user) {
+            this.setupAuthenticatedState();
+        } else {
+            this.setupUnauthenticatedState();
+        }
+    }
+
+    setupAuthenticatedState() {
+        document.body.classList.add('authenticated');
+        document.body.classList.remove('unauthenticated');
+        this.updateUIForAuthenticatedUser();
+    }
+
+    setupUnauthenticatedState() {
+        document.body.classList.add('unauthenticated');
+        document.body.classList.remove('authenticated');
+        this.updateUIForUnauthenticatedUser();
+    }
+
+    updateUIForAuthenticatedUser() {
+        // Update topbar
+        const authSection = document.querySelector('.auth-section');
+        if (authSection && this.user) {
+            authSection.innerHTML = `
+                <div class="user-menu dropdown">
+                    <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(this.user.username)}&background=6366f1&color=fff&size=32" 
+                             alt="${this.user.username}" class="user-avatar">
+                        <span class="username">${this.user.username}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/${this.user.username}/profile">Profile</a></li>
+                        <li><a class="dropdown-item" href="/user/watchlist.html">Watchlist</a></li>
+                        <li><a class="dropdown-item" href="/user/favorites.html">Favorites</a></li>
+                        <li><a class="dropdown-item" href="/user/settings.html">Settings</a></li>
+                        ${this.user.is_admin ? '<li><hr class="dropdown-divider"></li><li><a class="dropdown-item" href="/admin/">Admin Panel</a></li>' : ''}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item logout-btn" onclick="Auth.logout()">Logout</button></li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Update mobile nav
+        const mobileAuthItem = document.querySelector('.mobile-nav .auth-item');
+        if (mobileAuthItem && this.user) {
+            mobileAuthItem.innerHTML = `
+                <a href="/${this.user.username}/profile" class="nav-link">
+                    <i class="bi bi-person-circle"></i>
+                    <span>Profile</span>
+                </a>
+            `;
+        }
+    }
+
+    updateUIForUnauthenticatedUser() {
+        // Update topbar
+        const authSection = document.querySelector('.auth-section');
+        if (authSection) {
+            authSection.innerHTML = `
+                <div class="auth-buttons">
+                    <a href="/auth/login.html" class="btn btn-outline-light me-2">Login</a>
+                    <a href="/auth/register.html" class="btn btn-primary">Sign Up</a>
+                </div>
+            `;
+        }
+
+        // Update mobile nav
+        const mobileAuthItem = document.querySelector('.mobile-nav .auth-item');
+        if (mobileAuthItem) {
+            mobileAuthItem.innerHTML = `
+                <a href="/auth/login.html" class="nav-link">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    <span>Login</span>
+                </a>
+            `;
+        }
+    }
+
+    async register(username, email, password, preferences = {}) {
+        try {
+            const response = await api.post(CONFIG.API_ENDPOINTS.REGISTER, {
+                username,
+                email,
+                password,
+                preferred_languages: preferences.languages || [],
+                preferred_genres: preferences.genres || []
+            });
+
+            if (response.token && response.user) {
+                this.setAuthData(response.token, response.user);
+                this.handleAuthSuccess();
+                return { success: true, user: response.user };
+            } else {
+                throw new Error('Invalid registration response');
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async login(username, password) {
+        try {
+            const response = await api.post(CONFIG.API_ENDPOINTS.LOGIN, {
+                username,
+                password
+            });
+
+            if (response.token && response.user) {
+                this.setAuthData(response.token, response.user);
+                this.handleAuthSuccess();
+                return { success: true, user: response.user };
+            } else {
+                throw new Error('Invalid login response');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    logout() {
+        this.clearAuthData();
+        this.handleLogout();
+    }
+
+    setAuthData(token, user) {
+        this.token = token;
+        this.user = user;
+        localStorage.setItem('cinebrain_token', token);
+        localStorage.setItem('cinebrain_user', JSON.stringify(user));
+        this.setupTokenRefresh();
+    }
+
+    clearAuthData() {
+        this.token = null;
+        this.user = null;
+        localStorage.removeItem('cinebrain_token');
+        localStorage.removeItem('cinebrain_user');
+        if (this.refreshTimer) {
+            clearTimeout(this.refreshTimer);
+            this.refreshTimer = null;
+        }
+    }
+
+    handleAuthSuccess() {
+        this.setupAuthenticatedState();
         
-        localStorage.setItem('cinebrain_token', this.token);
-        localStorage.setItem('cinebrain_user', JSON.stringify(this.user));
+        // Redirect based on user role and current page
+        const currentPath = window.location.pathname;
         
-        this.dispatchAuthEvent('login', this.user);
-        return { success: true, user: this.user };
-      } else {
-        return { success: false, error: data.error };
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: 'Network error' };
-    }
-  }
-  
-  async register(userData) {
-    try {
-      const response = await fetch(`${CineBrain.API_BASE_URL}/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userData)
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        this.token = data.token;
-        this.user = data.user;
-        this.isAuthenticated = true;
+        if (currentPath.includes('/auth/')) {
+            if (this.user.is_admin) {
+                Router.navigate('/admin/');
+            } else {
+                Router.navigate('/');
+            }
+        }
+
+        // Show success toast
+        App.showToast('Welcome back!', 'success');
         
-        localStorage.setItem('cinebrain_token', this.token);
-        localStorage.setItem('cinebrain_user', JSON.stringify(this.user));
+        // Track login event
+        if (this.user) {
+            api.recordInteraction(0, 'login').catch(console.error);
+        }
+    }
+
+    handleLogout() {
+        this.setupUnauthenticatedState();
         
-        this.dispatchAuthEvent('register', this.user);
-        return { success: true, user: this.user };
-      } else {
-        return { success: false, error: data.error };
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      return { success: false, error: 'Network error' };
+        // Clear any user-specific data
+        api.clearCache();
+        
+        // Redirect to home page
+        Router.navigate('/');
+        
+        // Show logout message
+        App.showToast('You have been logged out', 'info');
     }
-  }
-  
-  logout() {
-    this.token = null;
-    this.user = null;
-    this.isAuthenticated = false;
-    
-    localStorage.removeItem('cinebrain_token');
-    localStorage.removeItem('cinebrain_user');
-    
-    this.dispatchAuthEvent('logout');
-    
-    if (window.location.pathname !== '/' && !window.location.pathname.includes('auth')) {
-      window.location.href = '/';
+
+    setupTokenRefresh() {
+        if (!this.token) return;
+
+        // Clear existing timer
+        if (this.refreshTimer) {
+            clearTimeout(this.refreshTimer);
+        }
+
+        // Decode token to get expiration (simplified)
+        try {
+            const tokenParts = this.token.split('.');
+            if (tokenParts.length === 3) {
+                const payload = JSON.parse(atob(tokenParts[1]));
+                const expirationTime = payload.exp * 1000; // Convert to milliseconds
+                const currentTime = Date.now();
+                const timeUntilExpiration = expirationTime - currentTime;
+                
+                // Refresh 5 minutes before expiration
+                const refreshTime = Math.max(timeUntilExpiration - 300000, 60000);
+                
+                this.refreshTimer = setTimeout(() => {
+                    this.refreshToken();
+                }, refreshTime);
+            }
+        } catch (error) {
+            console.warn('Could not parse token for refresh scheduling:', error);
+        }
     }
-  }
-  
-  getAuthHeaders() {
-    return this.token ? { 'Authorization': `Bearer ${this.token}` } : {};
-  }
-  
-  checkAuthStatus() {
-    if (!this.token) {
-      this.logout();
-      return false;
+
+    async refreshToken() {
+        // Since the backend uses long-lived tokens, we'll just validate the current token
+        try {
+            const response = await api.get('/api/user/profile');
+            if (response.user) {
+                // Token is still valid, update user data
+                this.user = { ...this.user, ...response.user };
+                localStorage.setItem('cinebrain_user', JSON.stringify(this.user));
+                this.setupTokenRefresh();
+            }
+        } catch (error) {
+            console.warn('Token validation failed:', error);
+            this.logout();
+        }
     }
-    
-    try {
-      const payload = JSON.parse(atob(this.token.split('.')[1]));
-      const currentTime = Date.now() / 1000;
-      
-      if (payload.exp < currentTime) {
-        this.logout();
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Token validation error:', error);
-      this.logout();
-      return false;
+
+    // Getters
+    getToken() {
+        return this.token;
     }
-  }
-  
-  requireAuth() {
-    if (!this.checkAuthStatus()) {
-      window.location.href = '/auth/login.html';
-      return false;
+
+    getUser() {
+        return this.user;
     }
-    return true;
-  }
-  
-  requireAdmin() {
-    if (!this.requireAuth()) return false;
-    
-    if (!this.user?.is_admin) {
-      window.location.href = '/';
-      return false;
+
+    isAuthenticated() {
+        return !!(this.token && this.user);
     }
-    return true;
-  }
-  
-  getUserAvatarUrl() {
-    if (!this.user) return null;
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(this.user.username)}&background=3b82f6&color=fff&size=40&rounded=true`;
-  }
-  
-  dispatchAuthEvent(type, user = null) {
-    window.dispatchEvent(new CustomEvent('auth:' + type, {
-      detail: { user, timestamp: Date.now() }
-    }));
-  }
+
+    isAdmin() {
+        return this.user && this.user.is_admin;
+    }
+
+    getUserAvatar() {
+        if (!this.user) return null;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(this.user.username)}&background=6366f1&color=fff&size=128`;
+    }
+
+    // Route protection
+    requireAuth() {
+        if (!this.isAuthenticated()) {
+            Router.navigate('/auth/login.html');
+            return false;
+        }
+        return true;
+    }
+
+    requireAdmin() {
+        if (!this.isAuthenticated()) {
+            Router.navigate('/auth/login.html');
+            return false;
+        }
+        if (!this.isAdmin()) {
+            App.showToast('Admin access required', 'error');
+            Router.navigate('/');
+            return false;
+        }
+        return true;
+    }
+
+    // Username-based routing
+    generateProfileURL(username = null) {
+        const targetUsername = username || (this.user ? this.user.username : null);
+        if (!targetUsername) return '/auth/login.html';
+        return `/${targetUsername}/profile`;
+    }
+
+    isOwnProfile(username) {
+        return this.user && this.user.username === username;
+    }
 }
 
-// Global auth instance
-window.Auth = new AuthManager();
+// Global Auth instance
+const Auth = new CineBrainAuth();
 
-// Auto-check auth status on page load
-document.addEventListener('DOMContentLoaded', () => {
-  Auth.checkAuthStatus();
-});
+// Export for modules
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = CineBrainAuth;
+}

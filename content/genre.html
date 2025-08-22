@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="Browse movies and TV shows by genre on CineBrain. Discover your favorite genres.">
+    <title>Browse by Genre - CineBrain</title>
+    
+    <!-- Preconnect -->
+    <link rel="preconnect" href="https://backend-app-970m.onrender.com">
+    <link rel="preconnect" href="https://image.tmdb.org/t/p">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+    <!-- Include Topbar -->
+    <div id="topbar-container"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="app-container">
+            <!-- Genre Hero -->
+            <section class="genre-hero" id="genre-hero">
+                <div class="hero-backdrop" id="genre-hero-backdrop"></div>
+                <div class="hero-content">
+                    <h1 class="hero-title" id="genre-title">Explore Genres</h1>
+                    <p class="hero-description" id="genre-description">Discover amazing content across all genres</p>
+                </div>
+            </section>
+
+            <!-- Genre Navigation -->
+            <section class="genre-navigation">
+                <div class="container">
+                    <div class="genre-tabs" id="genre-tabs">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Content Type Filters -->
+            <section class="content-filters">
+                <div class="container">
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-type="all">All Content</button>
+                        <button class="filter-tab" data-type="movie">Movies</button>
+                        <button class="filter-tab" data-type="tv">TV Shows</button>
+                        <button class="filter-tab" data-type="anime">Anime</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Genre Content -->
+            <section class="genre-content">
+                <div class="container">
+                    <!-- Loading State -->
+                    <div class="content-loading" id="content-loading">
+                        <div class="loading-grid">
+                            <div class="skeleton content-card"></div>
+                            <div class="skeleton content-card"></div>
+                            <div class="skeleton content-card"></div>
+                            <div class="skeleton content-card"></div>
+                            <div class="skeleton content-card"></div>
+                            <div class="skeleton content-card"></div>
+                        </div>
+                    </div>
+
+                    <!-- Content Grid -->
+                    <div class="genre-content-grid" id="genre-content-grid" style="display: none;">
+                        <!-- Real content populated here -->
+                    </div>
+
+                    <!-- No Content State -->
+                    <div class="no-content-state" id="no-content-state" style="display: none;">
+                        <div class="no-content-content">
+                            <i class="bi bi-collection no-content-icon"></i>
+                            <h3>No Content Found</h3>
+                            <p>No content available for this genre. Try selecting a different genre or content type.</p>
+                        </div>
+                    </div>
+
+                    <!-- Load More -->
+                    <div class="load-more-container" id="load-more-container" style="display: none;">
+                        <button class="btn btn-outline-primary" id="load-more-btn">
+                            <i class="bi bi-arrow-down-circle"></i> Load More
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Include Mobile Nav -->
+    <div id="mobile-nav-container"></div>
+
+    <!-- Core JavaScript -->
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Page JavaScript -->
+    <script>
+        let currentGenre = 'action';
+        let currentContentType = 'all';
+        let currentPage = 1;
+        let totalPages = 0;
+        let isLoading = false;
+
+        const genreConfig = {
+            action: {
+                title: 'Action',
+                description: 'Heart-pounding adventures and thrilling sequences',
+                color: 'var(--cinema-red)',
+                icon: 'bi-lightning-charge'
+            },
+            comedy: {
+                title: 'Comedy',
+                description: 'Laugh-out-loud entertainment for all moods',
+                color: 'var(--vip-gold)',
+                icon: 'bi-emoji-laughing'
+            },
+            drama: {
+                title: 'Drama',
+                description: 'Compelling stories that touch the heart',
+                color: 'var(--royal-purple)',
+                icon: 'bi-heart'
+            },
+            thriller: {
+                title: 'Thriller',
+                description: 'Edge-of-your-seat suspense and mystery',
+                color: '#dc2626',
+                icon: 'bi-eye'
+            },
+            romance: {
+                title: 'Romance',
+                description: 'Love stories that warm the heart',
+                color: '#ec4899',
+                icon: 'bi-suit-heart'
+            },
+            'sci-fi': {
+                title: 'Science Fiction',
+                description: 'Futuristic adventures and technological wonders',
+                color: 'var(--sky-blue)',
+                icon: 'bi-rocket'
+            },
+            horror: {
+                title: 'Horror',
+                description: 'Spine-chilling tales and supernatural frights',
+                color: '#7c2d12',
+                icon: 'bi-ghost'
+            },
+            fantasy: {
+                title: 'Fantasy',
+                description: 'Magical worlds and epic adventures',
+                color: '#8b5cf6',
+                icon: 'bi-magic'
+            },
+            animation: {
+                title: 'Animation',
+                description: 'Animated stories for all ages',
+                color: 'var(--emerald-green)',
+                icon: 'bi-palette'
+            },
+            documentary: {
+                title: 'Documentary',
+                description: 'Real stories and educational content',
+                color: '#059669',
+                icon: 'bi-camera-reels'
+            },
+            crime: {
+                title: 'Crime',
+                description: 'Gripping tales of law and order',
+                color: '#4b5563',
+                icon: 'bi-shield-exclamation'
+            },
+            adventure: {
+                title: 'Adventure',
+                description: 'Epic journeys and exciting quests',
+                color: '#f97316',
+                icon: 'bi-compass'
+            }
+        };
+
+        // Initialize genre page
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                await loadLayoutComponents();
+                setupGenreTabs();
+                setupFilterTabs();
+                handleURLParameters();
+                await loadGenreContent();
+                setupLoadMore();
+            } catch (error) {
+                console.error('Genre page initialization error:', error);
+            }
+        });
+
+        // Load layout components
+        async function loadLayoutComponents() {
+            try {
+                const [topbarResponse, mobileNavResponse] = await Promise.all([
+                    fetch('/components/layout/topbar.html'),
+                    fetch('/components/layout/mobile-nav.html')
+                ]);
+
+                if (topbarResponse.ok) {
+                    document.getElementById('topbar-container').innerHTML = await topbarResponse.text();
+                }
+                if (mobileNavResponse.ok) {
+                    document.getElementById('mobile-nav-container').innerHTML = await mobileNavResponse.text();
+                }
+            } catch (error) {
+                console.error('Error loading layout components:', error);
+            }
+        }
+
+        // Setup genre tabs
+        function setupGenreTabs() {
+            const genreTabs = document.getElementById('genre-tabs');
+            
+            const genreHTML = Object.keys(genreConfig).map(genreKey => {
+                const genre = genreConfig[genreKey];
+                return `
+                    <button class="genre-tab ${genreKey === currentGenre ? 'active' : ''}" 
+                            data-genre="${genreKey}" 
+                            style="--genre-color: ${genre.color}">
+                        <i class="${genre.icon}"></i>
+                        <span>${genre.title}</span>
+                    </button>
+                `;
+            }).join('');
+
+            genreTabs.innerHTML = genreHTML;
+
+            // Add event listeners
+            genreTabs.addEventListener('click', function(e) {
+                const genreTab = e.target.closest('.genre-tab');
+                if (genreTab) {
+                    const genre = genreTab.dataset.genre;
+                    selectGenre(genre);
+                }
+            });
+        }
+
+        // Setup content type filter tabs
+        function setupFilterTabs() {
+            const filterTabs = document.querySelectorAll('.filter-tab');
+            
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const contentType = this.dataset.type;
+                    
+                    // Update active state
+                    filterTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update current content type
+                    currentContentType = contentType;
+                    currentPage = 1;
+                    
+                    // Reload content
+                    loadGenreContent();
+                });
+            });
+        }
+
+        // Handle URL parameters
+        function handleURLParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const genre = urlParams.get('genre');
+            const type = urlParams.get('type');
+
+            if (genre && genreConfig[genre]) {
+                currentGenre = genre;
+            }
+
+            if (type) {
+                currentContentType = type;
+                // Update active filter tab
+                const filterTab = document.querySelector(`[data-type="${type}"]`);
+                if (filterTab) {
+                    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                    filterTab.classList.add('active');
+                }
+            }
+
+            updateGenreHero();
+            updateActiveGenreTab();
+        }
+
+        // Select genre
+        function selectGenre(genre) {
+            if (genre === currentGenre) return;
+
+            currentGenre = genre;
+            currentPage = 1;
+            
+            updateGenreHero();
+            updateActiveGenreTab();
+            loadGenreContent();
+            updateURL();
+        }
+
+        // Update genre hero
+        function updateGenreHero() {
+            const genreTitle = document.getElementById('genre-title');
+            const genreDescription = document.getElementById('genre-description');
+            const heroBackdrop = document.getElementById('genre-hero-backdrop');
+            const genreHero = document.querySelector('.genre-hero');
+            
+            const genre = genreConfig[currentGenre];
+            if (genre) {
+                genreTitle.textContent = genre.title;
+                genreDescription.textContent = genre.description;
+                genreHero.style.setProperty('--genre-color', genre.color);
+                
+                // Load hero backdrop from first content item
+                loadGenreHeroImage();
+            }
+        }
+
+        // Load genre hero image
+        async function loadGenreHeroImage() {
+            try {
+                const response = await fetch(`https://backend-app-970m.onrender.com/api/recommendations/genre/${currentGenre}?type=movie&limit=1`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.recommendations && data.recommendations.length > 0) {
+                        const heroContent = data.recommendations[0];
+                        const heroBackdrop = document.getElementById('genre-hero-backdrop');
+                        
+                        if (heroContent.backdrop_path) {
+                            const backdropUrl = heroContent.backdrop_path.startsWith('http')
+                                ? heroContent.backdrop_path
+                                : `https://image.tmdb.org/t/p/w1280${heroContent.backdrop_path}`;
+                            heroBackdrop.style.backgroundImage = `url(${backdropUrl})`;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading genre hero image:', error);
+            }
+        }
+
+        // Update active genre tab
+        function updateActiveGenreTab() {
+            const genreTabs = document.querySelectorAll('.genre-tab');
+            genreTabs.forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.genre === currentGenre);
+            });
+        }
+
+        // Load genre content
+        async function loadGenreContent() {
+            if (isLoading) return;
+            
+            try {
+                isLoading = true;
+                showLoading();
+                
+                let apiUrl = `https://backend-app-970m.onrender.com/api/recommendations/genre/${currentGenre}?page=${currentPage}&limit=20`;
+                
+                if (currentContentType !== 'all') {
+                    apiUrl += `&type=${currentContentType}`;
+                }
+
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error('Failed to load genre content');
+                
+                const data = await response.json();
+                
+                if (currentPage === 1) {
+                    displayGenreContent(data.recommendations || []);
+                } else {
+                    appendGenreContent(data.recommendations || []);
+                }
+                
+                totalPages = data.total_pages || 1;
+                updateLoadMoreButton();
+                
+            } catch (error) {
+                console.error('Error loading genre content:', error);
+                showNoContent();
+            } finally {
+                isLoading = false;
+                hideLoading();
+            }
+        }
+
+        // Display genre content
+        function displayGenreContent(content) {
+            const contentGrid = document.getElementById('genre-content-grid');
+            const noContentState = document.getElementById('no-content-state');
+            
+            if (content.length === 0) {
+                showNoContent();
+                return;
+            }
+
+            const html = content.map(item => createGenreContentCard(item)).join('');
+            contentGrid.innerHTML = html;
+            contentGrid.style.display = 'grid';
+            noContentState.style.display = 'none';
+        }
+
+        // Append genre content for pagination
+        function appendGenreContent(content) {
+            const contentGrid = document.getElementById('genre-content-grid');
+            const html = content.map(item => createGenreContentCard(item)).join('');
+            contentGrid.insertAdjacentHTML('beforeend', html);
+        }
+
+        // Create genre content card
+        function createGenreContentCard(item) {
+            const posterUrl = item.poster_path 
+                ? (item.poster_path.startsWith('http') 
+                   ? item.poster_path 
+                   : `https://image.tmdb.org/t/p/w500${item.poster_path}`)
+                : '/images/placeholder-poster.jpg';
+
+            return `
+                <div class="genre-content-card" data-content-id="${item.id}">
+                    <div class="content-poster" data-action="view-content" data-content-id="${item.id}">
+                        <img src="${posterUrl}" alt="${item.title}" loading="lazy">
+                        <div class="content-overlay">
+                            <button class="btn btn-play" data-action="play-trailer" data-content-id="${item.id}">
+                                <i class="bi bi-play-fill"></i>
+                            </button>
+                        </div>
+                        <div class="content-badges">
+                            ${item.is_new_release ? '<span class="badge badge-new">NEW</span>' : ''}
+                            ${item.is_trending ? '<span class="badge badge-trending">TRENDING</span>' : ''}
+                            ${item.is_critics_choice ? '<span class="badge badge-critics">CRITICS\' CHOICE</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="content-info">
+                        <h3 class="content-title" data-action="view-content" data-content-id="${item.id}">${item.title}</h3>
+                        <div class="content-meta">
+                            <span class="content-rating">
+                                ${item.rating ? `<i class="bi bi-star-fill"></i> ${Number(item.rating).toFixed(1)}` : 'NR'}
+                            </span>
+                            <span class="content-type type-badge ${item.content_type}">${item.content_type.toUpperCase()}</span>
+                            <span class="content-year">${item.release_date ? new Date(item.release_date).getFullYear() : 'TBA'}</span>
+                        </div>
+                        <p class="content-overview">${item.overview ? (item.overview.length > 120 ? item.overview.substring(0, 120) + '...' : item.overview) : 'No description available.'}</p>
+                        <div class="content-genres">
+                            ${item.genres ? item.genres.slice(0, 3).map(genre => `<span class="genre-chip">${genre}</span>`).join('') : ''}
+                        </div>
+                        <div class="content-actions">
+                            <button class="btn btn-sm btn-primary" data-action="view-content" data-content-id="${item.id}">
+                                <i class="bi bi-info-circle"></i> Details
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" data-action="add-watchlist" data-content-id="${item.id}">
+                                <i class="bi bi-bookmark"></i> Watchlist
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" data-action="add-favorite" data-content-id="${item.id}">
+                                <i class="bi bi-heart"></i> Favorite
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Setup load more functionality
+        function setupLoadMore() {
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            
+            loadMoreBtn.addEventListener('click', async function() {
+                if (currentPage < totalPages && !isLoading) {
+                    currentPage++;
+                    await loadGenreContent();
+                }
+            });
+        }
+
+        // Update load more button
+        function updateLoadMoreButton() {
+            const loadMoreContainer = document.getElementById('load-more-container');
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            
+            if (currentPage < totalPages) {
+                loadMoreContainer.style.display = 'block';
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.innerHTML = '<i class="bi bi-arrow-down-circle"></i> Load More';
+            } else {
+                loadMoreContainer.style.display = 'none';
+            }
+        }
+
+        // State management
+        function showLoading() {
+            document.getElementById('content-loading').style.display = 'block';
+            document.getElementById('genre-content-grid').style.display = 'none';
+            document.getElementById('no-content-state').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('content-loading').style.display = 'none';
+        }
+
+        function showNoContent() {
+            document.getElementById('content-loading').style.display = 'none';
+            document.getElementById('genre-content-grid').style.display = 'none';
+            document.getElementById('no-content-state').style.display = 'flex';
+        }
+
+        // Update URL
+        function updateURL() {
+            const url = new URL(window.location);
+            url.searchParams.set('genre', currentGenre);
+            if (currentContentType !== 'all') {
+                url.searchParams.set('type', currentContentType);
+            } else {
+                url.searchParams.delete('type');
+            }
+            window.history.pushState({}, '', url);
+        }
+    </script>
+
+    <!-- Page-specific CSS -->
+    <style>
+        /* Genre Hero */
+        .genre-hero {
+            position: relative;
+            height: 40vh;
+            min-height: 20rem;
+            overflow: hidden;
+            border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
+            margin-bottom: var(--space-3xl);
+        }
+
+        .hero-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .hero-backdrop::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, 
+                color-mix(in srgb, var(--genre-color, var(--royal-purple)) 70%, transparent) 0%, 
+                color-mix(in srgb, var(--genre-color, var(--royal-purple)) 30%, transparent) 100%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: var(--space-xl);
+        }
+
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+            background: linear-gradient(135deg, white, var(--pearl-white));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-description {
+            font-size: 1.125rem;
+            color: rgba(255, 255, 255, 0.9);
+            max-width: 32rem;
+        }
+
+        /* Genre Navigation */
+        .genre-navigation {
+            margin-bottom: var(--space-xl);
+        }
+
+        .genre-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+            justify-content: center;
+            padding: 0 var(--space-lg);
+            overflow-x: auto;
+        }
+
+        .genre-tab {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-tertiary);
+            border: 2px solid transparent;
+            border-radius: var(--radius-lg);
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .genre-tab:hover {
+            background: var(--bg-quaternary);
+            border-color: var(--genre-color);
+            color: var(--genre-color);
+        }
+
+        .genre-tab.active {
+            background: var(--genre-color);
+            border-color: var(--genre-color);
+            color: white;
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--genre-color) 40%, transparent);
+        }
+
+        .genre-tab i {
+            font-size: 1.125rem;
+        }
+
+        /* Content Filters */
+        .content-filters {
+            margin-bottom: var(--space-xl);
+        }
+
+        .filter-tabs {
+            display: flex;
+            justify-content: center;
+            gap: var(--space-md);
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            padding: 0.5rem 1.25rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .filter-tab:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-primary);
+        }
+
+        .filter-tab.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        /* Content Loading */
+        .content-loading {
+            margin-bottom: var(--space-3xl);
+        }
+
+        .loading-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--space-xl);
+        }
+
+        .skeleton.content-card {
+            height: 24rem;
+            background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: var(--radius-xl);
+        }
+
+        /* Genre Content Grid */
+        .genre-content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--space-xl);
+            margin-bottom: var(--space-3xl);
+        }
+
+        /* Genre Content Cards */
+        .genre-content-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            transition: all var(--transition-base);
+            border: 1px solid transparent;
+        }
+
+        .genre-content-card:hover {
+            transform: translateY(-0.5rem);
+            box-shadow: var(--shadow-2xl);
+            border-color: var(--border-primary);
+        }
+
+        .content-poster {
+            position: relative;
+            aspect-ratio: 2/3;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .content-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform var(--transition-slow);
+        }
+
+        .genre-content-card:hover .content-poster img {
+            transform: scale(1.05);
+        }
+
+        .content-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), transparent, rgba(0, 0, 0, 0.8));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity var(--transition-base);
+        }
+
+        .genre-content-card:hover .content-overlay {
+            opacity: 1;
+        }
+
+        .content-overlay .btn-play {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            font-size: 1.25rem;
+        }
+
+        .content-badges {
+            position: absolute;
+            top: 0.75rem;
+            left: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .badge {
+            padding: 0.125rem 0.375rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.625rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-new {
+            background: var(--emerald-green);
+            color: white;
+        }
+
+        .badge-trending {
+            background: var(--cinema-red);
+            color: white;
+        }
+
+        .badge-critics {
+            background: var(--vip-gold);
+            color: white;
+        }
+
+        .content-info {
+            padding: var(--space-lg);
+        }
+
+        .content-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin: 0 0 var(--space-sm) 0;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: color var(--transition-fast);
+        }
+
+        .content-title:hover {
+            color: var(--accent-primary);
+        }
+
+        .content-meta {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+            font-size: 0.875rem;
+            flex-wrap: wrap;
+        }
+
+        .content-rating {
+            color: var(--vip-gold);
+            font-weight: 600;
+        }
+
+        .content-overview {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.5;
+            margin-bottom: var(--space-md);
+        }
+
+        .content-genres {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-bottom: var(--space-md);
+        }
+
+        .genre-chip {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 0.125rem 0.5rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .content-actions {
+            display: flex;
+            gap: var(--space-sm);
+        }
+
+        .content-actions .btn {
+            flex: 1;
+            font-size: 0.75rem;
+            padding: 0.375rem 0.75rem;
+        }
+
+        .content-actions .btn:first-child {
+            flex: 2;
+        }
+
+        /* No Content State */
+        .no-content-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 24rem;
+            text-align: center;
+        }
+
+        .no-content-content {
+            max-width: 24rem;
+        }
+
+        .no-content-icon {
+            font-size: 4rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-lg);
+        }
+
+        .no-content-content h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+            color: var(--text-primary);
+        }
+
+        .no-content-content p {
+            color: var(--text-secondary);
+        }
+
+        /* Load More */
+        .load-more-container {
+            text-align: center;
+            margin: var(--space-3xl) 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 767.98px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .hero-description {
+                font-size: 1rem;
+            }
+
+            .genre-tabs {
+                justify-content: flex-start;
+                padding: 0 var(--space-md);
+            }
+
+            .genre-tab {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+            }
+
+            .filter-tabs {
+                justify-content: flex-start;
+                overflow-x: auto;
+                padding: 0 var(--space-md);
+            }
+
+            .filter-tab {
+                flex-shrink: 0;
+                padding: 0.375rem 1rem;
+                font-size: 0.875rem;
+            }
+
+            .genre-content-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: var(--space-lg);
+            }
+
+            .content-actions {
+                flex-direction: column;
+            }
+
+            .loading-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .genre-content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .loading-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>

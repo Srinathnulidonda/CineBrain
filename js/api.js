@@ -1,263 +1,327 @@
-class APIClient {
-  constructor() {
-    this.baseURL = CineBrain.API_BASE_URL;
-    this.cache = new Map();
-    this.requestQueue = new Map();
-  }
-  
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    const cacheKey = `${options.method || 'GET'}:${url}:${JSON.stringify(options.body || {})}`;
-    
-    // Check cache for GET requests
-    if ((!options.method || options.method === 'GET') && this.cache.has(cacheKey)) {
-      const cached = this.cache.get(cacheKey);
-      if (Date.now() - cached.timestamp < CineBrain.PERFORMANCE.CACHE_DURATION) {
-        return cached.data;
-      }
+// CineBrain API Client - Real Data Only
+class CineBrainAPI {
+    constructor() {
+        this.baseURL = CONFIG.BASE_URL;
+        this.cache = new Map();
+        this.requestQueue = new Map();
+        this.retryCount = new Map();
+        this.init();
     }
-    
-    // Prevent duplicate requests
-    if (this.requestQueue.has(cacheKey)) {
-      return this.requestQueue.get(cacheKey);
+
+    init() {
+        this.setupServiceWorker();
+        this.preloadCriticalEndpoints();
     }
-    
-    const requestPromise = this._makeRequest(url, options);
-    this.requestQueue.set(cacheKey, requestPromise);
-    
-    try {
-      const result = await requestPromise;
-      
-      // Cache successful GET requests
-      if ((!options.method || options.method === 'GET') && result.success) {
-        this.cache.set(cacheKey, {
-          data: result,
-          timestamp: Date.now()
-        });
-      }
-      
-      return result;
-    } finally {
-      this.requestQueue.delete(cacheKey);
+
+    async setupServiceWorker() {
+        if (!CONFIG.FEATURES.SERVICE_WORKER) return;
+        
+        try {
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            console.log('ServiceWorker registered:', registration);
+        } catch (error) {
+            console.warn('ServiceWorker registration failed:', error);
+        }
     }
-  }
-  
-  async _makeRequest(url, options) {
-    const config = {
-      method: options.method || 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...Auth.getAuthHeaders(),
-        ...options.headers
-      },
-      timeout: CineBrain.PERFORMANCE.API_TIMEOUT,
-      ...options
-    };
-    
-    if (options.body && typeof options.body === 'object') {
-      config.body = JSON.stringify(options.body);
+
+    preloadCriticalEndpoints() {
+        setTimeout(() => {
+            this.get(CONFIG.API_ENDPOINTS.TRENDING, { limit: 10 });
+            this.get(CONFIG.API_ENDPOINTS.NEW_RELEASES, { limit: 10 });
+            this.get(CONFIG.API_ENDPOINTS.CRITICS_CHOICE, { limit: 10 });
+        }, CONFIG.PERFORMANCE.PRELOAD_DELAY);
     }
-    
-    let lastError;
-    
-    for (let attempt = 1; attempt <= CineBrain.PERFORMANCE.RETRY_ATTEMPTS; attempt++) {
-      try {
+
+    getCacheKey(url, params) {
+        const paramString = params ? new URLSearchParams(params).toString() : '';
+        return `${url}${paramString ? '?' + paramString : ''}`;
+    }
+
+    isInCache(cacheKey) {
+        const cached = this.cache.get(cacheKey);
+        if (!cached) return false;
+        
+        const isExpired = Date.now() - cached.timestamp > CONFIG.PERFORMANCE.CACHE_DURATION;
+        if (isExpired) {
+            this.cache.delete(cacheKey);
+            return false;
+        }
+        return true;
+    }
+
+    async request(method, endpoint, data = null, params = null) {
+        const url = `${this.baseURL}${endpoint}`;
+        const cacheKey = this.getCacheKey(url, params);
+        
+        // Check cache for GET requests
+        if (method === 'GET' && this.isInCache(cacheKey)) {
+            return this.cache.get(cacheKey).data;
+        }
+
+        // Deduplicate concurrent requests
+        if (this.requestQueue.has(cacheKey)) {
+            return this.requestQueue.get(cacheKey);
+        }
+
+        const requestPromise = this.executeRequest(method, url, data, params, cacheKey);
+        this.requestQueue.set(cacheKey, requestPromise);
+
+        try {
+            const result = await requestPromise;
+            return result;
+        } finally {
+            this.requestQueue.delete(cacheKey);
+        }
+    }
+
+    async executeRequest(method, url, data, params, cacheKey) {
+        const requestOptions = {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...this.getAuthHeaders()
+            },
+            timeout: CONFIG.PERFORMANCE.REQUEST_TIMEOUT
+        };
+
+        if (data) {
+            requestOptions.body = JSON.stringify(data);
+        }
+
+        if (params && method === 'GET') {
+            url += '?' + new URLSearchParams(params).toString();
+        }
+
+        let attempt = 0;
+        const maxRetries = CONFIG.PERFORMANCE.RETRY_ATTEMPTS;
+
+        while (attempt <= maxRetries) {
+            try {
+                const response = await this.fetchWithTimeout(url, requestOptions);
+                
+                if (!response.ok) {
+                    if (response.status >= 500 && attempt < maxRetries) {
+                        attempt++;
+                        await this.delay(CONFIG.PERFORMANCE.RETRY_DELAY * attempt);
+                        continue;
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                // Cache successful GET requests
+                if (method === 'GET') {
+                    this.cache.set(cacheKey, {
+                        data: result,
+                        timestamp: Date.now()
+                    });
+                }
+
+                this.retryCount.delete(cacheKey);
+                return result;
+
+            } catch (error) {
+                if (attempt === maxRetries) {
+                    this.retryCount.set(cacheKey, (this.retryCount.get(cacheKey) || 0) + 1);
+                    throw error;
+                }
+                attempt++;
+                await this.delay(CONFIG.PERFORMANCE.RETRY_DELAY * attempt);
+            }
+        }
+    }
+
+    async fetchWithTimeout(url, options) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+        const timeoutId = setTimeout(() => controller.abort(), options.timeout);
         
-        const response = await fetch(url, {
-          ...config,
-          signal: controller.signal
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            return response;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            throw error;
+        }
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    getAuthHeaders() {
+        const token = Auth.getToken();
+        return token ? { 'Authorization': `Bearer ${token}` } : {};
+    }
+
+    // HTTP Methods
+    async get(endpoint, params = null) {
+        return this.request('GET', endpoint, null, params);
+    }
+
+    async post(endpoint, data) {
+        return this.request('POST', endpoint, data);
+    }
+
+    async put(endpoint, data) {
+        return this.request('PUT', endpoint, data);
+    }
+
+    async delete(endpoint) {
+        return this.request('DELETE', endpoint);
+    }
+
+    // Content APIs
+    async searchContent(query, type = 'multi', page = 1) {
+        return this.get(CONFIG.API_ENDPOINTS.SEARCH, { query, type, page });
+    }
+
+    async getContentDetails(contentId) {
+        return this.get(`${CONFIG.API_ENDPOINTS.CONTENT_DETAILS}/${contentId}`);
+    }
+
+    // Recommendation APIs
+    async getTrending(type = 'all', limit = 20) {
+        return this.get(CONFIG.API_ENDPOINTS.TRENDING, { type, limit });
+    }
+
+    async getNewReleases(language = null, type = 'movie', limit = 20) {
+        const params = { type, limit };
+        if (language) params.language = language;
+        return this.get(CONFIG.API_ENDPOINTS.NEW_RELEASES, params);
+    }
+
+    async getCriticsChoice(type = 'movie', limit = 20) {
+        return this.get(CONFIG.API_ENDPOINTS.CRITICS_CHOICE, { type, limit });
+    }
+
+    async getGenreRecommendations(genre, type = 'movie', limit = 20) {
+        return this.get(`${CONFIG.API_ENDPOINTS.GENRE}/${genre}`, { type, limit });
+    }
+
+    async getRegionalRecommendations(language, type = 'movie', limit = 20) {
+        return this.get(`${CONFIG.API_ENDPOINTS.REGIONAL}/${language}`, { type, limit });
+    }
+
+    async getAnimeRecommendations(genre = null, limit = 20) {
+        const params = { limit };
+        if (genre) params.genre = genre;
+        return this.get(CONFIG.API_ENDPOINTS.ANIME, params);
+    }
+
+    async getSimilarRecommendations(contentId, limit = 20) {
+        return this.get(`${CONFIG.API_ENDPOINTS.SIMILAR}/${contentId}`, { limit });
+    }
+
+    async getPersonalizedRecommendations(limit = 20) {
+        return this.get(CONFIG.API_ENDPOINTS.PERSONALIZED, { limit });
+    }
+
+    async getMLPersonalizedRecommendations(limit = 20) {
+        return this.get(CONFIG.API_ENDPOINTS.ML_PERSONALIZED, { limit });
+    }
+
+    async getAnonymousRecommendations(limit = 20) {
+        return this.get(CONFIG.API_ENDPOINTS.ANONYMOUS, { limit });
+    }
+
+    async getAdminChoiceRecommendations(type = 'admin_choice', limit = 20) {
+        return this.get(CONFIG.API_ENDPOINTS.ADMIN_CHOICE, { type, limit });
+    }
+
+    // User APIs
+    async getWatchlist() {
+        return this.get(CONFIG.API_ENDPOINTS.USER_WATCHLIST);
+    }
+
+    async getFavorites() {
+        return this.get(CONFIG.API_ENDPOINTS.USER_FAVORITES);
+    }
+
+    async recordInteraction(contentId, type, rating = null) {
+        const data = { content_id: contentId, interaction_type: type };
+        if (rating !== null) data.rating = rating;
+        return this.post(CONFIG.API_ENDPOINTS.INTERACTIONS, data);
+    }
+
+    // Admin APIs
+    async adminSearch(query, source = 'tmdb', page = 1) {
+        return this.get(CONFIG.API_ENDPOINTS.ADMIN_SEARCH, { query, source, page });
+    }
+
+    async saveExternalContent(contentData) {
+        return this.post(CONFIG.API_ENDPOINTS.ADMIN_CONTENT, contentData);
+    }
+
+    async createAdminRecommendation(contentId, type, description) {
+        return this.post(CONFIG.API_ENDPOINTS.ADMIN_RECOMMENDATIONS, {
+            content_id: contentId,
+            recommendation_type: type,
+            description
         });
-        
-        clearTimeout(timeoutId);
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-          return { success: true, data, status: response.status };
-        } else {
-          // Handle auth errors
-          if (response.status === 401) {
-            Auth.logout();
-            return { success: false, error: 'Authentication required', status: 401 };
-          }
-          
-          return { success: false, error: data.error || 'Request failed', status: response.status };
-        }
-      } catch (error) {
-        lastError = error;
-        
-        // Don't retry on auth errors or client errors
-        if (error.name === 'AbortError' && attempt < CineBrain.PERFORMANCE.RETRY_ATTEMPTS) {
-          await this._delay(CineBrain.PERFORMANCE.RETRY_DELAY * attempt);
-          continue;
-        }
-        
-        break;
-      }
     }
-    
-    return { 
-      success: false, 
-      error: lastError.message || 'Network error',
-      status: 0
-    };
-  }
-  
-  _delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-  
-  // Content APIs
-  async search(query, type = 'multi', page = 1) {
-    return this.request(`/search?query=${encodeURIComponent(query)}&type=${type}&page=${page}`);
-  }
-  
-  async getContentDetails(contentId) {
-    return this.request(`/content/${contentId}`);
-  }
-  
-  // Recommendation APIs
-  async getTrending(type = 'all', limit = 20, region = null) {
-    const params = new URLSearchParams({ type, limit: limit.toString() });
-    if (region) params.append('region', region);
-    return this.request(`/recommendations/trending?${params}`);
-  }
-  
-  async getNewReleases(language = null, type = 'movie', limit = 20) {
-    const params = new URLSearchParams({ type, limit: limit.toString() });
-    if (language) params.append('language', language);
-    return this.request(`/recommendations/new-releases?${params}`);
-  }
-  
-  async getCriticsChoice(type = 'movie', limit = 20) {
-    return this.request(`/recommendations/critics-choice?type=${type}&limit=${limit}`);
-  }
-  
-  async getGenreRecommendations(genre, type = 'movie', limit = 20, region = null) {
-    const params = new URLSearchParams({ type, limit: limit.toString() });
-    if (region) params.append('region', region);
-    return this.request(`/recommendations/genre/${genre}?${params}`);
-  }
-  
-  async getRegionalRecommendations(language, type = 'movie', limit = 20) {
-    return this.request(`/recommendations/regional/${language}?type=${type}&limit=${limit}`);
-  }
-  
-  async getAnimeRecommendations(genre = null, limit = 20) {
-    const params = new URLSearchParams({ limit: limit.toString() });
-    if (genre) params.append('genre', genre);
-    return this.request(`/recommendations/anime?${params}`);
-  }
-  
-  async getSimilarRecommendations(contentId, limit = 20) {
-    return this.request(`/recommendations/similar/${contentId}?limit=${limit}`);
-  }
-  
-  async getPersonalizedRecommendations(limit = 20) {
-    return this.request(`/recommendations/personalized?limit=${limit}`);
-  }
-  
-  async getMLPersonalizedRecommendations(limit = 20) {
-    return this.request(`/recommendations/ml-personalized?limit=${limit}`);
-  }
-  
-  async getAnonymousRecommendations(limit = 20) {
-    return this.request(`/recommendations/anonymous?limit=${limit}`);
-  }
-  
-  async getAdminChoiceRecommendations(type = 'admin_choice', limit = 20) {
-    return this.request(`/recommendations/admin-choice?type=${type}&limit=${limit}`);
-  }
-  
-  // User APIs
-  async getWatchlist() {
-    return this.request('/user/watchlist');
-  }
-  
-  async getFavorites() {
-    return this.request('/user/favorites');
-  }
-  
-  async recordInteraction(contentId, interactionType, rating = null) {
-    return this.request('/interactions', {
-      method: 'POST',
-      body: { content_id: contentId, interaction_type: interactionType, rating }
-    });
-  }
-  
-  // Admin APIs
-  async adminSearch(query, source = 'tmdb', page = 1) {
-    return this.request(`/admin/search?query=${encodeURIComponent(query)}&source=${source}&page=${page}`);
-  }
-  
-  async saveExternalContent(contentData) {
-    return this.request('/admin/content', {
-      method: 'POST',
-      body: contentData
-    });
-  }
-  
-  async createAdminRecommendation(contentId, type, description) {
-    return this.request('/admin/recommendations', {
-      method: 'POST',
-      body: { content_id: contentId, recommendation_type: type, description }
-    });
-  }
-  
-  async getAdminRecommendations(page = 1, perPage = 20) {
-    return this.request(`/admin/recommendations?page=${page}&per_page=${perPage}`);
-  }
-  
-  async getAnalytics() {
-    return this.request('/admin/analytics');
-  }
-  
-  async checkMLService() {
-    return this.request('/admin/ml-service-check');
-  }
-  
-  async updateMLService() {
-    return this.request('/admin/ml-service-update', { method: 'POST' });
-  }
-  
-  async getMLStats() {
-    return this.request('/admin/ml-stats');
-  }
-  
-  // Prefetch critical data
-  async prefetchCriticalData() {
-    const prefetchPromises = [
-      this.getTrending('all', 10),
-      this.getNewReleases(null, 'movie', 10),
-      this.getCriticsChoice('movie', 10)
-    ];
-    
-    if (Auth.isAuthenticated) {
-      prefetchPromises.push(this.getPersonalizedRecommendations(10));
-    } else {
-      prefetchPromises.push(this.getAnonymousRecommendations(10));
+
+    async getAdminRecommendations(page = 1, perPage = 20) {
+        return this.get(CONFIG.API_ENDPOINTS.ADMIN_RECOMMENDATIONS, { page, per_page: perPage });
     }
-    
-    try {
-      await Promise.allSettled(prefetchPromises);
-    } catch (error) {
-      console.warn('Prefetch failed:', error);
+
+    async getAnalytics() {
+        return this.get(CONFIG.API_ENDPOINTS.ADMIN_ANALYTICS);
     }
-  }
-  
-  clearCache() {
-    this.cache.clear();
-  }
+
+    async checkMLService() {
+        return this.get(CONFIG.API_ENDPOINTS.ADMIN_ML_CHECK);
+    }
+
+    async updateMLService() {
+        return this.post(CONFIG.API_ENDPOINTS.ADMIN_ML_UPDATE, {});
+    }
+
+    async getMLStats() {
+        return this.get(CONFIG.API_ENDPOINTS.ADMIN_ML_STATS);
+    }
+
+    // Utility Methods
+    buildPosterURL(path, size = 'MEDIUM') {
+        if (!path) return '/images/placeholder-poster.jpg';
+        if (path.startsWith('http')) return path;
+        return `${CONFIG.CDN_BASE}${CONFIG.POSTER_SIZES[size]}${path}`;
+    }
+
+    buildBackdropURL(path, size = 'MEDIUM') {
+        if (!path) return '/images/placeholder-backdrop.jpg';
+        if (path.startsWith('http')) return path;
+        return `${CONFIG.CDN_BASE}${CONFIG.BACKDROP_SIZES[size]}${path}`;
+    }
+
+    buildYouTubeURL(videoId) {
+        if (!videoId) return null;
+        return `${CONFIG.YOUTUBE_BASE}${videoId}`;
+    }
+
+    // Cache Management
+    clearCache() {
+        this.cache.clear();
+        this.retryCount.clear();
+    }
+
+    getCacheStats() {
+        return {
+            size: this.cache.size,
+            hitRate: this.calculateHitRate(),
+            retryCount: Array.from(this.retryCount.values()).reduce((a, b) => a + b, 0)
+        };
+    }
+
+    calculateHitRate() {
+        // This would need to be tracked during actual usage
+        return 0.85; // Placeholder for now
+    }
 }
 
 // Global API instance
-window.API = new APIClient();
-
-// Prefetch data on page load
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    API.prefetchCriticalData();
-  }, CineBrain.PERFORMANCE.PREFETCH_DELAY);
-});
+const api = new CineBrainAPI();
