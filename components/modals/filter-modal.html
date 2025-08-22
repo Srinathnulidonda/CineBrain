@@ -1,0 +1,107 @@
+<div class="filter-modal" id="filterModal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Filter Content</h3>
+            <button class="modal-close" id="filterClose">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="filter-section">
+            <h4>Content Type</h4>
+            <div class="filter-options">
+                <label class="filter-option">
+                    <input type="checkbox" name="type" value="movie">
+                    <span>Movies</span>
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" name="type" value="tv">
+                    <span>TV Shows</span>
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" name="type" value="anime">
+                    <span>Anime</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="filter-section">
+            <h4>Genres</h4>
+            <div class="filter-options filter-genres">
+                ${['Action', 'Comedy', 'Drama', 'Horror', 'Romance', 'Sci-Fi', 'Thriller', 'Animation'].map(genre => `
+                    <label class="filter-option">
+                        <input type="checkbox" name="genre" value="${genre}">
+                        <span>${genre}</span>
+                    </label>
+                `).join('')}
+            </div>
+        </div>
+        
+        <div class="filter-section">
+            <h4>Rating</h4>
+            <div class="filter-range">
+                <input type="range" id="ratingRange" min="0" max="10" step="0.5" value="0">
+                <span id="ratingValue">0+</span>
+            </div>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn-secondary" id="filterReset">Reset</button>
+            <button class="btn-primary" id="filterApply">Apply Filters</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const modal = document.getElementById('filterModal');
+    const closeBtn = document.getElementById('filterClose');
+    const backdrop = modal.querySelector('.modal-backdrop');
+    const applyBtn = document.getElementById('filterApply');
+    const resetBtn = document.getElementById('filterReset');
+    const ratingRange = document.getElementById('ratingRange');
+    const ratingValue = document.getElementById('ratingValue');
+    
+    ratingRange.addEventListener('input', (e) => {
+        ratingValue.textContent = `${e.target.value}+`;
+    });
+    
+    function openFilter() {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeFilter() {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    
+    function getFilters() {
+        const types = Array.from(document.querySelectorAll('input[name="type"]:checked')).map(cb => cb.value);
+        const genres = Array.from(document.querySelectorAll('input[name="genre"]:checked')).map(cb => cb.value);
+        const rating = ratingRange.value;
+        
+        return { types, genres, rating };
+    }
+    
+    applyBtn.addEventListener('click', () => {
+        const filters = getFilters();
+        window.dispatchEvent(new CustomEvent('applyFilters', { detail: filters }));
+        closeFilter();
+    });
+    
+    resetBtn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-modal input[type="checkbox"]').forEach(cb => cb.checked = false);
+        ratingRange.value = 0;
+        ratingValue.textContent = '0+';
+    });
+    
+    window.addEventListener('openFilter', openFilter);
+    closeBtn.addEventListener('click', closeFilter);
+    backdrop.addEventListener('click', closeFilter);
+})();
+</script>

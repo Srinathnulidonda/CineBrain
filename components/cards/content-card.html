@@ -1,0 +1,105 @@
+<div class="content-card" data-content-id="">
+  <div class="card-poster">
+    <img src="" alt="" loading="lazy">
+    <div class="card-overlay">
+      <button class="play-trailer" title="Play Trailer">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="card-info">
+    <h3 class="card-title"></h3>
+    <div class="card-meta">
+      <span class="card-rating">⭐ <span class="rating-value">0.0</span></span>
+      <span class="card-type"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+class ContentCard {
+  constructor(element, data) {
+    this.element = element;
+    this.data = data;
+    this.init();
+  }
+  
+  init() {
+    // Set content ID
+    this.element.setAttribute('data-content-id', this.data.id);
+    
+    // Update poster
+    const poster = this.element.querySelector('.card-poster img');
+    poster.src = this.data.poster_path || 'https://via.placeholder.com/300x450?text=No+Poster';
+    poster.alt = this.data.title;
+    
+    // Update title
+    this.element.querySelector('.card-title').textContent = this.data.title;
+    
+    // Update rating
+    this.element.querySelector('.rating-value').textContent = 
+      this.data.rating ? this.data.rating.toFixed(1) : 'N/A';
+    
+    // Update type
+    this.element.querySelector('.card-type').textContent = 
+      this.data.content_type ? this.data.content_type.toUpperCase() : 'MOVIE';
+    
+    // Click handler
+    this.element.addEventListener('click', (e) => {
+      if (!e.target.closest('.play-trailer')) {
+        window.location.href = `/content/details.html?id=${this.data.id}`;
+      }
+    });
+    
+    // Trailer button
+    const trailerBtn = this.element.querySelector('.play-trailer');
+    if (this.data.youtube_trailer) {
+      trailerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.playTrailer();
+      });
+    } else {
+      trailerBtn.style.display = 'none';
+    }
+  }
+  
+  playTrailer() {
+    if (!this.data.youtube_trailer) return;
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'trailer-modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <button class="modal-close">&times;</button>
+        <iframe src="${this.data.youtube_trailer.replace('watch?v=', 'embed/')}?autoplay=1" 
+                frameborder="0" allowfullscreen></iframe>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close handler
+    modal.querySelector('.modal-close').addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+  }
+}
+
+// Auto-initialize cards with data attributes
+document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('.content-card[data-init]');
+  cards.forEach(card => {
+    const data = JSON.parse(card.getAttribute('data-init'));
+    new ContentCard(card, data);
+  });
+});
+</script>
