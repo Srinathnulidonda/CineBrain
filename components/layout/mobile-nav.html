@@ -1,183 +1,35 @@
-<!-- Fixed Bottom Navigation (Mobile Only) -->
-<nav class="mobile-only fixed-bottom-nav bg-black bg-opacity-90 border-t border-gray-800 safe-area-bottom"
-    style="backdrop-filter: blur(20px);">
-    <div class="d-flex">
+<!-- Mobile Bottom Navigation (Custom Tailwind) -->
+<nav class="mobile-nav d-md-none position-fixed bottom-0 start-0 end-0 bg-cinema-black/95 backdrop-blur-sm border-top border-theater-dark"
+    style="height: 4rem; z-index: 1040; padding-bottom: env(safe-area-inset-bottom);">
+    <div class="d-flex justify-content-around align-items-center px-4 h-100">
+        <!-- Home -->
+        <button class="nav-item active" data-section="home">
+            <i class="fas fa-home nav-icon"></i>
+            <span class="nav-label">Home</span>
+        </button>
 
-        <!-- Home Tab -->
-        <a href="/" class="bottom-nav-item text-decoration-none d-flex flex-column align-items-center py-2 px-1"
-            data-tab="home">
-            <i class="bi bi-house fs-5 mb-1"></i>
-            <span class="text-xs">Home</span>
-        </a>
+        <!-- Search -->
+        <button class="nav-item" data-section="search">
+            <i class="fas fa-search nav-icon"></i>
+            <span class="nav-label">Search</span>
+        </button>
 
-        <!-- Search Tab -->
-        <a href="/content/search.html"
-            class="bottom-nav-item text-decoration-none d-flex flex-column align-items-center py-2 px-1"
-            data-tab="search">
-            <i class="bi bi-search fs-5 mb-1"></i>
-            <span class="text-xs">Search</span>
-        </a>
+        <!-- Watchlist -->
+        <button class="nav-item" data-section="watchlist">
+            <i class="fas fa-bookmark nav-icon"></i>
+            <span class="nav-label">Watchlist</span>
+        </button>
 
-        <!-- Watchlist Tab -->
-        <a href="/user/watchlist.html"
-            class="bottom-nav-item text-decoration-none d-flex flex-column align-items-center py-2 px-1 auth-required"
-            data-tab="watchlist">
-            <i class="bi bi-bookmark fs-5 mb-1"></i>
-            <span class="text-xs">Watchlist</span>
-        </a>
+        <!-- Favorites -->
+        <button class="nav-item" data-section="favorites">
+            <i class="fas fa-heart nav-icon"></i>
+            <span class="nav-label">Favorites</span>
+        </button>
 
-        <!-- Favorites Tab -->
-        <a href="/user/favorites.html"
-            class="bottom-nav-item text-decoration-none d-flex flex-column align-items-center py-2 px-1 auth-required"
-            data-tab="favorites">
-            <i class="bi bi-heart fs-5 mb-1"></i>
-            <span class="text-xs">Favorites</span>
-        </a>
-
-        <!-- Profile Tab -->
-        <a href="#"
-            class="bottom-nav-item text-decoration-none d-flex flex-column align-items-center py-2 px-1 profile-nav-link"
-            data-tab="profile">
-            <i class="bi bi-person fs-5 mb-1"></i>
-            <span class="text-xs">Profile</span>
-        </a>
-
+        <!-- Profile -->
+        <button class="nav-item" data-section="profile">
+            <i class="fas fa-user nav-icon"></i>
+            <span class="nav-label">Profile</span>
+        </button>
     </div>
 </nav>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Set active tab based on current page
-        function setActiveTab() {
-            const currentPath = window.location.pathname;
-            const tabs = document.querySelectorAll('.bottom-nav-item');
-
-            tabs.forEach(tab => tab.classList.remove('active', 'text-blue-500'));
-
-            // Determine active tab based on path
-            let activeTab = 'home';
-            if (currentPath.includes('/search') || currentPath.includes('/content/search')) {
-                activeTab = 'search';
-            } else if (currentPath.includes('/watchlist')) {
-                activeTab = 'watchlist';
-            } else if (currentPath.includes('/favorites')) {
-                activeTab = 'favorites';
-            } else if (currentPath.includes('/profile') || currentPath.includes('/user/') || currentPath.includes('/settings')) {
-                activeTab = 'profile';
-            }
-
-            const activeTabElement = document.querySelector(`[data-tab="${activeTab}"]`);
-            if (activeTabElement) {
-                activeTabElement.classList.add('active', 'text-blue-500');
-            }
-        }
-
-        // Update profile link based on authentication
-        function updateProfileNavLink() {
-            const profileLink = document.querySelector('.profile-nav-link');
-            if (profileLink) {
-                if (auth.isAuthenticated()) {
-                    const user = auth.getCurrentUser();
-                    profileLink.href = `/${user.username}/profile`;
-                } else {
-                    profileLink.href = '/auth/login.html';
-                }
-            }
-        }
-
-        // Add haptic feedback for mobile interactions
-        function addHapticFeedback() {
-            if ('vibrate' in navigator) {
-                const navItems = document.querySelectorAll('.bottom-nav-item');
-                navItems.forEach(item => {
-                    item.addEventListener('touchstart', () => {
-                        navigator.vibrate(50); // 50ms vibration
-                    });
-                });
-            }
-        }
-
-        // Handle tab clicks with smooth transitions
-        const navItems = document.querySelectorAll('.bottom-nav-item');
-        navItems.forEach(item => {
-            item.addEventListener('click', function (e) {
-                // Add touch feedback
-                this.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    this.style.transform = '';
-                }, 150);
-            });
-        });
-
-        // Initialize
-        setActiveTab();
-        updateProfileNavLink();
-        addHapticFeedback();
-
-        // Listen for auth state changes
-        window.addEventListener('auth-state-change', function () {
-            updateProfileNavLink();
-        });
-
-        // Update active tab on navigation
-        window.addEventListener('popstate', function () {
-            setActiveTab();
-        });
-
-        // Handle authentication requirements for tabs
-        const authRequiredTabs = document.querySelectorAll('.auth-required');
-        authRequiredTabs.forEach(tab => {
-            tab.addEventListener('click', function (e) {
-                if (!auth.isAuthenticated()) {
-                    e.preventDefault();
-                    window.location.href = '/auth/login.html';
-                }
-            });
-        });
-    });
-</script>
-
-<style>
-    /* Mobile Navigation Specific Styles */
-    .bottom-nav-item {
-        flex: 1;
-        color: #9ca3af;
-        /* text-gray-400 */
-        transition: all 0.2s ease;
-        touch-action: manipulation;
-        min-height: 60px;
-    }
-
-    .bottom-nav-item:hover {
-        color: #ffffff;
-        background-color: rgba(59, 130, 246, 0.1);
-    }
-
-    .bottom-nav-item.active {
-        color: #3b82f6 !important;
-        /* text-blue-500 */
-    }
-
-    .bottom-nav-item.active i {
-        transform: scale(1.1);
-    }
-
-    /* Touch feedback */
-    .bottom-nav-item:active {
-        background-color: rgba(59, 130, 246, 0.2);
-    }
-
-    /* Safe area handling for devices with notches */
-    @supports (padding-bottom: env(safe-area-inset-bottom)) {
-        .safe-area-bottom {
-            padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-        }
-    }
-
-    /* Hide on larger screens */
-    @media (min-width: 768px) {
-        .mobile-only {
-            display: none !important;
-        }
-    }
-</style>
