@@ -1,56 +1,188 @@
-<article
-    class="card-mini rounded-lg overflow-hidden position-relative bg-[#1a1a2e] hover:scale-105 transition-all duration-300"
-    style="width: 150px; cursor: pointer;" data-content-id="${content.id}" onclick="viewContent(${content.id})">
+<!-- Compact Content Card Component -->
+<div class="content-card-mini d-flex align-items-center p-2 rounded-2 bg-dark bg-opacity-50 mb-2 position-relative"
+    data-content-id="" style="transition: all 0.3s ease; cursor: pointer; min-height: 80px;">
 
-    <!-- Poster -->
-    <div class="poster-container position-relative" style="aspect-ratio: 2/3;">
-        <img class="w-100 h-100 object-cover" src="${content.poster_path || '/api/placeholder/150/225'}"
-            alt="${content.title}" loading="lazy">
+    <!-- Mini Poster -->
+    <div class="mini-poster-wrapper me-3 flex-shrink-0 position-relative overflow-hidden rounded-2"
+        style="width: 60px; height: 80px;">
+        <img class="mini-poster w-100 h-100 object-fit-cover" src="" alt="" loading="lazy">
 
-        <!-- Rating Badge (if high rated) -->
-        ${content.rating >= 7.5 ? `
-        <span class="position-absolute top-1 end-1 badge bg-warning text-dark" style="font-size: 10px;">
-            ⭐ ${content.rating}
-        </span>
-        ` : ''}
-    </div>
-
-    <!-- Title Overlay (Mobile) / Below (Desktop) -->
-    <div
-        class="card-info p-2 d-md-none position-absolute bottom-0 start-0 end-0 bg-gradient-to-t from-black/90 to-transparent">
-        <h4 class="text-white text-xs fw-semibold text-truncate mb-0">${content.title}</h4>
-    </div>
-
-    <div class="card-info p-2 d-none d-md-block">
-        <h4 class="text-[#e0e0ff] text-sm fw-semibold text-truncate mb-0">${content.title}</h4>
-        <p class="text-[#a78bfa] text-xs mb-0">${content.year || ''}</p>
-    </div>
-
-    <!-- Hover Overlay (Desktop) -->
-    <div class="hover-overlay position-absolute inset-0 d-none d-md-flex align-items-end p-2 opacity-0"
-        style="background: linear-gradient(to top, rgba(10, 10, 15, 0.95), transparent); transition: opacity 0.3s;">
-        <div class="text-white w-100">
-            <h4 class="text-sm fw-semibold mb-1">${content.title}</h4>
-            <p class="text-xs mb-0">${content.genres ? content.genres[0] : ''}</p>
+        <!-- Play Overlay -->
+        <div class="mini-play-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-75 opacity-0"
+            style="transition: opacity 0.3s ease;">
+            <i class="fas fa-play text-white"></i>
         </div>
     </div>
-</article>
+
+    <!-- Content Info -->
+    <div class="flex-grow-1 text-white">
+        <h6 class="mini-title fw-semibold mb-1 text-truncate" style="font-size: 0.9rem;"></h6>
+
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="mini-rating badge bg-warning text-dark px-2 py-1" style="font-size: 0.7rem;"></span>
+            <span class="mini-type badge bg-primary px-2 py-1" style="font-size: 0.7rem;"></span>
+        </div>
+
+        <div class="mini-genres">
+            <!-- Genres populated dynamically -->
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mini-actions d-flex flex-column gap-1 ms-2">
+        <button class="btn btn-outline-light btn-sm p-1 mini-watchlist-btn" style="width: 28px; height: 28px;">
+            <i class="fas fa-plus" style="font-size: 0.7rem;"></i>
+        </button>
+        <button class="btn btn-outline-light btn-sm p-1 mini-favorite-btn" style="width: 28px; height: 28px;">
+            <i class="far fa-heart" style="font-size: 0.7rem;"></i>
+        </button>
+    </div>
+</div>
 
 <script>
-    // Reuse viewContent from content-card
-    if (typeof viewContent === 'undefined') {
-        function viewContent(contentId) {
-            window.location.href = `/content/details.html?id=${contentId}`;
+    class ContentCardMini {
+        constructor(cardElement, contentData) {
+            this.card = cardElement;
+            this.data = contentData;
+            this.init();
+        }
+
+        init() {
+            this.populateCard();
+            this.attachEventListeners();
+        }
+
+        populateCard() {
+            this.card.dataset.contentId = this.data.id;
+
+            // Set mini poster
+            const img = this.card.querySelector('.mini-poster');
+            img.src = this.data.poster_path || '/api/placeholder/60x80';
+            img.alt = this.data.title || 'Unknown Title';
+
+            // Set title
+            this.card.querySelector('.mini-title').textContent = this.data.title || 'Unknown Title';
+
+            // Set rating
+            const ratingBadge = this.card.querySelector('.mini-rating');
+            if (this.data.rating) {
+                ratingBadge.textContent = `⭐ ${this.data.rating.toFixed(1)}`;
+            } else {
+                ratingBadge.style.display = 'none';
+            }
+
+            // Set type
+            const typeBadge = this.card.querySelector('.mini-type');
+            typeBadge.textContent = this.data.content_type?.toUpperCase() || 'UNKNOWN';
+            typeBadge.className = `badge ${this.getTypeColor(this.data.content_type)} px-2 py-1`;
+
+            // Set genres (max 2 for mini card)
+            const genreContainer = this.card.querySelector('.mini-genres');
+            if (this.data.genres && this.data.genres.length > 0) {
+                genreContainer.innerHTML = this.data.genres.slice(0, 2).map(genre =>
+                    `<span class="badge bg-secondary bg-opacity-75 me-1" style="font-size: 0.6rem;">${genre}</span>`
+                ).join('');
+            }
+        }
+
+        getTypeColor(type) {
+            const colors = {
+                'movie': 'bg-primary',
+                'tv': 'bg-success',
+                'anime': 'bg-info'
+            };
+            return colors[type] || 'bg-secondary';
+        }
+
+        attachEventListeners() {
+            // Hover effects
+            this.card.addEventListener('mouseenter', () => {
+                this.card.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                this.card.querySelector('.mini-play-overlay').classList.remove('opacity-0');
+            });
+
+            this.card.addEventListener('mouseleave', () => {
+                this.card.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                this.card.querySelector('.mini-play-overlay').classList.add('opacity-0');
+            });
+
+            // Click to details
+            this.card.addEventListener('click', (e) => {
+                if (!e.target.closest('.mini-actions')) {
+                    window.location.href = `content/details.html?id=${this.data.id}`;
+                }
+            });
+
+            // Watchlist action
+            this.card.querySelector('.mini-watchlist-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.addToWatchlist();
+            });
+
+            // Favorite action
+            this.card.querySelector('.mini-favorite-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.addToFavorites();
+            });
+        }
+
+        async addToWatchlist() {
+            try {
+                const response = await fetch('https://backend-app-970m.onrender.com/api/interactions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        content_id: this.data.id,
+                        interaction_type: 'watchlist'
+                    })
+                });
+
+                if (response.ok) {
+                    const btn = this.card.querySelector('.mini-watchlist-btn');
+                    btn.innerHTML = '<i class="fas fa-check" style="font-size: 0.7rem;"></i>';
+                    btn.classList.add('btn-success');
+                    btn.classList.remove('btn-outline-light');
+                }
+            } catch (error) {
+                console.error('Failed to add to watchlist:', error);
+            }
+        }
+
+        async addToFavorites() {
+            try {
+                const response = await fetch('https://backend-app-970m.onrender.com/api/interactions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        content_id: this.data.id,
+                        interaction_type: 'favorite'
+                    })
+                });
+
+                if (response.ok) {
+                    const btn = this.card.querySelector('.mini-favorite-btn');
+                    btn.innerHTML = '<i class="fas fa-heart" style="font-size: 0.7rem;"></i>';
+                    btn.classList.add('btn-danger');
+                    btn.classList.remove('btn-outline-light');
+                }
+            } catch (error) {
+                console.error('Failed to add to favorites:', error);
+            }
         }
     }
+
+    // Auto-initialize mini cards
+    document.addEventListener('DOMContentLoaded', () => {
+        const miniCards = document.querySelectorAll('.content-card-mini[data-auto-init="true"]');
+        miniCards.forEach(card => {
+            const contentData = JSON.parse(card.dataset.contentData || '{}');
+            new ContentCardMini(card, contentData);
+        });
+    });
 </script>
-
-<style>
-    .card-mini:hover .hover-overlay {
-        opacity: 1 !important;
-    }
-
-    .card-mini {
-        flex-shrink: 0;
-    }
-</style>

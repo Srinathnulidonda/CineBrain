@@ -1,29 +1,144 @@
-<span class="rating-badge d-inline-flex align-items-center rounded-pill px-2 py-1 text-xs fw-semibold border"
-    style="background: rgba(251, 191, 36, 0.12); color: #fbbf24; border-color: rgba(251, 191, 36, 0.3);"
-    aria-label="Rating: ${rating} out of 10">
-    <svg class="w-3 h-3 me-1" fill="currentColor" viewBox="0 0 20 20">
-        <path
-            d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-    </svg>
-    <span class="value">${rating}</span>
-
-    <!-- Secondary source badges if available -->
-    ${sources && sources.imdb ? `
-    <span class="ms-1 text-[10px] opacity-75">IMDb</span>
-    ` : ''}
-    ${sources && sources.rt ? `
-    <span class="ms-1 text-[10px] opacity-75">RT ${sources.rt}%</span>
-    ` : ''}
+<!-- Dynamic Rating Badge Component -->
+<span class="rating-badge d-inline-flex align-items-center" data-rating="" data-vote-count="">
+    <!-- Rating will be populated dynamically -->
 </span>
 
 <script>
-    // Optional: Click to show detailed ratings modal
-    document.querySelectorAll('.rating-badge').forEach(badge => {
-        badge.style.cursor = 'pointer';
-        badge.addEventListener('click', function (e) {
-            e.stopPropagation();
-            // Could open ratings breakdown modal
-            console.log('Show ratings breakdown');
+    class RatingBadge {
+        constructor(element, rating, voteCount = null, source = 'tmdb') {
+            this.element = element;
+            this.rating = parseFloat(rating) || 0;
+            this.voteCount = parseInt(voteCount) || 0;
+            this.source = source;
+
+            this.init();
+        }
+
+        init() {
+            this.element.dataset.rating = this.rating;
+            this.element.dataset.voteCount = this.voteCount;
+            this.render();
+        }
+
+        render() {
+            const badgeClass = this.getBadgeClass();
+            const ratingText = this.getRatingText();
+            const icon = this.getRatingIcon();
+
+            this.element.className = `rating-badge d-inline-flex align-items-center ${badgeClass} px-2 py-1 rounded-pill small fw-semibold`;
+            this.element.innerHTML = `
+      <i class="${icon} me-1" style="font-size: 0.8rem;"></i>
+      <span class="rating-text">${ratingText}</span>
+      ${this.voteCount > 0 ? `<span class="vote-count ms-1 opacity-75">(${this.formatVoteCount()})</span>` : ''}
+    `;
+
+            // Add tooltip for detailed info
+            this.element.title = this.getTooltipText();
+        }
+
+        getBadgeClass() {
+            if (this.rating >= 8.0) {
+                return 'bg-success text-white'; // Excellent (Green)
+            } else if (this.rating >= 7.0) {
+                return 'bg-warning text-dark'; // Good (Yellow/Gold)
+            } else if (this.rating >= 6.0) {
+                return 'bg-info text-white'; // Average (Blue)
+            } else if (this.rating >= 4.0) {
+                return 'bg-secondary text-white'; // Below Average (Gray)
+            } else {
+                return 'bg-danger text-white'; // Poor (Red)
+            }
+        }
+
+        getRatingIcon() {
+            if (this.source === 'imdb') {
+                return 'fas fa-star';
+            } else if (this.source === 'mal') {
+                return 'fas fa-heart'; // MyAnimeList uses hearts
+            } else {
+                return 'fas fa-star'; // TMDB default
+            }
+        }
+
+        getRatingText() {
+            if (this.rating === 0) {
+                return 'N/A';
+            }
+
+            // Format based on source
+            if (this.source === 'imdb') {
+                return this.rating.toFixed(1) + '/10';
+            } else if (this.source === 'mal') {
+                return this.rating.toFixed(1) + '/10';
+            } else {
+                return this.rating.toFixed(1) + '/10'; // TMDB
+            }
+        }
+
+        formatVoteCount() {
+            if (this.voteCount >= 1000000) {
+                return (this.voteCount / 1000000).toFixed(1) + 'M';
+            } else if (this.voteCount >= 1000) {
+                return (this.voteCount / 1000).toFixed(1) + 'K';
+            }
+            return this.voteCount.toString();
+        }
+
+        getTooltipText() {
+            const ratingLevel = this.getRatingLevel();
+            return `${ratingLevel} - ${this.rating.toFixed(1)}/10 based on ${this.voteCount.toLocaleString()} votes`;
+        }
+
+        getRatingLevel() {
+            if (this.rating >= 8.0) return 'Excellent';
+            if (this.rating >= 7.0) return 'Good';
+            if (this.rating >= 6.0) return 'Average';
+            if (this.rating >= 4.0) return 'Below Average';
+            return 'Poor';
+        }
+
+        // Update rating dynamically
+        updateRating(newRating, newVoteCount = null) {
+            this.rating = parseFloat(newRating) || 0;
+            if (newVoteCount !== null) {
+                this.voteCount = parseInt(newVoteCount) || 0;
+            }
+            this.render();
+        }
+    }
+
+    // Auto-initialize rating badges
+    document.addEventListener('DOMContentLoaded', () => {
+        const ratingBadges = document.querySelectorAll('.rating-badge[data-auto-init="true"]');
+        ratingBadges.forEach(badge => {
+            const rating = badge.dataset.rating;
+            const voteCount = badge.dataset.voteCount;
+            const source = badge.dataset.source || 'tmdb';
+            new RatingBadge(badge, rating, voteCount, source);
         });
     });
+
+    // Global function for creating rating badges
+    window.createRatingBadge = function (element, rating, voteCount, source) {
+        return new RatingBadge(element, rating, voteCount, source);
+    };
 </script>
+
+<style>
+    .rating-badge {
+        font-size: 0.75rem;
+        line-height: 1.2;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(4px);
+        transition: all 0.2s ease;
+    }
+
+    .rating-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .rating-badge .vote-count {
+        font-size: 0.65rem;
+    }
+</style>
