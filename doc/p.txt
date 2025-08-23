@@ -116,83 +116,55 @@ CSS Architecture Strategy
 3.	theme.css: Unified design tokens working with both Bootstrap and Tailwind classes
 4.	responsive.css: Media queries using Bootstrap breakpoints + Tailwind responsive utilities
 ________________________________________
+🖼 Branding
+•	Title (always visible, desktop & mobile): CineBrain
+•	Tagline (always below the title, responsive): The Mind Behind Your Next Favorite
+o	Font scales by breakpoint: text-xs on mobile → text-sm on tablets → text-base on desktop
+________________________________________
 🔝 Fixed Navigation Architecture
 Fixed Topbar (Mobile & Desktop)
-•	Fixed Position: Always pinned to the top across all breakpoints using Bootstrap's fixed-top + Tailwind positioning
-•	Bootstrap Navbar Structure: Use navbar component as foundation
-•	Element Order (Left → Right): 
-o	Logo & Tagline (Bootstrap brand + Tailwind styling): 
-o	<div class="navbar-brand d-flex align-items-center">  <div class="logo fw-bold text-primary">CineBrain</div>  <div class="tagline text-muted ms-2 d-none d-md-block">The Mind Behind Your Next Favorite</div></div>
-o	Search Component: Bootstrap form controls + Tailwind styling for autocomplete
+•	Fixed position: Always pinned at the top across all breakpoints using Bootstrap’s fixed-top + Tailwind positioning
+•	Bootstrap Navbar structure: Use navbar component as foundation
+•	Element Order (Left → Right):
+o	Logo & Tagline (stacked vertically with responsive text):
+o	<div class="navbar-brand flex flex-col items-start">
+o	  <div class="logo fw-bold text-primary text-xl md:text-2xl">CineBrain</div>
+o	  <div class="tagline text-muted text-xs sm:text-sm md:text-base">The Mind Behind Your Next Favorite</div>
+o	</div>
+o	Font scales by breakpoint: text-xs on mobile → text-sm on tablets → text-base on desktop
+o	Tagline (always below the title, responsive): The Mind Behind Your Next Favorite
+o	Search Component (Expandable Search Icon → Search Bar) : Bootstrap form controls + Tailwind styling for autocomplete
+• By default, only a search icon is visible on mobile.
+• On click/tap, the search icon expands into a full-width search bar with smooth animation.
+• On desktop, the search bar is always visible (no expansion needed).
+• Uses Tailwind transitions for smooth expand/collapse.
 o	User Avatar: Real-time avatar with Bootstrap utilities + Tailwind customization
+o	User Avatar Dropdown (Mobile & Desktop)
+Avatar shown in top-right of navbar.
+On click/tap, dropdown opens with the following items:
+Activity, Favorites, Profile, Settings, Watchlist, Logout
+Dropdown should be styled with Tailwind utilities (rounded corners, shadow, hover effects).
+Close when clicking outside 
+Works consistently across mobile and desktop
 Fixed Bottom Navigation (Mobile Only)
-•	Bootstrap-Free Zone: Custom implementation using Tailwind utilities
-•	Fixed Position: fixed bottom-0 inset-x-0 with proper z-index
+•	Bootstrap-free zone: Custom Tailwind-only implementation
+•	Fixed position: fixed bottom-0 inset-x-0 with correct z-index
 •	5 Primary Tabs: Home, Search, Watchlist, Favorites, Profile
-•	Safe Area Handling: iOS/Android notch adaptation using Tailwind spacing
-•	Haptic Feedback: JavaScript implementation for touch interactions
+•	Safe area handling: iOS/Android notch adaptation with Tailwind spacing utilities
+•	Haptic feedback: JavaScript-based mobile touch interactions
+
+Layout Structure
+•	Single Line: All three elements (logo, search, avatar) are now perfectly aligned in one horizontal line on mobile
+•	Responsive: Automatically adapts between mobile single-line and desktop expanded layout
+•	Proper Spacing: Optimized spacing between elements for better touch targets
 ________________________________________
 📱 COMPONENT REQUIREMENTS WITH BOOTSTRAP + TAILWIND
 Component Development Rules (MANDATORY FIRST STEP)
 Each component .html must:
 •	Bootstrap Structure: Use appropriate Bootstrap components as foundation
 •	Tailwind Styling: Apply Tailwind utilities for design customization
-•	Inline Scripts: Page-specific JavaScript inline within component
 •	Real Backend Data: Fetch from https://backend-app-970m.onrender.com/api
 •	Zero Placeholders: All content must be authentic and live
-•	Self-Contained: Drop-in ready with full functionality
-•	Fully Functional: Contains complete UI + inline <script> for component logic
-•	Production Ready: Can be dropped directly into any page and work immediately
-Required Reusable Components (Generate These FIRST)
-CRITICAL: Always generate ALL these components before any full pages:
-Layout Components (FIRST PRIORITY):
-•	components/layout/topbar.html:
-o	Bootstrap navbar + Tailwind aesthetics + real user data
-o	Shows logo + tagline (CineBrain – The Mind Behind Your Next Favorite)
-o	Search input with real-time autocomplete from /search endpoint
-o	User avatar with real username (via backend JWT + ui-avatars)
-o	Responsive design with Bootstrap classes + Tailwind utilities
-•	components/layout/mobile-nav.html:
-o	Fixed 5-tab mobile nav (Home, Search, Watchlist, Favorites, Profile)
-o	Uses real-time user state (if logged in → show profile pic)
-o	Tailwind-based custom implementation with haptic feedback
-o	Safe area handling for iOS/Android notches
-Card Components (SECOND PRIORITY):
-•	components/cards/content-card.html:
-o	Bootstrap card structure + Tailwind styling + backend movie data
-o	Real poster, title, rating fetched from backend recommendations
-o	Interactive hover effects and click handlers
-o	Add to watchlist/favorites functionality
-•	components/cards/card-mini.html:
-o	Compact card variant for mobile and dense layouts
-o	Real backend data integration with optimized loading
-o	Bootstrap utilities + Tailwind responsive design
-UI Components (THIRD PRIORITY):
-•	components/ui/rating-badge.html:
-o	Pulls actual rating (IMDB/Rotten score) from /content/:id
-o	Bootstrap badge + Tailwind custom styling
-o	Dynamic color coding based on score ranges
-•	components/ui/type-badge.html:
-o	Content type indicators (Movie, TV, Anime)
-o	Real content type from backend API responses
-o	Bootstrap badges + Tailwind color system
-•	components/ui/genre-chips.html:
-o	Genre tags with real genre data from backend
-o	Bootstrap pills + Tailwind hover effects
-o	Clickable navigation to genre pages
-•	components/ui/search-bar.html:
-o	Bootstrap form controls + Tailwind styling + real autocomplete
-o	Real-time search suggestions from /search endpoint
-o	Debounced input with loading states
-Modal Components (FOURTH PRIORITY):
-•	components/modals/trailer-modal.html:
-o	Bootstrap modal + custom video player + Tailwind design
-o	Autoplays real trailer from backend-provided YouTube/URL
-o	Responsive video player with custom controls
-•	components/modals/filter-modal.html:
-o	Advanced search filters with real filter options
-o	Bootstrap form components + Tailwind styling
-o	Real-time filter application with backend integration
 ________________________________________
 🏠 HOMEPAGE SPECIFICATIONS
 Non-Logged Users Homepage
@@ -334,25 +306,8 @@ Quality Gates (All Must Pass)
 •	✅ USERNAME ROUTING: Perfect /{username}/profile with real user data
 •	✅ FILE STRUCTURE COMPLIANCE: Exactly 4 JS files and 6 CSS files only
 •	✅ INLINE OPTIMIZATION: Page-specific code inline in HTML files
+• ✅ <100ms API response times with caching + retries + prefetching
 •	✅ VERCEL READY: Simple deployment configuration without version specification
-________________________________________
-🏆 SUCCESS CRITERIA
-Technical Excellence
-1.	World-Class Design: Premium streaming platform UI rivaling top competitors
-2.	Bootstrap + Tailwind Mastery: Seamless integration showcasing best of both frameworks
-3.	Real Data Integration: Every component populated with authentic backend data
-4.	Performance Leadership: Faster than Netflix, Disney+, and HBO Max
-5.	Production Ready: Immediate deployment capability with existing backend
-6.	API Preloading: Sub-100ms response times through intelligent caching
-7.	Mobile Excellence: Perfect responsive design with intuitive navigation
-8.	SEO Optimization: Professional URL structure and semantic markup
-User Experience Excellence
-•	Zero loading placeholders - instant content display
-•	Buttery smooth 60fps animations and transitions
-•	One-tap navigation maximum throughout platform
-•	Real-time search with <100ms autocomplete
-•	Cinematic visual hierarchy and premium aesthetics
-•	Perfect cross-device compatibility and responsiveness
 ________________________________________
 🚨 FINAL MANDATE
 Generate a complete, enterprise-grade CineBrain frontend that:
@@ -364,6 +319,6 @@ Generate a complete, enterprise-grade CineBrain frontend that:
 6.	FOLLOWS STRICT FILE LIMITS: Maximum 4 JS files and 6 CSS files with inline page-specific code
 7.	PROVIDES CINEMATIC EXPERIENCE: Premium design rivaling luxury cinema applications
 8.	HANDLES REAL USER DATA: Authentic authentication, profiles, watchlists, and personalization
+9. <100ms API response times with caching + retries + prefetching
 NO PLACEHOLDERS. NO MOCK DATA. NO FAKE CONTENT. NO FRAMEWORK CONFLICTS. NO EXTRA FILES.
 BOOTSTRAP 5 + TAILWIND CSS + REAL BACKEND INTEGRATION + WORLD-CLASS PERFORMANCE = PRODUCTION-READY CINEBRAIN
-This is the definitive reference implementation that immediately replaces any existing streaming platform frontend and delivers a superior user experience with authentic data integration.

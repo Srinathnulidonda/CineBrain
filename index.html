@@ -1,352 +1,850 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CineBrain - The Mind Behind Your Next Favorite</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Custom CSS for smooth transitions and mobile adaptations */
-        .search-expand {
-            transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out;
-        }
 
-        .search-collapsed {
-            width: 0;
-            opacity: 0;
-            overflow: hidden;
-        }
+    <!-- SEO Meta Tags -->
+    <meta name="description"
+        content="Discover your next favorite movie, TV show, or anime with CineBrain's AI-powered recommendations. Get personalized suggestions based on your taste.">
+    <meta name="keywords" content="movies, tv shows, anime, recommendations, streaming, entertainment">
+    <meta name="author" content="CineBrain">
 
-        .search-expanded {
-            width: 100%;
-            opacity: 1;
-        }
+    <!-- Open Graph -->
+    <meta property="og:title" content="CineBrain - The Mind Behind Your Next Favorite">
+    <meta property="og:description" content="AI-powered movie and TV show recommendations">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://cinebrain.vercel.app">
 
-        /* Safe area for mobile devices */
-        .safe-bottom {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
 
-        /* Haptic feedback animation */
-        .haptic-feedback {
-            transition: transform 0.1s ease;
-        }
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
 
-        .haptic-feedback:active {
-            transform: scale(0.95);
-        }
-
-        /* Custom avatar placeholder */
-        .avatar-placeholder {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        /* Content spacing to account for fixed navigation */
-        body {
-            padding-top: 80px;
-            padding-bottom: 70px;
-        }
-
-        @media (min-width: 768px) {
-            body {
-                padding-bottom: 0;
-            }
-        }
-    </style>
+    <!-- CSS Files -->
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/components.css" rel="stylesheet">
+    <link href="/css/layouts.css" rel="stylesheet">
+    <link href="/css/animations.css" rel="stylesheet">
+    <link href="/css/responsive.css" rel="stylesheet">
+    <link href="/css/theme.css" rel="stylesheet">
 </head>
 
-<body class="bg-light">
-    <!-- Fixed Top Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
-        <div class="container-fluid px-3 px-md-4">
-            <!-- Logo & Tagline -->
-            <div class="navbar-brand flex flex-col items-start me-3 me-md-4">
-                <div class="logo fw-bold text-primary text-xl md:text-2xl">CineBrain</div>
-                <div class="tagline text-muted text-xs sm:text-sm md:text-base">The Mind Behind Your Next Favorite</div>
-            </div>
+<body data-page="home">
 
-            <!-- Search Component -->
-            <div class="flex-grow-1 max-w-md mx-auto d-flex align-items-center position-relative">
-                <!-- Mobile Search Icon (visible on mobile only) -->
-                <button id="searchToggle" class="btn btn-outline-secondary d-md-none me-2 haptic-feedback"
-                    onclick="toggleSearch()">
-                    <i class="fas fa-search"></i>
+    <!-- Navigation -->
+    <div id="topbar-container"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- Hero Section -->
+        <section class="hero-section bg-gradient-primary position-relative overflow-hidden">
+            <div class="hero-overlay"></div>
+
+            <!-- Hero Carousel -->
+            <div id="heroCarousel" class="carousel slide position-absolute top-0 start-0 w-100 h-100"
+                data-bs-ride="carousel" data-bs-interval="5000">
+                <div class="carousel-inner h-100">
+                    <!-- Dynamic hero slides will be inserted here -->
+                </div>
+
+                <!-- Carousel Controls -->
+                <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
                 </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
 
-                <!-- Search Bar -->
-                <div id="searchContainer" class="search-expand search-collapsed d-md-block position-relative w-100">
-                    <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Search movies, shows, actors..."
-                            id="searchInput">
-                        <button class="btn btn-primary" type="button">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
+            <!-- Hero Content -->
+            <div class="hero-content position-relative z-2">
+                <div class="container text-center">
+                    <h1 class="display-3 fw-bold text-white mb-4 animate-fadeInUp">
+                        Welcome to <span class="brand-logo">CineBrain</span>
+                    </h1>
+                    <p class="lead text-white mb-5 animate-fadeInUp" style="animation-delay: 0.2s;">
+                        The Mind Behind Your Next Favorite Movie, TV Show, or Anime
+                    </p>
 
-                    <!-- Autocomplete dropdown (hidden by default) -->
-                    <div id="searchAutocomplete"
-                        class="position-absolute w-100 bg-white border rounded-bottom shadow-lg d-none"
-                        style="top: 100%; z-index: 1050;">
-                        <div class="list-group list-group-flush">
-                            <a href="#" class="list-group-item list-group-item-action">
-                                <i class="fas fa-film me-2 text-muted"></i>
-                                Inception (2010)
-                            </a>
-                            <a href="#" class="list-group-item list-group-item-action">
-                                <i class="fas fa-tv me-2 text-muted"></i>
-                                Breaking Bad (2008-2013)
-                            </a>
-                            <a href="#" class="list-group-item list-group-item-action">
-                                <i class="fas fa-user me-2 text-muted"></i>
-                                Christopher Nolan
-                            </a>
-                        </div>
+                    <!-- CTA Buttons -->
+                    <div class="d-flex justify-content-center gap-3 animate-fadeInUp" style="animation-delay: 0.4s;">
+                        <a href="/content/search.html" class="btn btn-primary btn-lg px-4 py-3">
+                            <i class="bi bi-search me-2"></i>Explore Content
+                        </a>
+                        <a href="/content/trending.html" class="btn btn-outline-light btn-lg px-4 py-3">
+                            <i class="bi bi-fire me-2"></i>What's Trending
+                        </a>
                     </div>
                 </div>
             </div>
+        </section>
 
-            <!-- User Avatar -->
-            <div class="ms-3">
-                <div class="dropdown">
-                    <button class="btn p-0 border-0 haptic-feedback" type="button" data-bs-toggle="dropdown">
-                        <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                            style="width: 40px; height: 40px;">
-                            JD
-                        </div>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-sign-out-alt me-2"></i>Sign Out</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
+        <!-- Content Sections -->
+        <div class="container py-5">
 
-    <!-- Main Content Area -->
-    <div class="container-fluid px-3 px-md-4 py-4">
-        <div class="row">
-            <div class="col-12">
-                <h1 class="h3 mb-4">Welcome to CineBrain</h1>
-                <div class="row g-4">
-                    <!-- Sample content cards -->
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <h5 class="card-title">Trending Movies</h5>
-                                <p class="card-text">Discover what's hot in cinema right now.</p>
-                                <button class="btn btn-primary">View All</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <h5 class="card-title">Your Watchlist</h5>
-                                <p class="card-text">Keep track of movies and shows you want to watch.</p>
-                                <button class="btn btn-outline-primary">Manage List</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <h5 class="card-title">Recommendations</h5>
-                                <p class="card-text">Personalized picks based on your taste.</p>
-                                <button class="btn btn-success">See Recommendations</button>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Trending Now Section -->
+            <section class="content-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-white fw-bold mb-0">
+                        <i class="bi bi-fire text-danger me-2"></i>Trending Now
+                    </h2>
+                    <a href="/content/trending.html" class="btn btn-outline-primary">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
                 </div>
 
-                <!-- More content to demonstrate scrolling -->
-                <div class="mt-5">
-                    <h2 class="h4 mb-3">Featured Collections</h2>
-                    <div class="row g-3">
-                        <div class="col-6 col-md-4 col-lg-3">
-                            <div class="card bg-dark text-white">
-                                <div class="card-body text-center py-4">
-                                    <i class="fas fa-crown fa-2x mb-2"></i>
-                                    <h6 class="card-title">Award Winners</h6>
-                                </div>
-                            </div>
+                <div class="horizontal-scroll trending-content">
+                    <!-- Dynamic trending content cards -->
+                    <div class="loading-placeholder d-flex gap-4">
+                        <div class="skeleton" style="width: 280px; height: 420px; border-radius: 12px;"></div>
+                        <div class="skeleton" style="width: 280px; height: 420px; border-radius: 12px;"></div>
+                        <div class="skeleton" style="width: 280px; height: 420px; border-radius: 12px;"></div>
+                        <div class="skeleton" style="width: 280px; height: 420px; border-radius: 12px;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- New Releases Section -->
+            <section class="content-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-white fw-bold mb-0">
+                        <i class="bi bi-star text-warning me-2"></i>New Releases
+                    </h2>
+                    <a href="/content/trending.html?filter=new-releases" class="btn btn-outline-primary">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                <div class="horizontal-scroll new-releases-content">
+                    <!-- Dynamic new releases content -->
+                </div>
+            </section>
+
+            <!-- Critics' Choice Section -->
+            <section class="content-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-white fw-bold mb-0">
+                        <i class="bi bi-award text-success me-2"></i>Critics' Choice
+                    </h2>
+                    <a href="/content/trending.html?filter=critics-choice" class="btn btn-outline-primary">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                <div class="horizontal-scroll critics-choice-content">
+                    <!-- Dynamic critics choice content -->
+                </div>
+            </section>
+
+            <!-- Personalized Recommendations (Authenticated Users) -->
+            <section class="content-section auth-required d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-white fw-bold mb-0">
+                        <i class="bi bi-brain text-primary me-2"></i>Just For You
+                    </h2>
+                    <a href="/user/recommendations.html" class="btn btn-outline-primary">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                <div class="horizontal-scroll personalized-content">
+                    <!-- Dynamic personalized content -->
+                </div>
+            </section>
+
+            <!-- Regional Favorites -->
+            <section class="content-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-white fw-bold mb-0">
+                        <i class="bi bi-geo-alt text-info me-2"></i>Regional Favorites
+                    </h2>
+                    <a href="/content/regional.html" class="btn btn-outline-primary">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                <!-- Regional Tabs -->
+                <ul class="nav nav-pills mb-4" id="regionalTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="hindi-tab" data-bs-toggle="pill" data-bs-target="#hindi"
+                            data-language="hindi">Hindi</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="telugu-tab" data-bs-toggle="pill" data-bs-target="#telugu"
+                            data-language="telugu">Telugu</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tamil-tab" data-bs-toggle="pill" data-bs-target="#tamil"
+                            data-language="tamil">Tamil</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="kannada-tab" data-bs-toggle="pill" data-bs-target="#kannada"
+                            data-language="kannada">Kannada</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="regionalTabContent">
+                    <div class="tab-pane fade show active" id="hindi" role="tabpanel">
+                        <div class="horizontal-scroll regional-hindi-content">
+                            <!-- Dynamic Hindi content -->
                         </div>
-                        <div class="col-6 col-md-4 col-lg-3">
-                            <div class="card bg-primary text-white">
-                                <div class="card-body text-center py-4">
-                                    <i class="fas fa-star fa-2x mb-2"></i>
-                                    <h6 class="card-title">Top Rated</h6>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="tab-pane fade" id="telugu" role="tabpanel">
+                        <div class="horizontal-scroll regional-telugu-content">
+                            <!-- Dynamic Telugu content -->
                         </div>
-                        <div class="col-6 col-md-4 col-lg-3">
-                            <div class="card bg-success text-white">
-                                <div class="card-body text-center py-4">
-                                    <i class="fas fa-fire fa-2x mb-2"></i>
-                                    <h6 class="card-title">Trending</h6>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="tab-pane fade" id="tamil" role="tabpanel">
+                        <div class="horizontal-scroll regional-tamil-content">
+                            <!-- Dynamic Tamil content -->
                         </div>
-                        <div class="col-6 col-md-4 col-lg-3">
-                            <div class="card bg-warning text-dark">
-                                <div class="card-body text-center py-4">
-                                    <i class="fas fa-clock fa-2x mb-2"></i>
-                                    <h6 class="card-title">Coming Soon</h6>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="tab-pane fade" id="kannada" role="tabpanel">
+                        <div class="horizontal-scroll regional-kannada-content">
+                            <!-- Dynamic Kannada content -->
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
+
+            <!-- Anime Section -->
+            <section class="content-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-white fw-bold mb-0">
+                        <i class="bi bi-emoji-heart-eyes text-pink-500 me-2"></i>Popular Anime
+                    </h2>
+                    <a href="/content/anime.html" class="btn btn-outline-primary">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                <div class="horizontal-scroll anime-content">
+                    <!-- Dynamic anime content -->
+                </div>
+            </section>
+
+            <!-- Admin's Choice (If Available) -->
+            <section class="content-section admin-choice-section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-white fw-bold mb-0">
+                        <i class="bi bi-shield-check text-vip me-2"></i>Admin's Choice
+                    </h2>
+                    <a href="/content/trending.html?filter=admin-choice" class="btn btn-outline-warning">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                <div class="horizontal-scroll admin-choice-content">
+                    <!-- Dynamic admin choice content -->
+                </div>
+            </section>
+
+            <!-- Genre Categories -->
+            <section class="content-section">
+                <h2 class="text-white fw-bold mb-4">
+                    <i class="bi bi-collection text-purple-500 me-2"></i>Browse by Genre
+                </h2>
+
+                <div class="genre-grid row g-3">
+                    <!-- Dynamic genre cards -->
+                </div>
+            </section>
         </div>
-    </div>
+    </main>
 
-    <!-- Fixed Bottom Navigation (Mobile Only) -->
-    <nav class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 d-md-none safe-bottom"
-        style="z-index: 1030;">
-        <div class="flex justify-around items-center h-16">
-            <!-- Home -->
-            <button class="flex flex-col items-center justify-center p-2 haptic-feedback"
-                onclick="navigateToTab('home')" data-tab="home">
-                <i class="fas fa-home text-lg mb-1 text-primary"></i>
-                <span class="text-xs text-primary fw-bold">Home</span>
-            </button>
+    <!-- Mobile Navigation -->
+    <div id="mobile-nav-container"></div>
 
-            <!-- Search -->
-            <button class="flex flex-col items-center justify-center p-2 haptic-feedback"
-                onclick="navigateToTab('search')" data-tab="search">
-                <i class="fas fa-search text-lg mb-1 text-muted"></i>
-                <span class="text-xs text-muted">Search</span>
-            </button>
+    <!-- Trailer Modal -->
+    <div id="trailer-modal-container"></div>
 
-            <!-- Watchlist -->
-            <button class="flex flex-col items-center justify-center p-2 haptic-feedback position-relative"
-                onclick="navigateToTab('watchlist')" data-tab="watchlist">
-                <i class="fas fa-bookmark text-lg mb-1 text-muted"></i>
-                <span class="text-xs text-muted">Watchlist</span>
-                <!-- Badge for items in watchlist -->
-                <span class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger"
-                    style="font-size: 0.6rem;">
-                    3
-                </span>
-            </button>
-
-            <!-- Favorites -->
-            <button class="flex flex-col items-center justify-center p-2 haptic-feedback"
-                onclick="navigateToTab('favorites')" data-tab="favorites">
-                <i class="fas fa-heart text-lg mb-1 text-muted"></i>
-                <span class="text-xs text-muted">Favorites</span>
-            </button>
-
-            <!-- Profile -->
-            <button class="flex flex-col items-center justify-center p-2 haptic-feedback"
-                onclick="navigateToTab('profile')" data-tab="profile">
-                <i class="fas fa-user text-lg mb-1 text-muted"></i>
-                <span class="text-xs text-muted">Profile</span>
-            </button>
-        </div>
-    </nav>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <!-- Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
 
     <script>
-        // Search functionality
-        let searchExpanded = false;
-
-        function toggleSearch() {
-            const container = document.getElementById('searchContainer');
-            const searchInput = document.getElementById('searchInput');
-            const toggleBtn = document.getElementById('searchToggle');
-
-            // Haptic feedback simulation
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
+        // Homepage specific functionality
+        class HomePage {
+            constructor() {
+                this.isLoaded = false;
+                this.currentUser = null;
+                this.initialize();
             }
 
-            if (!searchExpanded) {
-                container.classList.remove('search-collapsed');
-                container.classList.add('search-expanded');
-                setTimeout(() => searchInput.focus(), 300);
-                toggleBtn.innerHTML = '<i class="fas fa-times"></i>';
-                searchExpanded = true;
-            } else {
-                container.classList.remove('search-expanded');
-                container.classList.add('search-collapsed');
-                searchInput.blur();
-                toggleBtn.innerHTML = '<i class="fas fa-search"></i>';
-                searchExpanded = false;
+            async initialize() {
+                try {
+                    // Load navigation components
+                    await this.loadComponents();
+
+                    // Set current user
+                    this.currentUser = auth.getCurrentUser();
+
+                    // Load hero carousel
+                    await this.loadHeroCarousel();
+
+                    // Load content sections
+                    await this.loadContentSections();
+
+                    // Setup regional tabs
+                    this.setupRegionalTabs();
+
+                    // Initialize genre grid
+                    await this.loadGenreGrid();
+
+                    // Setup intersection observer for lazy loading
+                    this.setupLazyLoading();
+
+                    this.isLoaded = true;
+                    console.log('Homepage loaded successfully');
+
+                } catch (error) {
+                    console.error('Error initializing homepage:', error);
+                    this.showErrorMessage('Failed to load homepage content');
+                }
+            }
+
+            async loadComponents() {
+                try {
+                    // Load topbar
+                    const topbarResponse = await fetch('/components/layout/topbar.html');
+                    const topbarHTML = await topbarResponse.text();
+                    document.getElementById('topbar-container').innerHTML = topbarHTML;
+
+                    // Load mobile navigation
+                    const mobileNavResponse = await fetch('/components/layout/mobile-nav.html');
+                    const mobileNavHTML = await mobileNavResponse.text();
+                    document.getElementById('mobile-nav-container').innerHTML = mobileNavHTML;
+
+                    // Load trailer modal
+                    const trailerModalResponse = await fetch('/components/modals/trailer-modal.html');
+                    const trailerModalHTML = await trailerModalResponse.text();
+                    document.getElementById('trailer-modal-container').innerHTML = trailerModalHTML;
+
+                    // Execute component scripts
+                    this.executeComponentScripts();
+
+                } catch (error) {
+                    console.error('Error loading components:', error);
+                }
+            }
+
+            executeComponentScripts() {
+                // Re-execute component initialization after dynamic loading
+                const scripts = document.querySelectorAll('script');
+                scripts.forEach(script => {
+                    if (script.src === '') { // Inline scripts
+                        try {
+                            eval(script.innerHTML);
+                        } catch (error) {
+                            console.warn('Script execution error:', error);
+                        }
+                    }
+                });
+            }
+
+            async loadHeroCarousel() {
+                try {
+                    const response = await api.getTrending({ type: 'all', limit: 5 });
+                    const trendingContent = response.recommendations || [];
+
+                    const carouselInner = document.querySelector('#heroCarousel .carousel-inner');
+
+                    if (trendingContent.length === 0) {
+                        this.showDefaultHero();
+                        return;
+                    }
+
+                    carouselInner.innerHTML = trendingContent.map((item, index) => `
+                    <div class="carousel-item ${index === 0 ? 'active' : ''}">
+                        <img src="${item.poster_path || IMAGE_CONFIG.PLACEHOLDER}" 
+                             class="d-block w-100 h-100 object-fit-cover" 
+                             alt="${item.title}"
+                             style="filter: brightness(0.4);">
+                        <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-start ps-5">
+                            <h1 class="display-4 fw-bold mb-3">${item.title}</h1>
+                            <p class="lead mb-4" style="max-width: 600px;">
+                                ${UTILS.truncateText(item.overview, 200)}
+                            </p>
+                            <div class="d-flex gap-3">
+                                <a href="/content/details.html?id=${item.id}" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-play-fill me-2"></i>Watch Now
+                                </a>
+                                ${item.youtube_trailer ? `
+                                    <button class="btn btn-outline-light btn-lg play-trailer" 
+                                            data-video-id="${this.extractVideoId(item.youtube_trailer)}"
+                                            data-title="${item.title}"
+                                            data-content-id="${item.id}">
+                                        <i class="bi bi-play-circle me-2"></i>Trailer
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                } catch (error) {
+                    console.error('Error loading hero carousel:', error);
+                    this.showDefaultHero();
+                }
+            }
+
+            showDefaultHero() {
+                const carouselInner = document.querySelector('#heroCarousel .carousel-inner');
+                carouselInner.innerHTML = `
+                <div class="carousel-item active">
+                    <div class="bg-gradient-primary w-100 h-100 d-flex align-items-center justify-content-center">
+                        <div class="text-center">
+                            <h1 class="display-3 fw-bold text-white mb-4">Welcome to CineBrain</h1>
+                            <p class="lead text-white mb-4">Discover your next favorite with AI-powered recommendations</p>
+                            <a href="/content/search.html" class="btn btn-primary btn-lg">
+                                <i class="bi bi-search me-2"></i>Start Exploring
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            }
+
+            async loadContentSections() {
+                // Load trending content
+                this.loadTrendingContent();
+
+                // Load new releases
+                this.loadNewReleases();
+
+                // Load critics choice
+                this.loadCriticsChoice();
+
+                // Load personalized recommendations (if authenticated)
+                if (auth.isAuthenticated()) {
+                    this.loadPersonalizedContent();
+                }
+
+                // Load anime content
+                this.loadAnimeContent();
+
+                // Load admin choice (if available)
+                this.loadAdminChoice();
+            }
+
+            async loadTrendingContent() {
+                try {
+                    const response = await api.getTrending({ type: 'all', limit: 12 });
+                    const content = response.recommendations || [];
+
+                    const container = document.querySelector('.trending-content');
+                    this.renderContentCards(container, content);
+
+                } catch (error) {
+                    console.error('Error loading trending content:', error);
+                    this.showSectionError('.trending-content');
+                }
+            }
+
+            async loadNewReleases() {
+                try {
+                    const response = await api.getNewReleases({ limit: 12 });
+                    const content = response.recommendations || [];
+
+                    const container = document.querySelector('.new-releases-content');
+                    this.renderContentCards(container, content);
+
+                } catch (error) {
+                    console.error('Error loading new releases:', error);
+                    this.showSectionError('.new-releases-content');
+                }
+            }
+
+            async loadCriticsChoice() {
+                try {
+                    const response = await api.getCriticsChoice({ limit: 12 });
+                    const content = response.recommendations || [];
+
+                    const container = document.querySelector('.critics-choice-content');
+                    this.renderContentCards(container, content);
+
+                } catch (error) {
+                    console.error('Error loading critics choice:', error);
+                    this.showSectionError('.critics-choice-content');
+                }
+            }
+
+            async loadPersonalizedContent() {
+                try {
+                    const response = await api.getPersonalizedRecommendations({ limit: 12 });
+                    const content = response.recommendations || [];
+
+                    if (content.length > 0) {
+                        const container = document.querySelector('.personalized-content');
+                        this.renderContentCards(container, content);
+
+                        // Show the section
+                        document.querySelector('.auth-required').classList.remove('d-none');
+                    }
+
+                } catch (error) {
+                    console.error('Error loading personalized content:', error);
+                }
+            }
+
+            async loadAnimeContent() {
+                try {
+                    const response = await api.getAnimeRecommendations({ limit: 12 });
+                    const content = response.recommendations || [];
+
+                    const container = document.querySelector('.anime-content');
+                    this.renderContentCards(container, content);
+
+                } catch (error) {
+                    console.error('Error loading anime content:', error);
+                    this.showSectionError('.anime-content');
+                }
+            }
+
+            async loadAdminChoice() {
+                try {
+                    const response = await api.getAdminChoice({ limit: 8 });
+                    const content = response.recommendations || [];
+
+                    if (content.length > 0) {
+                        const container = document.querySelector('.admin-choice-content');
+                        this.renderContentCards(container, content);
+
+                        // Show the section
+                        document.querySelector('.admin-choice-section').classList.remove('d-none');
+                    }
+
+                } catch (error) {
+                    console.error('Error loading admin choice:', error);
+                }
+            }
+
+            renderContentCards(container, content) {
+                // Clear loading placeholder
+                const placeholder = container.querySelector('.loading-placeholder');
+                if (placeholder) placeholder.remove();
+
+                if (content.length === 0) {
+                    container.innerHTML = '<p class="text-muted text-center py-4">No content available</p>';
+                    return;
+                }
+
+                container.innerHTML = content.map(item => `
+                <div class="content-card bg-theater rounded-3 overflow-hidden shadow-lg hover-lift position-relative flex-shrink-0" 
+                     style="width: 280px;" data-content-id="${item.id}">
+                    
+                    <div class="content-card-poster position-relative">
+                        <img src="${item.poster_path || IMAGE_CONFIG.PLACEHOLDER}" 
+                             alt="${item.title}" 
+                             class="w-100 h-100 object-fit-cover"
+                             loading="lazy">
+                        
+                        <div class="rating-badge position-absolute top-0 end-0 m-2">
+                            <span class="rating-value ${UTILS.getRatingColorClass(item.rating)}">${UTILS.formatRating(item.rating)}</span>
+                        </div>
+                        
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="type-badge type-badge-${item.content_type}">${item.content_type.toUpperCase()}</span>
+                        </div>
+                        
+                        <div class="position-absolute inset-0 d-flex align-items-center justify-content-center bg-black bg-opacity-50 opacity-0 transition-opacity duration-300 play-overlay">
+                            ${item.youtube_trailer ? `
+                                <button class="btn btn-primary btn-lg rounded-circle play-trailer" 
+                                        data-video-id="${this.extractVideoId(item.youtube_trailer)}" 
+                                        data-title="${item.title}"
+                                        data-content-id="${item.id}">
+                                    <i class="bi bi-play-fill fs-3"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="p-3">
+                        <h6 class="card-title text-white mb-2 text-truncate" title="${item.title}">
+                            ${item.title}
+                        </h6>
+                        
+                        ${item.genres ? `
+                            <div class="genre-container mb-2">
+                                ${item.genres.slice(0, 2).map(genre => `
+                                    <span class="genre-chip ${UTILS.getGenreColorClass(genre)}">${genre}</span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="d-flex justify-content-between align-items-center text-sm text-gray-400 mb-2">
+                            <span class="release-date">${item.release_date ? new Date(item.release_date).getFullYear() : 'TBA'}</span>
+                            <span class="content-type-text">${item.content_type.charAt(0).toUpperCase() + item.content_type.slice(1)}</span>
+                        </div>
+                        
+                        <p class="card-text text-gray-300 text-sm mb-3" style="font-size: 0.875rem; line-height: 1.4;">
+                            ${UTILS.truncateText(item.overview, 100)}
+                        </p>
+                        
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary btn-sm flex-fill add-to-watchlist" 
+                                    data-content-id="${item.id}" title="Add to Watchlist">
+                                <i class="bi bi-bookmark me-1"></i>
+                                <span class="d-none d-md-inline">Watchlist</span>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm flex-fill add-to-favorites" 
+                                    data-content-id="${item.id}" title="Add to Favorites">
+                                <i class="bi bi-heart me-1"></i>
+                                <span class="d-none d-md-inline">Favorite</span>
+                            </button>
+                            <a href="/content/details.html?id=${item.id}" 
+                               class="btn btn-primary btn-sm" title="View Details">
+                                <i class="bi bi-info-circle"></i>
+                                <span class="d-none d-lg-inline ms-1">Details</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+                // Initialize content card functionality
+                this.initializeContentCards(container);
+            }
+
+            initializeContentCards(container) {
+                // Add event listeners for content cards
+                const cards = container.querySelectorAll('.content-card');
+                cards.forEach(card => {
+                    // Hover effects
+                    card.addEventListener('mouseenter', () => {
+                        const playOverlay = card.querySelector('.play-overlay');
+                        if (playOverlay) {
+                            playOverlay.classList.remove('opacity-0');
+                            playOverlay.classList.add('opacity-100');
+                        }
+                    });
+
+                    card.addEventListener('mouseleave', () => {
+                        const playOverlay = card.querySelector('.play-overlay');
+                        if (playOverlay) {
+                            playOverlay.classList.add('opacity-0');
+                            playOverlay.classList.remove('opacity-100');
+                        }
+                    });
+
+                    // Watchlist functionality
+                    const watchlistBtn = card.querySelector('.add-to-watchlist');
+                    if (watchlistBtn) {
+                        watchlistBtn.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            if (!auth.isAuthenticated()) {
+                                window.location.href = '/auth/login.html';
+                                return;
+                            }
+
+                            try {
+                                const originalContent = watchlistBtn.innerHTML;
+                                watchlistBtn.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
+                                watchlistBtn.disabled = true;
+
+                                await auth.addToWatchlist(card.dataset.contentId);
+
+                                watchlistBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Added';
+                                watchlistBtn.classList.remove('btn-outline-primary');
+                                watchlistBtn.classList.add('btn-success');
+
+                                setTimeout(() => {
+                                    watchlistBtn.innerHTML = originalContent;
+                                    watchlistBtn.classList.remove('btn-success');
+                                    watchlistBtn.classList.add('btn-outline-primary');
+                                    watchlistBtn.disabled = false;
+                                }, 2000);
+
+                            } catch (error) {
+                                console.error('Error adding to watchlist:', error);
+                            }
+                        });
+                    }
+
+                    // Favorites functionality
+                    const favoritesBtn = card.querySelector('.add-to-favorites');
+                    if (favoritesBtn) {
+                        favoritesBtn.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            if (!auth.isAuthenticated()) {
+                                window.location.href = '/auth/login.html';
+                                return;
+                            }
+
+                            try {
+                                const originalContent = favoritesBtn.innerHTML;
+                                favoritesBtn.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
+                                favoritesBtn.disabled = true;
+
+                                await auth.addToFavorites(card.dataset.contentId);
+
+                                favoritesBtn.innerHTML = '<i class="bi bi-heart-fill me-1"></i>Loved';
+                                favoritesBtn.classList.remove('btn-outline-danger');
+                                favoritesBtn.classList.add('btn-danger');
+
+                                setTimeout(() => {
+                                    favoritesBtn.innerHTML = originalContent;
+                                    favoritesBtn.classList.remove('btn-danger');
+                                    favoritesBtn.classList.add('btn-outline-danger');
+                                    favoritesBtn.disabled = false;
+                                }, 2000);
+
+                            } catch (error) {
+                                console.error('Error adding to favorites:', error);
+                            }
+                        });
+                    }
+
+                    // Card click to details
+                    card.addEventListener('click', (e) => {
+                        if (!e.target.closest('button, a')) {
+                            window.location.href = `/content/details.html?id=${card.dataset.contentId}`;
+                        }
+                    });
+                });
+            }
+
+            setupRegionalTabs() {
+                const tabButtons = document.querySelectorAll('#regionalTabs button[data-bs-toggle="pill"]');
+                tabButtons.forEach(button => {
+                    button.addEventListener('shown.bs.tab', async (e) => {
+                        const language = e.target.dataset.language;
+                        await this.loadRegionalContent(language);
+                    });
+                });
+
+                // Load initial Hindi content
+                this.loadRegionalContent('hindi');
+            }
+
+            async loadRegionalContent(language) {
+                try {
+                    const container = document.querySelector(`.regional-${language}-content`);
+
+                    // Show loading if empty
+                    if (container.children.length === 0) {
+                        container.innerHTML = `
+                        <div class="d-flex gap-4">
+                            <div class="skeleton" style="width: 280px; height: 420px; border-radius: 12px;"></div>
+                            <div class="skeleton" style="width: 280px; height: 420px; border-radius: 12px;"></div>
+                            <div class="skeleton" style="width: 280px; height: 420px; border-radius: 12px;"></div>
+                        </div>
+                    `;
+                    }
+
+                    const response = await api.getRegionalRecommendations(language, { limit: 12 });
+                    const content = response.recommendations || [];
+
+                    this.renderContentCards(container, content);
+
+                } catch (error) {
+                    console.error(`Error loading ${language} content:`, error);
+                    this.showSectionError(`.regional-${language}-content`);
+                }
+            }
+
+            async loadGenreGrid() {
+                try {
+                    const genreGrid = document.querySelector('.genre-grid');
+                    const genres = [
+                        { name: 'Action', icon: 'bi-lightning-charge', color: 'danger' },
+                        { name: 'Comedy', icon: 'bi-emoji-laughing', color: 'warning' },
+                        { name: 'Drama', icon: 'bi-mask-face', color: 'primary' },
+                        { name: 'Horror', icon: 'bi-ghost', color: 'dark' },
+                        { name: 'Romance', icon: 'bi-heart', color: 'pink' },
+                        { name: 'Sci-Fi', icon: 'bi-rocket', color: 'info' },
+                        { name: 'Thriller', icon: 'bi-exclamation-triangle', color: 'secondary' },
+                        { name: 'Animation', icon: 'bi-palette', color: 'success' }
+                    ];
+
+                    genreGrid.innerHTML = genres.map(genre => `
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <a href="/content/genre.html?genre=${genre.name.toLowerCase()}" 
+                           class="genre-card d-block p-4 text-center text-decoration-none bg-theater rounded-3 border border-gray-700 hover-lift">
+                            <i class="bi ${genre.icon} fs-1 text-${genre.color} mb-3 d-block"></i>
+                            <h5 class="text-white mb-0">${genre.name}</h5>
+                        </a>
+                    </div>
+                `).join('');
+
+                } catch (error) {
+                    console.error('Error loading genre grid:', error);
+                }
+            }
+
+            showSectionError(selector) {
+                const container = document.querySelector(selector);
+                if (container) {
+                    container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="bi bi-exclamation-triangle text-warning fs-2 mb-3"></i>
+                        <p class="text-muted">Failed to load content. Please try again later.</p>
+                    </div>
+                `;
+                }
+            }
+
+            setupLazyLoading() {
+                if ('IntersectionObserver' in window) {
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                const section = entry.target;
+                                const sectionName = section.classList[1]; // Get second class name
+
+                                // Load content based on section
+                                if (sectionName && !section.dataset.loaded) {
+                                    section.dataset.loaded = 'true';
+                                    // Additional lazy loading logic can be added here
+                                }
+                            }
+                        });
+                    }, { threshold: 0.1 });
+
+                    document.querySelectorAll('.content-section').forEach(section => {
+                        observer.observe(section);
+                    });
+                }
+            }
+
+            extractVideoId(url) {
+                if (!url) return null;
+                const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+                return match ? match[1] : null;
+            }
+
+            showErrorMessage(message) {
+                const errorHTML = `
+                <div class="alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 9999;">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+                document.body.insertAdjacentHTML('afterbegin', errorHTML);
+
+                setTimeout(() => {
+                    const alert = document.querySelector('.alert');
+                    if (alert) alert.remove();
+                }, 5000);
             }
         }
 
-        // Search autocomplete simulation
-        document.getElementById('searchInput').addEventListener('input', function (e) {
-            const autocomplete = document.getElementById('searchAutocomplete');
-            if (e.target.value.length > 0) {
-                autocomplete.classList.remove('d-none');
-            } else {
-                autocomplete.classList.add('d-none');
-            }
-        });
-
-        // Close autocomplete when clicking outside
-        document.addEventListener('click', function (e) {
-            const searchContainer = document.getElementById('searchContainer');
-            const autocomplete = document.getElementById('searchAutocomplete');
-
-            if (!searchContainer.contains(e.target)) {
-                autocomplete.classList.add('d-none');
-            }
-        });
-
-        // Bottom navigation functionality
-        function navigateToTab(tabName) {
-            // Haptic feedback simulation
-            if (navigator.vibrate) {
-                navigator.vibrate(30);
-            }
-
-            // Remove active state from all tabs
-            document.querySelectorAll('[data-tab]').forEach(tab => {
-                const icon = tab.querySelector('i');
-                const text = tab.querySelector('span');
-
-                icon.classList.remove('text-primary');
-                icon.classList.add('text-muted');
-                text.classList.remove('text-primary', 'fw-bold');
-                text.classList.add('text-muted');
-            });
-
-            // Add active state to clicked tab
-            const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
-            const activeIcon = activeTab.querySelector('i');
-            const activeText = activeTab.querySelector('span');
-
-            activeIcon.classList.remove('text-muted');
-            activeIcon.classList.add('text-primary');
-            activeText.classList.remove('text-muted');
-            activeText.classList.add('text-primary', 'fw-bold');
-
-            console.log(`Navigated to: ${tabName}`);
-        }
-
-        // Initialize home tab as active
+        // Initialize homepage when DOM is loaded
         document.addEventListener('DOMContentLoaded', function () {
-            // Home is already active by default in the HTML
-        });
-
-        // Handle window resize to close mobile search if needed
-        window.addEventListener('resize', function () {
-            if (window.innerWidth >= 768 && searchExpanded) {
-                toggleSearch();
-            }
+            window.homePage = new HomePage();
         });
     </script>
 </body>

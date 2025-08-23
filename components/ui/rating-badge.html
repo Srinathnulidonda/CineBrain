@@ -1,0 +1,305 @@
+<!-- Rating Badge Component -->
+<div class="rating-badge-component d-inline-flex align-items-center" data-rating="">
+
+    <!-- Star Rating Display -->
+    <div class="star-rating me-2">
+        <div class="stars-container position-relative">
+            <!-- Background stars -->
+            <div class="stars-bg">
+                <i class="bi bi-star"></i>
+                <i class="bi bi-star"></i>
+                <i class="bi bi-star"></i>
+                <i class="bi bi-star"></i>
+                <i class="bi bi-star"></i>
+            </div>
+            <!-- Filled stars overlay -->
+            <div class="stars-filled position-absolute top-0 start-0" style="overflow: hidden;">
+                <i class="bi bi-star-fill"></i>
+                <i class="bi bi-star-fill"></i>
+                <i class="bi bi-star-fill"></i>
+                <i class="bi bi-star-fill"></i>
+                <i class="bi bi-star-fill"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Numeric Rating -->
+    <span class="rating-number fw-bold">0.0</span>
+
+    <!-- Vote Count (Optional) -->
+    <span class="vote-count text-muted ms-1 text-sm">
+        (<span class="count">0</span>)
+    </span>
+
+    <!-- Rating Source Badge (IMDB, RT, etc.) -->
+    <span class="rating-source-badge ms-2 d-none">
+        <img src="" alt="" class="rating-source-icon">
+    </span>
+</div>
+
+<script>
+    class RatingBadge {
+        constructor(element) {
+            this.element = element;
+            this.rating = 0;
+            this.voteCount = 0;
+            this.maxRating = 10;
+            this.source = null;
+            this.initialize();
+        }
+
+        initialize() {
+            this.setupTooltip();
+            this.loadRatingData();
+        }
+
+        setupTooltip() {
+            // Initialize Bootstrap tooltip
+            if (typeof bootstrap !== 'undefined') {
+                new bootstrap.Tooltip(this.element, {
+                    title: () => this.getTooltipText(),
+                    placement: 'top'
+                });
+            }
+        }
+
+        getTooltipText() {
+            if (this.rating === 0) return 'No rating available';
+            return `${this.rating}/10 based on ${this.formatVoteCount(this.voteCount)} votes`;
+        }
+
+        formatVoteCount(count) {
+            if (count < 1000) return count.toString();
+            if (count < 1000000) return (count / 1000).toFixed(1) + 'K';
+            return (count / 1000000).toFixed(1) + 'M';
+        }
+
+        updateRating(rating, voteCount = 0, source = null) {
+            this.rating = parseFloat(rating) || 0;
+            this.voteCount = parseInt(voteCount) || 0;
+            this.source = source;
+
+            this.updateDisplay();
+            this.updateStars();
+            this.updateColorScheme();
+            this.updateSource();
+        }
+
+        updateDisplay() {
+            const ratingNumber = this.element.querySelector('.rating-number');
+            const voteCountElement = this.element.querySelector('.count');
+
+            if (this.rating === 0) {
+                ratingNumber.textContent = 'N/A';
+                this.element.querySelector('.vote-count').classList.add('d-none');
+            } else {
+                ratingNumber.textContent = this.rating.toFixed(1);
+                voteCountElement.textContent = this.formatVoteCount(this.voteCount);
+
+                if (this.voteCount > 0) {
+                    this.element.querySelector('.vote-count').classList.remove('d-none');
+                }
+            }
+
+            this.element.dataset.rating = this.rating;
+        }
+
+        updateStars() {
+            const starsFilled = this.element.querySelector('.stars-filled');
+            const percentage = (this.rating / this.maxRating) * 100;
+            starsFilled.style.width = `${Math.min(percentage, 100)}%`;
+        }
+
+        updateColorScheme() {
+            // Remove existing rating classes
+            this.element.classList.remove('rating-excellent', 'rating-good', 'rating-average', 'rating-poor');
+
+            // Add appropriate rating class
+            if (this.rating >= 8) {
+                this.element.classList.add('rating-excellent');
+            } else if (this.rating >= 6) {
+                this.element.classList.add('rating-good');
+            } else if (this.rating >= 4) {
+                this.element.classList.add('rating-average');
+            } else if (this.rating > 0) {
+                this.element.classList.add('rating-poor');
+            }
+        }
+
+        updateSource() {
+            const sourceBadge = this.element.querySelector('.rating-source-badge');
+            const sourceIcon = this.element.querySelector('.rating-source-icon');
+
+            if (this.source && sourceIcon) {
+                const sourceIcons = {
+                    'imdb': 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/imdb/imdb-original.svg',
+                    'tmdb': 'https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg',
+                    'rt': 'https://www.rottentomatoes.com/assets/pizza-pie/images/rtlogo.9b892cff3fd.svg'
+                };
+
+                if (sourceIcons[this.source.toLowerCase()]) {
+                    sourceIcon.src = sourceIcons[this.source.toLowerCase()];
+                    sourceIcon.alt = this.source.toUpperCase();
+                    sourceBadge.classList.remove('d-none');
+                }
+            }
+        }
+
+        // Load additional rating data from external sources
+        async loadRatingData() {
+            const contentId = this.element.dataset.contentId;
+            if (!contentId) return;
+
+            try {
+                // Fetch additional rating details from backend
+                const response = await api.getContentDetails(contentId);
+
+                if (response && response.rating) {
+                    this.updateRating(response.rating, response.vote_count, 'tmdb');
+                }
+
+                // Try to fetch IMDB rating if available
+                if (response && response.imdb_id) {
+                    this.fetchIMDBRating(response.imdb_id);
+                }
+
+            } catch (error) {
+                console.error('Error loading rating data:', error);
+            }
+        }
+
+        async fetchIMDBRating(imdbId) {
+            try {
+                // This would typically be handled by the backend
+                const response = await fetch(`${CONFIG.API.BASE_URL}/external/imdb-rating?id=${imdbId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.rating && data.rating > this.rating) {
+                        this.updateRating(data.rating, data.vote_count, 'imdb');
+                    }
+                }
+            } catch (error) {
+                console.warn('IMDB rating fetch failed:', error);
+            }
+        }
+
+        // Interactive rating (for user ratings)
+        makeInteractive(callback) {
+            const stars = this.element.querySelectorAll('.stars-bg i, .stars-filled i');
+
+            stars.forEach((star, index) => {
+                star.style.cursor = 'pointer';
+
+                star.addEventListener('mouseover', () => {
+                    this.highlightStars(index + 1);
+                });
+
+                star.addEventListener('click', () => {
+                    const userRating = ((index + 1) / 5) * 10; // Convert 5-star to 10-point scale
+                    if (callback) callback(userRating);
+                    this.updateRating(userRating, this.voteCount + 1);
+                });
+            });
+
+            this.element.addEventListener('mouseleave', () => {
+                this.updateStars(); // Reset to actual rating
+            });
+        }
+
+        highlightStars(count) {
+            const starsFilled = this.element.querySelector('.stars-filled');
+            const percentage = (count / 5) * 100;
+            starsFilled.style.width = `${percentage}%`;
+        }
+    }
+
+    // Initialize rating badges
+    document.addEventListener('DOMContentLoaded', function () {
+        const ratingBadges = document.querySelectorAll('.rating-badge-component');
+        ratingBadges.forEach(badge => {
+            new RatingBadge(badge);
+        });
+    });
+
+    // Export for dynamic use
+    window.RatingBadge = RatingBadge;
+</script>
+
+<style>
+    .rating-badge-component {
+        font-size: 0.875rem;
+        padding: 0.5rem;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+    }
+
+    .stars-container {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .stars-bg {
+        color: rgba(255, 255, 255, 0.2);
+    }
+
+    .stars-filled {
+        color: #fbbf24;
+        /* yellow-400 */
+        transition: width 0.3s ease;
+    }
+
+    .rating-number {
+        font-size: 1rem;
+        min-width: 2rem;
+        text-align: center;
+    }
+
+    .vote-count {
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+
+    .rating-source-icon {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+    }
+
+    /* Rating color schemes */
+    .rating-excellent .rating-number {
+        color: #10b981;
+        /* green-500 */
+    }
+
+    .rating-good .rating-number {
+        color: #f59e0b;
+        /* amber-500 */
+    }
+
+    .rating-average .rating-number {
+        color: #f97316;
+        /* orange-500 */
+    }
+
+    .rating-poor .rating-number {
+        color: #ef4444;
+        /* red-500 */
+    }
+
+    .rating-excellent .stars-filled {
+        color: #10b981;
+    }
+
+    .rating-good .stars-filled {
+        color: #f59e0b;
+    }
+
+    .rating-average .stars-filled {
+        color: #f97316;
+    }
+
+    .rating-poor .stars-filled {
+        color: #ef4444;
+    }
+</style>

@@ -1,0 +1,473 @@
+<!-- Genre Chips Component -->
+<div class="genre-chips-container d-flex flex-wrap gap-2" data-content-id="">
+
+    <!-- Individual Genre Chips will be dynamically inserted here -->
+    <!-- Example structure:
+  <span class="genre-chip" data-genre="action">
+    <i class="genre-icon me-1"></i>
+    Action
+  </span>
+  -->
+
+    <!-- Loading placeholder -->
+    <div class="genre-loading d-none">
+        <div class="placeholder-glow">
+            <span class="placeholder col-2 rounded-pill me-2"></span>
+            <span class="placeholder col-3 rounded-pill me-2"></span>
+            <span class="placeholder col-2 rounded-pill"></span>
+        </div>
+    </div>
+
+    <!-- Show More/Less Button -->
+    <button class="btn btn-link btn-sm text-muted genre-toggle d-none" type="button">
+        <span class="toggle-text">Show more</span>
+        <i class="bi bi-chevron-down ms-1 toggle-icon"></i>
+    </button>
+</div>
+
+<script>
+    class GenreChips {
+        constructor(element) {
+            this.element = element;
+            this.genres = [];
+            this.isExpanded = false;
+            this.maxVisibleGenres = 4;
+            this.contentId = null;
+            this.initialize();
+        }
+
+        initialize() {
+            this.contentId = this.element.dataset.contentId;
+            this.setupToggleHandler();
+            this.loadGenres();
+        }
+
+        setupToggleHandler() {
+            const toggleBtn = this.element.querySelector('.genre-toggle');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    this.toggleExpansion();
+                });
+            }
+        }
+
+        toggleExpansion() {
+            this.isExpanded = !this.isExpanded;
+            this.renderGenres();
+
+            const toggleBtn = this.element.querySelector('.genre-toggle');
+            const toggleText = this.element.querySelector('.toggle-text');
+            const toggleIcon = this.element.querySelector('.toggle-icon');
+
+            if (this.isExpanded) {
+                toggleText.textContent = 'Show less';
+                toggleIcon.classList.remove('bi-chevron-down');
+                toggleIcon.classList.add('bi-chevron-up');
+            } else {
+                toggleText.textContent = 'Show more';
+                toggleIcon.classList.remove('bi-chevron-up');
+                toggleIcon.classList.add('bi-chevron-down');
+            }
+        }
+
+        async loadGenres() {
+            if (!this.contentId) return;
+
+            try {
+                this.showLoading();
+
+                const response = await api.getContentDetails(this.contentId);
+
+                if (response && response.genres) {
+                    this.genres = response.genres;
+                    this.renderGenres();
+                } else {
+                    this.showEmpty();
+                }
+
+            } catch (error) {
+                console.error('Error loading genres:', error);
+                this.showError();
+            } finally {
+                this.hideLoading();
+            }
+        }
+
+        showLoading() {
+            const loading = this.element.querySelector('.genre-loading');
+            loading.classList.remove('d-none');
+        }
+
+        hideLoading() {
+            const loading = this.element.querySelector('.genre-loading');
+            loading.classList.add('d-none');
+        }
+
+        showEmpty() {
+            const emptyChip = this.createGenreChip('No genres available', null, true);
+            emptyChip.classList.add('text-muted', 'border-muted');
+            this.element.appendChild(emptyChip);
+        }
+
+        showError() {
+            const errorChip = this.createGenreChip('Error loading genres', null, true);
+            errorChip.classList.add('text-danger', 'border-danger');
+            this.element.appendChild(errorChip);
+        }
+
+        updateGenres(genres) {
+            this.genres = genres || [];
+            this.renderGenres();
+        }
+
+        renderGenres() {
+            // Clear existing genre chips (keep loading and toggle elements)
+            const existingChips = this.element.querySelectorAll('.genre-chip');
+            existingChips.forEach(chip => chip.remove());
+
+            if (this.genres.length === 0) {
+                this.showEmpty();
+                return;
+            }
+
+            const visibleGenres = this.isExpanded ? this.genres : this.genres.slice(0, this.maxVisibleGenres);
+
+            visibleGenres.forEach(genre => {
+                const chip = this.createGenreChip(genre);
+                this.element.insertBefore(chip, this.element.querySelector('.genre-toggle'));
+            });
+
+            // Show toggle button if there are more genres
+            const toggleBtn = this.element.querySelector('.genre-toggle');
+            if (this.genres.length > this.maxVisibleGenres) {
+                toggleBtn.classList.remove('d-none');
+            } else {
+                toggleBtn.classList.add('d-none');
+            }
+        }
+
+        createGenreChip(genreName, onClick = null, isStatic = false) {
+            const chip = document.createElement('span');
+            chip.className = `genre-chip ${this.getGenreClass(genreName)}`;
+            chip.dataset.genre = genreName.toLowerCase().replace(/\s+/g, '-');
+
+            // Add icon based on genre
+            const icon = this.getGenreIcon(genreName);
+            if (icon) {
+                chip.innerHTML = `<i class="${icon} me-1"></i>${genreName}`;
+            } else {
+                chip.textContent = genreName;
+            }
+
+            if (!isStatic) {
+                chip.style.cursor = 'pointer';
+                chip.addEventListener('click', onClick || (() => this.handleGenreClick(genreName)));
+
+                // Add hover effects
+                chip.addEventListener('mouseenter', () => {
+                    chip.style.transform = 'translateY(-1px)';
+                    chip.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+                });
+
+                chip.addEventListener('mouseleave', () => {
+                    chip.style.transform = '';
+                    chip.style.boxShadow = '';
+                });
+            }
+
+            return chip;
+        }
+
+        getGenreClass(genre) {
+            const genreClasses = {
+                'action': 'genre-action',
+                'adventure': 'genre-adventure',
+                'animation': 'genre-animation',
+                'comedy': 'genre-comedy',
+                'crime': 'genre-crime',
+                'documentary': 'genre-documentary',
+                'drama': 'genre-drama',
+                'family': 'genre-family',
+                'fantasy': 'genre-fantasy',
+                'history': 'genre-history',
+                'horror': 'genre-horror',
+                'music': 'genre-music',
+                'mystery': 'genre-mystery',
+                'romance': 'genre-romance',
+                'science fiction': 'genre-scifi',
+                'thriller': 'genre-thriller',
+                'war': 'genre-war',
+                'western': 'genre-western'
+            };
+
+            return genreClasses[genre.toLowerCase()] || 'genre-default';
+        }
+
+        getGenreIcon(genre) {
+            const genreIcons = {
+                'action': 'bi-lightning-charge',
+                'adventure': 'bi-compass',
+                'animation': 'bi-palette',
+                'comedy': 'bi-emoji-laughing',
+                'crime': 'bi-shield-exclamation',
+                'documentary': 'bi-camera-video',
+                'drama': 'bi-mask-face',
+                'family': 'bi-house-heart',
+                'fantasy': 'bi-magic',
+                'history': 'bi-clock-history',
+                'horror': 'bi-ghost',
+                'music': 'bi-music-note',
+                'mystery': 'bi-search',
+                'romance': 'bi-heart',
+                'science fiction': 'bi-rocket',
+                'thriller': 'bi-exclamation-triangle',
+                'war': 'bi-crosshair',
+                'western': 'bi-bullseye'
+            };
+
+            return genreIcons[genre.toLowerCase()] || null;
+        }
+
+        handleGenreClick(genre) {
+            // Navigate to genre-specific page
+            window.location.href = `/content/genre.html?genre=${encodeURIComponent(genre.toLowerCase())}`;
+        }
+
+        // Static method to create genre chips from array
+        static createFromArray(genres, container, maxVisible = 4) {
+            const genreChips = new GenreChips(container);
+            genreChips.maxVisibleGenres = maxVisible;
+            genreChips.updateGenres(genres);
+            return genreChips;
+        }
+
+        // Get trending genres from API
+        static async getTrendingGenres(limit = 10) {
+            try {
+                const response = await api.request('/analytics/trending-genres', {
+                    params: { limit }
+                });
+                return response.genres || [];
+            } catch (error) {
+                console.error('Error fetching trending genres:', error);
+                return [];
+            }
+        }
+    }
+
+    // Initialize genre chips
+    document.addEventListener('DOMContentLoaded', function () {
+        const genreContainers = document.querySelectorAll('.genre-chips-container');
+        genreContainers.forEach(container => {
+            new GenreChips(container);
+        });
+    });
+
+    // Export for dynamic use
+    window.GenreChips = GenreChips;
+</script>
+
+<style>
+    .genre-chips-container {
+        gap: 0.5rem;
+    }
+
+    .genre-chip {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.375rem 0.75rem;
+        border-radius: 20px;
+        border: 1px solid transparent;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        text-decoration: none;
+    }
+
+    .genre-chip:hover {
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Genre-specific styling */
+    .genre-action {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .genre-action:hover {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
+
+    .genre-adventure {
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+        border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .genre-adventure:hover {
+        background: rgba(34, 197, 94, 0.2);
+        color: #22c55e;
+    }
+
+    .genre-animation {
+        background: rgba(168, 85, 247, 0.1);
+        color: #a855f7;
+        border-color: rgba(168, 85, 247, 0.3);
+    }
+
+    .genre-animation:hover {
+        background: rgba(168, 85, 247, 0.2);
+        color: #a855f7;
+    }
+
+    .genre-comedy {
+        background: rgba(251, 191, 36, 0.1);
+        color: #fbbf24;
+        border-color: rgba(251, 191, 36, 0.3);
+    }
+
+    .genre-comedy:hover {
+        background: rgba(251, 191, 36, 0.2);
+        color: #fbbf24;
+    }
+
+    .genre-crime {
+        background: rgba(75, 85, 99, 0.1);
+        color: #6b7280;
+        border-color: rgba(75, 85, 99, 0.3);
+    }
+
+    .genre-crime:hover {
+        background: rgba(75, 85, 99, 0.2);
+        color: #6b7280;
+    }
+
+    .genre-documentary {
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+        border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .genre-documentary:hover {
+        background: rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
+    }
+
+    .genre-drama {
+        background: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+        border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    .genre-drama:hover {
+        background: rgba(139, 92, 246, 0.2);
+        color: #8b5cf6;
+    }
+
+    .genre-fantasy {
+        background: rgba(236, 72, 153, 0.1);
+        color: #ec4899;
+        border-color: rgba(236, 72, 153, 0.3);
+    }
+
+    .genre-fantasy:hover {
+        background: rgba(236, 72, 153, 0.2);
+        color: #ec4899;
+    }
+
+    .genre-horror {
+        background: rgba(15, 23, 42, 0.3);
+        color: #dc2626;
+        border-color: rgba(220, 38, 38, 0.5);
+    }
+
+    .genre-horror:hover {
+        background: rgba(15, 23, 42, 0.5);
+        color: #dc2626;
+    }
+
+    .genre-romance {
+        background: rgba(244, 63, 94, 0.1);
+        color: #f43f5e;
+        border-color: rgba(244, 63, 94, 0.3);
+    }
+
+    .genre-romance:hover {
+        background: rgba(244, 63, 94, 0.2);
+        color: #f43f5e;
+    }
+
+    .genre-scifi {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .genre-scifi:hover {
+        background: rgba(59, 130, 246, 0.2);
+        color: #3b82f6;
+    }
+
+    .genre-thriller {
+        background: rgba(107, 114, 128, 0.1);
+        color: #6b7280;
+        border-color: rgba(107, 114, 128, 0.3);
+    }
+
+    .genre-thriller:hover {
+        background: rgba(107, 114, 128, 0.2);
+        color: #6b7280;
+    }
+
+    .genre-default {
+        background: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+        border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    .genre-default:hover {
+        background: rgba(139, 92, 246, 0.2);
+        color: #8b5cf6;
+    }
+
+    .genre-toggle {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        text-decoration: none;
+        border: none;
+        background: none;
+        transition: all 0.3s ease;
+    }
+
+    .genre-toggle:hover {
+        color: var(--bs-primary) !important;
+        transform: translateY(-1px);
+    }
+
+    .toggle-icon {
+        transition: transform 0.3s ease;
+    }
+
+    /* Loading placeholder styling */
+    .placeholder {
+        background: rgba(139, 92, 246, 0.1);
+        height: 1.5rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        .genre-chip {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .genre-chips-container {
+            gap: 0.25rem;
+        }
+    }
+</style>

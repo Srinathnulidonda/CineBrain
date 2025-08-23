@@ -1,0 +1,373 @@
+<!-- Mini Content Card Component (Compact Variant) -->
+<div class="card-mini bg-theater rounded-2 overflow-hidden shadow-md hover-lift position-relative d-flex"
+    data-content-id="">
+
+    <!-- Mini Poster -->
+    <div class="mini-poster position-relative flex-shrink-0">
+        <img src="" alt="" class="w-100 h-100 object-fit-cover lazy" data-src="" loading="lazy">
+
+        <!-- Mini Rating Badge -->
+        <div class="mini-rating position-absolute top-0 end-0 m-1">
+            <span class="rating-value text-xs">0.0</span>
+        </div>
+    </div>
+
+    <!-- Mini Content -->
+    <div class="flex-grow-1 p-2 d-flex flex-column justify-content-between">
+
+        <!-- Title & Meta -->
+        <div>
+            <h6 class="mini-title text-white mb-1 text-truncate" style="font-size: 0.85rem;" title="">
+                Content Title
+            </h6>
+
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="mini-type text-xs text-gray-400">Movie</span>
+                <span class="mini-year text-xs text-gray-400">2024</span>
+            </div>
+
+            <!-- Mini Genres -->
+            <div class="mini-genres">
+                <!-- Dynamic mini genre chips will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Mini Actions -->
+        <div class="d-flex gap-1 mt-2">
+            <button class="btn btn-outline-primary btn-xs flex-fill add-to-watchlist-mini" data-content-id=""
+                title="Watchlist">
+                <i class="bi bi-bookmark"></i>
+            </button>
+            <button class="btn btn-outline-danger btn-xs flex-fill add-to-favorites-mini" data-content-id=""
+                title="Favorite">
+                <i class="bi bi-heart"></i>
+            </button>
+            <a href="#" class="btn btn-primary btn-xs view-details-mini" data-content-id="" title="Details">
+                <i class="bi bi-info-circle"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Mini Content Card Component JavaScript
+    class MiniContentCard {
+        constructor(element) {
+            this.element = element;
+            this.contentData = null;
+            this.initialize();
+        }
+
+        initialize() {
+            this.setupEventListeners();
+            this.setupLazyLoading();
+        }
+
+        setupEventListeners() {
+            // Watchlist button
+            const watchlistBtn = this.element.querySelector('.add-to-watchlist-mini');
+            if (watchlistBtn) {
+                watchlistBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.addToWatchlist();
+                });
+            }
+
+            // Favorites button
+            const favoritesBtn = this.element.querySelector('.add-to-favorites-mini');
+            if (favoritesBtn) {
+                favoritesBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.addToFavorites();
+                });
+            }
+
+            // View details
+            const detailsBtn = this.element.querySelector('.view-details-mini');
+            if (detailsBtn) {
+                detailsBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const contentId = this.element.dataset.contentId;
+                    if (contentId) {
+                        window.location.href = `/content/details.html?id=${contentId}`;
+                    }
+                });
+            }
+
+            // Card click (go to details)
+            this.element.addEventListener('click', (e) => {
+                // Only if not clicking on buttons
+                if (!e.target.closest('button, a')) {
+                    const contentId = this.element.dataset.contentId;
+                    if (contentId) {
+                        window.location.href = `/content/details.html?id=${contentId}`;
+                    }
+                }
+            });
+        }
+
+        setupLazyLoading() {
+            const img = this.element.querySelector('img[data-src]');
+            if (img && 'IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            this.loadImage(img);
+                            imageObserver.unobserve(img);
+                        }
+                    });
+                });
+                imageObserver.observe(img);
+            }
+        }
+
+        loadImage(img) {
+            img.src = img.dataset.src;
+            img.classList.remove('lazy');
+
+            img.addEventListener('load', () => {
+                img.style.opacity = '1';
+            });
+
+            img.addEventListener('error', () => {
+                img.src = IMAGE_CONFIG.PLACEHOLDER;
+            });
+        }
+
+        populateCard(contentData) {
+            this.contentData = contentData;
+            this.element.dataset.contentId = contentData.id;
+
+            // Update image
+            const img = this.element.querySelector('img');
+            const posterUrl = contentData.poster_path || IMAGE_CONFIG.PLACEHOLDER;
+            img.dataset.src = posterUrl;
+            img.alt = contentData.title;
+
+            // Update title
+            const titleElement = this.element.querySelector('.mini-title');
+            titleElement.textContent = contentData.title;
+            titleElement.title = contentData.title;
+
+            // Update rating
+            const ratingElement = this.element.querySelector('.rating-value');
+            if (contentData.rating) {
+                ratingElement.textContent = UTILS.formatRating(contentData.rating);
+                const ratingBadge = this.element.querySelector('.mini-rating');
+                ratingBadge.className = `mini-rating position-absolute top-0 end-0 m-1 ${UTILS.getRatingColorClass(contentData.rating)}`;
+            } else {
+                ratingElement.textContent = 'N/A';
+            }
+
+            // Update content type
+            const typeElement = this.element.querySelector('.mini-type');
+            typeElement.textContent = contentData.content_type.toUpperCase();
+
+            // Update year
+            const yearElement = this.element.querySelector('.mini-year');
+            if (contentData.release_date) {
+                const year = new Date(contentData.release_date).getFullYear();
+                yearElement.textContent = year;
+            } else {
+                yearElement.textContent = 'TBA';
+            }
+
+            // Update genres (max 2 mini chips)
+            this.updateGenres(contentData.genres || []);
+
+            // Update action button data
+            const actionButtons = this.element.querySelectorAll('[data-content-id]');
+            actionButtons.forEach(btn => {
+                btn.dataset.contentId = contentData.id;
+            });
+
+            // Update details link
+            const detailsLink = this.element.querySelector('.view-details-mini');
+            detailsLink.href = `/content/details.html?id=${contentData.id}`;
+        }
+
+        updateGenres(genres) {
+            const genreContainer = this.element.querySelector('.mini-genres');
+            genreContainer.innerHTML = '';
+
+            if (genres && genres.length > 0) {
+                // Show max 2 mini genres
+                const displayGenres = genres.slice(0, 2);
+                displayGenres.forEach(genre => {
+                    const genreChip = document.createElement('span');
+                    genreChip.className = 'mini-genre-chip';
+                    genreChip.textContent = genre.length > 8 ? genre.substring(0, 8) + '...' : genre;
+                    genreChip.title = genre;
+                    genreContainer.appendChild(genreChip);
+                });
+            }
+        }
+
+        async addToWatchlist() {
+            if (!auth.isAuthenticated()) {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            try {
+                const btn = this.element.querySelector('.add-to-watchlist-mini');
+                const originalContent = btn.innerHTML;
+
+                // Show loading state
+                btn.innerHTML = '<div class="spinner-border spinner-border-sm" style="width: 0.75rem; height: 0.75rem;" role="status"></div>';
+                btn.disabled = true;
+
+                await auth.addToWatchlist(this.contentData.id);
+
+                // Show success state
+                btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-success');
+
+                setTimeout(() => {
+                    btn.innerHTML = originalContent;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-primary');
+                    btn.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error adding to watchlist:', error);
+            }
+        }
+
+        async addToFavorites() {
+            if (!auth.isAuthenticated()) {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            try {
+                const btn = this.element.querySelector('.add-to-favorites-mini');
+                const originalContent = btn.innerHTML;
+
+                // Show loading state
+                btn.innerHTML = '<div class="spinner-border spinner-border-sm" style="width: 0.75rem; height: 0.75rem;" role="status"></div>';
+                btn.disabled = true;
+
+                await auth.addToFavorites(this.contentData.id);
+
+                // Show success state
+                btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+                btn.classList.remove('btn-outline-danger');
+                btn.classList.add('btn-danger');
+
+                setTimeout(() => {
+                    btn.innerHTML = originalContent;
+                    btn.classList.remove('btn-danger');
+                    btn.classList.add('btn-outline-danger');
+                    btn.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error adding to favorites:', error);
+            }
+        }
+    }
+
+    // Initialize mini content cards when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        const miniCards = document.querySelectorAll('.card-mini');
+        miniCards.forEach(cardElement => {
+            new MiniContentCard(cardElement);
+        });
+    });
+
+    // Export for dynamic card creation
+    window.MiniContentCard = MiniContentCard;
+</script>
+
+<style>
+    /* Mini Card Specific Styles */
+    .card-mini {
+        height: 120px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 1px solid rgba(139, 92, 246, 0.1);
+    }
+
+    .card-mini:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    .mini-poster {
+        width: 80px;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .mini-poster img {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .mini-rating {
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px);
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 2px 4px;
+        font-size: 0.65rem;
+    }
+
+    .mini-title {
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .mini-genre-chip {
+        display: inline-block;
+        font-size: 0.6rem;
+        font-weight: 500;
+        padding: 1px 4px;
+        margin-right: 2px;
+        margin-bottom: 2px;
+        border-radius: 6px;
+        background: rgba(139, 92, 246, 0.1);
+        color: var(--royal-purple);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+    }
+
+    .btn-xs {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+        min-width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .lazy {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        .card-mini {
+            height: 100px;
+        }
+
+        .mini-poster {
+            width: 70px;
+        }
+
+        .btn-xs {
+            min-width: 24px;
+            height: 24px;
+            font-size: 0.6rem;
+        }
+    }
+</style>
