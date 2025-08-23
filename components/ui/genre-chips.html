@@ -1,4 +1,64 @@
-<!-- Genre Tags with Tailwind utilities -->
-<div class="genre-chips d-flex flex-wrap gap-1 mt-2">
-    <!-- Dynamic genre chips will be populated here -->
+<div class="genre-chips d-flex flex-wrap gap-2" role="list">
+    ${genres.map(genre => `
+    <button class="genre-chip btn btn-sm rounded-pill px-3 py-1 border" role="option" aria-selected="false"
+        data-genre="${genre.toLowerCase()}" onclick="toggleGenre(this, '${genre}')">
+        ${genre}
+    </button>
+    `).join('')}
 </div>
+
+<style>
+    .genre-chip {
+        background: rgba(96, 165, 250, 0.1);
+        color: #60a5fa;
+        border-color: rgba(96, 165, 250, 0.3) !important;
+        transition: all 0.2s ease;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .genre-chip:hover {
+        background: rgba(96, 165, 250, 0.2);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(96, 165, 250, 0.2);
+    }
+
+    .genre-chip[aria-selected="true"] {
+        background: #60a5fa;
+        color: white;
+        border-color: #60a5fa !important;
+        box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+    }
+
+    .genre-chip:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5);
+    }
+</style>
+
+<script>
+    let selectedGenres = [];
+
+    function toggleGenre(chip, genre) {
+        const isSelected = chip.getAttribute('aria-selected') === 'true';
+        chip.setAttribute('aria-selected', !isSelected);
+
+        if (!isSelected) {
+            selectedGenres.push(genre);
+        } else {
+            selectedGenres = selectedGenres.filter(g => g !== genre);
+        }
+
+        // Emit custom event
+        const event = new CustomEvent('genres:changed', {
+            detail: { genres: selectedGenres }
+        });
+        document.dispatchEvent(event);
+    }
+
+    // Listen for genre changes
+    document.addEventListener('genres:changed', function (e) {
+        console.log('Selected genres:', e.detail.genres);
+        // Could trigger filtering here
+    });
+</script>

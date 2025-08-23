@@ -1,13 +1,56 @@
-<!-- Compact Card Variant -->
-<div class="col-auto">
-    <div class="w-32 flex-shrink-0 cursor-pointer" data-content-id=""
-        onclick="openContentDetails(this.dataset.contentId)">
-        <div class="position-relative">
-            <img class="aspect-[2/3] rounded-md hover:brightness-110 transition-all duration-300 w-100" src="" alt=""
-                loading="lazy">
-            <div class="rating-badge-mini"></div>
-        </div>
-        <h6 class="text-xs text-white mt-2 line-clamp-2 mb-0"></h6>
-        <div class="genre-chips-mini mt-1"></div>
+<article
+    class="card-mini rounded-lg overflow-hidden position-relative bg-[#1a1a2e] hover:scale-105 transition-all duration-300"
+    style="width: 150px; cursor: pointer;" data-content-id="${content.id}" onclick="viewContent(${content.id})">
+
+    <!-- Poster -->
+    <div class="poster-container position-relative" style="aspect-ratio: 2/3;">
+        <img class="w-100 h-100 object-cover" src="${content.poster_path || '/api/placeholder/150/225'}"
+            alt="${content.title}" loading="lazy">
+
+        <!-- Rating Badge (if high rated) -->
+        ${content.rating >= 7.5 ? `
+        <span class="position-absolute top-1 end-1 badge bg-warning text-dark" style="font-size: 10px;">
+            ⭐ ${content.rating}
+        </span>
+        ` : ''}
     </div>
-</div>
+
+    <!-- Title Overlay (Mobile) / Below (Desktop) -->
+    <div
+        class="card-info p-2 d-md-none position-absolute bottom-0 start-0 end-0 bg-gradient-to-t from-black/90 to-transparent">
+        <h4 class="text-white text-xs fw-semibold text-truncate mb-0">${content.title}</h4>
+    </div>
+
+    <div class="card-info p-2 d-none d-md-block">
+        <h4 class="text-[#e0e0ff] text-sm fw-semibold text-truncate mb-0">${content.title}</h4>
+        <p class="text-[#a78bfa] text-xs mb-0">${content.year || ''}</p>
+    </div>
+
+    <!-- Hover Overlay (Desktop) -->
+    <div class="hover-overlay position-absolute inset-0 d-none d-md-flex align-items-end p-2 opacity-0"
+        style="background: linear-gradient(to top, rgba(10, 10, 15, 0.95), transparent); transition: opacity 0.3s;">
+        <div class="text-white w-100">
+            <h4 class="text-sm fw-semibold mb-1">${content.title}</h4>
+            <p class="text-xs mb-0">${content.genres ? content.genres[0] : ''}</p>
+        </div>
+    </div>
+</article>
+
+<script>
+    // Reuse viewContent from content-card
+    if (typeof viewContent === 'undefined') {
+        function viewContent(contentId) {
+            window.location.href = `/content/details.html?id=${contentId}`;
+        }
+    }
+</script>
+
+<style>
+    .card-mini:hover .hover-overlay {
+        opacity: 1 !important;
+    }
+
+    .card-mini {
+        flex-shrink: 0;
+    }
+</style>
