@@ -1,0 +1,554 @@
+<!-- CineBrain Advanced Search Bar Component -->
+<div class="search-bar-container position-relative">
+  <!-- Main Search Input -->
+  <div class="search-input-wrapper position-relative">
+    <div class="input-group input-group-lg">
+      <span class="input-group-text bg-dark border-secondary text-primary">
+        <i class="fas fa-search"></i>
+      </span>
+      <input 
+        type="text" 
+        id="advancedSearchInput" 
+        class="form-control bg-dark border-secondary text-white search-main-input" 
+        placeholder="Search movies, TV shows, anime..."
+        style="border-radius: 0 25px 25px 0; transition: all 0.3s ease;"
+        autocomplete="off"
+      >
+      <button class="btn btn-outline-secondary search-filter-btn" type="button" data-bs-toggle="collapse" data-bs-target="#searchFilters">
+        <i class="fas fa-filter"></i>
+      </button>
+    </div>
+    
+    <!-- Search Loading Indicator -->
+    <div class="search-loading position-absolute end-0 top-50 translate-middle-y me-5 d-none">
+      <div class="spinner-border spinner-border-sm text-primary" role="status">
+        <span class="visually-hidden">Searching...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced Filters (Collapsible) -->
+  <div class="collapse mt-3" id="searchFilters">
+    <div class="card bg-dark border-secondary">
+      <div class="card-body">
+        <div class="row g-3">
+          <!-- Content Type Filter -->
+          <div class="col-md-3">
+            <label class="form-label text-white small">Content Type</label>
+            <select class="form-select bg-dark border-secondary text-white" id="contentTypeFilter">
+              <option value="">All Types</option>
+              <option value="movie">Movies</option>
+              <option value="tv">TV Series</option>
+              <option value="anime">Anime</option>
+            </select>
+          </div>
+
+          <!-- Genre Filter -->
+          <div class="col-md-3">
+            <label class="form-label text-white small">Genre</label>
+            <select class="form-select bg-dark border-secondary text-white" id="genreFilter">
+              <option value="">All Genres</option>
+              <!-- Will be populated dynamically -->
+            </select>
+          </div>
+
+          <!-- Year Range -->
+          <div class="col-md-3">
+            <label class="form-label text-white small">Release Year</label>
+            <select class="form-select bg-dark border-secondary text-white" id="yearFilter">
+              <option value="">Any Year</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2020-2024">2020-2024</option>
+              <option value="2010-2019">2010-2019</option>
+              <option value="2000-2009">2000-2009</option>
+              <option value="1990-1999">1990-1999</option>
+            </select>
+          </div>
+
+          <!-- Rating Filter -->
+          <div class="col-md-3">
+            <label class="form-label text-white small">Minimum Rating</label>
+            <select class="form-select bg-dark border-secondary text-white" id="ratingFilter">
+              <option value="">Any Rating</option>
+              <option value="9">9.0+ (Excellent)</option>
+              <option value="8">8.0+ (Very Good)</option>
+              <option value="7">7.0+ (Good)</option>
+              <option value="6">6.0+ (Above Average)</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Filter Actions -->
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-primary btn-sm" onclick="applySearchFilters()">
+            <i class="fas fa-search me-1"></i>Apply Filters
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="clearSearchFilters()">
+            <i class="fas fa-times me-1"></i>Clear
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Results Dropdown -->
+  <div 
+    id="searchDropdownResults" 
+    class="position-absolute w-100 bg-dark border border-secondary rounded shadow-lg mt-1 d-none"
+    style="top: 100%; z-index: 1060; max-height: 500px; overflow-y: auto; backdrop-filter: blur(10px);"
+  >
+    <!-- Search results will be populated here -->
+  </div>
+
+  <!-- Search Suggestions/Recent -->
+  <div class="search-suggestions mt-2 d-none">
+    <div class="d-flex flex-wrap gap-1">
+      <span class="text-muted small me-2">Popular:</span>
+      <!-- Popular search terms will be added here -->
+    </div>
+  </div>
+</div>
+
+<script>
+// Advanced Search Bar Component JavaScript
+(function() {
+  let searchTimeout;
+  let currentSearchQuery = '';
+  const searchInput = document.getElementById('advancedSearchInput');
+  const searchResults = document.getElementById('searchDropdownResults');
+  const searchLoading = document.querySelector('.search-loading');
+  const contentTypeFilter = document.getElementById('contentTypeFilter');
+  const genreFilter = document.getElementById('genreFilter');
+  const yearFilter = document.getElementById('yearFilter');
+  const ratingFilter = document.getElementById('ratingFilter');
+
+  // Initialize search bar
+  function initSearchBar() {
+    populateGenreFilter();
+    setupEventListeners();
+    loadPopularSearches();
+  }
+
+  // Setup event listeners
+  function setupEventListeners() {
+    // Main search input
+    searchInput.addEventListener('input', handleSearchInput);
+    searchInput.addEventListener('focus', handleSearchFocus);
+    searchInput.addEventListener('keydown', handleSearchKeydown);
+    
+    // Filter changes
+    [contentTypeFilter, genreFilter, yearFilter, ratingFilter].forEach(filter => {
+      filter.addEventListener('change', handleFilterChange);
+    });
+    
+    // Click outside to hide results
+    document.addEventListener('click', handleOutsideClick);
+  }
+
+  // Handle search input
+  function handleSearchInput(e) {
+    clearTimeout(searchTimeout);
+    const query = e.target.value.trim();
+    currentSearchQuery = query;
+    
+    if (query.length >= 2) {
+      showSearchLoading(true);
+      searchTimeout = setTimeout(() => performAdvancedSearch(query), 300);
+    } else {
+      hideSearchResults();
+      showSearchLoading(false);
+    }
+  }
+
+  // Handle search focus
+  function handleSearchFocus() {
+    if (currentSearchQuery.length >= 2) {
+      showSearchResults();
+    } else {
+      showPopularSuggestions();
+    }
+  }
+
+  // Handle keyboard navigation
+  function handleSearchKeydown(e) {
+    const activeResult = searchResults.querySelector('.search-result-active');
+    const allResults = searchResults.querySelectorAll('.search-result-item');
+    
+    switch(e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        navigateResults(allResults, activeResult, 'down');
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        navigateResults(allResults, activeResult, 'up');
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeResult) {
+          activeResult.click();
+        } else if (currentSearchQuery) {
+          performFullSearch();
+        }
+        break;
+      case 'Escape':
+        hideSearchResults();
+        searchInput.blur();
+        break;
+    }
+  }
+
+  // Navigate search results with keyboard
+  function navigateResults(results, activeResult, direction) {
+    if (results.length === 0) return;
+    
+    // Remove current active
+    if (activeResult) {
+      activeResult.classList.remove('search-result-active');
+    }
+    
+    let newIndex = 0;
+    if (activeResult) {
+      const currentIndex = Array.from(results).indexOf(activeResult);
+      newIndex = direction === 'down' 
+        ? (currentIndex + 1) % results.length
+        : (currentIndex - 1 + results.length) % results.length;
+    }
+    
+    results[newIndex].classList.add('search-result-active');
+    results[newIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  // Handle filter change
+  function handleFilterChange() {
+    if (currentSearchQuery.length >= 2) {
+      performAdvancedSearch(currentSearchQuery);
+    }
+  }
+
+  // Handle outside click
+  function handleOutsideClick(e) {
+    if (!e.target.closest('.search-bar-container')) {
+      hideSearchResults();
+    }
+  }
+
+  // Perform advanced search with filters
+  async function performAdvancedSearch(query) {
+    try {
+      const params = new URLSearchParams({
+        query: query,
+        type: contentTypeFilter.value || 'multi',
+        page: '1'
+      });
+
+      const response = await fetch(`${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.SEARCH}?${params}`);
+      const data = await response.json();
+      
+      showSearchLoading(false);
+      
+      if (data.results && data.results.length > 0) {
+        // Apply client-side filters
+        const filteredResults = applyClientFilters(data.results);
+        displaySearchResults(filteredResults.slice(0, 8));
+      } else {
+        showNoResults();
+      }
+    } catch (error) {
+      console.error('Advanced search failed:', error);
+      showSearchLoading(false);
+      showErrorResults();
+    }
+  }
+
+  // Apply client-side filters
+  function applyClientFilters(results) {
+    let filtered = [...results];
+    
+    // Genre filter
+    const selectedGenre = genreFilter.value;
+    if (selectedGenre) {
+      filtered = filtered.filter(item => 
+        item.genres && item.genres.includes(selectedGenre)
+      );
+    }
+    
+    // Year filter
+    const selectedYear = yearFilter.value;
+    if (selectedYear) {
+      filtered = filtered.filter(item => {
+        if (!item.release_date) return false;
+        const year = new Date(item.release_date).getFullYear();
+        
+        if (selectedYear.includes('-')) {
+          const [startYear, endYear] = selectedYear.split('-').map(Number);
+          return year >= startYear && year <= endYear;
+        } else {
+          return year === parseInt(selectedYear);
+        }
+      });
+    }
+    
+    // Rating filter
+    const selectedRating = ratingFilter.value;
+    if (selectedRating) {
+      filtered = filtered.filter(item => 
+        item.rating && item.rating >= parseFloat(selectedRating)
+      );
+    }
+    
+    return filtered;
+  }
+
+  // Display search results
+  function displaySearchResults(results) {
+    const resultsHTML = results.map((item, index) => `
+      <div class="search-result-item p-3 border-bottom border-secondary" 
+           style="cursor: pointer; transition: background-color 0.2s;"
+           onclick="selectAdvancedSearchResult(${item.id})"
+           onmouseover="this.classList.add('search-result-active')"
+           onmouseout="this.classList.remove('search-result-active')">
+        <div class="d-flex align-items-start">
+          <img src="${item.poster_path || '/assets/no-poster.jpg'}" 
+               class="rounded me-3" 
+               width="50" height="75" 
+               style="object-fit: cover;"
+               onerror="this.src='/assets/no-poster.jpg'">
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <h6 class="text-white fw-semibold mb-0">${item.title}</h6>
+              <small class="text-muted">${item.release_date ? new Date(item.release_date).getFullYear() : ''}</small>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <span class="badge ${getTypeColor(item.content_type)} text-white" style="font-size: 0.7rem;">
+                ${item.content_type.toUpperCase()}
+              </span>
+              ${item.rating ? `
+                <span class="badge bg-warning text-dark d-flex align-items-center gap-1" style="font-size: 0.7rem;">
+                  <i class="fas fa-star" style="font-size: 0.6rem;"></i>
+                  ${parseFloat(item.rating).toFixed(1)}
+                </span>
+              ` : ''}
+            </div>
+            
+            <div class="text-muted small mb-1">
+              ${item.genres ? item.genres.slice(0, 3).join(' • ') : 'No genres'}
+            </div>
+            
+            <p class="text-muted small mb-0" style="line-height: 1.3;">
+              ${item.overview ? (item.overview.substring(0, 120) + '...') : 'No description available'}
+            </p>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    searchResults.innerHTML = resultsHTML;
+    showSearchResults();
+  }
+
+  // Show no results
+  function showNoResults() {
+    searchResults.innerHTML = `
+      <div class="p-4 text-center">
+        <i class="fas fa-search text-muted mb-2" style="font-size: 2rem;"></i>
+        <div class="text-muted">No results found for "${currentSearchQuery}"</div>
+        <small class="text-muted">Try adjusting your filters or search terms</small>
+      </div>
+    `;
+    showSearchResults();
+  }
+
+  // Show error results
+  function showErrorResults() {
+    searchResults.innerHTML = `
+      <div class="p-4 text-center">
+        <i class="fas fa-exclamation-triangle text-warning mb-2" style="font-size: 2rem;"></i>
+        <div class="text-muted">Search temporarily unavailable</div>
+        <small class="text-muted">Please try again in a moment</small>
+      </div>
+    `;
+    showSearchResults();
+  }
+
+  // Show/hide search loading
+  function showSearchLoading(show) {
+    searchLoading.classList.toggle('d-none', !show);
+  }
+
+  // Show/hide search results
+  function showSearchResults() {
+    searchResults.classList.remove('d-none');
+  }
+
+  function hideSearchResults() {
+    searchResults.classList.add('d-none');
+  }
+
+  // Populate genre filter
+  function populateGenreFilter() {
+    const commonGenres = [
+      'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary',
+      'Drama', 'Family', 'Fantasy', 'Horror', 'Mystery', 'Romance',
+      'Sci-Fi', 'Thriller', 'War', 'Western'
+    ];
+
+    commonGenres.forEach(genre => {
+      const option = document.createElement('option');
+      option.value = genre;
+      option.textContent = genre;
+      genreFilter.appendChild(option);
+    });
+  }
+
+  // Load popular searches
+  function loadPopularSuggestions() {
+    const popularTerms = [
+      'Marvel', 'DC', 'Star Wars', 'Harry Potter', 'Studio Ghibli',
+      'Christopher Nolan', 'Quentin Tarantino', 'Martin Scorsese'
+    ];
+
+    const suggestionContainer = document.querySelector('.search-suggestions');
+    const suggestionsHTML = popularTerms.map(term => 
+      `<span class="badge bg-secondary text-white me-1 mb-1" 
+             style="cursor: pointer; font-size: 0.7rem;"
+             onclick="searchPopularTerm('${term}')">${term}</span>`
+    ).join('');
+
+    suggestionContainer.innerHTML = `
+      <div class="d-flex flex-wrap gap-1 align-items-center">
+        <span class="text-muted small me-2">Popular:</span>
+        ${suggestionsHTML}
+      </div>
+    `;
+    suggestionContainer.classList.remove('d-none');
+  }
+
+  // Global functions
+  window.selectAdvancedSearchResult = function(contentId) {
+    hideSearchResults();
+    window.location.href = `/content/details.html?id=${contentId}`;
+  };
+
+  window.searchPopularTerm = function(term) {
+    searchInput.value = term;
+    currentSearchQuery = term;
+    performAdvancedSearch(term);
+  };
+
+  window.applySearchFilters = function() {
+    if (currentSearchQuery.length >= 2) {
+      performAdvancedSearch(currentSearchQuery);
+    }
+  };
+
+  window.clearSearchFilters = function() {
+    contentTypeFilter.value = '';
+    genreFilter.value = '';
+    yearFilter.value = '';
+    ratingFilter.value = '';
+    
+    if (currentSearchQuery.length >= 2) {
+      performAdvancedSearch(currentSearchQuery);
+    }
+  };
+
+  window.performFullSearch = function() {
+    const params = new URLSearchParams({
+      query: currentSearchQuery,
+      type: contentTypeFilter.value || 'multi',
+      genre: genreFilter.value || '',
+      year: yearFilter.value || '',
+      rating: ratingFilter.value || ''
+    });
+    
+    window.location.href = `/content/search.html?${params}`;
+  };
+
+  // Helper function
+  function getTypeColor(contentType) {
+    const colors = {
+      movie: 'bg-primary',
+      tv: 'bg-success',
+      anime: 'bg-warning'
+    };
+    return colors[contentType] || 'bg-secondary';
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSearchBar);
+  } else {
+    initSearchBar();
+  }
+})();
+
+const searchBarStyles = `
+<style>
+.search-main-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+.search-filter-btn {
+  border-left: none !important;
+  border-radius: 0 25px 25px 0 !important;
+}
+
+.search-result-item {
+  transition: all 0.2s ease;
+}
+
+.search-result-item:hover,
+.search-result-item.search-result-active {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.search-suggestions .badge:hover {
+  background-color: #3b82f6 !important;
+  transform: scale(1.05);
+}
+
+#searchDropdownResults {
+  background: rgba(33, 37, 41, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Custom scrollbar for search results */
+#searchDropdownResults::-webkit-scrollbar {
+  width: 6px;
+}
+
+#searchDropdownResults::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#searchDropdownResults::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5);
+  border-radius: 3px;
+}
+
+#searchDropdownResults::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7);
+}
+
+/* Filter collapse animation */
+#searchFilters {
+  transition: all 0.3s ease;
+}
+
+.search-loading .spinner-border {
+  width: 1rem;
+  height: 1rem;
+}
+</style>
+`;
+
+// Inject search bar styles
+document.head.insertAdjacentHTML('beforeend', searchBarStyles);
+</script>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Login to CineBrain - Access your personalized movie, TV show, and anime recommendations">
+    <meta name="robots" content="noindex, nofollow">
+    
+    <title>Login - CineBrain</title>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+</head>
+<body>
+    <!-- Auth Layout -->
+    <div class="auth-layout">
+        <div class="auth-card fade-in">
+            <!-- Logo -->
+            <div class="text-center mb-4">
+                <h1 class="h3 gradient-text fw-bold">CineBrain</h1>
+                <p class="text-muted small">The Mind Behind Your Next Favorite</p>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="needs-validation" novalidate>
+                <div class="mb-3">
+                    <label for="username" class="form-label text-white">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" required 
+                           placeholder="Enter your username" autocomplete="username">
+                    <div class="invalid-feedback">Please enter your username.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label text-white">Password</label>
+                    <div class="position-relative">
+                        <input type="password" class="form-control" id="password" name="password" required 
+                               placeholder="Enter your password" autocomplete="current-password">
+                        <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted" 
+                                onclick="togglePasswordVisibility('password')">
+                            <i class="fas fa-eye" id="passwordToggleIcon"></i>
+                        </button>
+                    </div>
+                    <div class="invalid-feedback">Please enter your password.</div>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="rememberMe" name="rememberMe">
+                    <label class="form-check-label text-white" for="rememberMe">
+                        Remember me for 30 days
+                    </label>
+                </div>
+
+                <!-- Error Alert -->
+                <div id="loginError" class="alert alert-danger d-none" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="loginErrorMessage"></span>
+                </div>
+
+                <!-- Success Alert -->
+                <div id="loginSuccess" class="alert alert-success d-none" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Login successful! Redirecting...
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 mb-3" id="loginButton">
+                    <span class="login-text">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        Sign In
+                    </span>
+                    <span class="login-loading d-none">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        Signing in...
+                    </span>
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="text-center my-3">
+                <small class="text-muted">or</small>
+            </div>
+
+            <!-- Alternative Actions -->
+            <div class="text-center">
+                <p class="mb-2">
+                    <a href="/auth/forgot-password.html" class="text-decoration-none">
+                        <i class="fas fa-key me-1"></i>Forgot your password?
+                    </a>
+                </p>
+                <p class="mb-0">
+                    Don't have an account? 
+                    <a href="/auth/register.html" class="text-primary text-decoration-none fw-semibold">
+                        Sign up now
+                    </a>
+                </p>
+            </div>
+
+            <!-- Demo Account Info -->
+            <div class="mt-4 p-3 bg-dark bg-opacity-50 rounded">
+                <h6 class="text-white mb-2">
+                    <i class="fas fa-info-circle text-info me-1"></i>
+                    Demo Account
+                </h6>
+                <small class="text-muted">
+                    <strong>Username:</strong> demo<br>
+                    <strong>Password:</strong> demo123<br>
+                    <em>Try our platform without registration</em>
+                </small>
+                <button type="button" class="btn btn-outline-info btn-sm w-100 mt-2" onclick="loginAsDemo()">
+                    <i class="fas fa-user-shield me-1"></i>Login as Demo
+                </button>
+            </div>
+
+            <!-- Back to Home -->
+            <div class="text-center mt-4">
+                <a href="/" class="text-muted text-decoration-none">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+    
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Page-specific JavaScript -->
+    <script>
+    (function() {
+        let isSubmitting = false;
+
+        // Initialize login page
+        function initLoginPage() {
+            setupFormValidation();
+            setupFormSubmission();
+            checkExistingAuth();
+            prefillFromURL();
+        }
+
+        // Setup form validation
+        function setupFormValidation() {
+            const form = document.getElementById('loginForm');
+            const inputs = form.querySelectorAll('input[required]');
+
+            inputs.forEach(input => {
+                input.addEventListener('blur', validateField);
+                input.addEventListener('input', clearFieldError);
+            });
+
+            form.addEventListener('submit', handleFormSubmit);
+        }
+
+        // Validate individual field
+        function validateField(event) {
+            const field = event.target;
+            const isValid = field.checkValidity();
+
+            if (isValid) {
+                field.classList.remove('is-invalid');
+                field.classList.add('is-valid');
+            } else {
+                field.classList.remove('is-valid');
+                field.classList.add('is-invalid');
+            }
+        }
+
+        // Clear field error state
+        function clearFieldError(event) {
+            const field = event.target;
+            field.classList.remove('is-invalid');
+            hideError();
+        }
+
+        // Setup form submission
+        function setupFormSubmission() {
+            const form = document.getElementById('loginForm');
+            form.addEventListener('submit', handleFormSubmit);
+        }
+
+        // Handle form submission
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            if (isSubmitting) return;
+
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            // Validate form
+            if (!form.checkValidity()) {
+                event.stopPropagation();
+                form.classList.add('was-validated');
+                return;
+            }
+
+            // Prepare login data
+            const loginData = {
+                username: formData.get('username').trim(),
+                password: formData.get('password')
+            };
+
+            // Validate required fields
+            if (!loginData.username || !loginData.password) {
+                showError('Please fill in all required fields.');
+                return;
+            }
+
+            try {
+                await performLogin(loginData);
+            } catch (error) {
+                console.error('Login submission error:', error);
+                showError('An unexpected error occurred. Please try again.');
+            }
+        }
+
+        // Perform login
+        async function performLogin(loginData) {
+            setSubmittingState(true);
+            hideError();
+
+            try {
+                const result = await window.auth.login(loginData);
+
+                if (result.success) {
+                    showSuccess();
+                    
+                    // Small delay for user feedback
+                    setTimeout(() => {
+                        // Redirect will be handled by auth system
+                        window.location.href = getRedirectURL();
+                    }, 1000);
+                } else {
+                    throw new Error(result.error || 'Login failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                setSubmittingState(false);
+                
+                let errorMessage = 'Login failed. Please check your credentials.';
+                
+                if (error.message.includes('Invalid credentials')) {
+                    errorMessage = 'Invalid username or password. Please try again.';
+                } else if (error.message.includes('Network')) {
+                    errorMessage = 'Network error. Please check your connection and try again.';
+                } else if (error.message.includes('timeout')) {
+                    errorMessage = 'Request timeout. Please try again.';
+                }
+                
+                showError(errorMessage);
+                
+                // Shake animation for error feedback
+                const authCard = document.querySelector('.auth-card');
+                authCard.classList.add('shake');
+                setTimeout(() => {
+                    authCard.classList.remove('shake');
+                }, 500);
+            }
+        }
+
+        // Get redirect URL
+        function getRedirectURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirect = urlParams.get('redirect');
+            
+            if (redirect) {
+                try {
+                    return decodeURIComponent(redirect);
+                } catch (error) {
+                    console.error('Invalid redirect URL:', error);
+                }
+            }
+            
+            return '/';
+        }
+
+        // Set submitting state
+        function setSubmittingState(submitting) {
+            isSubmitting = submitting;
+            const button = document.getElementById('loginButton');
+            const loginText = button.querySelector('.login-text');
+            const loginLoading = button.querySelector('.login-loading');
+            
+            if (submitting) {
+                button.disabled = true;
+                loginText.classList.add('d-none');
+                loginLoading.classList.remove('d-none');
+            } else {
+                button.disabled = false;
+                loginText.classList.remove('d-none');
+                loginLoading.classList.add('d-none');
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorAlert = document.getElementById('loginError');
+            const errorMessage = document.getElementById('loginErrorMessage');
+            const successAlert = document.getElementById('loginSuccess');
+            
+            successAlert.classList.add('d-none');
+            errorMessage.textContent = message;
+            errorAlert.classList.remove('d-none');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                hideError();
+            }, 5000);
+        }
+
+        // Hide error message
+        function hideError() {
+            const errorAlert = document.getElementById('loginError');
+            errorAlert.classList.add('d-none');
+        }
+
+        // Show success message
+        function showSuccess() {
+            const errorAlert = document.getElementById('loginError');
+            const successAlert = document.getElementById('loginSuccess');
+            
+            errorAlert.classList.add('d-none');
+            successAlert.classList.remove('d-none');
+        }
+
+        // Check if user is already authenticated
+        function checkExistingAuth() {
+            if (window.auth && window.auth.isAuthenticated()) {
+                // User is already logged in, redirect
+                window.location.href = getRedirectURL();
+                return;
+            }
+        }
+
+        // Prefill form from URL parameters
+        function prefillFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const username = urlParams.get('username');
+            
+            if (username) {
+                document.getElementById('username').value = username;
+            }
+        }
+
+        // Toggle password visibility
+        window.togglePasswordVisibility = function(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById('passwordToggleIcon');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        };
+
+        // Demo login
+        window.loginAsDemo = function() {
+            document.getElementById('username').value = 'demo';
+            document.getElementById('password').value = 'demo123';
+            
+            // Trigger form submission
+            const form = document.getElementById('loginForm');
+            form.dispatchEvent(new Event('submit'));
+        };
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initLoginPage);
+        } else {
+            initLoginPage();
+        }
+
+        // Handle Enter key in form
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && event.target.form === document.getElementById('loginForm')) {
+                event.preventDefault();
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

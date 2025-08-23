@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Your CineBrain Activity - Watch history and interactions">
+    <meta name="robots" content="noindex, nofollow">
+
+    <title>My Activity - CineBrain</title>
+
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+</head>
+
+<body>
+    <!-- Fixed Topbar -->
+    <div id="topbarContainer"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Activity Header -->
+        <section class="py-5"
+            style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);">
+            <div class="container">
+                <h1 class="display-4 fw-bold text-white mb-3">
+                    <i class="fas fa-history text-info me-3"></i>
+                    My Activity
+                </h1>
+                <p class="lead text-muted mb-4">Track your viewing history and interactions</p>
+
+                <!-- Activity Stats -->
+                <div class="row g-3">
+                    <div class="col-6 col-md-3">
+                        <div class="activity-stat-card text-center p-3 bg-dark rounded">
+                            <i class="fas fa-play text-primary mb-2" style="font-size: 2rem;"></i>
+                            <h4 class="text-white mb-0" id="watchedCount">0</h4>
+                            <small class="text-muted">Watched</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="activity-stat-card text-center p-3 bg-dark rounded">
+                            <i class="fas fa-star text-warning mb-2" style="font-size: 2rem;"></i>
+                            <h4 class="text-white mb-0" id="ratedCount">0</h4>
+                            <small class="text-muted">Rated</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="activity-stat-card text-center p-3 bg-dark rounded">
+                            <i class="fas fa-clock text-info mb-2" style="font-size: 2rem;"></i>
+                            <h4 class="text-white mb-0" id="watchTime">0h</h4>
+                            <small class="text-muted">Watch Time</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="activity-stat-card text-center p-3 bg-dark rounded">
+                            <i class="fas fa-calendar text-success mb-2" style="font-size: 2rem;"></i>
+                            <h4 class="text-white mb-0" id="streakDays">0</h4>
+                            <small class="text-muted">Day Streak</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Activity Content -->
+        <section class="py-5">
+            <div class="container">
+                <!-- Activity Filters -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-info activity-filter active" data-filter="all"
+                            onclick="filterActivity('all')">
+                            <i class="fas fa-th me-1"></i>All Activity
+                        </button>
+                        <button class="btn btn-outline-info activity-filter" data-filter="watched"
+                            onclick="filterActivity('watched')">
+                            <i class="fas fa-play me-1"></i>Watched
+                        </button>
+                        <button class="btn btn-outline-info activity-filter" data-filter="rated"
+                            onclick="filterActivity('rated')">
+                            <i class="fas fa-star me-1"></i>Rated
+                        </button>
+                        <button class="btn btn-outline-info activity-filter" data-filter="added"
+                            onclick="filterActivity('added')">
+                            <i class="fas fa-plus me-1"></i>Added
+                        </button>
+                    </div>
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary w-auto" id="timeRange"
+                        onchange="changeTimeRange()">
+                        <option value="today">Today</option>
+                        <option value="week" selected>This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="all">All Time</option>
+                    </select>
+                </div>
+
+                <!-- Activity Timeline -->
+                <div id="activityTimeline" class="activity-timeline">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner mx-auto mb-3"></div>
+                        <p class="text-muted">Loading your activity...</p>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="text-center py-5 d-none">
+                    <i class="fas fa-history text-muted mb-3" style="font-size: 4rem;"></i>
+                    <h3 class="text-white mb-2">No Activity Yet</h3>
+                    <p class="text-muted mb-4">Start watching content to build your activity history!</p>
+                    <a href="/content/trending.html" class="btn btn-info">
+                        <i class="fas fa-fire me-2"></i>Explore Trending
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Mobile Navigation -->
+    <div id="mobileNavContainer"></div>
+
+    <!-- JavaScript Files -->
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Page-specific JavaScript -->
+    <script>
+        (function () {
+            let activityData = [];
+            let filteredData = [];
+            let currentFilter = 'all';
+            let currentTimeRange = 'week';
+            let stats = {
+                watched: 0,
+                rated: 0,
+                watchTime: 0,
+                streak: 0
+            };
+
+            // Initialize activity page
+            async function initActivityPage() {
+                try {
+                    // Check authentication
+                    if (!window.auth || !window.auth.requireAuth()) {
+                        return;
+                    }
+
+                    await loadComponents();
+                    await loadActivity();
+                    calculateStats();
+                } catch (error) {
+                    console.error('Activity page initialization failed:', error);
+                }
+            }
+
+            // Load reusable components
+            async function loadComponents() {
+                try {
+                    // Load topbar
+                    const topbarResponse = await fetch('/components/layout/topbar.html');
+                    const topbarHTML = await topbarResponse.text();
+                    document.getElementById('topbarContainer').innerHTML = topbarHTML;
+
+                    // Load mobile navigation
+                    const mobileNavResponse = await fetch('/components/layout/mobile-nav.html');
+                    const mobileNavHTML = await mobileNavResponse.text();
+                    document.getElementById('mobileNavContainer').innerHTML = mobileNavHTML;
+
+                    // Execute component scripts
+                    const scripts = document.querySelectorAll('#topbarContainer script, #mobileNavContainer script');
+                    scripts.forEach(script => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = script.textContent;
+                        document.head.appendChild(newScript);
+                    });
+                } catch (error) {
+                    console.error('Failed to load components:', error);
+                }
+            }
+
+            // Load activity
+            async function loadActivity() {
+                try {
+                    // Simulate activity data (in production, this would come from a real endpoint)
+                    activityData = await generateActivityData();
+
+                    if (activityData.length > 0) {
+                        document.getElementById('emptyState').classList.add('d-none');
+                        applyFilters();
+                    } else {
+                        document.getElementById('activityTimeline').innerHTML = '';
+                        document.getElementById('emptyState').classList.remove('d-none');
+                    }
+                } catch (error) {
+                    console.error('Failed to load activity:', error);
+                    showErrorState();
+                }
+            }
+
+            // Generate activity data (simulated)
+            async function generateActivityData() {
+                // In production, this would fetch real user activity
+                const activities = [];
+
+                // Get user's watchlist and favorites for activity simulation
+                try {
+                    const [watchlistResponse, favoritesResponse] = await Promise.all([
+                        window.api.getUserList('watchlist'),
+                        window.api.getUserList('favorites')
+                    ]);
+
+                    const watchlist = watchlistResponse.watchlist || [];
+                    const favorites = favoritesResponse.favorites || [];
+
+                    // Create watched activities
+                    watchlist.slice(0, 5).forEach((item, index) => {
+                        activities.push({
+                            id: Date.now() + index,
+                            type: 'watched',
+                            content: item,
+                            timestamp: new Date(Date.now() - (index * 3600000)).toISOString(),
+                            progress: Math.floor(Math.random() * 100)
+                        });
+                    });
+
+                    // Create rated activities
+                    favorites.slice(0, 3).forEach((item, index) => {
+                        activities.push({
+                            id: Date.now() + 100 + index,
+                            type: 'rated',
+                            content: item,
+                            rating: Math.floor(Math.random() * 4) + 7,
+                            timestamp: new Date(Date.now() - ((index + 5) * 3600000)).toISOString()
+                        });
+                    });
+
+                    // Create added activities
+                    [...watchlist.slice(5, 7), ...favorites.slice(3, 5)].forEach((item, index) => {
+                        activities.push({
+                            id: Date.now() + 200 + index,
+                            type: 'added',
+                            content: item,
+                            list: index % 2 === 0 ? 'watchlist' : 'favorites',
+                            timestamp: new Date(Date.now() - ((index + 8) * 3600000)).toISOString()
+                        });
+                    });
+
+                } catch (error) {
+                    console.error('Failed to generate activity data:', error);
+                }
+
+                // Sort by timestamp
+                return activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            }
+
+            // Calculate stats
+            function calculateStats() {
+                stats.watched = activityData.filter(a => a.type === 'watched').length;
+                stats.rated = activityData.filter(a => a.type === 'rated').length;
+
+                // Calculate watch time
+                const watchedActivities = activityData.filter(a => a.type === 'watched');
+                stats.watchTime = watchedActivities.reduce((total, activity) => {
+                    const runtime = activity.content?.runtime || 120; // Default 2 hours
+                    return total + runtime;
+                }, 0);
+
+                // Calculate streak
+                const today = new Date();
+                const activityDates = activityData.map(a =>
+                    new Date(a.timestamp).toDateString()
+                );
+                const uniqueDates = [...new Set(activityDates)];
+
+                let streak = 0;
+                for (let i = 0; i < 30; i++) {
+                    const checkDate = new Date(today - (i * 24 * 60 * 60 * 1000)).toDateString();
+                    if (uniqueDates.includes(checkDate)) {
+                        streak++;
+                    } else if (i > 0) {
+                        break;
+                    }
+                }
+                stats.streak = streak;
+
+                // Update UI
+                document.getElementById('watchedCount').textContent = stats.watched;
+                document.getElementById('ratedCount').textContent = stats.rated;
+                document.getElementById('watchTime').textContent = `${Math.floor(stats.watchTime / 60)}h`;
+                document.getElementById('streakDays').textContent = stats.streak;
+            }
+
+            // Filter activity
+            window.filterActivity = function (filter) {
+                currentFilter = filter;
+
+                // Update active button
+                document.querySelectorAll('.activity-filter').forEach(btn => {
+                    btn.classList.remove('active', 'btn-info');
+                    btn.classList.add('btn-outline-info');
+                    if (btn.dataset.filter === filter) {
+                        btn.classList.add('active', 'btn-info');
+                        btn.classList.remove('btn-outline-info');
+                    }
+                });
+
+                applyFilters();
+            };
+
+            // Change time range
+            window.changeTimeRange = function () {
+                currentTimeRange = document.getElementById('timeRange').value;
+                applyFilters();
+            };
+
+            // Apply filters
+            function applyFilters() {
+                // Filter by type
+                if (currentFilter === 'all') {
+                    filteredData = [...activityData];
+                } else {
+                    filteredData = activityData.filter(a => a.type === currentFilter);
+                }
+
+                // Filter by time range
+                const now = new Date();
+                const timeFilters = {
+                    today: 24 * 60 * 60 * 1000,
+                    week: 7 * 24 * 60 * 60 * 1000,
+                    month: 30 * 24 * 60 * 60 * 1000
+                };
+
+                if (currentTimeRange !== 'all') {
+                    const cutoff = now - timeFilters[currentTimeRange];
+                    filteredData = filteredData.filter(a =>
+                        new Date(a.timestamp) >= cutoff
+                    );
+                }
+
+                renderTimeline();
+            }
+
+            // Helper function to format date
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+
+                if (date.toDateString() === today.toDateString()) {
+                    return 'Today';
+                } else if (date.toDateString() === yesterday.toDateString()) {
+                    return 'Yesterday';
+                } else {
+                    return date.toLocaleDateString([], {
+                        weekday: 'long',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                }
+            }
+
+            // Render timeline
+            function renderTimeline() {
+                const container = document.getElementById('activityTimeline');
+
+                if (filteredData.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="fas fa-filter text-muted mb-2" style="font-size: 2rem;"></i>
+                            <p class="text-muted">No activity found for the selected filters</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Group by date
+                const groupedActivities = {};
+                filteredData.forEach(activity => {
+                    const date = new Date(activity.timestamp).toDateString();
+                    if (!groupedActivities[date]) {
+                        groupedActivities[date] = [];
+                    }
+                    groupedActivities[date].push(activity);
+                });
+
+                const timelineHTML = Object.entries(groupedActivities).map(([date, activities]) => `
+                    <div class="timeline-group mb-4">
+                        <h5 class="text-info mb-3">
+                            <i class="fas fa-calendar me-2"></i>
+                            ${formatDate(date)}
+                        </h5>
+                        <div class="timeline-items">
+                            ${activities.map(activity => renderActivityItem(activity)).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = timelineHTML;
+                animateTimeline();
+            }
+
+            // Render activity item
+            function renderActivityItem(activity) {
+                const content = activity.content;
+                const time = new Date(activity.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                let icon, action, details;
+                switch (activity.type) {
+                    case 'watched':
+                        icon = 'fa-play';
+                        action = 'Watched';
+                        details = activity.progress ? `${activity.progress}% complete` : 'Completed';
+                        break;
+                    case 'rated':
+                        icon = 'fa-star';
+                        action = `Rated ${activity.rating}/10`;
+                        details = '⭐'.repeat(Math.floor(activity.rating / 2));
+                        break;
+                    case 'added':
+                        icon = 'fa-plus';
+                        action = `Added to ${activity.list}`;
+                        details = activity.list === 'watchlist' ? 'To watch later' : 'Marked as favorite';
+                        break;
+                }
+
+                return `
+                    <div class="activity-item d-flex align-items-center p-3">
+                        <div class="activity-icon me-3 ${activity.type}-icon">
+                            <i class="fas ${icon}"></i>
+                        </div>
+                        <div class="activity-content flex-grow-1">
+                            <p class="text-white mb-1">
+                                ${action} <strong>${content.title}</strong>
+                            </p>
+                            <p class="text-muted small mb-0">${details}</p>
+                        </div>
+                        <small class="text-muted ms-3">${time}</small>
+                    </div>
+                `;
+            }
+
+            // Animate timeline
+            function animateTimeline() {
+                const items = document.querySelectorAll('.activity-item');
+                items.forEach((item, index) => {
+                    setTimeout(() => {
+                        item.classList.add('fade-in-left');
+                    }, index * 100);
+                });
+            }
+
+            // Show error state
+            function showErrorState() {
+                const container = document.getElementById('activityTimeline');
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle text-warning mb-3" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted">Failed to load activity</h5>
+                        <button class="btn btn-outline-primary mt-2" onclick="location.reload()">
+                            <i class="fas fa-refresh me-1"></i>Try Again
+                        </button>
+                    </div>
+                `;
+            }
+
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initActivityPage);
+            } else {
+                initActivityPage();
+            }
+        })();
+    </script>
+
+    <!-- Activity-specific Styles -->
+    <style>
+        .activity-stat-card {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .activity-stat-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .activity-timeline {
+            position: relative;
+        }
+
+        .timeline-group {
+            position: relative;
+        }
+
+        .timeline-group::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .timeline-items {
+            position: relative;
+        }
+
+        .activity-item {
+            background: rgba(20, 20, 24, 0.8);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            opacity: 0;
+        }
+
+        .activity-item:hover {
+            transform: translateX(8px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--platinum-blue);
+        }
+
+        .watched-icon {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--critic-green);
+        }
+
+        .rated-icon {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--vip-gold);
+        }
+
+        .added-icon {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--platinum-blue);
+        }
+
+        .activity-filter {
+            min-width: 120px;
+            transition: all 0.3s ease;
+        }
+
+        .activity-filter:hover {
+            transform: translateY(-2px);
+        }
+
+        .activity-item.fade-in-left {
+            animation: fadeInLeft 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 576px) {
+            .activity-stat-card {
+                padding: 1rem;
+            }
+        }
+    </style>
+</body>
+
+</html>

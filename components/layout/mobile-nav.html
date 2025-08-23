@@ -1,0 +1,217 @@
+<!-- CineBrain Mobile Bottom Navigation - Tailwind CSS Custom Implementation -->
+<div id="mobileNav" class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-blue-500/20 backdrop-blur-lg z-50 d-block d-lg-none" 
+     style="background: linear-gradient(135deg, rgba(10, 10, 11, 0.95) 0%, rgba(20, 20, 24, 0.95) 100%); padding-bottom: env(safe-area-inset-bottom);">
+  
+  <div class="flex justify-around items-center py-2 px-1">
+    <!-- Home Tab -->
+    <button class="mobile-nav-item flex flex-col items-center p-2 rounded-lg transition-all duration-300" 
+            data-tab="home" onclick="navigateMobile('/')">
+      <div class="mobile-nav-icon mb-1">
+        <i class="fas fa-home text-xl"></i>
+      </div>
+      <span class="mobile-nav-text text-xs font-medium">Home</span>
+    </button>
+
+    <!-- Search Tab -->
+    <button class="mobile-nav-item flex flex-col items-center p-2 rounded-lg transition-all duration-300" 
+            data-tab="search" onclick="navigateMobile('/content/search.html')">
+      <div class="mobile-nav-icon mb-1">
+        <i class="fas fa-search text-xl"></i>
+      </div>
+      <span class="mobile-nav-text text-xs font-medium">Search</span>
+    </button>
+
+    <!-- Watchlist Tab -->
+    <button class="mobile-nav-item flex flex-col items-center p-2 rounded-lg transition-all duration-300" 
+            data-tab="watchlist" onclick="navigateMobile('/user/watchlist.html')">
+      <div class="mobile-nav-icon mb-1">
+        <i class="fas fa-bookmark text-xl"></i>
+      </div>
+      <span class="mobile-nav-text text-xs font-medium">Watchlist</span>
+    </button>
+
+    <!-- Favorites Tab -->
+    <button class="mobile-nav-item flex flex-col items-center p-2 rounded-lg transition-all duration-300" 
+            data-tab="favorites" onclick="navigateMobile('/user/favorites.html')">
+      <div class="mobile-nav-icon mb-1">
+        <i class="fas fa-heart text-xl"></i>
+      </div>
+      <span class="mobile-nav-text text-xs font-medium">Favorites</span>
+    </button>
+
+    <!-- Profile Tab -->
+    <button class="mobile-nav-item flex flex-col items-center p-2 rounded-lg transition-all duration-300" 
+            data-tab="profile" onclick="navigateToMobileProfile()">
+      <div class="mobile-nav-icon mb-1">
+        <img id="mobileUserAvatar" class="w-6 h-6 rounded-full border border-blue-500 d-none" alt="Profile">
+        <i id="mobileProfileIcon" class="fas fa-user text-xl"></i>
+      </div>
+      <span class="mobile-nav-text text-xs font-medium">Profile</span>
+    </button>
+  </div>
+</div>
+
+<style>
+/* Mobile Navigation Styles */
+.mobile-nav-item {
+  min-width: 60px;
+  color: rgba(156, 163, 175, 0.8);
+  transform: scale(1);
+}
+
+.mobile-nav-item:hover,
+.mobile-nav-item.active {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  transform: scale(1.05);
+}
+
+.mobile-nav-item.active .mobile-nav-icon {
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.95);
+}
+
+/* Haptic feedback animation */
+.mobile-nav-item.tapped {
+  animation: tap-feedback 0.15s ease-out;
+}
+
+@keyframes tap-feedback {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.9); }
+  100% { transform: scale(1.05); }
+}
+
+/* Safe area handling for iOS/Android notches */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  #mobileNav {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+}
+</style>
+
+<script>
+// Mobile Navigation Component JavaScript
+(function() {
+  const mobileNav = document.getElementById('mobileNav');
+  const mobileUserAvatar = document.getElementById('mobileUserAvatar');
+  const mobileProfileIcon = document.getElementById('mobileProfileIcon');
+
+  // Initialize mobile navigation
+  async function initMobileNav() {
+    const token = localStorage.getItem('cinebrain_token');
+    if (token) {
+      try {
+        const userData = JSON.parse(localStorage.getItem('cinebrain_user') || '{}');
+        if (userData.username) {
+          showMobileUserAvatar(userData);
+        }
+      } catch (error) {
+        console.error('Mobile nav init error:', error);
+      }
+    }
+
+    // Set active tab based on current URL
+    setActiveTab();
+    
+    // Add haptic feedback listeners
+    addHapticFeedback();
+  }
+
+  function showMobileUserAvatar(user) {
+    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=3b82f6&color=fff&size=24&bold=true`;
+    mobileUserAvatar.src = avatarUrl;
+    mobileUserAvatar.classList.remove('d-none');
+    mobileProfileIcon.classList.add('d-none');
+  }
+
+  function setActiveTab() {
+    const path = window.location.pathname;
+    const navItems = document.querySelectorAll('.mobile-nav-item');
+    
+    // Remove active class from all items
+    navItems.forEach(item => item.classList.remove('active'));
+    
+    // Determine active tab based on path
+    let activeTab = 'home';
+    if (path.includes('/search')) activeTab = 'search';
+    else if (path.includes('/watchlist')) activeTab = 'watchlist';
+    else if (path.includes('/favorites')) activeTab = 'favorites';
+    else if (path.includes('/profile') || path.match(/\/\w+\/profile/)) activeTab = 'profile';
+    
+    // Set active tab
+    const activeItem = document.querySelector(`[data-tab="${activeTab}"]`);
+    if (activeItem) {
+      activeItem.classList.add('active');
+    }
+  }
+
+  function addHapticFeedback() {
+    const navItems = document.querySelectorAll('.mobile-nav-item');
+    
+    navItems.forEach(item => {
+      item.addEventListener('touchstart', function() {
+        // Add haptic feedback class
+        this.classList.add('tapped');
+        
+        // Vibrate if supported
+        if ('vibrate' in navigator) {
+          navigator.vibrate(50);
+        }
+        
+        // Remove class after animation
+        setTimeout(() => {
+          this.classList.remove('tapped');
+        }, 150);
+      });
+    });
+  }
+
+  // Global navigation functions
+  window.navigateMobile = function(url) {
+    // Add smooth transition
+    document.body.style.opacity = '0.8';
+    
+    setTimeout(() => {
+      window.location.href = url;
+    }, 100);
+  };
+
+  window.navigateToMobileProfile = function() {
+    const token = localStorage.getItem('cinebrain_token');
+    if (token) {
+      const userData = JSON.parse(localStorage.getItem('cinebrain_user') || '{}');
+      navigateMobile(`/${userData.username || 'user'}/profile`);
+    } else {
+      navigateMobile('/auth/login.html');
+    }
+  };
+
+  // Update active tab when navigation occurs
+  window.addEventListener('popstate', setActiveTab);
+  
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMobileNav);
+  } else {
+    initMobileNav();
+  }
+
+  // Hide mobile nav on larger screens
+  function handleResize() {
+    if (window.innerWidth >= 992) {
+      mobileNav.classList.add('d-none');
+      mobileNav.classList.remove('d-block');
+    } else {
+      mobileNav.classList.remove('d-none');
+      mobileNav.classList.add('d-block');
+    }
+  }
+
+  window.addEventListener('resize', handleResize);
+  handleResize(); // Initial check
+})();
+</script>

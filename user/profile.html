@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Your CineBrain profile - Manage your preferences and viewing history">
+    <meta name="robots" content="noindex, nofollow">
+
+    <title>Profile - CineBrain</title>
+
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layouts.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/theme.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+</head>
+
+<body>
+    <!-- Fixed Topbar -->
+    <div id="topbarContainer"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Profile Header -->
+        <section class="profile-header py-5"
+            style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-3 text-center text-md-start mb-4 mb-md-0">
+                        <div class="profile-avatar-container position-relative d-inline-block">
+                            <img id="userAvatar" class="rounded-circle border border-primary border-3" width="150"
+                                height="150" style="filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.4));">
+                            <button class="btn btn-primary btn-sm position-absolute bottom-0 end-0 rounded-circle"
+                                style="width: 40px; height: 40px;" onclick="changeAvatar()">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <h1 class="text-white fw-bold mb-2" id="userName">Loading...</h1>
+                        <p class="text-muted mb-3" id="userEmail">Loading...</p>
+                        <div class="d-flex flex-wrap gap-3 mb-3">
+                            <div class="stat-item">
+                                <span class="text-primary fw-bold" id="watchedCount">0</span>
+                                <span class="text-muted ms-1">Watched</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="text-success fw-bold" id="watchlistCount">0</span>
+                                <span class="text-muted ms-1">Watchlist</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="text-danger fw-bold" id="favoritesCount">0</span>
+                                <span class="text-muted ms-1">Favorites</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="text-warning fw-bold" id="ratedCount">0</span>
+                                <span class="text-muted ms-1">Rated</span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="/user/settings.html" class="btn btn-outline-primary">
+                                <i class="fas fa-cog me-1"></i>Settings
+                            </a>
+                            <button class="btn btn-outline-secondary" onclick="shareProfile()">
+                                <i class="fas fa-share me-1"></i>Share Profile
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Profile Content -->
+        <section class="py-5">
+            <div class="container">
+                <!-- Profile Navigation -->
+                <ul class="nav nav-pills mb-4" id="profileTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-tab="overview" onclick="switchTab('overview')">
+                            <i class="fas fa-th-large me-1"></i>Overview
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-tab="activity" onclick="switchTab('activity')">
+                            <i class="fas fa-history me-1"></i>Activity
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-tab="preferences" onclick="switchTab('preferences')">
+                            <i class="fas fa-sliders-h me-1"></i>Preferences
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-tab="recommendations" onclick="switchTab('recommendations')">
+                            <i class="fas fa-brain me-1"></i>For You
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Overview Tab -->
+                    <div id="overviewTab" class="tab-pane active">
+                        <!-- Continue Watching -->
+                        <div class="mb-5">
+                            <h3 class="h4 text-white mb-3">
+                                <i class="fas fa-play-circle text-primary me-2"></i>
+                                Continue Watching
+                            </h3>
+                            <div id="continueWatchingContainer" class="row">
+                                <div class="col-12 text-center py-4">
+                                    <p class="text-muted">No content in progress</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity -->
+                        <div class="mb-5">
+                            <h3 class="h4 text-white mb-3">
+                                <i class="fas fa-clock text-info me-2"></i>
+                                Recent Activity
+                            </h3>
+                            <div id="recentActivityContainer" class="row">
+                                <div class="col-12 text-center py-4">
+                                    <div class="loading-spinner mx-auto mb-3"></div>
+                                    <p class="text-muted">Loading recent activity...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Favorite Genres -->
+                        <div>
+                            <h3 class="h4 text-white mb-3">
+                                <i class="fas fa-theater-masks text-warning me-2"></i>
+                                Your Favorite Genres
+                            </h3>
+                            <div id="favoriteGenresContainer" class="d-flex flex-wrap gap-2">
+                                <!-- Genres will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Tab -->
+                    <div id="activityTab" class="tab-pane d-none">
+                        <div class="activity-timeline">
+                            <h3 class="h4 text-white mb-4">
+                                <i class="fas fa-stream text-primary me-2"></i>
+                                Your Activity Timeline
+                            </h3>
+                            <div id="activityTimelineContainer">
+                                <div class="text-center py-4">
+                                    <div class="loading-spinner mx-auto mb-3"></div>
+                                    <p class="text-muted">Loading activity timeline...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preferences Tab -->
+                    <div id="preferencesTab" class="tab-pane d-none">
+                        <div class="preferences-form">
+                            <h3 class="h4 text-white mb-4">
+                                <i class="fas fa-user-cog text-primary me-2"></i>
+                                Update Your Preferences
+                            </h3>
+                            <form id="preferencesForm">
+                                <!-- Language Preferences -->
+                                <div class="mb-4">
+                                    <label class="form-label text-white">Preferred Languages</label>
+                                    <div class="row g-2" id="languagePreferences">
+                                        <!-- Will be populated -->
+                                    </div>
+                                </div>
+
+                                <!-- Genre Preferences -->
+                                <div class="mb-4">
+                                    <label class="form-label text-white">Favorite Genres</label>
+                                    <div class="row g-2" id="genrePreferences">
+                                        <!-- Will be populated -->
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Save Preferences
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Recommendations Tab -->
+                    <div id="recommendationsTab" class="tab-pane d-none">
+                        <h3 class="h4 text-white mb-4">
+                            <i class="fas fa-magic text-primary me-2"></i>
+                            Personalized for You
+                        </h3>
+                        <div id="personalizedContainer" class="row">
+                            <div class="col-12 text-center py-4">
+                                <div class="loading-spinner mx-auto mb-3"></div>
+                                <p class="text-muted">Loading your recommendations...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Mobile Navigation -->
+    <div id="mobileNavContainer"></div>
+
+    <!-- JavaScript Files -->
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Page-specific JavaScript -->
+    <script>
+        (function () {
+            let currentUser = null;
+            let currentTab = 'overview';
+            let userStats = {
+                watched: 0,
+                watchlist: 0,
+                favorites: 0,
+                rated: 0
+            };
+
+            // Initialize profile page
+            async function initProfilePage() {
+                try {
+                    // Check authentication
+                    if (!window.auth || !window.auth.requireAuth()) {
+                        return;
+                    }
+
+                    currentUser = window.auth.getCurrentUser();
+
+                    await loadComponents();
+                    loadUserProfile();
+                    await loadUserStats();
+                    await loadRecentActivity();
+                    await loadFavoriteGenres();
+                } catch (error) {
+                    console.error('Profile page initialization failed:', error);
+                }
+            }
+
+            // Load reusable components
+            async function loadComponents() {
+                try {
+                    // Load topbar
+                    const topbarResponse = await fetch('/components/layout/topbar.html');
+                    const topbarHTML = await topbarResponse.text();
+                    document.getElementById('topbarContainer').innerHTML = topbarHTML;
+
+                    // Load mobile navigation
+                    const mobileNavResponse = await fetch('/components/layout/mobile-nav.html');
+                    const mobileNavHTML = await mobileNavResponse.text();
+                    document.getElementById('mobileNavContainer').innerHTML = mobileNavHTML;
+
+                    // Execute component scripts
+                    const scripts = document.querySelectorAll('#topbarContainer script, #mobileNavContainer script');
+                    scripts.forEach(script => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = script.textContent;
+                        document.head.appendChild(newScript);
+                    });
+                } catch (error) {
+                    console.error('Failed to load components:', error);
+                }
+            }
+
+            // Load user profile
+            function loadUserProfile() {
+                if (!currentUser) return;
+
+                // Update profile info
+                document.getElementById('userName').textContent = currentUser.username;
+                document.getElementById('userEmail').textContent = currentUser.email;
+
+                // Set avatar
+                const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.username)}&background=3b82f6&color=fff&size=150&bold=true`;
+                document.getElementById('userAvatar').src = avatarUrl;
+
+                // Update page title
+                document.title = `${currentUser.username} - CineBrain Profile`;
+            }
+
+            // Load user stats
+            async function loadUserStats() {
+                try {
+                    // Get watchlist
+                    const watchlistData = await window.api.getUserList('watchlist');
+                    userStats.watchlist = watchlistData.watchlist?.length || 0;
+
+                    // Get favorites
+                    const favoritesData = await window.api.getUserList('favorites');
+                    userStats.favorites = favoritesData.favorites?.length || 0;
+
+                    // Update UI
+                    document.getElementById('watchedCount').textContent = userStats.watched;
+                    document.getElementById('watchlistCount').textContent = userStats.watchlist;
+                    document.getElementById('favoritesCount').textContent = userStats.favorites;
+                    document.getElementById('ratedCount').textContent = userStats.rated;
+                } catch (error) {
+                    console.error('Failed to load user stats:', error);
+                }
+            }
+
+            // Load recent activity
+            async function loadRecentActivity() {
+                const container = document.getElementById('recentActivityContainer');
+
+                try {
+                    // For now, we'll show the user's favorites as recent activity
+                    const favoritesData = await window.api.getUserList('favorites');
+
+                    if (favoritesData.favorites && favoritesData.favorites.length > 0) {
+                        const recentItems = favoritesData.favorites.slice(0, 6);
+                        const contentHTML = renderContentGrid(recentItems);
+                        container.innerHTML = contentHTML;
+                    } else {
+                        container.innerHTML = `
+                        <div class="col-12 text-center py-4">
+                            <i class="fas fa-history text-muted mb-2" style="font-size: 2rem;"></i>
+                            <p class="text-muted">No recent activity</p>
+                            <a href="/content/search.html" class="btn btn-outline-primary mt-2">
+                                <i class="fas fa-search me-1"></i>Discover Content
+                            </a>
+                        </div>
+                    `;
+                    }
+                } catch (error) {
+                    console.error('Failed to load recent activity:', error);
+                    container.innerHTML = '<div class="col-12 text-center py-4"><p class="text-muted">Failed to load activity</p></div>';
+                }
+            }
+
+            // Load favorite genres
+            async function loadFavoriteGenres() {
+                const container = document.getElementById('favoriteGenresContainer');
+
+                if (currentUser && currentUser.preferred_genres && currentUser.preferred_genres.length > 0) {
+                    const genreHTML = currentUser.preferred_genres.map(genre => `
+                    <span class="badge bg-primary px-3 py-2" style="cursor: pointer;" onclick="exploreGenre('${genre}')">
+                        ${genre}
+                    </span>
+                `).join('');
+
+                    container.innerHTML = genreHTML;
+                } else {
+                    container.innerHTML = '<p class="text-muted">No favorite genres set. Update your preferences to get better recommendations!</p>';
+                }
+            }
+
+            // Switch tab
+            window.switchTab = async function (tab) {
+                if (currentTab === tab) return;
+
+                // Update active tab
+                document.querySelectorAll('#profileTabs .nav-link').forEach(link => {
+                    link.classList.remove('active');
+                    if (link.dataset.tab === tab) {
+                        link.classList.add('active');
+                    }
+                });
+
+                // Hide all tabs
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.add('d-none');
+                });
+
+                // Show selected tab
+                document.getElementById(`${tab}Tab`).classList.remove('d-none');
+
+                currentTab = tab;
+
+                // Load tab-specific content
+                switch (tab) {
+                    case 'activity':
+                        await loadActivityTimeline();
+                        break;
+                    case 'preferences':
+                        await loadPreferences();
+                        break;
+                    case 'recommendations':
+                        await loadPersonalizedRecommendations();
+                        break;
+                }
+            };
+
+            // Load activity timeline
+            async function loadActivityTimeline() {
+                const container = document.getElementById('activityTimelineContainer');
+
+                try {
+                    // Simulated activity timeline
+                    const activities = [
+                        { type: 'watched', content: 'Inception', time: '2 hours ago' },
+                        { type: 'added', content: 'The Dark Knight', list: 'favorites', time: '5 hours ago' },
+                        { type: 'rated', content: 'Interstellar', rating: 9, time: 'Yesterday' },
+                        { type: 'added', content: 'Tenet', list: 'watchlist', time: '2 days ago' }
+                    ];
+
+                    const timelineHTML = activities.map(activity => `
+                    <div class="activity-item d-flex align-items-center p-3 mb-3 bg-dark rounded">
+                        <div class="activity-icon me-3">
+                            <i class="fas fa-${activity.type === 'watched' ? 'play' : activity.type === 'rated' ? 'star' : 'plus'} text-primary"></i>
+                        </div>
+                        <div class="activity-details flex-grow-1">
+                            <p class="text-white mb-0">
+                                ${activity.type === 'watched' ? 'Watched' :
+                            activity.type === 'rated' ? `Rated ${activity.rating}/10` :
+                                `Added to ${activity.list}`}
+                                <strong>${activity.content}</strong>
+                            </p>
+                            <small class="text-muted">${activity.time}</small>
+                        </div>
+                    </div>
+                `).join('');
+
+                    container.innerHTML = timelineHTML || '<p class="text-muted text-center py-4">No activity yet</p>';
+                } catch (error) {
+                    console.error('Failed to load activity timeline:', error);
+                    container.innerHTML = '<p class="text-muted text-center py-4">Failed to load activity</p>';
+                }
+            }
+
+            // Load preferences
+            async function loadPreferences() {
+                // Populate language preferences
+                const languages = ['English', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Japanese'];
+                const langContainer = document.getElementById('languagePreferences');
+
+                langContainer.innerHTML = languages.map(lang => `
+                <div class="col-6 col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${lang.toLowerCase()}" 
+                               id="lang${lang}" name="languages"
+                               ${currentUser?.preferred_languages?.includes(lang.toLowerCase()) ? 'checked' : ''}>
+                        <label class="form-check-label text-white" for="lang${lang}">${lang}</label>
+                    </div>
+                </div>
+            `).join('');
+
+                // Populate genre preferences
+                const genres = ['Action', 'Comedy', 'Drama', 'Horror', 'Romance', 'Sci-Fi', 'Thriller', 'Animation'];
+                const genreContainer = document.getElementById('genrePreferences');
+
+                genreContainer.innerHTML = genres.map(genre => `
+                <div class="col-6 col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${genre}" 
+                               id="genre${genre}" name="genres"
+                               ${currentUser?.preferred_genres?.includes(genre) ? 'checked' : ''}>
+                        <label class="form-check-label text-white" for="genre${genre}">${genre}</label>
+                    </div>
+                </div>
+            `).join('');
+
+                // Setup form submission
+                document.getElementById('preferencesForm').addEventListener('submit', savePreferences);
+            }
+
+            // Save preferences
+            async function savePreferences(event) {
+                event.preventDefault();
+
+                const formData = new FormData(event.target);
+                const languages = formData.getAll('languages');
+                const genres = formData.getAll('genres');
+
+                // Update local user data
+                currentUser.preferred_languages = languages;
+                currentUser.preferred_genres = genres;
+
+                // Save to localStorage
+                localStorage.setItem('cinebrain_user', JSON.stringify(currentUser));
+
+                if (window.showToast) {
+                    window.showToast('Preferences updated successfully!', 'success');
+                }
+            }
+
+            // Load personalized recommendations
+            async function loadPersonalizedRecommendations() {
+                const container = document.getElementById('personalizedContainer');
+
+                try {
+                    const recommendations = await window.api.getRecommendations('personalized', { limit: 12 });
+
+                    if (recommendations && recommendations.length > 0) {
+                        const contentHTML = renderContentGrid(recommendations);
+                        container.innerHTML = contentHTML;
+                    } else {
+                        container.innerHTML = `
+                        <div class="col-12 text-center py-4">
+                            <i class="fas fa-brain text-muted mb-2" style="font-size: 2rem;"></i>
+                            <p class="text-muted">No recommendations yet. Watch more content to get personalized suggestions!</p>
+                        </div>
+                    `;
+                    }
+                } catch (error) {
+                    console.error('Failed to load recommendations:', error);
+                    container.innerHTML = '<div class="col-12 text-center py-4"><p class="text-muted">Failed to load recommendations</p></div>';
+                }
+            }
+
+            // Render content grid
+            function renderContentGrid(data) {
+                return data.map((item, index) => `
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+                    <div class="content-card card bg-dark border-secondary h-100" 
+                         onclick="viewContent(${item.id})"
+                         style="cursor: pointer; transition: all 0.3s ease;">
+                        <img src="${item.poster_path || '/assets/no-poster.jpg'}" 
+                             class="card-img-top" 
+                             style="height: 250px; object-fit: cover;"
+                             alt="${item.title}"
+                             onerror="this.src='/assets/no-poster.jpg'">
+                        <div class="card-body p-2">
+                            <h6 class="text-white small mb-0" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${item.title}
+                            </h6>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            }
+
+            // Global functions
+            window.changeAvatar = function () {
+                if (window.showToast) {
+                    window.showToast('Avatar customization coming soon!', 'info');
+                }
+            };
+
+            window.shareProfile = function () {
+                const profileUrl = window.location.href;
+
+                if (navigator.share) {
+                    navigator.share({
+                        title: `${currentUser.username}'s CineBrain Profile`,
+                        text: 'Check out my movie preferences and watchlist!',
+                        url: profileUrl
+                    }).catch(console.error);
+                } else {
+                    navigator.clipboard.writeText(profileUrl).then(() => {
+                        if (window.showToast) {
+                            window.showToast('Profile link copied to clipboard!', 'success');
+                        }
+                    });
+                }
+            };
+
+            window.exploreGenre = function (genre) {
+                window.location.href = `/content/genre.html?genre=${genre}`;
+            };
+
+            window.viewContent = function (contentId) {
+                window.location.href = `/content/details.html?id=${contentId}`;
+            };
+
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initProfilePage);
+            } else {
+                initProfilePage();
+            }
+        })();
+    </script>
+
+    <!-- Profile-specific Styles -->
+    <style>
+        .profile-avatar-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .activity-item {
+            border-left: 3px solid var(--platinum-blue);
+            transition: all 0.3s ease;
+        }
+
+        .activity-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
+        }
+
+        #profileTabs .nav-link {
+            color: rgba(255, 255, 255, 0.7);
+            border: none;
+            border-radius: 0.5rem;
+            margin-right: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        #profileTabs .nav-link:hover {
+            color: white;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        #profileTabs .nav-link.active {
+            color: white;
+            background: var(--platinum-blue);
+        }
+    </style>
+</body>
+
+</html>

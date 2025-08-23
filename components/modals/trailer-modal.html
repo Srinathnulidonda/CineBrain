@@ -1,0 +1,599 @@
+<!-- CineBrain Trailer Modal - Bootstrap 5 + Custom Video Player -->
+<div class="modal fade" id="trailerModal" tabindex="-1" aria-labelledby="trailerModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content bg-dark border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white" id="trailerModalLabel">
+          <i class="fas fa-play-circle text-primary me-2"></i>
+          <span id="trailerTitle">Movie Trailer</span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      
+      <div class="modal-body p-0 position-relative">
+        <!-- Video Container -->
+        <div class="video-container position-relative" style="aspect-ratio: 16/9; background: #000;">
+          <!-- YouTube Player -->
+          <div id="youtubePlayer" class="w-100 h-100 d-none"></div>
+          
+          <!-- Custom Video Player -->
+          <video 
+            id="customVideoPlayer" 
+            class="w-100 h-100 d-none" 
+            controls 
+            preload="metadata"
+            style="background: #000;"
+          >
+            Your browser does not support the video tag.
+          </video>
+          
+          <!-- Loading State -->
+          <div id="videoLoading" class="position-absolute top-50 start-50 translate-middle text-center">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+              <span class="visually-hidden">Loading trailer...</span>
+            </div>
+            <div class="text-white">Loading trailer...</div>
+          </div>
+          
+          <!-- Error State -->
+          <div id="videoError" class="position-absolute top-50 start-50 translate-middle text-center d-none">
+            <i class="fas fa-exclamation-triangle text-warning mb-3" style="font-size: 3rem;"></i>
+            <div class="text-white h5 mb-2">Trailer not available</div>
+            <div class="text-muted">Sorry, we couldn't load the trailer for this content.</div>
+          </div>
+          
+          <!-- Custom Controls Overlay -->
+          <div id="customControls" class="position-absolute bottom-0 start-0 end-0 p-3 d-none"
+               style="background: linear-gradient(transparent, rgba(0,0,0,0.8));">
+            <div class="d-flex align-items-center gap-3">
+              <!-- Play/Pause Button -->
+              <button id="playPauseBtn" class="btn btn-primary rounded-circle" style="width: 50px; height: 50px;">
+                <i class="fas fa-play"></i>
+              </button>
+              
+              <!-- Progress Bar -->
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span id="currentTime" class="text-white small">0:00</span>
+                  <div class="progress flex-grow-1" style="height: 6px;">
+                    <div id="progressBar" class="progress-bar bg-primary" style="width: 0%;"></div>
+                  </div>
+                  <span id="totalTime" class="text-white small">0:00</span>
+                </div>
+              </div>
+              
+              <!-- Volume Control -->
+              <div class="d-flex align-items-center gap-2">
+                <button id="muteBtn" class="btn btn-outline-light btn-sm">
+                  <i class="fas fa-volume-up"></i>
+                </button>
+                <input type="range" id="volumeSlider" class="form-range" min="0" max="100" value="80" style="width: 80px;">
+              </div>
+              
+              <!-- Fullscreen Button -->
+              <button id="fullscreenBtn" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-expand"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Modal Footer with Additional Info -->
+      <div class="modal-footer border-secondary">
+        <div class="flex-grow-1">
+          <div id="trailerInfo" class="text-muted small d-none">
+            <!-- Additional trailer info will be populated here -->
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="shareTrailer()">
+            <i class="fas fa-share me-1"></i>Share
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="watchFullContent()">
+            <i class="fas fa-external-link-alt me-1"></i>Watch Full
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Trailer Modal Component JavaScript
+(function() {
+  let currentYouTubePlayer = null;
+  let currentVideoElement = null;
+  let currentContentData = null;
+  
+  const modal = document.getElementById('trailerModal');
+  const trailerTitle = document.getElementById('trailerTitle');
+  const youtubePlayer = document.getElementById('youtubePlayer');
+  const customVideoPlayer = document.getElementById('customVideoPlayer');
+  const videoLoading = document.getElementById('videoLoading');
+  const videoError = document.getElementById('videoError');
+  const customControls = document.getElementById('customControls');
+  const trailerInfo = document.getElementById('trailerInfo');
+
+  // Initialize trailer modal
+  function initTrailerModal() {
+    setupModalEventListeners();
+    setupCustomVideoControls();
+  }
+
+  // Setup modal event listeners
+  function setupModalEventListeners() {
+    modal.addEventListener('hidden.bs.modal', function() {
+      stopAllVideo();
+      resetModalState();
+    });
+
+    modal.addEventListener('shown.bs.modal', function() {
+      // Focus management for accessibility
+      const closeBtn = modal.querySelector('.btn-close');
+      closeBtn.focus();
+    });
+  }
+
+  // Setup custom video controls
+  function setupCustomVideoControls() {
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const muteBtn = document.getElementById('muteBtn');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const progressBar = document.getElementById('progressBar');
+
+    // Play/Pause button
+    playPauseBtn.addEventListener('click', togglePlayPause);
+
+    // Mute button
+    muteBtn.addEventListener('click', toggleMute);
+
+    // Volume slider
+    volumeSlider.addEventListener('input', function() {
+      if (currentVideoElement) {
+        currentVideoElement.volume = this.value / 100;
+        updateMuteButtonIcon();
+      }
+    });
+
+    // Fullscreen button
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+    // Progress bar click
+    progressBar.parentElement.addEventListener('click', function(e) {
+      if (currentVideoElement) {
+        const rect = this.getBoundingClientRect();
+        const percent = (e.clientX - rect.left) / rect.width;
+        currentVideoElement.currentTime = percent * currentVideoElement.duration;
+      }
+    });
+  }
+
+  // Open trailer modal with content data
+  window.openTrailerModal = async function(contentData) {
+    currentContentData = contentData;
+    
+    // Set modal title
+    trailerTitle.textContent = `${contentData.title} - Trailer`;
+    
+    // Show modal
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+    
+    // Load trailer
+    await loadTrailer(contentData);
+  };
+
+  // Load trailer from content data
+  async function loadTrailer(contentData) {
+    showLoadingState();
+    
+    try {
+      // Try to get trailer URL from content data or API
+      let trailerUrl = contentData.youtube_trailer;
+      
+      if (!trailerUrl && contentData.id) {
+        // Fetch detailed content data
+        const response = await fetch(`${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.CONTENT_DETAILS}/${contentData.id}`);
+        const detailedData = await response.json();
+        trailerUrl = detailedData.youtube_trailer;
+      }
+      
+      if (trailerUrl) {
+        if (trailerUrl.includes('youtube.com') || trailerUrl.includes('youtu.be')) {
+          await loadYouTubeTrailer(trailerUrl);
+        } else {
+          await loadCustomVideoTrailer(trailerUrl);
+        }
+        
+        // Update trailer info
+        updateTrailerInfo(contentData);
+      } else {
+        showErrorState();
+      }
+    } catch (error) {
+      console.error('Failed to load trailer:', error);
+      showErrorState();
+    }
+  }
+
+  // Load YouTube trailer
+  async function loadYouTubeTrailer(url) {
+    const videoId = extractYouTubeVideoId(url);
+    
+    if (!videoId) {
+      showErrorState();
+      return;
+    }
+
+    // Load YouTube API if not already loaded
+    if (!window.YT) {
+      await loadYouTubeAPI();
+    }
+
+    // Create YouTube player
+    try {
+      hideLoadingState();
+      youtubePlayer.classList.remove('d-none');
+      
+      currentYouTubePlayer = new YT.Player(youtubePlayer, {
+        videoId: videoId,
+        width: '100%',
+        height: '100%',
+        playerVars: {
+          autoplay: 1,
+          controls: 1,
+          rel: 0,
+          modestbranding: 1,
+          fs: 1
+        },
+        events: {
+          onReady: function(event) {
+            event.target.playVideo();
+          },
+          onError: function(event) {
+            console.error('YouTube player error:', event.data);
+            showErrorState();
+          }
+        }
+      });
+    } catch (error) {
+      console.error('YouTube player initialization failed:', error);
+      showErrorState();
+    }
+  }
+
+  // Load custom video trailer
+  async function loadCustomVideoTrailer(url) {
+    try {
+      hideLoadingState();
+      customVideoPlayer.classList.remove('d-none');
+      customControls.classList.remove('d-none');
+      
+      currentVideoElement = customVideoPlayer;
+      currentVideoElement.src = url;
+      
+      // Setup video event listeners
+      setupVideoEventListeners();
+      
+      // Try to play
+      await currentVideoElement.play();
+    } catch (error) {
+      console.error('Custom video player failed:', error);
+      showErrorState();
+    }
+  }
+
+  // Setup video event listeners for custom player
+  function setupVideoEventListeners() {
+    if (!currentVideoElement) return;
+
+    currentVideoElement.addEventListener('loadedmetadata', function() {
+      document.getElementById('totalTime').textContent = formatTime(this.duration);
+      document.getElementById('volumeSlider').value = this.volume * 100;
+    });
+
+    currentVideoElement.addEventListener('timeupdate', function() {
+      const currentTime = document.getElementById('currentTime');
+      const progressBar = document.getElementById('progressBar');
+      
+      currentTime.textContent = formatTime(this.currentTime);
+      const percent = (this.currentTime / this.duration) * 100;
+      progressBar.style.width = percent + '%';
+    });
+
+    currentVideoElement.addEventListener('play', function() {
+      document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+    });
+
+    currentVideoElement.addEventListener('pause', function() {
+      document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+    });
+
+    currentVideoElement.addEventListener('volumechange', updateMuteButtonIcon);
+  }
+
+  // Video control functions
+  function togglePlayPause() {
+    if (!currentVideoElement) return;
+    
+    if (currentVideoElement.paused) {
+      currentVideoElement.play();
+    } else {
+      currentVideoElement.pause();
+    }
+  }
+
+  function toggleMute() {
+    if (!currentVideoElement) return;
+    
+    currentVideoElement.muted = !currentVideoElement.muted;
+    updateMuteButtonIcon();
+  }
+
+  function updateMuteButtonIcon() {
+    const muteBtn = document.getElementById('muteBtn');
+    const icon = muteBtn.querySelector('i');
+    
+    if (currentVideoElement && (currentVideoElement.muted || currentVideoElement.volume === 0)) {
+      icon.className = 'fas fa-volume-mute';
+    } else {
+      icon.className = 'fas fa-volume-up';
+    }
+  }
+
+  function toggleFullscreen() {
+    const videoContainer = document.querySelector('.video-container');
+    
+    if (!document.fullscreenElement) {
+      videoContainer.requestFullscreen().catch(err => {
+        console.error('Fullscreen request failed:', err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  // State management functions
+  function showLoadingState() {
+    videoLoading.classList.remove('d-none');
+    youtubePlayer.classList.add('d-none');
+    customVideoPlayer.classList.add('d-none');
+    customControls.classList.add('d-none');
+    videoError.classList.add('d-none');
+  }
+
+  function hideLoadingState() {
+    videoLoading.classList.add('d-none');
+  }
+
+  function showErrorState() {
+    videoLoading.classList.add('d-none');
+    youtubePlayer.classList.add('d-none');
+    customVideoPlayer.classList.add('d-none');
+    customControls.classList.add('d-none');
+    videoError.classList.remove('d-none');
+  }
+
+  function resetModalState() {
+    videoLoading.classList.remove('d-none');
+    youtubePlayer.classList.add('d-none');
+    customVideoPlayer.classList.add('d-none');
+    customControls.classList.add('d-none');
+    videoError.classList.add('d-none');
+    trailerInfo.classList.add('d-none');
+  }
+
+  // Stop all video playback
+  function stopAllVideo() {
+    if (currentYouTubePlayer) {
+      try {
+        currentYouTubePlayer.destroy();
+      } catch (error) {
+        console.error('Error destroying YouTube player:', error);
+      }
+      currentYouTubePlayer = null;
+    }
+
+    if (currentVideoElement) {
+      currentVideoElement.pause();
+      currentVideoElement.src = '';
+      currentVideoElement = null;
+    }
+  }
+
+  // Update trailer info
+  function updateTrailerInfo(contentData) {
+    const infoHTML = `
+      <div class="d-flex align-items-center gap-3">
+        <span><i class="fas fa-film me-1"></i>${contentData.content_type.toUpperCase()}</span>
+        ${contentData.rating ? `<span><i class="fas fa-star me-1"></i>${parseFloat(contentData.rating).toFixed(1)}/10</span>` : ''}
+        ${contentData.release_date ? `<span><i class="fas fa-calendar me-1"></i>${new Date(contentData.release_date).getFullYear()}</span>` : ''}
+        <span><i class="fas fa-eye me-1"></i>Trailer</span>
+      </div>
+    `;
+    
+    trailerInfo.innerHTML = infoHTML;
+    trailerInfo.classList.remove('d-none');
+  }
+
+  // Utility functions
+  function extractYouTubeVideoId(url) {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  }
+
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  // Load YouTube API
+  function loadYouTubeAPI() {
+    return new Promise((resolve, reject) => {
+      if (window.YT && window.YT.Player) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://www.youtube.com/iframe_api';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+
+      window.onYouTubeIframeAPIReady = resolve;
+    });
+  }
+
+  // Global functions
+  window.shareTrailer = function() {
+    if (currentContentData && navigator.share) {
+      navigator.share({
+        title: `${currentContentData.title} - Trailer`,
+        text: `Check out the trailer for ${currentContentData.title}`,
+        url: window.location.href
+      }).catch(console.error);
+    } else {
+      // Fallback to clipboard copy
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        // Show toast notification
+        showToast('Trailer link copied to clipboard!');
+      });
+    }
+  };
+
+  window.watchFullContent = function() {
+    if (currentContentData) {
+      // Close modal and navigate to content details
+      bootstrap.Modal.getInstance(modal).hide();
+      window.location.href = `/content/details.html?id=${currentContentData.id}`;
+    }
+  };
+
+  // Toast notification helper
+  function showToast(message) {
+    // Create toast element if it doesn't exist
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+      toastContainer = document.createElement('div');
+      toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+      document.body.appendChild(toastContainer);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'toast show';
+    toast.innerHTML = `
+      <div class="toast-body bg-dark text-white border border-secondary rounded">
+        ${message}
+      </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.remove();
+    }, 3000);
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTrailerModal);
+  } else {
+    initTrailerModal();
+  }
+})();
+
+const trailerModalStyles = `
+<style>
+#trailerModal .modal-xl {
+  max-width: 90vw;
+}
+
+.video-container {
+  background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#customControls {
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  transition: opacity 0.3s ease;
+}
+
+.video-container:hover #customControls {
+  opacity: 1;
+}
+
+.form-range::-webkit-slider-thumb {
+  background: #3b82f6;
+}
+
+.form-range::-moz-range-thumb {
+  background: #3b82f6;
+  border: none;
+}
+
+.progress {
+  background-color: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+}
+
+.progress-bar {
+  transition: width 0.1s ease;
+}
+
+/* Fullscreen styles */
+.video-container:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+}
+
+.video-container:-moz-full-screen {
+  width: 100vw;
+  height: 100vh;
+}
+
+.video-container:fullscreen {
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Loading animation */
+#videoLoading .spinner-border {
+  border-color: #3b82f6;
+  border-right-color: transparent;
+}
+
+/* Error state styling */
+#videoError {
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Custom video styling */
+#customVideoPlayer::-webkit-media-controls {
+  display: none !important;
+}
+
+#customVideoPlayer::-moz-media-controls {
+  display: none !important;
+}
+
+/* Modal animations */
+#trailerModal .modal-dialog {
+  transition: all 0.3s ease;
+}
+
+#trailerModal.show .modal-dialog {
+  transform: scale(1);
+}
+</style>
+`;
+
+// Inject trailer modal styles
+document.head.insertAdjacentHTML('beforeend', trailerModalStyles);
+</script>
