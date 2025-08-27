@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Watch History - CineBrain</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+
+<body class="bg-gray-900 text-white">
+    <!-- Fixed Topbar -->
+    <div id="topbar-container"></div>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-20 md:pb-8">
+        <div class="container-fluid px-3 px-md-4">
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h1 class="text-white fw-bold mb-2">📊 Activity & History</h1>
+                            <p class="text-muted">Your viewing history and interactions</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <select class="form-select search-input" id="timeFilter" style="width: auto;">
+                                <option value="all">All Time</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="year">This Year</option>
+                            </select>
+                            <select class="form-select search-input" id="activityFilter" style="width: auto;">
+                                <option value="all">All Activity</option>
+                                <option value="view">Views</option>
+                                <option value="watchlist">Watchlist</option>
+                                <option value="favorite">Favorites</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Activity Overview -->
+                    <div class="row mb-4" id="activityOverview">
+                        <div class="col-md-3 mb-3">
+                            <div class="card glass-effect border-0 text-center">
+                                <div class="card-body p-3">
+                                    <i class="fas fa-eye text-primary mb-2" style="font-size: 2rem;"></i>
+                                    <div class="fw-bold fs-4" id="totalViews">0</div>
+                                    <small class="text-muted">Total Views</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card glass-effect border-0 text-center">
+                                <div class="card-body p-3">
+                                    <i class="fas fa-bookmark text-warning mb-2" style="font-size: 2rem;"></i>
+                                    <div class="fw-bold fs-4" id="totalWatchlist">0</div>
+                                    <small class="text-muted">Watchlist Items</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card glass-effect border-0 text-center">
+                                <div class="card-body p-3">
+                                    <i class="fas fa-heart text-danger mb-2" style="font-size: 2rem;"></i>
+                                    <div class="fw-bold fs-4" id="totalFavorites">0</div>
+                                    <small class="text-muted">Favorites</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card glass-effect border-0 text-center">
+                                <div class="card-body p-3">
+                                    <i class="fas fa-calendar text-success mb-2" style="font-size: 2rem;"></i>
+                                    <div class="fw-bold fs-4" id="activeDays">0</div>
+                                    <small class="text-muted">Active Days</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Tabs -->
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-pills nav-fill glass-effect mb-4" id="activityTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="timeline-tab" data-bs-toggle="pill"
+                                data-bs-target="#timeline" type="button" role="tab">Timeline</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="insights-tab" data-bs-toggle="pill" data-bs-target="#insights"
+                                type="button" role="tab">Insights</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="recommendations-tab" data-bs-toggle="pill"
+                                data-bs-target="#recommendations" type="button" role="tab">Based on Activity</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="activityTabsContent">
+                        <!-- Timeline Tab -->
+                        <div class="tab-pane fade show active" id="timeline" role="tabpanel">
+                            <div class="card glass-effect border-0">
+                                <div class="card-body">
+                                    <div id="activityTimeline">
+                                        <div class="text-center py-5">
+                                            <div class="spinner-border text-danger mb-3" role="status"></div>
+                                            <h5 class="text-white">Loading activity timeline...</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Insights Tab -->
+                        <div class="tab-pane fade" id="insights" role="tabpanel">
+                            <div class="row">
+                                <!-- Genre Distribution -->
+                                <div class="col-md-6 mb-4">
+                                    <div class="card glass-effect border-0">
+                                        <div class="card-header">
+                                            <h5 class="text-white mb-0">Favorite Genres</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="genreInsights">
+                                                <div class="text-center py-3">
+                                                    <div class="spinner-border text-danger mb-2" role="status"></div>
+                                                    <p class="text-muted small">Analyzing preferences...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Content Type Distribution -->
+                                <div class="col-md-6 mb-4">
+                                    <div class="card glass-effect border-0">
+                                        <div class="card-header">
+                                            <h5 class="text-white mb-0">Content Preferences</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="contentTypeInsights">
+                                                <div class="text-center py-3">
+                                                    <div class="spinner-border text-danger mb-2" role="status"></div>
+                                                    <p class="text-muted small">Calculating distribution...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Activity Patterns -->
+                                <div class="col-12">
+                                    <div class="card glass-effect border-0">
+                                        <div class="card-header">
+                                            <h5 class="text-white mb-0">Activity Patterns</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="activityPatterns">
+                                                <div class="text-center py-3">
+                                                    <div class="spinner-border text-danger mb-2" role="status"></div>
+                                                    <p class="text-muted small">Analyzing patterns...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recommendations Tab -->
+                        <div class="tab-pane fade" id="recommendations" role="tabpanel">
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="text-white mb-0">Recommendations Based on Your Activity</h5>
+                                        <button class="btn btn-outline-light btn-sm"
+                                            onclick="activityHandler.refreshRecommendations()">
+                                            <i class="fas fa-refresh me-2"></i>Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" id="activityRecommendations">
+                                <div class="col-12 text-center py-5">
+                                    <div class="spinner-border text-danger mb-3" role="status"></div>
+                                    <h5 class="text-white">Loading recommendations...</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <div id="mobile-nav-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/utils.js"></script>
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/components.js"></script>
+
+    <script>
+        class ActivityHandler {
+            constructor() {
+                this.watchlistData = [];
+                this.favoritesData = [];
+                this.allActivity = [];
+                this.filteredActivity = [];
+                this.currentTimeFilter = 'all';
+                this.currentActivityFilter = 'all';
+                this.init();
+            }
+
+            init() {
+                this.checkAuthentication();
+                this.setupEventListeners();
+                this.loadActivityData();
+            }
+
+            checkAuthentication() {
+                const token = Utils.getStorage('auth_token');
+                if (!token) {
+                    window.location.href = '../auth/login.html';
+                    return;
+                }
+            }
+
+            setupEventListeners() {
+                const timeFilter = document.getElementById('timeFilter');
+                const activityFilter = document.getElementById('activityFilter');
+
+                timeFilter.addEventListener('change', () => {
+                    this.currentTimeFilter = timeFilter.value;
+                    this.applyFilters();
+                });
+
+                activityFilter.addEventListener('change', () => {
+                    this.currentActivityFilter = activityFilter.value;
+                    this.applyFilters();
+                });
+
+                // Tab change events
+                document.querySelectorAll('#activityTabs button').forEach(tab => {
+                    tab.addEventListener('shown.bs.tab', (event) => {
+                        const target = event.target.getAttribute('data-bs-target');
+                        if (target === '#insights') {
+                            this.loadInsights();
+                        } else if (target === '#recommendations') {
+                            this.loadActivityRecommendations();
+                        }
+                    });
+                });
+            }
+
+            async loadActivityData() {
+                try {
+                    // Load user data in parallel
+                    const [watchlistResponse, favoritesResponse] = await Promise.all([
+                        apiClient.getWatchlist(),
+                        apiClient.getFavorites()
+                    ]);
+
+                    this.watchlistData = watchlistResponse.watchlist || [];
+                    this.favoritesData = favoritesResponse.favorites || [];
+
+                    // Combine all activities
+                    this.allActivity = [
+                        ...this.watchlistData.map(item => ({
+                            ...item,
+                            activity_type: 'watchlist',
+                            timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000) // Simulate timestamps
+                        })),
+                        ...this.favoritesData.map(item => ({
+                            ...item,
+                            activity_type: 'favorite',
+                            timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000) // Simulate timestamps
+                        }))
+                    ];
+
+                    // Sort by timestamp (most recent first)
+                    this.allActivity.sort((a, b) => b.timestamp - a.timestamp);
+
+                    this.updateOverview();
+                    this.applyFilters();
+
+                } catch (error) {
+                    console.error('Failed to load activity data:', error);
+                    this.showError();
+                }
+            }
+
+            updateOverview() {
+                // Calculate overview stats
+                const totalViews = this.allActivity.length; // Simulate views
+                const totalWatchlist = this.watchlistData.length;
+                const totalFavorites = this.favoritesData.length;
+                const activeDays = new Set(this.allActivity.map(item =>
+                    item.timestamp.toDateString()
+                )).size;
+
+                document.getElementById('totalViews').textContent = totalViews;
+                document.getElementById('totalWatchlist').textContent = totalWatchlist;
+                document.getElementById('totalFavorites').textContent = totalFavorites;
+                document.getElementById('activeDays').textContent = activeDays;
+            }
+
+            applyFilters() {
+                let filtered = [...this.allActivity];
+
+                // Filter by activity type
+                if (this.currentActivityFilter !== 'all') {
+                    filtered = filtered.filter(item => item.activity_type === this.currentActivityFilter);
+                }
+
+                // Filter by time
+                const now = new Date();
+                let cutoffDate;
+
+                switch (this.currentTimeFilter) {
+                    case 'week':
+                        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        break;
+                    case 'month':
+                        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        break;
+                    case 'year':
+                        cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                        break;
+                    default:
+                        cutoffDate = null;
+                }
+
+                if (cutoffDate) {
+                    filtered = filtered.filter(item => item.timestamp >= cutoffDate);
+                }
+
+                this.filteredActivity = filtered;
+                this.renderTimeline();
+            }
+
+            renderTimeline() {
+                const container = document.getElementById('activityTimeline');
+
+                if (this.filteredActivity.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="fas fa-history text-muted mb-3" style="font-size: 4rem;"></i>
+                            <h5 class="text-white mb-2">No Activity Found</h5>
+                            <p class="text-muted">No activity matches your current filters.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Group by date
+                const groupedByDate = {};
+                this.filteredActivity.forEach(item => {
+                    const dateKey = item.timestamp.toDateString();
+                    if (!groupedByDate[dateKey]) {
+                        groupedByDate[dateKey] = [];
+                    }
+                    groupedByDate[dateKey].push(item);
+                });
+
+                const timelineHtml = Object.entries(groupedByDate).map(([date, activities]) => `
+                    <div class="mb-4">
+                        <h6 class="text-white mb-3 border-bottom border-secondary pb-2">
+                            <i class="fas fa-calendar me-2"></i>${new Date(date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                })}
+                        </h6>
+                        <div class="row">
+                            ${activities.map(activity => `
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-flex align-items-center p-3 glass-effect rounded hover-scale" 
+                                         onclick="window.location.href='../content/details.html?id=${activity.id}'">
+                                        <img src="${Utils.getImageUrl(activity.poster_path, 'w92')}" 
+                                             alt="${activity.title}" class="rounded me-3" width="50" height="75"
+                                             onerror="this.src='${Utils.getImageUrl(null)}'">
+                                        <div class="flex-grow-1">
+                                            <h6 class="text-white mb-1">${activity.title}</h6>
+                                            <p class="text-muted mb-1 small">${Utils.formatContentType(activity.content_type)}</p>
+                                            <div class="d-flex align-items-center gap-2">
+                                                ${this.getActivityIcon(activity.activity_type)}
+                                                <small class="text-muted">
+                                                    ${this.getActivityText(activity.activity_type)} • 
+                                                    ${activity.timestamp.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        ${activity.rating ? `
+                                            <div class="text-end">
+                                                <span class="${Utils.formatRating(activity.rating).className}">
+                                                    ${Utils.formatRating(activity.rating).value}
+                                                </span>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = timelineHtml;
+            }
+
+            getActivityIcon(type) {
+                const icons = {
+                    'watchlist': '<i class="fas fa-bookmark text-warning"></i>',
+                    'favorite': '<i class="fas fa-heart text-danger"></i>',
+                    'view': '<i class="fas fa-eye text-primary"></i>'
+                };
+                return icons[type] || '<i class="fas fa-star text-info"></i>';
+            }
+
+            getActivityText(type) {
+                const texts = {
+                    'watchlist': 'Added to Watchlist',
+                    'favorite': 'Added to Favorites',
+                    'view': 'Viewed'
+                };
+                return texts[type] || 'Interacted';
+            }
+
+            loadInsights() {
+                this.renderGenreInsights();
+                this.renderContentTypeInsights();
+                this.renderActivityPatterns();
+            }
+
+            renderGenreInsights() {
+                const container = document.getElementById('genreInsights');
+
+                // Analyze genres from all activity
+                const genreCounts = {};
+                this.allActivity.forEach(item => {
+                    if (item.genres) {
+                        const genres = JSON.parse(item.genres);
+                        genres.forEach(genre => {
+                            genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+                        });
+                    }
+                });
+
+                const sortedGenres = Object.entries(genreCounts)
+                    .sort(([, a], [, b]) => b - a)
+                    .slice(0, 6);
+
+                if (sortedGenres.length === 0) {
+                    container.innerHTML = '<p class="text-muted text-center">No genre data available</p>';
+                    return;
+                }
+
+                const total = sortedGenres.reduce((sum, [, count]) => sum + count, 0);
+
+                const genreHtml = sortedGenres.map(([genre, count]) => {
+                    const percentage = Math.round((count / total) * 100);
+                    return `
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-white">${genre}</span>
+                                <span class="text-muted">${percentage}%</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-gradient" role="progressbar" 
+                                     style="width: ${percentage}%; background: linear-gradient(45deg, #E50914, #0073E6);">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = genreHtml;
+            }
+
+            renderContentTypeInsights() {
+                const container = document.getElementById('contentTypeInsights');
+
+                const typeCounts = {
+                    movie: this.allActivity.filter(item => item.content_type === 'movie').length,
+                    tv: this.allActivity.filter(item => item.content_type === 'tv').length,
+                    anime: this.allActivity.filter(item => item.content_type === 'anime').length
+                };
+
+                const total = Object.values(typeCounts).reduce((sum, count) => sum + count, 0);
+
+                if (total === 0) {
+                    container.innerHTML = '<p class="text-muted text-center">No content data available</p>';
+                    return;
+                }
+
+                const typeHtml = Object.entries(typeCounts).map(([type, count]) => {
+                    const percentage = Math.round((count / total) * 100);
+                    const colors = {
+                        movie: 'text-warning',
+                        tv: 'text-info',
+                        anime: 'text-success'
+                    };
+
+                    return `
+                        <div class="d-flex align-items-center justify-content-between mb-3 p-2 glass-effect rounded">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-film ${colors[type]} me-3"></i>
+                                <span class="text-white">${Utils.formatContentType(type)}</span>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-white">${count}</div>
+                                <small class="text-muted">${percentage}%</small>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = typeHtml;
+            }
+
+            renderActivityPatterns() {
+                const container = document.getElementById('activityPatterns');
+
+                // Analyze activity patterns
+                const patterns = {
+                    mostActiveDay: this.getMostActiveDay(),
+                    averageDaily: Math.round(this.allActivity.length / 30), // Simulate 30 days
+                    streakDays: this.getStreakDays(),
+                    totalHours: Math.round(this.allActivity.length * 1.5) // Simulate hours
+                };
+
+                const patternsHtml = `
+                    <div class="row text-center">
+                        <div class="col-6 col-md-3 mb-3">
+                            <div class="p-3 glass-effect rounded">
+                                <div class="fw-bold text-primary fs-5">${patterns.mostActiveDay}</div>
+                                <small class="text-muted">Most Active Day</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 mb-3">
+                            <div class="p-3 glass-effect rounded">
+                                <div class="fw-bold text-warning fs-5">${patterns.averageDaily}</div>
+                                <small class="text-muted">Avg. Daily Activity</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 mb-3">
+                            <div class="p-3 glass-effect rounded">
+                                <div class="fw-bold text-success fs-5">${patterns.streakDays}</div>
+                                <small class="text-muted">Day Streak</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 mb-3">
+                            <div class="p-3 glass-effect rounded">
+                                <div class="fw-bold text-info fs-5">${patterns.totalHours}h</div>
+                                <small class="text-muted">Est. Watch Time</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML = patternsHtml;
+            }
+
+            getMostActiveDay() {
+                const dayCounts = {};
+                this.allActivity.forEach(item => {
+                    const day = item.timestamp.toLocaleDateString('en-US', { weekday: 'long' });
+                    dayCounts[day] = (dayCounts[day] || 0) + 1;
+                });
+
+                const mostActive = Object.entries(dayCounts).sort(([, a], [, b]) => b - a)[0];
+                return mostActive ? mostActive[0] : 'N/A';
+            }
+
+            getStreakDays() {
+                // Simulate streak calculation
+                return Math.floor(Math.random() * 15) + 1;
+            }
+
+            async loadActivityRecommendations() {
+                const container = document.getElementById('activityRecommendations');
+
+                try {
+                    const response = await apiClient.getPersonalizedRecommendations(20);
+                    const recommendations = response.recommendations || [];
+
+                    if (recommendations.length === 0) {
+                        container.innerHTML = `
+                            <div class="col-12 text-center py-5">
+                                <i class="fas fa-robot text-muted mb-3" style="font-size: 4rem;"></i>
+                                <h5 class="text-white mb-2">No Recommendations Available</h5>
+                                <p class="text-muted">Interact with more content to get personalized recommendations.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    const recommendationsHtml = recommendations.map(item => `
+                        <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+                            ${Components.createContentCard(item)}
+                        </div>
+                    `).join('');
+
+                    container.innerHTML = recommendationsHtml;
+
+                } catch (error) {
+                    console.error('Failed to load recommendations:', error);
+                    container.innerHTML = Components.createErrorState('Failed to load recommendations');
+                }
+            }
+
+            async refreshRecommendations() {
+                const container = document.getElementById('activityRecommendations');
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner-border text-danger mb-3" role="status"></div>
+                        <h5 class="text-white">Refreshing recommendations...</h5>
+                    </div>
+                `;
+
+                await this.loadActivityRecommendations();
+            }
+
+            showError() {
+                document.getElementById('activityTimeline').innerHTML =
+                    Components.createErrorState('Failed to load activity data');
+            }
+        }
+
+        // Initialize activity handler
+        document.addEventListener('DOMContentLoaded', () => {
+            window.activityHandler = new ActivityHandler();
+        });
+    </script>
+</body>
+
+</html>

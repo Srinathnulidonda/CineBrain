@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Content Management - CineBrain Admin</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+
+<body class="bg-gray-900 text-white">
+    <!-- Fixed Topbar -->
+    <div id="topbar-container"></div>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-8">
+        <div class="container-fluid px-3 px-md-4">
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 class="text-white fw-bold mb-2">📽️ Content Management</h1>
+                            <p class="text-muted">Add content and create admin recommendations</p>
+                        </div>
+                        <a href="index.html" class="btn btn-outline-light">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Tabs -->
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-pills nav-fill glass-effect mb-4" id="contentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="search-tab" data-bs-toggle="pill"
+                                data-bs-target="#search" type="button" role="tab">Search & Add</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="recommendations-tab" data-bs-toggle="pill"
+                                data-bs-target="#recommendations" type="button" role="tab">Admin
+                                Recommendations</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="ml-insights-tab" data-bs-toggle="pill"
+                                data-bs-target="#ml-insights" type="button" role="tab">ML Insights</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="telegram-tab" data-bs-toggle="pill" data-bs-target="#telegram"
+                                type="button" role="tab">Telegram Posts</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="contentTabsContent">
+                        <!-- Search & Add Tab -->
+                        <div class="tab-pane fade show active" id="search" role="tabpanel">
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="card glass-effect border-0">
+                                        <div class="card-header">
+                                            <h5 class="text-white mb-0">Search External Content</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <form id="contentSearchForm">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <input type="text" class="form-control search-input"
+                                                            id="searchQuery"
+                                                            placeholder="Search for movies, TV shows, or anime..."
+                                                            required>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <select class="form-select search-input" id="searchSource">
+                                                            <option value="tmdb">TMDB (Movies/TV)</option>
+                                                            <option value="anime">Anime (Jikan API)</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <button type="submit" class="btn btn-primary-custom w-100">
+                                                            <i class="fas fa-search me-2"></i>Search
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Search Results -->
+                            <div class="row" id="searchResults">
+                                <div class="col-12" id="searchInitialState">
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-search text-muted mb-3" style="font-size: 4rem;"></i>
+                                        <h4 class="text-white mb-3">Search External Content</h4>
+                                        <p class="text-muted">Use the search form above to find movies, TV shows, or
+                                            anime to add to CineBrain.</p>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 d-none" id="searchLoadingState">
+                                    <div class="text-center py-5">
+                                        <div class="spinner-border text-danger mb-3" role="status"></div>
+                                        <h5 class="text-white">Searching external databases...</h5>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 d-none" id="searchResultsGrid">
+                                    <div class="row" id="searchResultsContainer">
+                                        <!-- Results will be populated here -->
+                                    </div>
+                                </div>
+
+                                <div class="col-12 d-none" id="searchNoResults">
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-search-minus text-muted mb-3" style="font-size: 4rem;"></i>
+                                        <h4 class="text-white mb-3">No Results Found</h4>
+                                        <p class="text-muted">No content found for your search query. Try different
+                                            keywords.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Admin Recommendations Tab -->
+                        <div class="tab-pane fade" id="recommendations" role="tabpanel">
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h4 class="text-white mb-0">Your Recommendations</h4>
+                                        <button class="btn btn-primary-custom"
+                                            onclick="contentHandler.refreshRecommendations()">
+                                            <i class="fas fa-refresh me-2"></i>Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" id="adminRecommendations">
+                                <div class="col-12 text-center py-5">
+                                    <div class="spinner-border text-danger mb-3" role="status"></div>
+                                    <h5 class="text-white">Loading admin recommendations...</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ML Insights Tab -->
+                        <div class="tab-pane fade" id="ml-insights" role="tabpanel">
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h4 class="text-white mb-0">ML Service Insights</h4>
+                                        <button class="btn btn-outline-light"
+                                            onclick="contentHandler.refreshMLInsights()">
+                                            <i class="fas fa-robot me-2"></i>Refresh Insights
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" id="mlInsightsContent">
+                                <div class="col-12 text-center py-5">
+                                    <div class="spinner-border text-danger mb-3" role="status"></div>
+                                    <h5 class="text-white">Loading ML insights...</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Telegram Posts Tab -->
+                        <div class="tab-pane fade" id="telegram" role="tabpanel">
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="card glass-effect border-0">
+                                        <div class="card-header">
+                                            <h5 class="text-white mb-0">Recent Telegram Posts</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Admin recommendations are automatically posted to the CineBrain Telegram
+                                                channel.
+                                            </div>
+                                            <div id="telegramPosts">
+                                                <div class="text-center py-3">
+                                                    <i class="fab fa-telegram text-primary mb-3"
+                                                        style="font-size: 3rem;"></i>
+                                                    <h5 class="text-white mb-2">Telegram Integration Active</h5>
+                                                    <p class="text-muted">Your admin recommendations will be
+                                                        automatically posted to the Telegram channel.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Content Modal -->
+    <div class="modal fade" id="addContentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content glass-effect">
+                <div class="modal-header">
+                    <h5 class="modal-title text-white">Add Content to CineBrain</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <img id="modalPoster" src="" alt="" class="img-fluid rounded mb-3"
+                                style="max-height: 300px;">
+                        </div>
+                        <div class="col-md-8">
+                            <h4 id="modalTitle" class="text-white mb-3"></h4>
+                            <div id="modalDetails" class="mb-3">
+                                <!-- Content details will be populated here -->
+                            </div>
+                            <p id="modalOverview" class="text-muted"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary-custom" id="confirmAddBtn">
+                        <i class="fas fa-plus me-2"></i>Add to CineBrain
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommend Content Modal -->
+    <div class="modal fade" id="recommendModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content glass-effect">
+                <div class="modal-header">
+                    <h5 class="modal-title text-white">Create Admin Recommendation</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="recommendationForm">
+                        <div class="mb-3">
+                            <label for="recommendationType" class="form-label text-white">Recommendation Type</label>
+                            <select class="form-select search-input" id="recommendationType" required>
+                                <option value="admin_choice">Admin's Choice</option>
+                                <option value="trending">Trending Pick</option>
+                                <option value="hidden_gem">Hidden Gem</option>
+                                <option value="must_watch">Must Watch</option>
+                                <option value="weekend_special">Weekend Special</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="recommendationDescription" class="form-label text-white">Description</label>
+                            <textarea class="form-control search-input" id="recommendationDescription" rows="4"
+                                placeholder="Why do you recommend this content?" required></textarea>
+                            <div class="form-text text-muted">This will be posted to the Telegram channel</div>
+                        </div>
+                        <input type="hidden" id="recommendContentId">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary-custom"
+                        onclick="contentHandler.submitRecommendation()">
+                        <i class="fas fa-star me-2"></i>Create Recommendation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/utils.js"></script>
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/components.js"></script>
+
+    <script>
+        class ContentHandler {
+            constructor() {
+                this.searchResults = [];
+                this.selectedContent = null;
+                this.adminRecommendations = [];
+                this.init();
+            }
+
+            init() {
+                this.checkAdminAccess();
+                this.setupEventListeners();
+                this.loadAdminRecommendations();
+            }
+
+            checkAdminAccess() {
+                const userData = Utils.getStorage('user_data');
+                if (!userData || !userData.is_admin) {
+                    window.location.href = '../index.html';
+                    return;
+                }
+            }
+
+            setupEventListeners() {
+                // Search form
+                document.getElementById('contentSearchForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.searchContent();
+                });
+
+                // Tab change events
+                document.querySelectorAll('#contentTabs button').forEach(tab => {
+                    tab.addEventListener('shown.bs.tab', (event) => {
+                        const target = event.target.getAttribute('data-bs-target');
+                        if (target === '#recommendations') {
+                            this.loadAdminRecommendations();
+                        } else if (target === '#ml-insights') {
+                            this.loadMLInsights();
+                        }
+                    });
+                });
+
+                // Confirm add button
+                document.getElementById('confirmAddBtn').addEventListener('click', () => {
+                    this.addContentToPlatform();
+                });
+            }
+
+            async searchContent() {
+                const query = document.getElementById('searchQuery').value.trim();
+                const source = document.getElementById('searchSource').value;
+
+                if (!query) return;
+
+                this.showSearchLoading();
+
+                try {
+                    const response = await apiClient.adminSearch(query, source, 1);
+                    this.searchResults = response.results || [];
+
+                    if (this.searchResults.length === 0) {
+                        this.showSearchNoResults();
+                    } else {
+                        this.renderSearchResults();
+                        this.showSearchResults();
+                    }
+
+                } catch (error) {
+                    console.error('Search failed:', error);
+                    Utils.showToast('Search failed. Please try again.', 'error');
+                    this.showSearchNoResults();
+                }
+            }
+
+            renderSearchResults() {
+                const container = document.getElementById('searchResultsContainer');
+
+                const resultsHtml = this.searchResults.map(item => `
+                    <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+                        <div class="card glass-effect border-0 h-100">
+                            <img src="${item.poster_path || Utils.getImageUrl(null)}" 
+                                 alt="${item.title}" class="card-img-top" 
+                                 style="height: 300px; object-fit: cover;"
+                                 onerror="this.src='${Utils.getImageUrl(null)}'">
+                            
+                            <div class="card-body">
+                                <h6 class="text-white fw-bold mb-2">${item.title}</h6>
+                                <p class="text-muted small mb-2">
+                                    ${Utils.formatContentType(item.content_type)} • ${Utils.formatDate(item.release_date)}
+                                </p>
+                                ${item.rating ? `
+                                    <div class="mb-2">
+                                        <span class="${Utils.formatRating(item.rating).className}">
+                                            ${Utils.formatRating(item.rating).value}
+                                        </span>
+                                    </div>
+                                ` : ''}
+                                <p class="text-muted small mb-3">${Utils.truncateText(item.overview, 100) || 'No description available'}</p>
+                                
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary-custom btn-sm" 
+                                            onclick="contentHandler.showAddModal(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                        <i class="fas fa-plus me-2"></i>Add to Platform
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = resultsHtml;
+            }
+
+            showAddModal(item) {
+                this.selectedContent = item;
+
+                // Populate modal
+                document.getElementById('modalPoster').src = item.poster_path || Utils.getImageUrl(null);
+                document.getElementById('modalTitle').textContent = item.title;
+                document.getElementById('modalOverview').textContent = item.overview || 'No description available';
+
+                const details = [
+                    `<strong>Type:</strong> ${Utils.formatContentType(item.content_type)}`,
+                    `<strong>Release:</strong> ${Utils.formatDate(item.release_date)}`,
+                    item.rating ? `<strong>Rating:</strong> ${item.rating}/10` : null
+                ].filter(Boolean);
+
+                document.getElementById('modalDetails').innerHTML = details.join('<br>');
+
+                const modal = new bootstrap.Modal(document.getElementById('addContentModal'));
+                modal.show();
+            }
+
+            async addContentToPlatform() {
+                if (!this.selectedContent) return;
+
+                try {
+                    const response = await apiClient.saveExternalContent(this.selectedContent);
+
+                    Utils.showToast('Content added successfully!', 'success');
+
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addContentModal'));
+                    modal.hide();
+
+                    // Show recommendation prompt
+                    setTimeout(() => {
+                        if (confirm('Would you like to create an admin recommendation for this content?')) {
+                            this.showRecommendModal(response.content_id);
+                        }
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Failed to add content:', error);
+                    Utils.showToast('Failed to add content. Please try again.', 'error');
+                }
+            }
+
+            showRecommendModal(contentId) {
+                document.getElementById('recommendContentId').value = contentId;
+                document.getElementById('recommendationDescription').value = '';
+
+                const modal = new bootstrap.Modal(document.getElementById('recommendModal'));
+                modal.show();
+            }
+
+            async submitRecommendation() {
+                const contentId = document.getElementById('recommendContentId').value;
+                const type = document.getElementById('recommendationType').value;
+                const description = document.getElementById('recommendationDescription').value.trim();
+
+                if (!contentId || !description) {
+                    Utils.showToast('Please fill in all fields', 'error');
+                    return;
+                }
+
+                try {
+                    const response = await apiClient.createAdminRecommendation(contentId, type, description);
+
+                    Utils.showToast('Admin recommendation created successfully!', 'success');
+
+                    if (response.telegram_sent) {
+                        Utils.showToast('Recommendation posted to Telegram channel', 'success');
+                    }
+
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('recommendModal'));
+                    modal.hide();
+
+                    // Refresh recommendations
+                    this.loadAdminRecommendations();
+
+                } catch (error) {
+                    console.error('Failed to create recommendation:', error);
+                    Utils.showToast('Failed to create recommendation. Please try again.', 'error');
+                }
+            }
+
+            async loadAdminRecommendations() {
+                const container = document.getElementById('adminRecommendations');
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner-border text-danger mb-3" role="status"></div>
+                        <h5 class="text-white">Loading admin recommendations...</h5>
+                    </div>
+                `;
+
+                try {
+                    const response = await apiClient.getAdminRecommendations(1, 20);
+                    this.adminRecommendations = response.recommendations || [];
+
+                    if (this.adminRecommendations.length === 0) {
+                        container.innerHTML = `
+                            <div class="col-12 text-center py-5">
+                                <i class="fas fa-star text-muted mb-3" style="font-size: 4rem;"></i>
+                                <h4 class="text-white mb-3">No Recommendations Yet</h4>
+                                <p class="text-muted mb-4">You haven't created any admin recommendations yet.</p>
+                                <button class="btn btn-primary-custom" onclick="document.querySelector('#search-tab').click()">
+                                    <i class="fas fa-plus me-2"></i>Add Your First Recommendation
+                                </button>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    this.renderAdminRecommendations();
+
+                } catch (error) {
+                    console.error('Failed to load recommendations:', error);
+                    container.innerHTML = Components.createErrorState('Failed to load admin recommendations');
+                }
+            }
+
+            renderAdminRecommendations() {
+                const container = document.getElementById('adminRecommendations');
+
+                const recsHtml = this.adminRecommendations.map(rec => `
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card glass-effect border-0 h-100">
+                            <div class="position-relative">
+                                <img src="${Utils.getImageUrl(rec.content.poster_path)}" 
+                                     alt="${rec.content.title}" class="card-img-top" 
+                                     style="height: 200px; object-fit: cover;"
+                                     onerror="this.src='${Utils.getImageUrl(null)}'">
+                                
+                                <div class="position-absolute top-0 end-0 m-2">
+                                    <span class="badge bg-warning">${rec.recommendation_type.replace('_', ' ').toUpperCase()}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="card-body">
+                                <h6 class="text-white fw-bold mb-2">${rec.content.title}</h6>
+                                <p class="text-muted small mb-2">by ${rec.admin_name}</p>
+                                <p class="text-white small mb-3">${rec.description}</p>
+                                <small class="text-muted">
+                                    Created: ${new Date(rec.created_at).toLocaleDateString()}
+                                </small>
+                                
+                                <div class="mt-3">
+                                    <button class="btn btn-sm btn-outline-light w-100" 
+                                            onclick="window.open('../content/details.html?id=${rec.content.id}', '_blank')">
+                                        <i class="fas fa-external-link-alt me-2"></i>View Content
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = recsHtml;
+            }
+
+            async loadMLInsights() {
+                const container = document.getElementById('mlInsightsContent');
+
+                try {
+                    // Load ML service statistics and insights
+                    const [mlStats, mlCheck] = await Promise.all([
+                        apiClient.getMLStats(),
+                        apiClient.checkMLService()
+                    ]);
+
+                    this.renderMLInsights(mlStats, mlCheck);
+
+                } catch (error) {
+                    console.error('Failed to load ML insights:', error);
+                    container.innerHTML = Components.createErrorState('Failed to load ML insights');
+                }
+            }
+
+            renderMLInsights(mlStats, mlCheck) {
+                const container = document.getElementById('mlInsightsContent');
+
+                const insightsHtml = `
+                    <div class="col-md-6 mb-4">
+                        <div class="card glass-effect border-0">
+                            <div class="card-header">
+                                <h5 class="text-white mb-0">ML Service Status</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="fas fa-circle ${mlCheck.status === 'healthy' ? 'text-success' : mlCheck.status === 'partial' ? 'text-warning' : 'text-danger'} me-2"></i>
+                                    <span class="text-white">${mlCheck.status?.toUpperCase() || 'UNKNOWN'}</span>
+                                </div>
+                                
+                                ${mlCheck.checks ? Object.entries(mlCheck.checks).map(([key, check]) => `
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted">${key.replace('_', ' ').toUpperCase()}:</span>
+                                        <span class="badge bg-${check.status === 'pass' ? 'success' : 'danger'}">
+                                            ${check.status?.toUpperCase() || 'UNKNOWN'}
+                                        </span>
+                                    </div>
+                                `).join('') : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+                        <div class="card glass-effect border-0">
+                            <div class="card-header">
+                                <h5 class="text-white mb-0">Data Statistics</h5>
+                            </div>
+                            <div class="card-body">
+                                ${mlStats.ml_service_stats ? `
+                                    <div class="row text-center">
+                                        <div class="col-6 mb-3">
+                                            <div class="fw-bold text-primary fs-5">
+                                                ${mlStats.ml_service_stats.data_statistics?.total_content || 0}
+                                            </div>
+                                            <small class="text-muted">ML Content</small>
+                                        </div>
+                                        <div class="col-6 mb-3">
+                                            <div class="fw-bold text-warning fs-5">
+                                                ${mlStats.ml_service_stats.data_statistics?.unique_users || 0}
+                                            </div>
+                                            <small class="text-muted">ML Users</small>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="mt-3">
+                                    <h6 class="text-white">Backend vs ML Sync</h6>
+                                    ${mlStats.data_sync_status ? `
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-muted">Content Sync:</span>
+                                            <span class="badge bg-${mlStats.data_sync_status.content_match ? 'success' : 'warning'}">
+                                                ${mlStats.data_sync_status.content_match ? 'Synced' : 'Out of Sync'}
+                                            </span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-muted">User Sync:</span>
+                                            <span class="badge bg-${mlStats.data_sync_status.user_match ? 'success' : 'warning'}">
+                                                ${mlStats.data_sync_status.user_match ? 'Synced' : 'Out of Sync'}
+                                            </span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="card glass-effect border-0">
+                            <div class="card-header">
+                                <h5 class="text-white mb-0">Recommendation Performance</h5>
+                            </div>
+                            <div class="card-body">
+                                ${mlStats.ml_service_stats?.performance_metrics ? `
+                                    <div class="row">
+                                        ${Object.entries(mlStats.ml_service_stats.performance_metrics).map(([metric, value]) => `
+                                            <div class="col-md-3 mb-3 text-center">
+                                                <div class="fw-bold text-info fs-5">${value}</div>
+                                                <small class="text-muted">${metric.replace('_', ' ').toUpperCase()}</small>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : `
+                                    <div class="text-center py-3">
+                                        <i class="fas fa-chart-line text-muted mb-2" style="font-size: 2rem;"></i>
+                                        <p class="text-muted">No performance metrics available</p>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML = insightsHtml;
+            }
+
+            async refreshRecommendations() {
+                await this.loadAdminRecommendations();
+                Utils.showToast('Recommendations refreshed', 'success');
+            }
+
+            async refreshMLInsights() {
+                document.getElementById('mlInsightsContent').innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner-border text-danger mb-3" role="status"></div>
+                        <h5 class="text-white">Refreshing ML insights...</h5>
+                    </div>
+                `;
+
+                await this.loadMLInsights();
+                Utils.showToast('ML insights refreshed', 'success');
+            }
+
+            showSearchLoading() {
+                this.hideAllSearchStates();
+                document.getElementById('searchLoadingState').classList.remove('d-none');
+            }
+
+            showSearchResults() {
+                this.hideAllSearchStates();
+                document.getElementById('searchResultsGrid').classList.remove('d-none');
+            }
+
+            showSearchNoResults() {
+                this.hideAllSearchStates();
+                document.getElementById('searchNoResults').classList.remove('d-none');
+            }
+
+            hideAllSearchStates() {
+                ['searchInitialState', 'searchLoadingState', 'searchResultsGrid', 'searchNoResults'].forEach(stateId => {
+                    document.getElementById(stateId).classList.add('d-none');
+                });
+            }
+        }
+
+        // Initialize content handler
+        document.addEventListener('DOMContentLoaded', () => {
+            window.contentHandler = new ContentHandler();
+        });
+    </script>
+</body>
+
+</html>
