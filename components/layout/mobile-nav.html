@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Navigation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body>
+    <!-- Mobile Bottom Navigation -->
+    <nav id="mobile-bottom-nav" class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50"
+        style="padding-bottom: env(safe-area-inset-bottom);">
+        <div class="flex justify-around items-center h-16">
+            <!-- Home Tab -->
+            <button onclick="navigateToTab('home')"
+                class="nav-tab flex flex-col items-center justify-center w-full h-full transition-all duration-200"
+                data-tab="home">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span class="text-xs">Home</span>
+            </button>
+
+            <!-- Search Tab -->
+            <button onclick="navigateToTab('search')"
+                class="nav-tab flex flex-col items-center justify-center w-full h-full transition-all duration-200"
+                data-tab="search">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span class="text-xs">Search</span>
+            </button>
+
+            <!-- Watchlist Tab -->
+            <button onclick="navigateToTab('watchlist')"
+                class="nav-tab flex flex-col items-center justify-center w-full h-full transition-all duration-200 relative"
+                data-tab="watchlist">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-xs">Watchlist</span>
+                <span id="watchlistBadge"
+                    class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+            </button>
+
+            <!-- Favorites Tab -->
+            <button onclick="navigateToTab('favorites')"
+                class="nav-tab flex flex-col items-center justify-center w-full h-full transition-all duration-200"
+                data-tab="favorites">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <span class="text-xs">Favorites</span>
+            </button>
+
+            <!-- Profile Tab -->
+            <button onclick="navigateToTab('profile')"
+                class="nav-tab flex flex-col items-center justify-center w-full h-full transition-all duration-200"
+                data-tab="profile">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span class="text-xs">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <style>
+        .nav-tab {
+            color: #6b7280;
+            position: relative;
+        }
+
+        .nav-tab.active {
+            color: #7c3aed;
+        }
+
+        .nav-tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%) scaleX(0);
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 0 0 3px 3px;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-tab.active::before {
+            transform: translateX(-50%) scaleX(1);
+        }
+
+        .nav-tab:active {
+            transform: scale(0.95);
+        }
+
+        /* Haptic feedback simulation */
+        @media (max-width: 768px) {
+            .nav-tab:active {
+                background-color: rgba(124, 58, 237, 0.1);
+                border-radius: 12px;
+            }
+        }
+    </style>
+
+    <script>
+        const API_BASE_URL = 'https://backend-app-970m.onrender.com/api';
+
+        // Initialize navigation
+        document.addEventListener('DOMContentLoaded', function () {
+            setActiveTab();
+            loadWatchlistCount();
+            cacheNavigationContent();
+        });
+
+        function setActiveTab() {
+            const currentPath = window.location.pathname;
+            const tabs = document.querySelectorAll('.nav-tab');
+
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+                const tabName = tab.dataset.tab;
+
+                if (currentPath === '/' && tabName === 'home') {
+                    tab.classList.add('active');
+                } else if (currentPath.includes(tabName)) {
+                    tab.classList.add('active');
+                }
+            });
+
+            // Save current tab to session
+            const activeTab = document.querySelector('.nav-tab.active');
+            if (activeTab) {
+                sessionStorage.setItem('activeTab', activeTab.dataset.tab);
+            }
+        }
+
+        function navigateToTab(tabName) {
+            // Trigger haptic feedback on supported devices
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+
+            // Store tab state
+            sessionStorage.setItem('activeTab', tabName);
+
+            // Preload content before navigation
+            preloadTabContent(tabName);
+
+            // Navigate to page
+            const routes = {
+                'home': '/',
+                'search': '/search',
+                'watchlist': '/watchlist',
+                'favorites': '/favorites',
+                'profile': '/profile'
+            };
+
+            window.location.href = routes[tabName] || '/';
+        }
+
+        async function loadWatchlistCount() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/user/watchlist`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const badge = document.getElementById('watchlistBadge');
+                    if (data.watchlist && data.watchlist.length > 0) {
+                        badge.textContent = data.watchlist.length;
+                        badge.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load watchlist count:', error);
+            }
+        }
+
+        async function preloadTabContent(tabName) {
+            // Preload content for smooth transitions
+            const preloadMap = {
+                'home': '/recommendations/trending',
+                'search': '/recommendations/trending?limit=10',
+                'watchlist': '/user/watchlist',
+                'favorites': '/user/favorites',
+                'profile': '/user/profile'
+            };
+
+            const endpoint = preloadMap[tabName];
+            if (!endpoint) return;
+
+            try {
+                const token = localStorage.getItem('authToken');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
+                if (response.ok) {
+                    const data = await response.json();
+                    sessionStorage.setItem(`preload_${tabName}`, JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error(`Failed to preload ${tabName}:`, error);
+            }
+        }
+
+        async function cacheNavigationContent() {
+            // Cache frequently accessed content
+            const token = localStorage.getItem('authToken');
+
+            if (!sessionStorage.getItem('nav_cache_loaded')) {
+                const endpoints = [
+                    '/recommendations/trending?limit=5',
+                    '/recommendations/new-releases?limit=5'
+                ];
+
+                for (const endpoint of endpoints) {
+                    try {
+                        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                        const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
+                        if (response.ok) {
+                            const data = await response.json();
+                            sessionStorage.setItem(`cache_${endpoint}`, JSON.stringify(data));
+                        }
+                    } catch (error) {
+                        console.error(`Cache failed for ${endpoint}:`, error);
+                    }
+                }
+
+                sessionStorage.setItem('nav_cache_loaded', 'true');
+            }
+        }
+    </script>
+</body>
+
+</html>
