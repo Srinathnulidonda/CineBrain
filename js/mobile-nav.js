@@ -2,7 +2,9 @@
  * CineBrain Mobile Navigation Component
  * Enhanced with Spotify-like interactions and theme support
  * Fixed: Pull-to-refresh prevention when closing menu
- * Added: Logout confirmation and notification
+ * Fixed: Navigation is always visible (no auto-hide)
+ * Fixed: No rotation animations on buttons
+ * Fixed: Instant theme switching with Theme Manager
  */
 
 class MobileNavigation {
@@ -11,7 +13,6 @@ class MobileNavigation {
         this.config = {
             apiBase: config.apiBase || 'https://backend-app-970m.onrender.com/api',
             enableHaptic: config.enableHaptic !== false,
-            autoHideOnScroll: config.autoHideOnScroll !== false,
             swipeThreshold: config.swipeThreshold || 50,
             swipeVelocity: config.swipeVelocity || 0.3,
             ...config
@@ -23,8 +24,6 @@ class MobileNavigation {
             isMenuOpen: false,
             watchlistCount: 0,
             currentPage: null,
-            lastScrollY: 0,
-            isNavHidden: false,
             isDragging: false,
             dragStartY: 0,
             dragCurrentY: 0,
@@ -38,6 +37,11 @@ class MobileNavigation {
         // Touch tracking
         this.touchStartTime = 0;
         this.touchStartY = 0;
+
+        // Register with theme manager if available
+        if (window.themeManager) {
+            window.themeManager.register((theme) => this.onThemeChange(theme));
+        }
 
         // Initialize
         this.init();
@@ -82,10 +86,6 @@ class MobileNavigation {
             this.loadUserData();
         }
 
-        if (this.config.autoHideOnScroll) {
-            this.initScrollHide();
-        }
-
         // Initialize Feather icons
         this.initIcons();
 
@@ -114,25 +114,45 @@ class MobileNavigation {
     }
 
     /**
-     * Detect and apply current theme
+     * Theme change callback from Theme Manager
      */
-    detectAndApplyTheme() {
-        // Check for either attribute (data-theme or data-bs-theme)
-        const htmlElement = document.documentElement;
-        const currentTheme = htmlElement.getAttribute('data-theme') ||
-            htmlElement.getAttribute('data-bs-theme') ||
-            localStorage.getItem('cinebrain-theme') ||
-            'dark';
-
-        // Apply theme to navigation
-        this.applyTheme(currentTheme);
-
-        // Listen for theme changes
-        this.observeThemeChanges();
+    onThemeChange(theme) {
+        this.updateThemeUI(theme);
     }
 
     /**
-     * Apply theme to navigation
+     * Update UI for theme change
+     */
+    updateThemeUI(theme) {
+        // Just update icons, the theme is already applied by Theme Manager
+        this.initIcons();
+
+        // Dispatch theme change event for component
+        this.dispatchEvent('themeChanged', { theme });
+    }
+
+    /**
+     * Detect and apply current theme
+     */
+    detectAndApplyTheme() {
+        // If theme manager exists, use it
+        if (window.themeManager) {
+            const theme = window.themeManager.getCurrentTheme();
+            this.updateThemeUI(theme);
+        } else {
+            // Fallback to old method
+            const htmlElement = document.documentElement;
+            const currentTheme = htmlElement.getAttribute('data-theme') ||
+                htmlElement.getAttribute('data-bs-theme') ||
+                localStorage.getItem('cinebrain-theme') ||
+                'dark';
+            this.applyTheme(currentTheme);
+            this.observeThemeChanges();
+        }
+    }
+
+    /**
+     * Apply theme to navigation (fallback method)
      */
     applyTheme(theme) {
         // The CSS already handles this via [data-bs-theme] attribute
@@ -144,40 +164,13 @@ class MobileNavigation {
     }
 
     /**
-     * Observe theme changes
+     * Observe theme changes (simplified)
      */
     observeThemeChanges() {
-        // Watch for attribute changes on html element
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' &&
-                    (mutation.attributeName === 'data-theme' ||
-                        mutation.attributeName === 'data-bs-theme')) {
-                    const newTheme = document.documentElement.getAttribute('data-theme') ||
-                        document.documentElement.getAttribute('data-bs-theme') ||
-                        'dark';
-                    this.applyTheme(newTheme);
-                }
-            });
-        });
-
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['data-theme', 'data-bs-theme']
-        });
-
-        // Listen for custom theme change events from topbar
-        window.addEventListener('themeChanged', (e) => {
-            if (e.detail && e.detail.theme) {
-                this.applyTheme(e.detail.theme);
-            }
-        });
-
-        // Listen for storage events (theme changes from other tabs)
+        // Only listen for storage events for cross-tab sync
         window.addEventListener('storage', (e) => {
-            if (e.key === 'cinebrain-theme') {
-                const newTheme = e.newValue || 'dark';
-                this.applyTheme(newTheme);
+            if (e.key === 'cinebrain-theme' && window.themeManager) {
+                window.themeManager.applyTheme(e.newValue || 'dark');
             }
         });
     }
@@ -677,13 +670,6 @@ class MobileNavigation {
             }
         });
 
-        // Listen for storage events (theme changes from other tabs)
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'theme') {
-                this.detectAndApplyTheme();
-            }
-        });
-
         // Handle back button when menu is open
         window.addEventListener('popstate', (e) => {
             if (this.state.isMenuOpen) {
@@ -691,36 +677,6 @@ class MobileNavigation {
                 this.closeMenu();
             }
         });
-    }
-
-    /**
-     * Initialize scroll hide
-     */
-    initScrollHide() {
-        let ticking = false;
-
-        const handleScroll = () => {
-            if (!ticking) {
-                window.requestAnimationFrame(() => {
-                    const currentScrollY = window.scrollY;
-
-                    if (currentScrollY > this.state.lastScrollY && currentScrollY > 100) {
-                        // Scrolling down
-                        this.hideNav();
-                    } else {
-                        // Scrolling up
-                        this.showNav();
-                    }
-
-                    this.state.lastScrollY = currentScrollY;
-                    ticking = false;
-                });
-
-                ticking = true;
-            }
-        };
-
-        window.addEventListener('scroll', handleScroll, { passive: true });
     }
 
     /**
@@ -812,7 +768,7 @@ class MobileNavigation {
      * Navigate to route
      */
     navigate(route) {
-        // Add loading state
+        // Add loading state WITHOUT rotation (CSS handles this now)
         const activeItem = this.elements.navContainer.querySelector(`[data-route="${route}"]`);
         if (activeItem) {
             activeItem.classList.add('loading');
@@ -877,354 +833,234 @@ class MobileNavigation {
     }
 
     /**
-     * Hide navigation
-     */
-    hideNav() {
-        if (this.state.isNavHidden || this.state.isMenuOpen) return;
-
-        this.state.isNavHidden = true;
-        this.elements.nav.classList.add('hidden');
-    }
-
-    /**
-     * Show navigation
-     */
-    showNav() {
-        if (!this.state.isNavHidden) return;
-
-        this.state.isNavHidden = false;
-        this.elements.nav.classList.remove('hidden');
-    }
-
-    /**
-     * Logout with responsive confirmation and notification
-     */
-    /**
      * Logout with fully responsive confirmation dialog
      */
     logout() {
         // Create responsive confirmation dialog
         const confirmDialog = document.createElement('div');
         confirmDialog.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.8);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        animation: fadeIn 0.2s ease;
-        padding: 16px;
-        padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-    `;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+            padding: 16px;
+            padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        `;
 
         const dialogBox = document.createElement('div');
         dialogBox.style.cssText = `
-        background: var(--menu-bg, #121212);
-        border-radius: clamp(16px, 4vw, 24px);
-        padding: clamp(20px, 5vw, 32px);
-        width: min(90vw, 400px);
-        max-width: calc(100vw - 32px);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        animation: scaleIn 0.2s ease;
-        text-align: center;
-        position: relative;
-        margin: auto;
-    `;
+            background: var(--menu-bg, #121212);
+            border-radius: clamp(16px, 4vw, 24px);
+            padding: clamp(20px, 5vw, 32px);
+            width: min(90vw, 400px);
+            max-width: calc(100vw - 32px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: scaleIn 0.2s ease;
+            text-align: center;
+            position: relative;
+            margin: auto;
+        `;
 
         // Detect viewport size for dynamic adjustments
         const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
         const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
         const isLandscape = vw > vh;
-        const isSmallScreen = vw <= 320;
-        const isTinyHeight = vh <= 568; // iPhone SE height
 
         dialogBox.innerHTML = `
-        <style>
-            /* Ultra small devices (Galaxy Fold, etc.) */
-            @media (max-width: 280px) {
-                .m-dialog-icon-wrapper { 
-                    width: 44px !important; 
-                    height: 44px !important; 
-                }
-                .m-dialog-icon { 
-                    width: 22px !important; 
-                    height: 22px !important; 
-                }
-                .m-dialog-title { 
-                    font-size: 15px !important; 
-                }
-                .m-dialog-text { 
-                    font-size: 12px !important; 
-                }
-                .m-dialog-button { 
-                    font-size: 12px !important;
-                    padding: 8px 12px !important;
-                    min-height: 36px !important;
-                }
-            }
-            
-            /* Small phones (iPhone SE, Galaxy S5) */
-            @media (min-width: 281px) and (max-width: 320px) {
-                .m-dialog-icon-wrapper { 
-                    width: 48px !important; 
-                    height: 48px !important; 
-                }
-                .m-dialog-icon { 
-                    width: 24px !important; 
-                    height: 24px !important; 
-                }
-                .m-dialog-title { 
-                    font-size: 16px !important; 
-                }
-                .m-dialog-text { 
-                    font-size: 13px !important; 
-                }
-                .m-dialog-button { 
-                    font-size: 13px !important;
-                    padding: 10px 14px !important;
-                    min-height: 38px !important;
-                }
-            }
-            
-            /* Medium phones (iPhone 6/7/8) */
-            @media (min-width: 321px) and (max-width: 375px) {
-                .m-dialog-icon-wrapper { 
-                    width: 54px !important; 
-                    height: 54px !important; 
-                }
-                .m-dialog-icon { 
-                    width: 27px !important; 
-                    height: 27px !important; 
-                }
-                .m-dialog-title { 
-                    font-size: 17px !important; 
-                }
-                .m-dialog-text { 
-                    font-size: 14px !important; 
-                }
-                .m-dialog-button { 
-                    font-size: 14px !important;
-                    padding: 11px 18px !important;
-                    min-height: 42px !important;
-                }
-            }
-            
-            /* Large phones (iPhone Plus, Pixel) */
-            @media (min-width: 376px) and (max-width: 414px) {
-                .m-dialog-icon-wrapper { 
-                    width: 60px !important; 
-                    height: 60px !important; 
-                }
-                .m-dialog-icon { 
-                    width: 30px !important; 
-                    height: 30px !important; 
-                }
-                .m-dialog-title { 
-                    font-size: 18px !important; 
-                }
-                .m-dialog-text { 
-                    font-size: 14px !important; 
-                }
-                .m-dialog-button { 
-                    font-size: 14px !important;
-                    padding: 12px 20px !important;
-                    min-height: 44px !important;
-                }
-            }
-            
-            /* XL phones (iPhone Pro Max) */
-            @media (min-width: 415px) and (max-width: 480px) {
-                .m-dialog-icon-wrapper { 
-                    width: 64px !important; 
-                    height: 64px !important; 
-                }
-                .m-dialog-icon { 
-                    width: 32px !important; 
-                    height: 32px !important; 
-                }
-                .m-dialog-title { 
-                    font-size: 19px !important; 
-                }
-                .m-dialog-text { 
-                    font-size: 15px !important; 
-                }
-                .m-dialog-button { 
-                    font-size: 15px !important;
-                    padding: 12px 22px !important;
-                    min-height: 46px !important;
-                }
-            }
-            
-            /* Tablets */
-            @media (min-width: 481px) {
-                .m-dialog-icon-wrapper { 
-                    width: 72px !important; 
-                    height: 72px !important; 
-                }
-                .m-dialog-icon { 
-                    width: 36px !important; 
-                    height: 36px !important; 
-                }
-                .m-dialog-title { 
-                    font-size: 20px !important; 
-                }
-                .m-dialog-text { 
-                    font-size: 16px !important; 
-                }
-                .m-dialog-button { 
-                    font-size: 16px !important;
-                    padding: 14px 28px !important;
-                    min-height: 48px !important;
-                }
-            }
-
-            /* Landscape adjustments */
-            @media (orientation: landscape) and (max-height: 500px) {
-                .m-dialog-icon-wrapper { 
-                    width: 40px !important; 
-                    height: 40px !important;
-                    margin-bottom: 8px !important;
-                }
-                .m-dialog-icon { 
-                    width: 20px !important; 
-                    height: 20px !important; 
-                }
-                .m-dialog-content-wrapper {
-                    margin-bottom: 12px !important;
-                }
-                .m-dialog-title {
-                    margin-bottom: 4px !important;
-                }
-                .m-dialog-text {
-                    padding: 0 !important;
-                }
-            }
-
-            /* Very small landscape (hide icon) */
-            @media (orientation: landscape) and (max-height: 400px) {
-                .m-dialog-icon-section {
-                    display: none !important;
-                }
-                .m-dialog-content-wrapper {
-                    margin-bottom: 8px !important;
-                }
-            }
-
-            /* Dynamic viewport height adjustments */
-            @supports (height: 100dvh) {
-                @media (max-height: 600px) {
-                    .m-dialog-content-wrapper {
-                        margin-bottom: 12px !important;
+            <style>
+                /* Responsive styles for different screen sizes */
+                @media (max-width: 280px) {
+                    .m-dialog-icon-wrapper { 
+                        width: 44px !important; 
+                        height: 44px !important; 
+                    }
+                    .m-dialog-icon { 
+                        width: 22px !important; 
+                        height: 22px !important; 
+                    }
+                    .m-dialog-title { 
+                        font-size: 15px !important; 
+                    }
+                    .m-dialog-text { 
+                        font-size: 12px !important; 
+                    }
+                    .m-dialog-button { 
+                        font-size: 12px !important;
+                        padding: 8px 12px !important;
+                        min-height: 36px !important;
                     }
                 }
-            }
-        </style>
-        
-        <div class="m-dialog-content-wrapper" style="
-            margin-bottom: clamp(12px, 3vh, 24px);
-        ">
-            <div class="m-dialog-icon-section" style="${(isLandscape && vh < 400) ? 'display: none;' : ''}">
-                <div class="m-dialog-icon-wrapper" style="
-                    width: clamp(44px, 13vmin, 72px);
-                    height: clamp(44px, 13vmin, 72px);
-                    margin: 0 auto clamp(8px, 2vh, 20px);
-                    background: linear-gradient(135deg, var(--cinebrain-red, #E50914), var(--cinebrain-purple, #8B5CF6));
-                    border-radius: 50%;
+                
+                @media (min-width: 281px) and (max-width: 375px) {
+                    .m-dialog-icon-wrapper { 
+                        width: 54px !important; 
+                        height: 54px !important; 
+                    }
+                    .m-dialog-icon { 
+                        width: 27px !important; 
+                        height: 27px !important; 
+                    }
+                    .m-dialog-title { 
+                        font-size: 17px !important; 
+                    }
+                    .m-dialog-text { 
+                        font-size: 14px !important; 
+                    }
+                    .m-dialog-button { 
+                        font-size: 14px !important;
+                        padding: 11px 18px !important;
+                        min-height: 42px !important;
+                    }
+                }
+                
+                @media (min-width: 376px) {
+                    .m-dialog-icon-wrapper { 
+                        width: 64px !important; 
+                        height: 64px !important; 
+                    }
+                    .m-dialog-icon { 
+                        width: 32px !important; 
+                        height: 32px !important; 
+                    }
+                    .m-dialog-title { 
+                        font-size: 19px !important; 
+                    }
+                    .m-dialog-text { 
+                        font-size: 15px !important; 
+                    }
+                    .m-dialog-button { 
+                        font-size: 15px !important;
+                        padding: 12px 22px !important;
+                        min-height: 46px !important;
+                    }
+                }
+
+                /* Landscape adjustments */
+                @media (orientation: landscape) and (max-height: 500px) {
+                    .m-dialog-icon-wrapper { 
+                        width: 40px !important; 
+                        height: 40px !important;
+                        margin-bottom: 8px !important;
+                    }
+                    .m-dialog-icon { 
+                        width: 20px !important; 
+                        height: 20px !important; 
+                    }
+                }
+
+                @media (orientation: landscape) and (max-height: 400px) {
+                    .m-dialog-icon-section {
+                        display: none !important;
+                    }
+                }
+            </style>
+            
+            <div class="m-dialog-content-wrapper" style="margin-bottom: clamp(12px, 3vh, 24px);">
+                <div class="m-dialog-icon-section" style="${(isLandscape && vh < 400) ? 'display: none;' : ''}">
+                    <div class="m-dialog-icon-wrapper" style="
+                        width: clamp(44px, 13vmin, 72px);
+                        height: clamp(44px, 13vmin, 72px);
+                        margin: 0 auto clamp(8px, 2vh, 20px);
+                        background: linear-gradient(135deg, var(--cinebrain-red, #E50914), var(--cinebrain-purple, #8B5CF6));
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        position: relative;
+                        box-shadow: 0 4px 20px rgba(229, 9, 20, 0.3);
+                    ">
+                        <i data-feather="log-out" class="m-dialog-icon" style="
+                            width: clamp(22px, 6.5vmin, 36px);
+                            height: clamp(22px, 6.5vmin, 36px);
+                            stroke: white;
+                            stroke-width: 2.5;
+                        "></i>
+                    </div>
+                </div>
+                
+                <h3 class="m-dialog-title" style="
+                    margin: 0 0 clamp(4px, 1vh, 10px) 0;
+                    color: var(--menu-text, #ffffff);
+                    font-size: clamp(15px, 4.5vmin, 20px);
+                    font-weight: 600;
+                    line-height: 1.3;
+                ">Sign Out?</h3>
+                
+                <p class="m-dialog-text" style="
+                    margin: 0;
+                    color: var(--menu-text-secondary, rgba(255,255,255,0.6));
+                    font-size: clamp(12px, 3.5vmin, 16px);
+                    line-height: 1.5;
+                    padding: 0 clamp(4px, 1vw, 16px);
+                    opacity: 0.9;
+                ">
+                    Are you sure you want to sign out?
+                </p>
+            </div>
+            
+            <div style="
+                display: flex;
+                gap: clamp(8px, 2vmin, 12px);
+                justify-content: center;
+                flex-wrap: nowrap;
+            ">
+                <button id="cancelLogout" class="m-dialog-button" style="
+                    flex: 1;
+                    min-width: 0;
+                    max-width: clamp(120px, 35vw, 160px);
+                    padding: clamp(8px, 2.5vmin, 14px) clamp(12px, 4vmin, 28px);
+                    background: var(--menu-item-bg, rgba(255,255,255,0.05));
+                    color: var(--menu-text, #ffffff);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: clamp(8px, 2vmin, 12px);
+                    cursor: pointer;
+                    font-weight: 600;
+                    font-size: clamp(12px, 3.5vmin, 16px);
+                    transition: all 0.2s;
+                    min-height: clamp(36px, 10vmin, 48px);
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    white-space: nowrap;
+                    -webkit-tap-highlight-color: transparent;
+                    user-select: none;
+                ">Cancel</button>
+                
+                <button id="confirmLogout" class="m-dialog-button" style="
+                    flex: 1;
+                    min-width: 0;
+                    max-width: clamp(120px, 35vw, 160px);
+                    padding: clamp(8px, 2.5vmin, 14px) clamp(12px, 4vmin, 28px);
+                    background: linear-gradient(135deg, var(--cinebrain-red, #E50914), var(--cinebrain-purple, #8B5CF6));
+                    color: white;
+                    border: none;
+                    border-radius: clamp(8px, 2vmin, 12px);
+                    cursor: pointer;
+                    font-weight: 600;
+                    font-size: clamp(12px, 3.5vmin, 16px);
+                    transition: all 0.2s;
+                    min-height: clamp(36px, 10vmin, 48px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    white-space: nowrap;
                     position: relative;
-                    box-shadow: 0 4px 20px rgba(229, 9, 20, 0.3);
-                ">
-                    <i data-feather="log-out" class="m-dialog-icon" style="
-                        width: clamp(22px, 6.5vmin, 36px);
-                        height: clamp(22px, 6.5vmin, 36px);
-                        stroke: white;
-                        stroke-width: 2.5;
-                    "></i>
-                </div>
+                    overflow: hidden;
+                    -webkit-tap-highlight-color: transparent;
+                    user-select: none;
+                    box-shadow: 0 2px 10px rgba(229, 9, 20, 0.3);
+                ">Sign Out</button>
             </div>
-            
-            <h3 class="m-dialog-title" style="
-                margin: 0 0 clamp(4px, 1vh, 10px) 0;
-                color: var(--menu-text, #ffffff);
-                font-size: clamp(15px, 4.5vmin, 20px);
-                font-weight: 600;
-                line-height: 1.3;
-            ">Sign Out?</h3>
-            
-            <p class="m-dialog-text" style="
-                margin: 0;
-                color: var(--menu-text-secondary, rgba(255,255,255,0.6));
-                font-size: clamp(12px, 3.5vmin, 16px);
-                line-height: 1.5;
-                padding: 0 clamp(4px, 1vw, 16px);
-                opacity: 0.9;
-            ">
-                Are you sure you want to sign out?
-            </p>
-        </div>
-        
-        <div style="
-            display: flex;
-            gap: clamp(8px, 2vmin, 12px);
-            justify-content: center;
-            flex-wrap: nowrap;
-        ">
-            <button id="cancelLogout" class="m-dialog-button" style="
-                flex: 1;
-                min-width: 0;
-                max-width: clamp(120px, 35vw, 160px);
-                padding: clamp(8px, 2.5vmin, 14px) clamp(12px, 4vmin, 28px);
-                background: var(--menu-item-bg, rgba(255,255,255,0.05));
-                color: var(--menu-text, #ffffff);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: clamp(8px, 2vmin, 12px);
-                cursor: pointer;
-                font-weight: 600;
-                font-size: clamp(12px, 3.5vmin, 16px);
-                transition: all 0.2s;
-                min-height: clamp(36px, 10vmin, 48px);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                white-space: nowrap;
-                -webkit-tap-highlight-color: transparent;
-                user-select: none;
-            ">Cancel</button>
-            
-            <button id="confirmLogout" class="m-dialog-button" style="
-                flex: 1;
-                min-width: 0;
-                max-width: clamp(120px, 35vw, 160px);
-                padding: clamp(8px, 2.5vmin, 14px) clamp(12px, 4vmin, 28px);
-                background: linear-gradient(135deg, var(--cinebrain-red, #E50914), var(--cinebrain-purple, #8B5CF6));
-                color: white;
-                border: none;
-                border-radius: clamp(8px, 2vmin, 12px);
-                cursor: pointer;
-                font-weight: 600;
-                font-size: clamp(12px, 3.5vmin, 16px);
-                transition: all 0.2s;
-                min-height: clamp(36px, 10vmin, 48px);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                white-space: nowrap;
-                position: relative;
-                overflow: hidden;
-                -webkit-tap-highlight-color: transparent;
-                user-select: none;
-                box-shadow: 0 2px 10px rgba(229, 9, 20, 0.3);
-            ">Sign Out</button>
-        </div>
-    `;
+        `;
 
         confirmDialog.appendChild(dialogBox);
         document.body.appendChild(confirmDialog);
@@ -1234,40 +1070,37 @@ class MobileNavigation {
             const style = document.createElement('style');
             style.id = 'm-dialog-animations';
             style.textContent = `
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-            @keyframes scaleIn {
-                from { 
-                    transform: scale(0.95) translateY(10px); 
-                    opacity: 0; 
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
                 }
-                to { 
-                    transform: scale(1) translateY(0); 
-                    opacity: 1; 
+                @keyframes scaleIn {
+                    from { 
+                        transform: scale(0.95) translateY(10px); 
+                        opacity: 0; 
+                    }
+                    to { 
+                        transform: scale(1) translateY(0); 
+                        opacity: 1; 
+                    }
                 }
-            }
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-            
-            /* Button press effect */
-            .m-dialog-button:active {
-                transform: scale(0.97);
-            }
-            
-            /* Cancel button hover/touch */
-            #cancelLogout:active {
-                background: rgba(255, 255, 255, 0.08) !important;
-            }
-            
-            /* Confirm button hover/touch */
-            #confirmLogout:active {
-                filter: brightness(1.1);
-                box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4) !important;
-            }
-        `;
+                
+                /* Button press effect - NO ROTATION */
+                .m-dialog-button:active {
+                    transform: scale(0.97);
+                }
+                
+                /* Cancel button hover/touch */
+                #cancelLogout:active {
+                    background: rgba(255, 255, 255, 0.08) !important;
+                }
+                
+                /* Confirm button hover/touch */
+                #confirmLogout:active {
+                    filter: brightness(1.1);
+                    box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4) !important;
+                }
+            `;
             document.head.appendChild(style);
         }
 
@@ -1292,23 +1125,24 @@ class MobileNavigation {
                 window.mobileNav.hapticFeedback('success');
             }
 
-            // Show loading state with adaptive sizing
+            // Show loading state
             const viewportWidth = window.innerWidth;
             const loadingText = viewportWidth < 320 ? 'Signing out...' : 'Signing out...';
             const spinnerSize = viewportWidth < 360 ? '14px' : '16px';
 
             this.innerHTML = `
-            <svg style="
-                width: ${spinnerSize}; 
-                height: ${spinnerSize}; 
-                margin-right: clamp(4px, 1vw, 6px);
-                animation: spin 1s linear infinite;
-            " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" opacity="0.3"/>
-                <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
-            </svg>
-            <span style="font-size: clamp(12px, 3.5vmin, 16px);">${loadingText}</span>
-        `;
+                <span style="
+                    display: inline-block;
+                    width: ${spinnerSize}; 
+                    height: ${spinnerSize}; 
+                    margin-right: clamp(4px, 1vw, 6px);
+                    border: 2px solid rgba(255, 255, 255, 0.3);
+                    border-top-color: white;
+                    border-radius: 50%;
+                    opacity: 0.8;
+                "></span>
+                <span style="font-size: clamp(12px, 3.5vmin, 16px);">${loadingText}</span>
+            `;
             this.disabled = true;
             this.style.opacity = '0.8';
 
@@ -1326,7 +1160,7 @@ class MobileNavigation {
                 window.mobileNav.showToast('Signing out...', 'success');
             }
 
-            // Redirect to home page (guest view) after delay
+            // Redirect to home page after delay
             setTimeout(() => {
                 window.location.href = '/index.html';
             }, 800);
@@ -1349,8 +1183,9 @@ class MobileNavigation {
         };
         window.addEventListener('popstate', handlePopState);
     }
+
     /**
-     * Show responsive toast notification (mobile-friendly)
+     * Show responsive toast notification
      */
     showToast(message, type = 'info') {
         const screenWidth = window.innerWidth;
@@ -1365,32 +1200,32 @@ class MobileNavigation {
 
         const toast = document.createElement('div');
         toast.style.cssText = `
-        position: fixed;
-        bottom: ${bottomOffset};
-        left: 50%;
-        transform: translateX(-50%);
-        background: ${type === 'success' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(0, 0, 0, 0.9)'};
-        color: white;
-        padding: ${padding};
-        border-radius: ${borderRadius};
-        font-size: ${fontSize};
-        font-weight: 500;
-        z-index: 10001;
-        animation: slideUp 0.3s ease;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        max-width: calc(100% - 32px);
-        white-space: nowrap;
-        text-align: center;
-    `;
+            position: fixed;
+            bottom: ${bottomOffset};
+            left: 50%;
+            transform: translateX(-50%);
+            background: ${type === 'success' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(0, 0, 0, 0.9)'};
+            color: white;
+            padding: ${padding};
+            border-radius: ${borderRadius};
+            font-size: ${fontSize};
+            font-weight: 500;
+            z-index: 10001;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-width: calc(100% - 32px);
+            white-space: nowrap;
+            text-align: center;
+        `;
         toast.textContent = message;
 
         const style = document.createElement('style');
         style.textContent = `
-        @keyframes slideUp {
-            from { transform: translate(-50%, 100%); opacity: 0; }
-            to { transform: translate(-50%, 0); opacity: 1; }
-        }
-    `;
+            @keyframes slideUp {
+                from { transform: translate(-50%, 100%); opacity: 0; }
+                to { transform: translate(-50%, 0); opacity: 1; }
+            }
+        `;
         document.head.appendChild(style);
 
         document.body.appendChild(toast);
@@ -1414,7 +1249,6 @@ class MobileNavigation {
     destroy() {
         // Remove event listeners
         window.removeEventListener('resize', this.handleResize);
-        window.removeEventListener('scroll', this.handleScroll);
         window.removeEventListener('popstate', this.handlePopstate);
 
         // Remove DOM elements
@@ -1437,7 +1271,6 @@ class MobileNavigation {
 // Initialize mobile navigation
 const mobileNav = new MobileNavigation({
     enableHaptic: true,
-    autoHideOnScroll: true,
     swipeThreshold: 50,
     swipeVelocity: 0.3
 });

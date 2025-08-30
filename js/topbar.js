@@ -171,7 +171,6 @@ class SearchEngine {
     }
 }
 
-// Notification System
 // Notification System with Responsive Sizing
 class NotificationSystem {
     constructor() {
@@ -370,7 +369,8 @@ class NotificationSystem {
         }
     }
 }
-// Optimized TopBar Component with Recent Searches
+
+// Optimized TopBar Component with Theme Manager Integration
 class TopbarComponent {
     constructor() {
         this.apiBase = 'https://backend-app-970m.onrender.com/api';
@@ -388,6 +388,11 @@ class TopbarComponent {
         this.SEARCH_DEBOUNCE_MS = 150; // Reduced from 300ms
         this.MIN_SEARCH_LENGTH = 1; // Start searching from 1 character
 
+        // Register with theme manager if available
+        if (window.themeManager) {
+            window.themeManager.register((theme) => this.onThemeChange(theme));
+        }
+
         this.init();
     }
 
@@ -403,6 +408,23 @@ class TopbarComponent {
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
+    }
+
+    // New method for theme change callback
+    onThemeChange(theme) {
+        this.updateThemeUI(theme);
+    }
+
+    // New method to update UI without setting theme
+    updateThemeUI(theme) {
+        // Just update the UI elements, don't set attributes
+        // The theme manager already did that
+
+        // Update any component-specific theme elements
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+        this.updateIconColors();
     }
 
     initKeyboardShortcuts() {
@@ -940,35 +962,42 @@ class TopbarComponent {
     }
 
     initTheme() {
-        const savedTheme = localStorage.getItem('cinebrain-theme') || 'dark';
-        this.setTheme(savedTheme);
+        // If theme manager exists, use it
+        if (window.themeManager) {
+            const theme = window.themeManager.getCurrentTheme();
+            this.updateThemeUI(theme);
+        } else {
+            // Fallback to old method
+            const savedTheme = localStorage.getItem('cinebrain-theme') || 'dark';
+            this.setTheme(savedTheme);
+        }
     }
 
     setTheme(theme) {
-        // Set both attributes for compatibility
-        document.documentElement.setAttribute('data-theme', theme);
-        document.documentElement.setAttribute('data-bs-theme', theme);
+        // If theme manager exists, delegate to it
+        if (window.themeManager) {
+            window.themeManager.applyTheme(theme);
+        } else {
+            // Fallback to old method
+            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            document.body.setAttribute('data-theme', theme);
+            document.body.setAttribute('data-bs-theme', theme);
 
-        // Also set on body for Bootstrap components
-        document.body.setAttribute('data-theme', theme);
-        document.body.setAttribute('data-bs-theme', theme);
+            localStorage.setItem('cinebrain-theme', theme);
 
-        // Save to localStorage
-        localStorage.setItem('cinebrain-theme', theme);
+            window.dispatchEvent(new CustomEvent('themeChanged', {
+                detail: { theme: theme },
+                bubbles: true
+            }));
 
-        // Dispatch custom event for other components
-        window.dispatchEvent(new CustomEvent('themeChanged', {
-            detail: { theme: theme },
-            bubbles: true
-        }));
-
-        // Update icons after theme change
-        setTimeout(() => {
-            if (typeof feather !== 'undefined') {
-                feather.replace();
-            }
-            this.updateIconColors();
-        }, 0);
+            setTimeout(() => {
+                if (typeof feather !== 'undefined') {
+                    feather.replace();
+                }
+                this.updateIconColors();
+            }, 0);
+        }
     }
 
     updateIconColors() {
@@ -987,9 +1016,14 @@ class TopbarComponent {
     }
 
     toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        this.setTheme(newTheme);
+        if (window.themeManager) {
+            window.themeManager.toggleTheme();
+        } else {
+            // Fallback to old method
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            this.setTheme(newTheme);
+        }
 
         // Provide haptic feedback if available
         if (navigator.vibrate) {
