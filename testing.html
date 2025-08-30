@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CineBrain - Content Cards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* Custom CSS for Content Cards */
+        :root {
+            --cinebrain-red: #E50914;
+            --cinebrain-blue: #0073E6;
+            --cinebrain-purple: #8B5CF6;
+            --cinebrain-dark: #0F0F0F;
+            --cinebrain-gold: #FFD700;
+            --cinebrain-green: #46d369;
+
+            /* Dynamic sizing based on viewport */
+            --card-gap: clamp(0.5rem, 1.5vw, 1rem);
+            --container-padding: clamp(0.75rem, 2vw, 1.5rem);
+        }
+
+        /* Dark mode variables */
+        [data-theme="dark"] {
+            --bg-primary: #0F0F0F;
+            --bg-secondary: #1a1a1a;
+            --bg-card: rgba(26, 26, 26, 0.95);
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --hover-overlay: rgba(0, 0, 0, 0.7);
+            --action-bg: rgba(0, 0, 0, 0.85);
+            --action-hover: rgba(229, 9, 20, 0.2);
+        }
+
+        /* Light mode variables */
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --hover-overlay: rgba(255, 255, 255, 0.9);
+            --action-bg: rgba(255, 255, 255, 0.95);
+            --action-hover: rgba(0, 115, 230, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Content Container */
+        #contentContainer {
+            width: 100%;
+            padding: 0;
+        }
+
+        /* Content Row Container */
+        .content-row {
+            position: relative;
+            margin-bottom: clamp(1.5rem, 4vw, 2.5rem);
+            width: 100%;
+        }
+
+        .content-row-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: clamp(0.5rem, 2vw, 1rem);
+            padding: 0 var(--container-padding);
+        }
+
+        .content-row-title {
+            font-size: clamp(1rem, 3.5vw, 1.5rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: clamp(0.25rem, 1vw, 0.5rem);
+        }
+
+        .content-row-title .title-icon {
+            color: var(--cinebrain-red);
+            font-size: clamp(0.9rem, 3vw, 1.2rem);
+        }
+
+        /* Carousel Container */
+        .carousel-container {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: var(--card-gap);
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            padding: 4px var(--container-padding);
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .carousel-track::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Navigation Arrows - Desktop Only */
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            opacity: 0;
+        }
+
+        @media (min-width: 768px) {
+            .carousel-nav {
+                display: flex;
+            }
+
+            .carousel-container:hover .carousel-nav:not(:disabled) {
+                opacity: 1;
+            }
+        }
+
+        .carousel-nav:hover:not(:disabled) {
+            background: var(--cinebrain-red);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .carousel-nav.prev {
+            left: 0.5rem;
+        }
+
+        .carousel-nav.next {
+            right: 0.5rem;
+        }
+
+        .carousel-nav:disabled {
+            opacity: 0 !important;
+            cursor: not-allowed;
+        }
+
+        /* Content Card with Dynamic Sizing */
+        .content-card {
+            flex: 0 0 auto;
+            scroll-snap-align: start;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            background: var(--bg-card);
+            border-radius: clamp(0.375rem, 1vw, 0.5rem);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            /* Dynamic width calculation */
+            width: calc((100vw - (var(--container-padding) * 2) - var(--card-gap)) / 2);
+        }
+
+        /* Responsive card widths */
+        @media (min-width: 480px) {
+            .content-card {
+                width: calc((100vw - (var(--container-padding) * 2) - (var(--card-gap) * 2)) / 3);
+            }
+        }
+
+        @media (min-width: 640px) {
+            .content-card {
+                width: calc((100vw - (var(--container-padding) * 2) - (var(--card-gap) * 3)) / 4);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .content-card {
+                width: calc((100vw - (var(--container-padding) * 2) - (var(--card-gap) * 4)) / 5);
+                max-width: 220px;
+            }
+        }
+
+        @media (min-width: 1280px) {
+            .content-card {
+                width: calc((100vw - (var(--container-padding) * 2) - (var(--card-gap) * 5)) / 6);
+                max-width: 200px;
+            }
+        }
+
+        /* Card Hover Effects - Desktop */
+        @media (hover: hover) and (pointer: fine) {
+            .content-card:hover {
+                transform: scale(1.05);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+                z-index: 5;
+            }
+        }
+
+        /* Mobile tap effect */
+        .content-card:active {
+            transform: scale(0.98);
+        }
+
+        /* Poster Container */
+        .poster-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 2/3;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .poster-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .content-card:hover .poster-image {
+                transform: scale(1.1);
+            }
+        }
+
+        /* NEW: Action Bar Design - Bottom of Poster */
+        .action-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.7), transparent);
+            padding: 2.5rem 0.5rem 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            z-index: 3;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Desktop: Show on hover */
+        @media (hover: hover) and (pointer: fine) {
+            .action-bar {
+                opacity: 0;
+            }
+
+            .content-card:hover .action-bar {
+                opacity: 1;
+            }
+        }
+
+        /* Action Buttons Container */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Action Button Styling */
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            min-height: 36px;
+            background: var(--action-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+        }
+
+        /* Mobile: Larger touch targets */
+        @media (max-width: 768px) {
+            .action-btn {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                min-height: 40px;
+            }
+        }
+
+        /* Hover effects */
+        .action-btn:hover {
+            transform: scale(1.15);
+            background: var(--action-hover);
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Icon styling */
+        .action-btn i {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.8);
+            transition: color 0.3s ease;
+        }
+
+        /* Bookmark button active state */
+        .action-btn.bookmark-btn.active {
+            background: rgba(0, 115, 230, 0.9);
+            border-color: var(--cinebrain-blue);
+        }
+
+        .action-btn.bookmark-btn.active i {
+            color: white;
+        }
+
+        /* Favorite button active state */
+        .action-btn.favorite-btn.active {
+            background: rgba(229, 9, 20, 0.9);
+            border-color: var(--cinebrain-red);
+        }
+
+        .action-btn.favorite-btn.active i {
+            color: white;
+        }
+
+        /* Tooltip */
+        .action-btn::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        @media (hover: hover) {
+            .action-btn:hover::after {
+                opacity: 1;
+            }
+        }
+
+        /* Rating Badge - Top Right */
+        .rating-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: var(--cinebrain-gold);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: clamp(0.7rem, 2vw, 0.85rem);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 2;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .rating-badge i {
+            font-size: clamp(0.6rem, 1.5vw, 0.75rem);
+        }
+
+        /* Quick Info (visible on mobile) */
+        .quick-info {
+            padding: 0.25rem 0.5rem;
+            color: white;
+            font-size: 0.75rem;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .quick-info {
+                display: block;
+            }
+        }
+
+        .quick-info .content-type {
+            background: rgba(139, 92, 246, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Content Info */
+        .content-info {
+            padding: clamp(0.5rem, 1.5vw, 0.75rem);
+        }
+
+        .content-title {
+            font-size: clamp(0.7rem, 2.2vw, 0.9rem);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: clamp(2px, 0.5vw, 4px);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+            min-height: calc(clamp(0.7rem, 2.2vw, 0.9rem) * 2.6);
+        }
+
+        .content-meta {
+            display: flex;
+            align-items: center;
+            gap: clamp(4px, 1vw, 6px);
+            margin-bottom: clamp(4px, 1vw, 6px);
+        }
+
+        .content-year {
+            font-size: clamp(0.6rem, 1.8vw, 0.75rem);
+            color: var(--text-secondary);
+        }
+
+        /* Genre Chips */
+        .genre-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: clamp(2px, 0.5vw, 4px);
+        }
+
+        .genre-chip {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--cinebrain-purple);
+            padding: clamp(1px, 0.25vw, 2px) clamp(4px, 1vw, 6px);
+            border-radius: clamp(2px, 0.5vw, 4px);
+            font-size: clamp(0.55rem, 1.5vw, 0.65rem);
+            font-weight: 500;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            white-space: nowrap;
+        }
+
+        /* Loading Skeleton */
+        .poster-skeleton {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(2rem, 5vw, 3rem) 1rem;
+            text-align: center;
+            color: var(--text-secondary);
+            width: 100%;
+            min-height: 200px;
+        }
+
+        .empty-state i {
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: clamp(0.5rem, 2vw, 1rem);
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: clamp(0.8rem, 2.5vw, 1rem);
+            margin-bottom: clamp(0.25rem, 1vw, 0.5rem);
+        }
+
+        .empty-state small {
+            font-size: clamp(0.65rem, 2vw, 0.8rem);
+            opacity: 0.7;
+        }
+
+        /* View All Link */
+        .view-all-link {
+            font-size: clamp(0.7rem, 2vw, 0.875rem);
+            color: var(--cinebrain-blue);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: clamp(2px, 0.5vw, 4px);
+            transition: color 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .view-all-link:hover {
+            color: var(--cinebrain-purple);
+        }
+
+        /* Shimmer Loading */
+        .shimmer-card {
+            background: var(--bg-card);
+            border-radius: clamp(0.375rem, 1vw, 0.5rem);
+            overflow: hidden;
+        }
+
+        .shimmer {
+            background: linear-gradient(90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.1),
+                    transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* Pulse animation for saved state */
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(229, 9, 20, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(229, 9, 20, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(229, 9, 20, 0);
+            }
+        }
+
+        .action-btn.pulse {
+            animation: pulse 1s;
+        }
+    </style>
+</head>
+
+<body data-theme="dark">
+    <div class="container mx-auto py-4 px-0">
+        <div id="contentContainer"></div>
+    </div>
+
+    <script>
+        // CineBrain Content Card Component - Real-time data only
+        class ContentCardSystem {
+            constructor() {
+                this.apiBase = 'https://backend-app-970m.onrender.com/api';
+                this.currentUser = this.getCurrentUser();
+                this.watchlist = new Set();
+                this.favorites = new Set();
+                this.loadingStates = new Map();
+                this.contentRows = [
+                    {
+                        id: 'trending',
+                        title: 'Trending Now',
+                        icon: 'fa-fire',
+                        endpoint: '/recommendations/trending',
+                        params: { type: 'all', limit: 20 }
+                    },
+                    {
+                        id: 'new-releases',
+                        title: 'New Releases',
+                        icon: 'fa-sparkles',
+                        endpoint: '/recommendations/new-releases',
+                        params: { type: 'movie', limit: 20 }
+                    },
+                    {
+                        id: 'critics-choice',
+                        title: 'Critics Choice',
+                        icon: 'fa-award',
+                        endpoint: '/recommendations/critics-choice',
+                        params: { type: 'movie', limit: 20 }
+                    },
+                    {
+                        id: 'popular-movies',
+                        title: 'Popular Movies',
+                        icon: 'fa-film',
+                        endpoint: '/recommendations/trending',
+                        params: { type: 'movie', limit: 20 }
+                    },
+                    {
+                        id: 'top-tv',
+                        title: 'Top Rated TV Shows',
+                        icon: 'fa-tv',
+                        endpoint: '/recommendations/critics-choice',
+                        params: { type: 'tv', limit: 20 }
+                    },
+                    {
+                        id: 'anime',
+                        title: 'Anime Picks',
+                        icon: 'fa-dragon',
+                        endpoint: '/recommendations/anime',
+                        params: { limit: 20 }
+                    }
+                ];
+
+                this.init();
+            }
+
+            async init() {
+                console.log('Initializing Content Card System...');
+                this.detectTheme();
+                this.setupThemeListener();
+
+                if (this.currentUser) {
+                    await this.loadUserLists();
+                }
+
+                await this.loadAllContent();
+                this.setupEventListeners();
+            }
+
+            detectTheme() {
+                const savedTheme = localStorage.getItem('cinebrain-theme') || 'dark';
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                document.body.setAttribute('data-theme', savedTheme);
+            }
+
+            setupThemeListener() {
+                window.addEventListener('themeChanged', (e) => {
+                    if (e.detail && e.detail.theme) {
+                        document.documentElement.setAttribute('data-theme', e.detail.theme);
+                        document.body.setAttribute('data-theme', e.detail.theme);
+                    }
+                });
+
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'cinebrain-theme') {
+                        const theme = e.newValue || 'dark';
+                        document.documentElement.setAttribute('data-theme', theme);
+                        document.body.setAttribute('data-theme', theme);
+                    }
+                });
+            }
+
+            getCurrentUser() {
+                const userStr = localStorage.getItem('cinebrain-user');
+                if (userStr) {
+                    try {
+                        return JSON.parse(userStr);
+                    } catch (e) {
+                        console.error('Error parsing user data:', e);
+                        return null;
+                    }
+                }
+                return null;
+            }
+
+            getAuthHeaders() {
+                const token = localStorage.getItem('cinebrain-token');
+                return token ? { 'Authorization': `Bearer ${token}` } : {};
+            }
+
+            async loadUserLists() {
+                try {
+                    const headers = this.getAuthHeaders();
+
+                    const [watchlistResponse, favoritesResponse] = await Promise.all([
+                        fetch(`${this.apiBase}/user/watchlist`, { headers }),
+                        fetch(`${this.apiBase}/user/favorites`, { headers })
+                    ]);
+
+                    if (watchlistResponse.ok) {
+                        const data = await watchlistResponse.json();
+                        this.watchlist = new Set(data.watchlist.map(item => item.id));
+                        console.log('Loaded watchlist:', this.watchlist.size, 'items');
+                    }
+
+                    if (favoritesResponse.ok) {
+                        const data = await favoritesResponse.json();
+                        this.favorites = new Set(data.favorites.map(item => item.id));
+                        console.log('Loaded favorites:', this.favorites.size, 'items');
+                    }
+                } catch (error) {
+                    console.error('Error loading user lists:', error);
+                }
+            }
+
+            async loadAllContent() {
+                const container = document.getElementById('contentContainer');
+
+                // Load all content rows in parallel
+                const promises = this.contentRows.map(row => {
+                    const rowElement = this.createContentRow(row);
+                    container.appendChild(rowElement);
+                    return this.loadRowContent(row, rowElement);
+                });
+
+                await Promise.allSettled(promises);
+            }
+
+            createContentRow(rowConfig) {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'content-row';
+                rowDiv.id = `row-${rowConfig.id}`;
+
+                rowDiv.innerHTML = `
+                    <div class="content-row-header">
+                        <h2 class="content-row-title">
+                            <i class="fas ${rowConfig.icon} title-icon"></i>
+                            <span>${rowConfig.title}</span>
+                        </h2>
+                        <a href="#" class="view-all-link">
+                            <span>View All</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div class="carousel-container">
+                        <button class="carousel-nav prev" data-row="${rowConfig.id}" data-direction="prev">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="carousel-track" id="track-${rowConfig.id}">
+                            ${this.createLoadingCards(6)}
+                        </div>
+                        <button class="carousel-nav next" data-row="${rowConfig.id}" data-direction="next">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                `;
+
+                return rowDiv;
+            }
+
+            createLoadingCards(count) {
+                let cards = '';
+                for (let i = 0; i < count; i++) {
+                    cards += `
+                        <div class="content-card shimmer-card">
+                            <div class="poster-container">
+                                <div class="poster-skeleton shimmer"></div>
+                            </div>
+                            <div class="content-info">
+                                <div style="height: 14px; background: #333; border-radius: 4px; margin-bottom: 6px;" class="shimmer"></div>
+                                <div style="height: 10px; background: #333; border-radius: 4px; width: 60%;" class="shimmer"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+                return cards;
+            }
+
+            async loadRowContent(rowConfig, rowElement) {
+                if (this.loadingStates.get(rowConfig.id)) {
+                    return;
+                }
+
+                this.loadingStates.set(rowConfig.id, true);
+
+                try {
+                    console.log(`Loading content for ${rowConfig.title}...`);
+
+                    const url = new URL(`${this.apiBase}${rowConfig.endpoint}`);
+                    Object.keys(rowConfig.params).forEach(key => {
+                        url.searchParams.append(key, rowConfig.params[key]);
+                    });
+
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+                    const response = await fetch(url.toString(), {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        // Try to get data from cache or database
+                        console.warn(`API returned ${response.status} for ${rowConfig.title}, attempting fallback...`);
+                        await this.loadFallbackContent(rowConfig, rowElement);
+                        return;
+                    }
+
+                    const data = await response.json();
+                    const items = data.recommendations || data.results || data.data || [];
+
+                    const track = rowElement.querySelector(`#track-${rowConfig.id}`);
+
+                    if (items.length > 0) {
+                        track.innerHTML = '';
+                        items.forEach(item => {
+                            const card = this.createContentCard(item);
+                            track.appendChild(card);
+                        });
+
+                        this.setupCarouselNavigation(rowConfig.id);
+                        console.log(`Successfully loaded ${items.length} items for ${rowConfig.title}`);
+                    } else {
+                        track.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-film"></i>
+                                <p>No content available</p>
+                                <small>Check back later for updates</small>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error(`Error loading ${rowConfig.title}:`, error);
+                    await this.loadFallbackContent(rowConfig, rowElement);
+                } finally {
+                    this.loadingStates.set(rowConfig.id, false);
+                }
+            }
+
+            async loadFallbackContent(rowConfig, rowElement) {
+                // Try alternative endpoints
+                const fallbackEndpoints = {
+                    'new-releases': '/recommendations/trending',
+                    'critics-choice': '/recommendations/trending',
+                    'anime': '/recommendations/trending'
+                };
+
+                if (fallbackEndpoints[rowConfig.id]) {
+                    try {
+                        const url = new URL(`${this.apiBase}${fallbackEndpoints[rowConfig.id]}`);
+                        url.searchParams.append('limit', '20');
+
+                        const response = await fetch(url);
+                        if (response.ok) {
+                            const data = await response.json();
+                            const items = data.recommendations || [];
+
+                            const track = rowElement.querySelector(`#track-${rowConfig.id}`);
+                            if (items.length > 0) {
+                                track.innerHTML = '';
+                                items.forEach(item => {
+                                    const card = this.createContentCard(item);
+                                    track.appendChild(card);
+                                });
+                                this.setupCarouselNavigation(rowConfig.id);
+                                console.log(`Loaded fallback content for ${rowConfig.title}`);
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Fallback also failed:', e);
+                    }
+                }
+
+                // Show error state
+                const track = rowElement.querySelector(`#track-${rowConfig.id}`);
+                track.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Unable to load content</p>
+                        <small>Please try refreshing the page</small>
+                    </div>
+                `;
+            }
+
+            createContentCard(content) {
+                const card = document.createElement('div');
+                card.className = 'content-card';
+                card.dataset.contentId = content.id;
+
+                const title = content.title || content.name || 'Unknown Title';
+                const posterUrl = this.getPosterUrl(content.poster_path);
+                const rating = content.rating ? parseFloat(content.rating).toFixed(1) : null;
+                const year = this.extractYear(content.release_date || content.first_air_date);
+                const contentType = content.content_type || content.media_type || 'movie';
+                const genres = content.genres ? content.genres.slice(0, 2) : [];
+
+                const isInWatchlist = this.watchlist.has(content.id);
+                const isInFavorites = this.favorites.has(content.id);
+
+                card.innerHTML = `
+                    <div class="poster-container">
+                        <img src="${posterUrl}" 
+                             alt="${this.escapeHtml(title)}" 
+                             class="poster-image"
+                             loading="lazy"
+                             onerror="this.onerror=null;this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgZmlsbD0iIzJhMmEyYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSIjODg4IiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'"
+                        >
+                        
+                        ${rating && rating !== '0.0' ? `
+                            <div class="rating-badge">
+                                <i class="fas fa-star"></i>
+                                <span>${rating}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${this.currentUser ? `
+                            <div class="action-bar">
+                                <div class="quick-info">
+                                    <span class="content-type">${contentType}</span>
+                                </div>
+                                <div class="action-buttons">
+                                    <button class="action-btn bookmark-btn ${isInWatchlist ? 'active' : ''}" 
+                                            data-content-id="${content.id}"
+                                            data-tooltip="${isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}"
+                                            aria-label="Toggle watchlist">
+                                        <i class="fas fa-bookmark"></i>
+                                    </button>
+                                    <button class="action-btn favorite-btn ${isInFavorites ? 'active' : ''}" 
+                                            data-content-id="${content.id}"
+                                            data-tooltip="${isInFavorites ? 'Remove from Favorites' : 'Add to Favorites'}"
+                                            aria-label="Toggle favorites">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="content-info">
+                        <h3 class="content-title">${this.escapeHtml(title)}</h3>
+                        ${year || contentType !== 'movie' ? `
+                            <div class="content-meta">
+                                ${year ? `<span class="content-year">${year}</span>` : ''}
+                            </div>
+                        ` : ''}
+                        ${genres.length > 0 ? `
+                            <div class="genre-chips">
+                                ${genres.map(genre => `
+                                    <span class="genre-chip">${this.escapeHtml(genre)}</span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                // Add click event for navigation
+                card.addEventListener('click', (e) => {
+                    if (!e.target.closest('.action-btn')) {
+                        this.navigateToDetails(content.id);
+                    }
+                });
+
+                return card;
+            }
+
+            getPosterUrl(posterPath) {
+                if (!posterPath) {
+                    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgZmlsbD0iIzJhMmEyYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSIjODg4IiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
+                }
+
+                if (posterPath.startsWith('http://') || posterPath.startsWith('https://')) {
+                    return posterPath;
+                }
+
+                return `https://image.tmdb.org/t/p/w342${posterPath}`;
+            }
+
+            extractYear(dateString) {
+                if (!dateString) return '';
+                try {
+                    return new Date(dateString).getFullYear();
+                } catch (e) {
+                    return '';
+                }
+            }
+
+            escapeHtml(text) {
+                if (!text) return '';
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return String(text).replace(/[&<>"']/g, m => map[m]);
+            }
+
+            navigateToDetails(contentId) {
+                window.location.href = `/content/details.html?id=${contentId}`;
+            }
+
+            setupCarouselNavigation(rowId) {
+                const track = document.getElementById(`track-${rowId}`);
+                const prevBtn = document.querySelector(`.carousel-nav[data-row="${rowId}"][data-direction="prev"]`);
+                const nextBtn = document.querySelector(`.carousel-nav[data-row="${rowId}"][data-direction="next"]`);
+
+                if (!track || !prevBtn || !nextBtn) return;
+
+                const updateButtonStates = () => {
+                    const atStart = track.scrollLeft <= 0;
+                    const atEnd = track.scrollLeft >= track.scrollWidth - track.clientWidth - 1;
+
+                    prevBtn.disabled = atStart;
+                    nextBtn.disabled = atEnd;
+                };
+
+                prevBtn.addEventListener('click', () => {
+                    const scrollAmount = track.clientWidth * 0.8;
+                    track.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                });
+
+                nextBtn.addEventListener('click', () => {
+                    const scrollAmount = track.clientWidth * 0.8;
+                    track.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                });
+
+                track.addEventListener('scroll', updateButtonStates);
+                updateButtonStates();
+            }
+
+            setupEventListeners() {
+                document.addEventListener('click', async (e) => {
+                    if (e.target.closest('.bookmark-btn')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const btn = e.target.closest('.bookmark-btn');
+                        const contentId = parseInt(btn.dataset.contentId);
+                        await this.toggleWatchlist(contentId, btn);
+                    }
+
+                    if (e.target.closest('.favorite-btn')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const btn = e.target.closest('.favorite-btn');
+                        const contentId = parseInt(btn.dataset.contentId);
+                        await this.toggleFavorite(contentId, btn);
+                    }
+                });
+            }
+
+            async toggleWatchlist(contentId, button) {
+                if (!this.currentUser) {
+                    window.location.href = '/auth/login.html';
+                    return;
+                }
+
+                const isInWatchlist = this.watchlist.has(contentId);
+                const action = isInWatchlist ? 'remove_watchlist' : 'watchlist';
+
+                // Optimistic update
+                if (isInWatchlist) {
+                    this.watchlist.delete(contentId);
+                    button.classList.remove('active');
+                    button.dataset.tooltip = 'Add to Watchlist';
+                } else {
+                    this.watchlist.add(contentId);
+                    button.classList.add('active');
+                    button.dataset.tooltip = 'Remove from Watchlist';
+                }
+
+                // Visual feedback
+                button.classList.add('pulse');
+                setTimeout(() => button.classList.remove('pulse'), 1000);
+
+                try {
+                    const response = await fetch(`${this.apiBase}/interactions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...this.getAuthHeaders()
+                        },
+                        body: JSON.stringify({
+                            content_id: contentId,
+                            interaction_type: action
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to update watchlist');
+                    }
+
+                    console.log(`Content ${contentId} ${isInWatchlist ? 'removed from' : 'added to'} watchlist`);
+                } catch (error) {
+                    console.error('Error updating watchlist:', error);
+                    // Revert on error
+                    if (isInWatchlist) {
+                        this.watchlist.add(contentId);
+                        button.classList.add('active');
+                        button.dataset.tooltip = 'Remove from Watchlist';
+                    } else {
+                        this.watchlist.delete(contentId);
+                        button.classList.remove('active');
+                        button.dataset.tooltip = 'Add to Watchlist';
+                    }
+                }
+            }
+
+            async toggleFavorite(contentId, button) {
+                if (!this.currentUser) {
+                    window.location.href = '/auth/login.html';
+                    return;
+                }
+
+                const isInFavorites = this.favorites.has(contentId);
+                const action = isInFavorites ? 'remove_favorite' : 'favorite';
+
+                // Optimistic update
+                if (isInFavorites) {
+                    this.favorites.delete(contentId);
+                    button.classList.remove('active');
+                    button.dataset.tooltip = 'Add to Favorites';
+                } else {
+                    this.favorites.add(contentId);
+                    button.classList.add('active');
+                    button.dataset.tooltip = 'Remove from Favorites';
+                }
+
+                // Visual feedback
+                button.classList.add('pulse');
+                setTimeout(() => button.classList.remove('pulse'), 1000);
+
+                try {
+                    const response = await fetch(`${this.apiBase}/interactions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...this.getAuthHeaders()
+                        },
+                        body: JSON.stringify({
+                            content_id: contentId,
+                            interaction_type: action
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to update favorites');
+                    }
+
+                    console.log(`Content ${contentId} ${isInFavorites ? 'removed from' : 'added to'} favorites`);
+                } catch (error) {
+                    console.error('Error updating favorites:', error);
+                    // Revert on error
+                    if (isInFavorites) {
+                        this.favorites.add(contentId);
+                        button.classList.add('active');
+                        button.dataset.tooltip = 'Remove from Favorites';
+                    } else {
+                        this.favorites.delete(contentId);
+                        button.classList.remove('active');
+                        button.dataset.tooltip = 'Add to Favorites';
+                    }
+                }
+            }
+        }
+
+        // Initialize the content card system when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            window.contentCardSystem = new ContentCardSystem();
+        });
+    </script>
+</body>
+
+</html>

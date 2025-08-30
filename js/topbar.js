@@ -171,11 +171,211 @@ class SearchEngine {
     }
 }
 
+// Notification System
+// Notification System with Responsive Sizing
+class NotificationSystem {
+    constructor() {
+        this.container = null;
+        this.init();
+    }
+
+    init() {
+        // Create notification container if it doesn't exist
+        if (!document.getElementById('notification-container')) {
+            this.container = document.createElement('div');
+            this.container.id = 'notification-container';
+
+            // Responsive positioning based on screen size
+            const isMobile = window.innerWidth <= 768;
+
+            this.container.style.cssText = `
+                position: fixed;
+                ${isMobile ? 'top: 10px; left: 10px; right: 10px;' : 'top: 70px; right: 20px;'}
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                pointer-events: none;
+                max-width: ${isMobile ? '100%' : '400px'};
+            `;
+            document.body.appendChild(this.container);
+        } else {
+            this.container = document.getElementById('notification-container');
+        }
+    }
+
+    show(message, type = 'info', duration = 3000) {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+
+        const isMobile = window.innerWidth <= 768;
+
+        // Define colors based on type
+        const colors = {
+            success: 'linear-gradient(135deg, #10b981, #059669)',
+            error: 'linear-gradient(135deg, #ef4444, #dc2626)',
+            warning: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            info: 'linear-gradient(135deg, #3b82f6, #2563eb)'
+        };
+
+        // Define icons based on type
+        const icons = {
+            success: 'check-circle',
+            error: 'x-circle',
+            warning: 'alert-triangle',
+            info: 'info'
+        };
+
+        // Responsive notification styling
+        notification.style.cssText = `
+            background: ${colors[type] || colors.info};
+            color: white;
+            padding: ${isMobile ? 'clamp(12px, 3vw, 16px) clamp(14px, 3.5vw, 18px)' : '16px 20px'};
+            border-radius: ${isMobile ? 'clamp(8px, 2vw, 12px)' : '12px'};
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: ${isMobile ? 'clamp(8px, 2vw, 12px)' : '12px'};
+            min-width: ${isMobile ? 'auto' : '300px'};
+            max-width: 100%;
+            pointer-events: auto;
+            cursor: pointer;
+            animation: ${isMobile ? 'slideDown' : 'slideInRight'} 0.3s ease;
+            font-size: ${isMobile ? 'clamp(12px, 3.5vw, 14px)' : '14px'};
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+            width: ${isMobile ? '100%' : 'auto'};
+        `;
+
+        // Add icon with responsive sizing
+        const iconElement = document.createElement('i');
+        iconElement.setAttribute('data-feather', icons[type] || icons.info);
+        iconElement.style.cssText = `
+            width: ${isMobile ? 'clamp(18px, 5vw, 20px)' : '20px'};
+            height: ${isMobile ? 'clamp(18px, 5vw, 20px)' : '20px'};
+            flex-shrink: 0;
+        `;
+
+        // Add message
+        const messageElement = document.createElement('span');
+        messageElement.textContent = message;
+        messageElement.style.cssText = 'flex: 1; line-height: 1.4;';
+
+        // Add close button with responsive sizing
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '×';
+        closeBtn.style.cssText = `
+            background: none;
+            border: none;
+            color: white;
+            font-size: ${isMobile ? 'clamp(20px, 6vw, 24px)' : '24px'};
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            margin-left: ${isMobile ? 'clamp(8px, 2vw, 12px)' : '12px'};
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            min-width: ${isMobile ? '24px' : 'auto'};
+        `;
+        closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
+        closeBtn.onmouseout = () => closeBtn.style.opacity = '0.8';
+
+        // Add progress bar
+        const progressBar = document.createElement('div');
+        progressBar.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.5);
+            animation: progress ${duration}ms linear;
+            width: 100%;
+            transform-origin: left;
+        `;
+
+        notification.appendChild(iconElement);
+        notification.appendChild(messageElement);
+        notification.appendChild(closeBtn);
+        notification.appendChild(progressBar);
+
+        this.container.appendChild(notification);
+
+        // Initialize feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+
+        // Auto remove after duration
+        const removeNotification = () => {
+            notification.style.animation = `${isMobile ? 'slideDown' : 'slideOutRight'} 0.3s ease reverse`;
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        };
+
+        const timeoutId = setTimeout(removeNotification, duration);
+
+        // Click to dismiss
+        notification.addEventListener('click', () => {
+            clearTimeout(timeoutId);
+            removeNotification();
+        });
+
+        // Add animations to style if not exists
+        if (!document.getElementById('notification-styles')) {
+            const style = document.createElement('style');
+            style.id = 'notification-styles';
+            style.textContent = `
+                @keyframes slideInRight {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes slideOutRight {
+                    from {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                }
+                @keyframes slideDown {
+                    from {
+                        transform: translateY(-100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateY(0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes progress {
+                    from {
+                        transform: scaleX(1);
+                    }
+                    to {
+                        transform: scaleX(0);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+}
 // Optimized TopBar Component with Recent Searches
 class TopbarComponent {
     constructor() {
         this.apiBase = 'https://backend-app-970m.onrender.com/api';
         this.searchEngine = new SearchEngine(this.apiBase);
+        this.notificationSystem = new NotificationSystem();
         this.searchDebounceTimer = null;
         this.currentUser = this.getCurrentUser();
         this.currentSearchQuery = '';
@@ -886,9 +1086,366 @@ class TopbarComponent {
     }
 
     logout() {
-        localStorage.removeItem('cinebrain-token');
-        localStorage.removeItem('cinebrain-user');
-        window.location.href = '/auth/login.html';
+        // Create responsive confirmation dialog
+        const confirmDialog = document.createElement('div');
+        confirmDialog.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.2s ease;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    `;
+
+        const dialogBox = document.createElement('div');
+        dialogBox.style.cssText = `
+        background: var(--bs-dropdown-bg, #1a1a1a);
+        border-radius: clamp(16px, 4vw, 24px);
+        padding: clamp(20px, 5vw, 32px);
+        width: min(90vw, 400px);
+        max-width: calc(100vw - 32px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        animation: scaleIn 0.2s ease;
+        text-align: center;
+        position: relative;
+        margin: auto;
+    `;
+
+        dialogBox.innerHTML = `
+        <style>
+            @media (max-width: 320px) {
+                .dialog-icon-wrapper { 
+                    width: 48px !important; 
+                    height: 48px !important; 
+                }
+                .dialog-icon { 
+                    width: 24px !important; 
+                    height: 24px !important; 
+                }
+                .dialog-title { 
+                    font-size: 16px !important; 
+                }
+                .dialog-text { 
+                    font-size: 13px !important; 
+                }
+                .dialog-button { 
+                    font-size: 13px !important;
+                    padding: 10px 16px !important;
+                    min-height: 38px !important;
+                }
+            }
+            
+            @media (min-width: 321px) and (max-width: 375px) {
+                .dialog-icon-wrapper { 
+                    width: 56px !important; 
+                    height: 56px !important; 
+                }
+                .dialog-icon { 
+                    width: 28px !important; 
+                    height: 28px !important; 
+                }
+                .dialog-title { 
+                    font-size: 18px !important; 
+                }
+                .dialog-text { 
+                    font-size: 14px !important; 
+                }
+                .dialog-button { 
+                    font-size: 14px !important;
+                    padding: 11px 20px !important;
+                    min-height: 42px !important;
+                }
+            }
+            
+            @media (min-width: 376px) and (max-width: 414px) {
+                .dialog-icon-wrapper { 
+                    width: 60px !important; 
+                    height: 60px !important; 
+                }
+                .dialog-icon { 
+                    width: 30px !important; 
+                    height: 30px !important; 
+                }
+                .dialog-title { 
+                    font-size: 19px !important; 
+                }
+                .dialog-text { 
+                    font-size: 14px !important; 
+                }
+                .dialog-button { 
+                    font-size: 14px !important;
+                    padding: 12px 22px !important;
+                    min-height: 44px !important;
+                }
+            }
+            
+            @media (min-width: 415px) {
+                .dialog-icon-wrapper { 
+                    width: 64px !important; 
+                    height: 64px !important; 
+                }
+                .dialog-icon { 
+                    width: 32px !important; 
+                    height: 32px !important; 
+                }
+                .dialog-title { 
+                    font-size: 20px !important; 
+                }
+                .dialog-text { 
+                    font-size: 15px !important; 
+                }
+                .dialog-button { 
+                    font-size: 15px !important;
+                    padding: 12px 24px !important;
+                    min-height: 46px !important;
+                }
+            }
+
+            /* Landscape mode adjustments */
+            @media (orientation: landscape) and (max-height: 500px) {
+                .dialog-icon-wrapper { 
+                    width: 40px !important; 
+                    height: 40px !important; 
+                }
+                .dialog-icon { 
+                    width: 20px !important; 
+                    height: 20px !important; 
+                }
+                .dialog-content-wrapper {
+                    margin-bottom: 12px !important;
+                }
+            }
+
+            /* Small devices in landscape */
+            @media (orientation: landscape) and (max-height: 400px) {
+                .dialog-icon-section {
+                    display: none !important;
+                }
+            }
+        </style>
+        
+        <div class="dialog-content-wrapper" style="margin-bottom: clamp(16px, 4vw, 24px);">
+            <div class="dialog-icon-section">
+                <div class="dialog-icon-wrapper" style="
+                    width: clamp(48px, 12vw, 64px);
+                    height: clamp(48px, 12vw, 64px);
+                    margin: 0 auto clamp(12px, 3vw, 20px);
+                    background: linear-gradient(135deg, var(--cinebrain-red, #E50914), var(--cinebrain-purple, #8B5CF6));
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    position: relative;
+                ">
+                    <i data-feather="log-out" class="dialog-icon" style="
+                        width: clamp(24px, 6vw, 32px);
+                        height: clamp(24px, 6vw, 32px);
+                        stroke: white;
+                        stroke-width: 2.5;
+                    "></i>
+                </div>
+            </div>
+            
+            <h3 class="dialog-title" style="
+                margin: 0 0 clamp(6px, 1.5vw, 10px) 0;
+                color: var(--text-primary, #ffffff);
+                font-size: clamp(16px, 4.5vw, 20px);
+                font-weight: 600;
+                line-height: 1.3;
+            ">Sign Out?</h3>
+            
+            <p class="dialog-text" style="
+                margin: 0;
+                color: var(--text-secondary, #b3b3b3);
+                font-size: clamp(13px, 3.5vw, 15px);
+                line-height: 1.5;
+                padding: 0 clamp(8px, 2vw, 16px);
+            ">
+                Are you sure you want to sign out of CineBrain?
+            </p>
+        </div>
+        
+        <div style="
+            display: flex;
+            gap: clamp(8px, 2vw, 12px);
+            justify-content: center;
+            flex-wrap: nowrap;
+        ">
+            <button id="cancelLogout" class="dialog-button" style="
+                flex: 1;
+                min-width: 0;
+                max-width: 160px;
+                padding: clamp(10px, 2.5vw, 12px) clamp(16px, 4vw, 24px);
+                background: rgba(255, 255, 255, 0.1);
+                color: var(--text-primary, #ffffff);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: clamp(8px, 2vw, 12px);
+                cursor: pointer;
+                font-weight: 500;
+                font-size: clamp(13px, 3.5vw, 15px);
+                transition: all 0.2s;
+                min-height: clamp(38px, 10vw, 46px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                white-space: nowrap;
+                -webkit-tap-highlight-color: transparent;
+            "
+            onmouseover="this.style.background='rgba(255, 255, 255, 0.15)'"
+            onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'"
+            ontouchstart="this.style.background='rgba(255, 255, 255, 0.15)'"
+            ontouchend="this.style.background='rgba(255, 255, 255, 0.1)'"
+            >Cancel</button>
+            
+            <button id="confirmLogout" class="dialog-button" style="
+                flex: 1;
+                min-width: 0;
+                max-width: 160px;
+                padding: clamp(10px, 2.5vw, 12px) clamp(16px, 4vw, 24px);
+                background: linear-gradient(135deg, var(--cinebrain-red, #E50914), var(--cinebrain-purple, #8B5CF6));
+                color: white;
+                border: none;
+                border-radius: clamp(8px, 2vw, 12px);
+                cursor: pointer;
+                font-weight: 500;
+                font-size: clamp(13px, 3.5vw, 15px);
+                transition: all 0.2s;
+                min-height: clamp(38px, 10vw, 46px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                white-space: nowrap;
+                position: relative;
+                overflow: hidden;
+                -webkit-tap-highlight-color: transparent;
+            "
+            onmouseover="this.style.filter='brightness(1.1)'"
+            onmouseout="this.style.filter='brightness(1)'"
+            ontouchstart="this.style.filter='brightness(1.1)'"
+            ontouchend="this.style.filter='brightness(1)'"
+            >Sign Out</button>
+        </div>
+    `;
+
+        confirmDialog.appendChild(dialogBox);
+        document.body.appendChild(confirmDialog);
+
+        // Add animations
+        if (!document.getElementById('dialog-animations')) {
+            const style = document.createElement('style');
+            style.id = 'dialog-animations';
+            style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes scaleIn {
+                from { 
+                    transform: scale(0.9); 
+                    opacity: 0; 
+                }
+                to { 
+                    transform: scale(1); 
+                    opacity: 1; 
+                }
+            }
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            
+            /* Responsive button hover effects */
+            @media (hover: hover) {
+                .dialog-button:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                }
+            }
+            
+            /* Touch feedback */
+            .dialog-button:active {
+                transform: scale(0.98);
+            }
+        `;
+            document.head.appendChild(style);
+        }
+
+        // Initialize feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+
+        // Handle button clicks
+        document.getElementById('cancelLogout').addEventListener('click', () => {
+            confirmDialog.style.animation = 'fadeIn 0.2s ease reverse';
+            setTimeout(() => confirmDialog.remove(), 200);
+        });
+
+        document.getElementById('confirmLogout').addEventListener('click', function () {
+            // Show loading state with responsive text
+            const viewportWidth = window.innerWidth;
+            const loadingText = viewportWidth < 360 ? 'Signing out...' : 'Signing out...';
+            const spinnerSize = viewportWidth < 360 ? '14px' : '16px';
+
+            this.innerHTML = `
+            <svg style="
+                width: ${spinnerSize}; 
+                height: ${spinnerSize}; 
+                margin-right: 6px;
+                animation: spin 1s linear infinite;
+            " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" opacity="0.3"/>
+                <path d="M21 12a9 9 0 11-18 0" stroke-linecap="round"/>
+            </svg>
+            ${loadingText}
+        `;
+            this.disabled = true;
+            this.style.opacity = '0.8';
+
+            // Show notification
+            if (window.topbar && window.topbar.notificationSystem) {
+                window.topbar.notificationSystem.show('Signing out successfully...', 'success', 2000);
+            }
+
+            // Clear all auth data
+            localStorage.removeItem('cinebrain-token');
+            localStorage.removeItem('cinebrain-user');
+            localStorage.removeItem('cinebrain-role');
+            sessionStorage.clear();
+
+            // Store flag to show logout message on home page
+            sessionStorage.setItem('show-logout-message', 'true');
+
+            // Redirect to home page (guest view) after delay
+            setTimeout(() => {
+                window.location.href = '/index.html';
+            }, 1000);
+        });
+
+        // Close on backdrop click
+        confirmDialog.addEventListener('click', (e) => {
+            if (e.target === confirmDialog) {
+                confirmDialog.style.animation = 'fadeIn 0.2s ease reverse';
+                setTimeout(() => confirmDialog.remove(), 200);
+            }
+        });
+
+        // Handle escape key
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                confirmDialog.style.animation = 'fadeIn 0.2s ease reverse';
+                setTimeout(() => confirmDialog.remove(), 200);
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
     }
 
     initMobileSearch() {
@@ -996,3 +1553,20 @@ class TopbarComponent {
 
 // Initialize TopBar Component
 window.topbar = new TopbarComponent();
+
+// Check for logout message on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const showLogoutMessage = sessionStorage.getItem('show-logout-message');
+
+    if (showLogoutMessage) {
+        // Remove the flag
+        sessionStorage.removeItem('show-logout-message');
+
+        // Show notification if notification system exists
+        if (window.topbar && window.topbar.notificationSystem) {
+            setTimeout(() => {
+                window.topbar.notificationSystem.show('You have been signed out successfully', 'info', 4000);
+            }, 500);
+        }
+    }
+});
