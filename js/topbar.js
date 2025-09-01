@@ -1,18 +1,24 @@
+// topbar.js - Complete Updated File with Instant Search
+
 // Initialize Feather Icons first
 if (typeof feather !== 'undefined') {
     feather.replace();
 }
 
-// Advanced Search Engine with Backend Priority and Recent Searches
+// Advanced Search Engine with Instant Search Support
 class SearchEngine {
     constructor(apiBase) {
         this.apiBase = apiBase;
         this.cache = new Map();
         this.activeRequest = null;
-        this.maxCacheSize = 50;
-        this.cacheTimeout = 60000; // 1 minute cache
+        this.maxCacheSize = 100;
+        this.cacheTimeout = 30000; // 30 seconds for instant results
         this.recentSearches = this.loadRecentSearches();
         this.maxRecentSearches = 10;
+        this.instantSearchController = null;
+        this.autocompleteController = null;
+        this.lastInstantQuery = '';
+        this.instantCache = new Map();
     }
 
     loadRecentSearches() {
@@ -21,7 +27,6 @@ class SearchEngine {
             if (!stored) return [];
 
             const searches = JSON.parse(stored);
-            // Validate and filter out invalid entries
             return searches.filter(item =>
                 item &&
                 typeof item === 'object' &&
@@ -30,7 +35,6 @@ class SearchEngine {
             );
         } catch (e) {
             console.error('Error loading recent searches:', e);
-            // Clear corrupted data
             localStorage.removeItem('cinebrain-recent-searches');
             return [];
         }
@@ -47,26 +51,22 @@ class SearchEngine {
     addRecentSearch(query, result = null) {
         if (!query || typeof query !== 'string' || query.length < 2) return;
 
-        // Remove if already exists - with proper validation
         this.recentSearches = this.recentSearches.filter(item => {
-            // Ensure item and item.query exist before comparing
             return item && item.query && item.query.toLowerCase() !== query.toLowerCase();
         });
 
-        // Add to beginning with timestamp and optional result info
         const recentItem = {
             query: query,
             timestamp: Date.now(),
             resultCount: result ? result.length : 0,
             firstResult: result && result[0] ? {
                 title: result[0].title || 'Unknown',
-                type: result[0].content_type || 'unknown'
+                type: result[0].content_type || result[0].type || 'unknown'
             } : null
         };
 
         this.recentSearches.unshift(recentItem);
 
-        // Keep only max number of searches
         if (this.recentSearches.length > this.maxRecentSearches) {
             this.recentSearches = this.recentSearches.slice(0, this.maxRecentSearches);
         }
@@ -75,7 +75,6 @@ class SearchEngine {
     }
 
     getRecentSearches() {
-        // Return only valid recent searches
         return this.recentSearches.filter(item =>
             item && item.query && typeof item.query === 'string'
         );
@@ -95,14 +94,86 @@ class SearchEngine {
         this.saveRecentSearches();
     }
 
-    async search(query, signal) {
+    // New: Instant search method for ultra-fast results
+    async instantSearch(query, signal) {
+        const cacheKey = `instant:${query.toLowerCase().trim()}`;
+
+        // Check instant cache first
+        if (this.instantCache.has(cacheKey)) {
+            const cached = this.instantCache.get(cacheKey);
+            if (Date.now() - cached.timestamp < 10000) { // 10 second cache for instant
+                return { results: cached.results, fromCache: true, instant: true };
+            }
+            this.instantCache.delete(cacheKey);
+        }
+
+        // Cancel previous instant search
+        if (this.instantSearchController) {
+            this.instantSearchController.abort();
+        }
+
+        this.instantSearchController = new AbortController();
+        const combinedSignal = signal || this.instantSearchController.signal;
+
+        try {
+            const response = await fetch(
+                `${this.apiBase}/search/instant?q=${encodeURIComponent(query)}`,
+                {
+                    signal: combinedSignal,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Instant search failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const results = data.results || [];
+
+            // Cache instant results
+            this.instantCache.set(cacheKey, {
+                results,
+                timestamp: Date.now()
+            });
+
+            // Limit instant cache size
+            if (this.instantCache.size > 50) {
+                const firstKey = this.instantCache.keys().next().value;
+                this.instantCache.delete(firstKey);
+            }
+
+            return { results, fromCache: false, instant: true };
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw error;
+            }
+            // Fallback to regular search on instant search failure
+            return this.search(query, signal);
+        } finally {
+            if (this.instantSearchController === this.instantSearchController) {
+                this.instantSearchController = null;
+            }
+        }
+    }
+
+    // Enhanced main search with instant fallback
+    async search(query, signal, options = {}) {
         const cacheKey = query.toLowerCase().trim();
 
-        // Check cache first (but with short timeout)
+        // Check cache first
         if (this.cache.has(cacheKey)) {
             const cached = this.cache.get(cacheKey);
             if (Date.now() - cached.timestamp < this.cacheTimeout) {
-                return { results: cached.results, fromCache: true };
+                return {
+                    results: cached.results,
+                    fromCache: true,
+                    instant: cached.instant,
+                    suggestions: cached.suggestions
+                };
             }
             this.cache.delete(cacheKey);
         }
@@ -112,13 +183,26 @@ class SearchEngine {
             this.activeRequest.abort();
         }
 
-        // Create new abort controller for this request
         const controller = new AbortController();
         this.activeRequest = controller;
 
         try {
+            // Build query parameters
+            const params = new URLSearchParams({
+                query: query,
+                type: options.type || 'multi',
+                page: options.page || 1
+            });
+
+            // Add filters if provided
+            if (options.filters) {
+                Object.entries(options.filters).forEach(([key, value]) => {
+                    if (value) params.append(key, value);
+                });
+            }
+
             const response = await fetch(
-                `${this.apiBase}/search?query=${encodeURIComponent(query)}&type=multi&page=1`,
+                `${this.apiBase}/search?${params.toString()}`,
                 {
                     signal: signal || controller.signal,
                     headers: {
@@ -134,6 +218,8 @@ class SearchEngine {
 
             const data = await response.json();
             const results = data.results || [];
+            const instant = data.instant || false;
+            const suggestions = data.suggestions || [];
 
             // Add to recent searches if we got results
             if (results.length > 0) {
@@ -143,7 +229,9 @@ class SearchEngine {
             // Cache the results
             this.cache.set(cacheKey, {
                 results,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                instant,
+                suggestions
             });
 
             // Manage cache size
@@ -152,7 +240,7 @@ class SearchEngine {
                 this.cache.delete(firstKey);
             }
 
-            return { results, fromCache: false };
+            return { results, fromCache: false, instant, suggestions };
         } catch (error) {
             if (error.name === 'AbortError') {
                 throw error;
@@ -166,8 +254,78 @@ class SearchEngine {
         }
     }
 
+    // New: Autocomplete method
+    async autocomplete(prefix, signal) {
+        const cacheKey = `autocomplete:${prefix.toLowerCase()}`;
+
+        // Check cache
+        if (this.cache.has(cacheKey)) {
+            const cached = this.cache.get(cacheKey);
+            if (Date.now() - cached.timestamp < 60000) { // 1 minute cache
+                return cached.suggestions;
+            }
+        }
+
+        // Cancel previous autocomplete
+        if (this.autocompleteController) {
+            this.autocompleteController.abort();
+        }
+
+        this.autocompleteController = new AbortController();
+        const combinedSignal = signal || this.autocompleteController.signal;
+
+        try {
+            const response = await fetch(
+                `${this.apiBase}/search/autocomplete?q=${encodeURIComponent(prefix)}&limit=10`,
+                {
+                    signal: combinedSignal,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                return [];
+            }
+
+            const data = await response.json();
+            const suggestions = data.suggestions || [];
+
+            // Cache autocomplete results
+            this.cache.set(cacheKey, {
+                suggestions,
+                timestamp: Date.now()
+            });
+
+            return suggestions;
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Autocomplete error:', error);
+            }
+            return [];
+        } finally {
+            this.autocompleteController = null;
+        }
+    }
+
+    // New: Get trending searches
+    async getTrendingSearches() {
+        try {
+            const response = await fetch(`${this.apiBase}/search/suggestions?limit=10`);
+            if (!response.ok) return [];
+
+            const data = await response.json();
+            return data.trending || [];
+        } catch (error) {
+            console.error('Failed to get trending searches:', error);
+            return [];
+        }
+    }
+
     clearCache() {
         this.cache.clear();
+        this.instantCache.clear();
     }
 }
 
@@ -370,23 +528,28 @@ class NotificationSystem {
     }
 }
 
-// Optimized TopBar Component with Theme Manager Integration
+// Optimized TopBar Component with Instant Search
 class TopbarComponent {
     constructor() {
         this.apiBase = 'https://backend-app-970m.onrender.com/api';
         this.searchEngine = new SearchEngine(this.apiBase);
         this.notificationSystem = new NotificationSystem();
         this.searchDebounceTimer = null;
+        this.instantSearchTimer = null;
         this.currentUser = this.getCurrentUser();
         this.currentSearchQuery = '';
         this.searchController = null;
         this.lastSearchResults = [];
         this.searchInProgress = false;
         this.showingRecentSearches = false;
+        this.autocompleteResults = [];
+        this.useInstantSearch = true; // Feature flag for instant search
 
-        // Reduced debounce for faster response
-        this.SEARCH_DEBOUNCE_MS = 150; // Reduced from 300ms
-        this.MIN_SEARCH_LENGTH = 1; // Start searching from 1 character
+        // Optimized debounce timings
+        this.INSTANT_SEARCH_DEBOUNCE_MS = 50; // Ultra-fast for instant search
+        this.SEARCH_DEBOUNCE_MS = 200; // Regular search debounce
+        this.MIN_INSTANT_LENGTH = 1; // Start instant search from 1 character
+        this.MIN_SEARCH_LENGTH = 2; // Regular search from 2 characters
 
         // Register with theme manager if available
         if (window.themeManager) {
@@ -496,7 +659,7 @@ class TopbarComponent {
             desktopInput.addEventListener('focus', (e) => {
                 if (!e.target.value.trim()) {
                     this.showRecentSearches('desktop');
-                } else if (e.target.value.trim().length >= this.MIN_SEARCH_LENGTH && this.lastSearchResults.length > 0) {
+                } else if (e.target.value.trim().length >= this.MIN_INSTANT_LENGTH && this.lastSearchResults.length > 0) {
                     this.displaySearchResults(this.lastSearchResults, 'desktop', e.target.value.trim());
                 }
             });
@@ -542,6 +705,158 @@ class TopbarComponent {
                     this.showRecentSearches('mobile');
                 }
             });
+        }
+    }
+
+    // Enhanced search input handler with instant search
+    handleSearchInput(value, mode) {
+        const query = value ? value.trim() : '';
+        this.currentSearchQuery = query;
+        this.showingRecentSearches = false;
+
+        // Clear all timers
+        clearTimeout(this.searchDebounceTimer);
+        clearTimeout(this.instantSearchTimer);
+
+        // Close results if query is empty
+        if (query.length === 0) {
+            this.closeSearchResults(mode);
+            this.lastSearchResults = [];
+            this.showRecentSearches(mode);
+            return;
+        }
+
+        // Instant search for very short queries (1 character)
+        if (this.useInstantSearch && query.length >= this.MIN_INSTANT_LENGTH && query.length < this.MIN_SEARCH_LENGTH) {
+            this.showLoadingState(mode, query, 'instant');
+            this.instantSearchTimer = setTimeout(() => {
+                this.performInstantSearch(query, mode);
+            }, this.INSTANT_SEARCH_DEBOUNCE_MS);
+            return;
+        }
+
+        // Regular search for longer queries
+        if (query.length >= this.MIN_SEARCH_LENGTH) {
+            // Show instant results immediately if available in cache
+            const cacheKey = `instant:${query.toLowerCase()}`;
+            if (this.searchEngine.instantCache.has(cacheKey)) {
+                const cached = this.searchEngine.instantCache.get(cacheKey);
+                if (Date.now() - cached.timestamp < 10000) {
+                    this.displaySearchResults(cached.results, mode, query, 'instant-cache', 0, true);
+                }
+            } else {
+                this.showLoadingState(mode, query, 'search');
+            }
+
+            // Debounce the full search
+            this.searchDebounceTimer = setTimeout(() => {
+                this.performSearch(query, mode);
+            }, this.SEARCH_DEBOUNCE_MS);
+        }
+
+        // Trigger autocomplete for suggestions
+        if (query.length >= 2) {
+            this.fetchAutocomplete(query, mode);
+        }
+    }
+
+    // New: Perform instant search
+    async performInstantSearch(query, mode) {
+        if (query !== this.currentSearchQuery || query.length < this.MIN_INSTANT_LENGTH) {
+            return;
+        }
+
+        try {
+            this.searchInProgress = true;
+
+            const startTime = performance.now();
+            const { results, fromCache, instant } = await this.searchEngine.instantSearch(query);
+            const responseTime = performance.now() - startTime;
+
+            if (query === this.currentSearchQuery) {
+                this.lastSearchResults = results;
+                this.displaySearchResults(
+                    results,
+                    mode,
+                    query,
+                    fromCache ? 'instant-cache' : 'instant',
+                    responseTime,
+                    true
+                );
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Instant search error:', error);
+                // Don't show error for instant search, just close results
+                this.closeSearchResults(mode);
+            }
+        } finally {
+            this.searchInProgress = false;
+        }
+    }
+
+    // Enhanced regular search with instant fallback
+    async performSearch(query, mode) {
+        if (query !== this.currentSearchQuery || query.length < this.MIN_SEARCH_LENGTH) {
+            return;
+        }
+
+        try {
+            this.searchInProgress = true;
+
+            if (this.searchController) {
+                this.searchController.abort();
+            }
+
+            this.searchController = new AbortController();
+
+            const startTime = performance.now();
+            const { results, fromCache, instant, suggestions } = await this.searchEngine.search(
+                query,
+                this.searchController.signal
+            );
+            const responseTime = performance.now() - startTime;
+
+            if (query === this.currentSearchQuery) {
+                this.lastSearchResults = results;
+                this.displaySearchResults(
+                    results,
+                    mode,
+                    query,
+                    fromCache ? 'cache' : (instant ? 'instant' : 'backend'),
+                    responseTime,
+                    instant
+                );
+
+                // Display suggestions if available
+                if (suggestions && suggestions.length > 0) {
+                    this.displaySuggestions(suggestions, mode);
+                }
+            }
+
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Search error:', error);
+                if (query === this.currentSearchQuery) {
+                    this.displaySearchError(mode, query);
+                }
+            }
+        } finally {
+            this.searchInProgress = false;
+            this.searchController = null;
+        }
+    }
+
+    // New: Fetch autocomplete suggestions
+    async fetchAutocomplete(query, mode) {
+        try {
+            const suggestions = await this.searchEngine.autocomplete(query);
+            if (suggestions && suggestions.length > 0 && query === this.currentSearchQuery) {
+                this.autocompleteResults = suggestions;
+                // Optionally display autocomplete inline or as dropdown
+            }
+        } catch (error) {
+            console.error('Autocomplete error:', error);
         }
     }
 
@@ -601,10 +916,11 @@ class TopbarComponent {
             <div class="search-suggestions">
                 <span class="suggestions-title">Try searching for:</span>
                 <div class="suggestion-chips">
-                    <span class="suggestion-chip" data-query="Avengers">Avengers</span>
-                    <span class="suggestion-chip" data-query="Spider-Man">Spider-Man</span>
-                    <span class="suggestion-chip" data-query="Batman">Batman</span>
+                    <span class="suggestion-chip" data-query="Telugu movies">Telugu movies</span>
+                    <span class="suggestion-chip" data-query="New releases">New releases</span>
+                    <span class="suggestion-chip" data-query="Action">Action</span>
                     <span class="suggestion-chip" data-query="Anime">Anime</span>
+                    <span class="suggestion-chip" data-query="Marvel">Marvel</span>
                 </div>
             </div>
         `;
@@ -685,94 +1001,32 @@ class TopbarComponent {
         return 'Just now';
     }
 
-    handleSearchInput(value, mode) {
-        const query = value ? value.trim() : '';
-        this.currentSearchQuery = query;
-        this.showingRecentSearches = false;
-
-        // Clear existing debounce timer
-        clearTimeout(this.searchDebounceTimer);
-
-        // Close results if query is too short
-        if (query.length < this.MIN_SEARCH_LENGTH) {
-            this.closeSearchResults(mode);
-            this.lastSearchResults = [];
-            // Show recent searches when input is empty
-            if (query.length === 0) {
-                this.showRecentSearches(mode);
-            }
-            return;
-        }
-
-        // Show loading state immediately
-        this.showLoadingState(mode, query);
-
-        // Set up debounced search
-        this.searchDebounceTimer = setTimeout(() => {
-            this.performSearch(query, mode);
-        }, this.SEARCH_DEBOUNCE_MS);
-    }
-
-    async performSearch(query, mode) {
-        // Skip if query hasn't changed or is too short
-        if (query !== this.currentSearchQuery || query.length < this.MIN_SEARCH_LENGTH) {
-            return;
-        }
-
-        try {
-            this.searchInProgress = true;
-
-            // Cancel any existing search request
-            if (this.searchController) {
-                this.searchController.abort();
-            }
-
-            this.searchController = new AbortController();
-
-            const startTime = performance.now();
-            const { results, fromCache } = await this.searchEngine.search(query, this.searchController.signal);
-            const responseTime = performance.now() - startTime;
-
-            // Only update if this is still the current query
-            if (query === this.currentSearchQuery) {
-                this.lastSearchResults = results;
-                this.displaySearchResults(results, mode, query, fromCache ? 'cache' : 'backend', responseTime);
-            }
-
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Search error:', error);
-                if (query === this.currentSearchQuery) {
-                    this.displaySearchError(mode, query);
-                }
-            }
-        } finally {
-            this.searchInProgress = false;
-            this.searchController = null;
-        }
-    }
-
-    showLoadingState(mode, query) {
+    // Enhanced loading state
+    showLoadingState(mode, query, searchType = 'search') {
         const resultsContainer = document.getElementById(`${mode}SearchResults`);
         if (!resultsContainer) return;
 
-        // Only show loading if we don't have cached results to show
+        const loadingMessage = searchType === 'instant'
+            ? `Finding "${this.escapeHtml(query)}"...`
+            : `Searching for "${this.escapeHtml(query)}"...`;
+
+        // Only show loading if we don't have cached results
         if (this.lastSearchResults.length === 0 || this.currentSearchQuery !== query) {
             resultsContainer.innerHTML = `
                 <div class="search-loading">
                     <div class="spinner-cinebrain"></div>
-                    <span>Searching for "${this.escapeHtml(query)}"...</span>
+                    <span>${loadingMessage}</span>
                 </div>
             `;
             resultsContainer.classList.add('show');
         }
     }
 
-    displaySearchResults(results, mode, query, source = 'backend', responseTime = 0) {
+    // Enhanced display search results with instant indicator
+    displaySearchResults(results, mode, query, source = 'backend', responseTime = 0, isInstant = false) {
         const resultsContainer = document.getElementById(`${mode}SearchResults`);
         if (!resultsContainer) return;
 
-        // Don't update if query has changed
         if (query !== this.currentSearchQuery) {
             return;
         }
@@ -794,27 +1048,28 @@ class TopbarComponent {
             return;
         }
 
-        // Build results HTML
         let html = '';
         const isMobile = window.innerWidth <= 480;
 
         results.forEach((item, index) => {
-            if (!item) return; // Skip invalid items
+            if (!item) return;
 
-            const posterUrl = item.poster_path
-                ? (item.poster_path.startsWith('http')
-                    ? item.poster_path
-                    : `https://image.tmdb.org/t/p/w92${item.poster_path}`)
-                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy82MDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzIi8+PC9zdmc+';
+            const posterUrl = item.poster
+                ? item.poster
+                : item.poster_path
+                    ? (item.poster_path.startsWith('http')
+                        ? item.poster_path
+                        : `https://image.tmdb.org/t/p/w92${item.poster_path}`)
+                    : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy82MDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzIi8+PC9zdmc+';
 
-            const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
-            const rating = item.rating ? `⭐ ${item.rating.toFixed(1)}` : '';
+            const year = item.year || (item.release_date ? new Date(item.release_date).getFullYear() : '');
+            const rating = item.rating ? `⭐ ${parseFloat(item.rating).toFixed(1)}` : '';
             const title = item.title || 'Unknown Title';
             const displayTitle = isMobile && title.length > 30
                 ? title.substring(0, 30) + '...'
                 : title;
 
-            const contentType = item.content_type || 'movie';
+            const contentType = item.type || item.content_type || 'movie';
             const typeColor = contentType === 'movie' ? 'primary' :
                 contentType === 'tv' ? 'success' :
                     contentType === 'anime' ? 'warning' : 'secondary';
@@ -840,17 +1095,23 @@ class TopbarComponent {
             `;
         });
 
-        // Add search info footer
-        if (source === 'backend' && responseTime > 0) {
+        // Add search info footer with instant indicator
+        if (isInstant) {
             html += `
                 <div class="search-indicator">
-                    <small>Found ${results.length} results in ${responseTime.toFixed(0)}ms</small>
+                    <small>⚡ Instant results • ${results.length} items${responseTime > 0 ? ` • ${responseTime.toFixed(0)}ms` : ''}</small>
                 </div>
             `;
-        } else if (source === 'cache') {
+        } else if (source === 'cache' || source === 'instant-cache') {
             html += `
                 <div class="search-indicator">
                     <small>⚡ Cached results • ${results.length} items</small>
+                </div>
+            `;
+        } else if (source === 'backend' && responseTime > 0) {
+            html += `
+                <div class="search-indicator">
+                    <small>Found ${results.length} results in ${responseTime.toFixed(0)}ms</small>
                 </div>
             `;
         }
@@ -864,6 +1125,50 @@ class TopbarComponent {
                 const contentId = item.dataset.id;
                 if (contentId) {
                     window.location.href = `/content/details.html?id=${contentId}`;
+                }
+            });
+        });
+    }
+
+    // New: Display search suggestions
+    displaySuggestions(suggestions, mode) {
+        const resultsContainer = document.getElementById(`${mode}SearchResults`);
+        if (!resultsContainer || !suggestions || suggestions.length === 0) return;
+
+        // Find or create suggestions container
+        let suggestionsContainer = resultsContainer.querySelector('.search-suggestions-inline');
+        if (!suggestionsContainer) {
+            suggestionsContainer = document.createElement('div');
+            suggestionsContainer.className = 'search-suggestions-inline';
+            resultsContainer.appendChild(suggestionsContainer);
+        }
+
+        let html = `
+            <div class="suggestions-inline-header">
+                <span class="suggestions-title">Related searches:</span>
+            </div>
+            <div class="suggestion-chips">
+        `;
+
+        suggestions.slice(0, 5).forEach(suggestion => {
+            html += `<span class="suggestion-chip" data-query="${this.escapeHtml(suggestion)}">${this.escapeHtml(suggestion)}</span>`;
+        });
+
+        html += `</div>`;
+        suggestionsContainer.innerHTML = html;
+
+        // Add click handlers for suggestions
+        suggestionsContainer.querySelectorAll('.suggestion-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const query = chip.dataset.query;
+                const input = document.getElementById(`${mode}SearchInput`);
+                if (input && query) {
+                    input.value = query;
+                    this.handleSearchInput(query, mode);
+                    if (mode === 'desktop') {
+                        const clearBtn = document.getElementById('searchClear');
+                        if (clearBtn) clearBtn.style.display = 'flex';
+                    }
                 }
             });
         });

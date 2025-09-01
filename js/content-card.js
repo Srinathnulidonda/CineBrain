@@ -14,43 +14,43 @@ class ContentCardManager {
         this.userWishlist = new Set();
         this.contentCache = new Map();
 
-        // Content row configurations
+        // Content row configurations - Updated with correct endpoints
         this.contentRows = [
             {
                 id: 'trending',
                 title: 'Trending Now',
                 endpoint: '/recommendations/trending',
-                params: { type: 'all' }
+                params: { category: 'all', limit: 20 }
             },
             {
                 id: 'new-releases',
                 title: 'New Releases',
                 endpoint: '/recommendations/new-releases',
-                params: { type: 'movie' }
+                params: { type: 'movie', limit: 20 }
             },
             {
                 id: 'critics-choice',
                 title: 'Critics Choice',
                 endpoint: '/recommendations/critics-choice',
-                params: { type: 'movie' }
+                params: { type: 'movie', limit: 20 }
             },
             {
                 id: 'popular-movies',
                 title: 'Popular Movies',
                 endpoint: '/recommendations/trending',
-                params: { type: 'movie' }
+                params: { category: 'movies', limit: 20 }
             },
             {
                 id: 'top-tv-shows',
                 title: 'Top Rated TV Shows',
                 endpoint: '/recommendations/trending',
-                params: { type: 'tv' }
+                params: { category: 'tv_shows', limit: 20 }
             },
             {
                 id: 'anime-picks',
                 title: 'Anime Picks',
                 endpoint: '/recommendations/anime',
-                params: {}
+                params: { limit: 20 }
             }
         ];
 
@@ -132,7 +132,7 @@ class ContentCardManager {
         if (!this.isAuthenticated) return;
 
         try {
-            const response = await fetch(`${this.apiBase}/user/watchlist`, {
+            const response = await fetch(`${this.apiBase}/users/watchlist`, {
                 headers: {
                     'Authorization': `Bearer ${this.authToken}`
                 }
@@ -324,7 +324,7 @@ class ContentCardManager {
             }
 
             // Send request to backend
-            const response = await fetch(`${this.apiBase}/interactions`, {
+            const response = await fetch(`${this.apiBase}/users/interactions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -437,7 +437,22 @@ class ContentCardManager {
         }
 
         const data = await response.json();
-        return data.recommendations || data.results || [];
+
+        // Handle different response structures
+        if (data.recommendations) {
+            return data.recommendations;
+        } else if (data.categories) {
+            // For trending endpoint with categories
+            const allContent = [];
+            Object.values(data.categories).forEach(categoryItems => {
+                allContent.push(...categoryItems);
+            });
+            return allContent.slice(0, params.limit || 20);
+        } else if (data.results) {
+            return data.results;
+        } else {
+            return [];
+        }
     }
 
     setupCarouselNavigation(carouselRow) {
