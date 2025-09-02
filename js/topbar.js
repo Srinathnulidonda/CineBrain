@@ -1,24 +1,29 @@
-// topbar.js - Complete Updated File with Instant Search
+// topbar.js - Updated with Improved Search
 
 // Initialize Feather Icons first
 if (typeof feather !== 'undefined') {
     feather.replace();
 }
 
-// Advanced Search Engine with Instant Search Support
+// Advanced Search Engine with Enhanced Backend Integration
 class SearchEngine {
     constructor(apiBase) {
         this.apiBase = apiBase;
         this.cache = new Map();
         this.activeRequest = null;
         this.maxCacheSize = 100;
-        this.cacheTimeout = 30000; // 30 seconds for instant results
+        this.cacheTimeout = 30000; // 30 seconds
         this.recentSearches = this.loadRecentSearches();
         this.maxRecentSearches = 10;
         this.instantSearchController = null;
         this.autocompleteController = null;
         this.lastInstantQuery = '';
         this.instantCache = new Map();
+        this.searchMetrics = {
+            totalSearches: 0,
+            cacheHits: 0,
+            averageResponseTime: 0
+        };
     }
 
     loadRecentSearches() {
@@ -32,7 +37,7 @@ class SearchEngine {
                 typeof item === 'object' &&
                 item.query &&
                 typeof item.query === 'string'
-            );
+            ).slice(0, this.maxRecentSearches);
         } catch (e) {
             console.error('Error loading recent searches:', e);
             localStorage.removeItem('cinebrain-recent-searches');
@@ -51,6 +56,7 @@ class SearchEngine {
     addRecentSearch(query, result = null) {
         if (!query || typeof query !== 'string' || query.length < 2) return;
 
+        // Remove existing entry for this query
         this.recentSearches = this.recentSearches.filter(item => {
             return item && item.query && item.query.toLowerCase() !== query.toLowerCase();
         });
@@ -61,16 +67,13 @@ class SearchEngine {
             resultCount: result ? result.length : 0,
             firstResult: result && result[0] ? {
                 title: result[0].title || 'Unknown',
-                type: result[0].content_type || result[0].type || 'unknown'
+                type: result[0].content_type || result[0].type || 'unknown',
+                id: result[0].id
             } : null
         };
 
         this.recentSearches.unshift(recentItem);
-
-        if (this.recentSearches.length > this.maxRecentSearches) {
-            this.recentSearches = this.recentSearches.slice(0, this.maxRecentSearches);
-        }
-
+        this.recentSearches = this.recentSearches.slice(0, this.maxRecentSearches);
         this.saveRecentSearches();
     }
 
@@ -94,167 +97,7 @@ class SearchEngine {
         this.saveRecentSearches();
     }
 
-    // New: Instant search method for ultra-fast results
-    async instantSearch(query, signal) {
-        const cacheKey = `instant:${query.toLowerCase().trim()}`;
-
-        // Check instant cache first
-        if (this.instantCache.has(cacheKey)) {
-            const cached = this.instantCache.get(cacheKey);
-            if (Date.now() - cached.timestamp < 10000) { // 10 second cache for instant
-                return { results: cached.results, fromCache: true, instant: true };
-            }
-            this.instantCache.delete(cacheKey);
-        }
-
-        // Cancel previous instant search
-        if (this.instantSearchController) {
-            this.instantSearchController.abort();
-        }
-
-        this.instantSearchController = new AbortController();
-        const combinedSignal = signal || this.instantSearchController.signal;
-
-        try {
-            const response = await fetch(
-                `${this.apiBase}/search/instant?q=${encodeURIComponent(query)}`,
-                {
-                    signal: combinedSignal,
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`Instant search failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const results = data.results || [];
-
-            // Cache instant results
-            this.instantCache.set(cacheKey, {
-                results,
-                timestamp: Date.now()
-            });
-
-            // Limit instant cache size
-            if (this.instantCache.size > 50) {
-                const firstKey = this.instantCache.keys().next().value;
-                this.instantCache.delete(firstKey);
-            }
-
-            return { results, fromCache: false, instant: true };
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                throw error;
-            }
-            // Fallback to regular search on instant search failure
-            return this.search(query, signal);
-        } finally {
-            if (this.instantSearchController === this.instantSearchController) {
-                this.instantSearchController = null;
-            }
-        }
-    }
-
-    // Enhanced main search with instant fallback
-    async search(query, signal, options = {}) {
-        const cacheKey = query.toLowerCase().trim();
-
-        // Check cache first
-        if (this.cache.has(cacheKey)) {
-            const cached = this.cache.get(cacheKey);
-            if (Date.now() - cached.timestamp < this.cacheTimeout) {
-                return {
-                    results: cached.results,
-                    fromCache: true,
-                    instant: cached.instant,
-                    suggestions: cached.suggestions
-                };
-            }
-            this.cache.delete(cacheKey);
-        }
-
-        // Cancel previous request if exists
-        if (this.activeRequest) {
-            this.activeRequest.abort();
-        }
-
-        const controller = new AbortController();
-        this.activeRequest = controller;
-
-        try {
-            // Build query parameters
-            const params = new URLSearchParams({
-                query: query,
-                type: options.type || 'multi',
-                page: options.page || 1
-            });
-
-            // Add filters if provided
-            if (options.filters) {
-                Object.entries(options.filters).forEach(([key, value]) => {
-                    if (value) params.append(key, value);
-                });
-            }
-
-            const response = await fetch(
-                `${this.apiBase}/search?${params.toString()}`,
-                {
-                    signal: signal || controller.signal,
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`Search failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const results = data.results || [];
-            const instant = data.instant || false;
-            const suggestions = data.suggestions || [];
-
-            // Add to recent searches if we got results
-            if (results.length > 0) {
-                this.addRecentSearch(query, results);
-            }
-
-            // Cache the results
-            this.cache.set(cacheKey, {
-                results,
-                timestamp: Date.now(),
-                instant,
-                suggestions
-            });
-
-            // Manage cache size
-            if (this.cache.size > this.maxCacheSize) {
-                const firstKey = this.cache.keys().next().value;
-                this.cache.delete(firstKey);
-            }
-
-            return { results, fromCache: false, instant, suggestions };
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                throw error;
-            }
-            console.error('Search error:', error);
-            throw error;
-        } finally {
-            if (this.activeRequest === controller) {
-                this.activeRequest = null;
-            }
-        }
-    }
-
-    // New: Autocomplete method
+    // Enhanced autocomplete with better backend integration
     async autocomplete(prefix, signal) {
         const cacheKey = `autocomplete:${prefix.toLowerCase()}`;
 
@@ -262,6 +105,7 @@ class SearchEngine {
         if (this.cache.has(cacheKey)) {
             const cached = this.cache.get(cacheKey);
             if (Date.now() - cached.timestamp < 60000) { // 1 minute cache
+                this.searchMetrics.cacheHits++;
                 return cached.suggestions;
             }
         }
@@ -275,17 +119,23 @@ class SearchEngine {
         const combinedSignal = signal || this.autocompleteController.signal;
 
         try {
+            const startTime = performance.now();
             const response = await fetch(
                 `${this.apiBase}/search/autocomplete?q=${encodeURIComponent(prefix)}&limit=10`,
                 {
                     signal: combinedSignal,
                     headers: {
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
                     }
                 }
             );
 
+            const responseTime = performance.now() - startTime;
+            this.updateMetrics(responseTime);
+
             if (!response.ok) {
+                console.warn(`Autocomplete returned ${response.status}`);
                 return [];
             }
 
@@ -309,27 +159,241 @@ class SearchEngine {
         }
     }
 
-    // New: Get trending searches
+    // Enhanced main search with better error handling and response processing
+    async search(query, signal, options = {}) {
+        const cacheKey = this.generateCacheKey(query, options);
+
+        // Check cache first
+        if (this.cache.has(cacheKey)) {
+            const cached = this.cache.get(cacheKey);
+            if (Date.now() - cached.timestamp < this.cacheTimeout) {
+                this.searchMetrics.cacheHits++;
+                return {
+                    ...cached,
+                    fromCache: true
+                };
+            }
+            this.cache.delete(cacheKey);
+        }
+
+        // Cancel previous request if exists
+        if (this.activeRequest) {
+            this.activeRequest.abort();
+        }
+
+        const controller = new AbortController();
+        this.activeRequest = controller;
+
+        try {
+            this.searchMetrics.totalSearches++;
+            const startTime = performance.now();
+
+            // Build query parameters
+            const params = new URLSearchParams({
+                query: query,
+                type: options.type || 'multi',
+                page: options.page || 1
+            });
+
+            // Add filters if provided
+            if (options.filters) {
+                Object.entries(options.filters).forEach(([key, value]) => {
+                    if (value !== null && value !== undefined && value !== '') {
+                        params.append(key, value);
+                    }
+                });
+            }
+
+            const response = await fetch(
+                `${this.apiBase}/search?${params.toString()}`,
+                {
+                    signal: signal || controller.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            const responseTime = performance.now() - startTime;
+            this.updateMetrics(responseTime);
+
+            if (!response.ok) {
+                // Handle specific error codes
+                if (response.status === 400) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Invalid search request');
+                }
+                throw new Error(`Search failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Process the response
+            const processedData = {
+                results: this.processSearchResults(data.results || []),
+                total_results: data.total_results || 0,
+                page: data.page || 1,
+                query: data.query || query,
+                search_time: data.search_time || responseTime,
+                suggestions: data.suggestions || [],
+                instant: data.instant || false,
+                cached: data.cached || false,
+                filters_applied: data.filters_applied || {},
+                timestamp: Date.now()
+            };
+
+            // Add to recent searches if we got results
+            if (processedData.results.length > 0) {
+                this.addRecentSearch(query, processedData.results);
+            }
+
+            // Cache the results
+            this.cache.set(cacheKey, processedData);
+
+            // Manage cache size
+            if (this.cache.size > this.maxCacheSize) {
+                const firstKey = this.cache.keys().next().value;
+                this.cache.delete(firstKey);
+            }
+
+            return { ...processedData, fromCache: false };
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw error;
+            }
+            console.error('Search error:', error);
+
+            // Return empty results with error information
+            return {
+                results: [],
+                total_results: 0,
+                error: error.message,
+                query: query,
+                fromCache: false
+            };
+        } finally {
+            if (this.activeRequest === controller) {
+                this.activeRequest = null;
+            }
+        }
+    }
+
+    // Process search results to ensure consistent format
+    processSearchResults(results) {
+        if (!Array.isArray(results)) return [];
+
+        return results.map(item => {
+            // Ensure all required fields are present
+            return {
+                id: item.id,
+                title: item.title || 'Unknown Title',
+                original_title: item.original_title,
+                content_type: item.content_type || item.type || 'unknown',
+                genres: item.genres || [],
+                languages: item.languages || [],
+                rating: parseFloat(item.rating) || 0,
+                vote_count: item.vote_count || 0,
+                popularity: item.popularity || 0,
+                release_date: item.release_date,
+                year: item.year || (item.release_date ? new Date(item.release_date).getFullYear() : null),
+                poster_path: item.poster_path,
+                overview: item.overview,
+                youtube_trailer: item.youtube_trailer,
+                is_trending: item.is_trending || false,
+                is_new_release: item.is_new_release || false,
+                match_info: item.match_info || {
+                    exact_match: false,
+                    source: 'backend',
+                    score: 0
+                }
+            };
+        });
+    }
+
+    // Generate cache key with filters
+    generateCacheKey(query, options = {}) {
+        const parts = [
+            query.toLowerCase().trim(),
+            options.type || 'multi',
+            options.page || 1
+        ];
+
+        if (options.filters) {
+            const filterStr = Object.entries(options.filters)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([k, v]) => `${k}:${v}`)
+                .join('|');
+            parts.push(filterStr);
+        }
+
+        return parts.join('::');
+    }
+
+    // Update search metrics
+    updateMetrics(responseTime) {
+        const currentAvg = this.searchMetrics.averageResponseTime;
+        const totalSearches = this.searchMetrics.totalSearches;
+
+        this.searchMetrics.averageResponseTime =
+            (currentAvg * (totalSearches - 1) + responseTime) / totalSearches;
+    }
+
+    // Get trending searches from backend
     async getTrendingSearches() {
         try {
-            const response = await fetch(`${this.apiBase}/search/suggestions?limit=10`);
+            const response = await fetch(`${this.apiBase}/search/suggestions?limit=10`, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
             if (!response.ok) return [];
 
             const data = await response.json();
             return data.trending || [];
         } catch (error) {
             console.error('Failed to get trending searches:', error);
-            return [];
+            return this.getDefaultTrending();
         }
     }
 
+    // Default trending searches
+    getDefaultTrending() {
+        return [
+            "Telugu movies 2024",
+            "Latest Telugu releases",
+            "New releases",
+            "Action movies",
+            "Romantic series",
+            "Best anime",
+            "Thriller movies",
+            "Comedy shows",
+            "Marvel",
+            "Netflix originals"
+        ];
+    }
+
+    // Clear all caches
     clearCache() {
         this.cache.clear();
         this.instantCache.clear();
     }
+
+    // Get search metrics
+    getMetrics() {
+        return {
+            ...this.searchMetrics,
+            cacheHitRate: this.searchMetrics.totalSearches > 0
+                ? (this.searchMetrics.cacheHits / this.searchMetrics.totalSearches * 100).toFixed(2) + '%'
+                : '0%',
+            cacheSize: this.cache.size
+        };
+    }
 }
 
-// Notification System with Responsive Sizing
+// Notification System (unchanged - keeping as is)
 class NotificationSystem {
     constructor() {
         this.container = null;
@@ -528,28 +592,24 @@ class NotificationSystem {
     }
 }
 
-// Optimized TopBar Component with Instant Search
+// Enhanced TopBar Component with Improved Search
 class TopbarComponent {
     constructor() {
         this.apiBase = 'https://backend-app-970m.onrender.com/api';
         this.searchEngine = new SearchEngine(this.apiBase);
         this.notificationSystem = new NotificationSystem();
         this.searchDebounceTimer = null;
-        this.instantSearchTimer = null;
         this.currentUser = this.getCurrentUser();
         this.currentSearchQuery = '';
         this.searchController = null;
         this.lastSearchResults = [];
         this.searchInProgress = false;
         this.showingRecentSearches = false;
-        this.autocompleteResults = [];
-        this.useInstantSearch = true; // Feature flag for instant search
+        this.currentFilters = {};
 
         // Optimized debounce timings
-        this.INSTANT_SEARCH_DEBOUNCE_MS = 50; // Ultra-fast for instant search
-        this.SEARCH_DEBOUNCE_MS = 200; // Regular search debounce
-        this.MIN_INSTANT_LENGTH = 1; // Start instant search from 1 character
-        this.MIN_SEARCH_LENGTH = 2; // Regular search from 2 characters
+        this.SEARCH_DEBOUNCE_MS = 300; // Slightly longer for better backend performance
+        this.MIN_SEARCH_LENGTH = 2; // Minimum 2 characters for search
 
         // Register with theme manager if available
         if (window.themeManager) {
@@ -567,23 +627,23 @@ class TopbarComponent {
         this.setupEventListeners();
         this.handleResponsive();
         this.initKeyboardShortcuts();
+        this.loadTrendingSearches();
 
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
     }
 
-    // New method for theme change callback
+    async loadTrendingSearches() {
+        // Load trending searches in background
+        this.trendingSearches = await this.searchEngine.getTrendingSearches();
+    }
+
     onThemeChange(theme) {
         this.updateThemeUI(theme);
     }
 
-    // New method to update UI without setting theme
     updateThemeUI(theme) {
-        // Just update the UI elements, don't set attributes
-        // The theme manager already did that
-
-        // Update any component-specific theme elements
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
@@ -640,7 +700,7 @@ class TopbarComponent {
         const clearBtn = document.getElementById('searchClear');
 
         if (desktopInput) {
-            // Handle all input events (typing, paste, etc.)
+            // Handle all input events
             desktopInput.addEventListener('input', (e) => {
                 this.handleSearchInput(e.target.value, 'desktop');
                 if (clearBtn) {
@@ -651,7 +711,7 @@ class TopbarComponent {
             // Handle paste separately for immediate response
             desktopInput.addEventListener('paste', (e) => {
                 setTimeout(() => {
-                    this.handleSearchInput(e.target.value, 'desktop');
+                    this.handleSearchInput(desktopInput.value, 'desktop');
                 }, 0);
             });
 
@@ -659,7 +719,7 @@ class TopbarComponent {
             desktopInput.addEventListener('focus', (e) => {
                 if (!e.target.value.trim()) {
                     this.showRecentSearches('desktop');
-                } else if (e.target.value.trim().length >= this.MIN_INSTANT_LENGTH && this.lastSearchResults.length > 0) {
+                } else if (e.target.value.trim().length >= this.MIN_SEARCH_LENGTH && this.lastSearchResults.length > 0) {
                     this.displaySearchResults(this.lastSearchResults, 'desktop', e.target.value.trim());
                 }
             });
@@ -680,6 +740,7 @@ class TopbarComponent {
                     desktopInput.value = '';
                     this.currentSearchQuery = '';
                     this.lastSearchResults = [];
+                    this.currentFilters = {};
                     clearBtn.style.display = 'none';
                     this.closeSearchResults('desktop');
                     desktopInput.focus();
@@ -696,7 +757,7 @@ class TopbarComponent {
 
             mobileInput.addEventListener('paste', (e) => {
                 setTimeout(() => {
-                    this.handleSearchInput(e.target.value, 'mobile');
+                    this.handleSearchInput(mobileInput.value, 'mobile');
                 }, 0);
             });
 
@@ -708,7 +769,7 @@ class TopbarComponent {
         }
     }
 
-    // Enhanced search input handler with instant search
+    // Enhanced search input handler
     handleSearchInput(value, mode) {
         const query = value ? value.trim() : '';
         this.currentSearchQuery = query;
@@ -716,7 +777,6 @@ class TopbarComponent {
 
         // Clear all timers
         clearTimeout(this.searchDebounceTimer);
-        clearTimeout(this.instantSearchTimer);
 
         // Close results if query is empty
         if (query.length === 0) {
@@ -726,76 +786,31 @@ class TopbarComponent {
             return;
         }
 
-        // Instant search for very short queries (1 character)
-        if (this.useInstantSearch && query.length >= this.MIN_INSTANT_LENGTH && query.length < this.MIN_SEARCH_LENGTH) {
-            this.showLoadingState(mode, query, 'instant');
-            this.instantSearchTimer = setTimeout(() => {
-                this.performInstantSearch(query, mode);
-            }, this.INSTANT_SEARCH_DEBOUNCE_MS);
-            return;
-        }
-
-        // Regular search for longer queries
+        // Show loading state for queries of minimum length
         if (query.length >= this.MIN_SEARCH_LENGTH) {
-            // Show instant results immediately if available in cache
-            const cacheKey = `instant:${query.toLowerCase()}`;
-            if (this.searchEngine.instantCache.has(cacheKey)) {
-                const cached = this.searchEngine.instantCache.get(cacheKey);
-                if (Date.now() - cached.timestamp < 10000) {
-                    this.displaySearchResults(cached.results, mode, query, 'instant-cache', 0, true);
+            // Check cache first for instant display
+            const cacheKey = this.searchEngine.generateCacheKey(query, { filters: this.currentFilters });
+            if (this.searchEngine.cache.has(cacheKey)) {
+                const cached = this.searchEngine.cache.get(cacheKey);
+                if (Date.now() - cached.timestamp < 30000) {
+                    this.displaySearchResults(cached.results, mode, query, cached);
+                    return;
                 }
-            } else {
-                this.showLoadingState(mode, query, 'search');
             }
 
-            // Debounce the full search
+            this.showLoadingState(mode, query);
+
+            // Debounce the search
             this.searchDebounceTimer = setTimeout(() => {
                 this.performSearch(query, mode);
             }, this.SEARCH_DEBOUNCE_MS);
-        }
-
-        // Trigger autocomplete for suggestions
-        if (query.length >= 2) {
-            this.fetchAutocomplete(query, mode);
+        } else {
+            // Show message for too short query
+            this.showMinLengthMessage(mode);
         }
     }
 
-    // New: Perform instant search
-    async performInstantSearch(query, mode) {
-        if (query !== this.currentSearchQuery || query.length < this.MIN_INSTANT_LENGTH) {
-            return;
-        }
-
-        try {
-            this.searchInProgress = true;
-
-            const startTime = performance.now();
-            const { results, fromCache, instant } = await this.searchEngine.instantSearch(query);
-            const responseTime = performance.now() - startTime;
-
-            if (query === this.currentSearchQuery) {
-                this.lastSearchResults = results;
-                this.displaySearchResults(
-                    results,
-                    mode,
-                    query,
-                    fromCache ? 'instant-cache' : 'instant',
-                    responseTime,
-                    true
-                );
-            }
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Instant search error:', error);
-                // Don't show error for instant search, just close results
-                this.closeSearchResults(mode);
-            }
-        } finally {
-            this.searchInProgress = false;
-        }
-    }
-
-    // Enhanced regular search with instant fallback
+    // Enhanced search with better error handling
     async performSearch(query, mode) {
         if (query !== this.currentSearchQuery || query.length < this.MIN_SEARCH_LENGTH) {
             return;
@@ -810,27 +825,30 @@ class TopbarComponent {
 
             this.searchController = new AbortController();
 
-            const startTime = performance.now();
-            const { results, fromCache, instant, suggestions } = await this.searchEngine.search(
+            const searchOptions = {
+                type: 'multi',
+                page: 1,
+                filters: this.currentFilters
+            };
+
+            const result = await this.searchEngine.search(
                 query,
-                this.searchController.signal
+                this.searchController.signal,
+                searchOptions
             );
-            const responseTime = performance.now() - startTime;
 
             if (query === this.currentSearchQuery) {
-                this.lastSearchResults = results;
-                this.displaySearchResults(
-                    results,
-                    mode,
-                    query,
-                    fromCache ? 'cache' : (instant ? 'instant' : 'backend'),
-                    responseTime,
-                    instant
-                );
+                this.lastSearchResults = result.results || [];
 
-                // Display suggestions if available
-                if (suggestions && suggestions.length > 0) {
-                    this.displaySuggestions(suggestions, mode);
+                if (result.error) {
+                    this.displaySearchError(mode, query, result.error);
+                } else {
+                    this.displaySearchResults(this.lastSearchResults, mode, query, result);
+
+                    // Fetch and display autocomplete suggestions
+                    if (result.suggestions && result.suggestions.length > 0) {
+                        this.displaySuggestions(result.suggestions, mode);
+                    }
                 }
             }
 
@@ -838,7 +856,7 @@ class TopbarComponent {
             if (error.name !== 'AbortError') {
                 console.error('Search error:', error);
                 if (query === this.currentSearchQuery) {
-                    this.displaySearchError(mode, query);
+                    this.displaySearchError(mode, query, error.message);
                 }
             }
         } finally {
@@ -847,17 +865,340 @@ class TopbarComponent {
         }
     }
 
-    // New: Fetch autocomplete suggestions
-    async fetchAutocomplete(query, mode) {
-        try {
-            const suggestions = await this.searchEngine.autocomplete(query);
-            if (suggestions && suggestions.length > 0 && query === this.currentSearchQuery) {
-                this.autocompleteResults = suggestions;
-                // Optionally display autocomplete inline or as dropdown
-            }
-        } catch (error) {
-            console.error('Autocomplete error:', error);
+    showMinLengthMessage(mode) {
+        const resultsContainer = document.getElementById(`${mode}SearchResults`);
+        if (!resultsContainer) return;
+
+        resultsContainer.innerHTML = `
+            <div class="search-empty">
+                <i data-feather="search"></i>
+                <p>Type at least ${this.MIN_SEARCH_LENGTH} characters to search</p>
+            </div>
+        `;
+
+        if (typeof feather !== 'undefined') {
+            feather.replace();
         }
+
+        resultsContainer.classList.add('show');
+    }
+
+    showLoadingState(mode, query) {
+        const resultsContainer = document.getElementById(`${mode}SearchResults`);
+        if (!resultsContainer) return;
+
+        const loadingMessage = `Searching for "${this.escapeHtml(query)}"...`;
+
+        resultsContainer.innerHTML = `
+            <div class="search-loading">
+                <div class="spinner-cinebrain"></div>
+                <span>${loadingMessage}</span>
+            </div>
+        `;
+        resultsContainer.classList.add('show');
+    }
+
+    // Enhanced display search results with better formatting
+    displaySearchResults(results, mode, query, metadata = {}) {
+        const resultsContainer = document.getElementById(`${mode}SearchResults`);
+        if (!resultsContainer) return;
+
+        if (query !== this.currentSearchQuery) {
+            return;
+        }
+
+        this.showingRecentSearches = false;
+
+        if (!results || results.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="search-empty">
+                    <i data-feather="search"></i>
+                    <p>No results found for "${this.escapeHtml(query)}"</p>
+                    <p class="small">Try different keywords or check spelling</p>
+                    ${this.getSuggestedSearchesHTML()}
+                </div>
+            `;
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+            resultsContainer.classList.add('show');
+            this.attachSuggestionHandlers(resultsContainer, mode);
+            return;
+        }
+
+        let html = '';
+        const isMobile = window.innerWidth <= 480;
+
+        // Group results by match quality if available
+        const exactMatches = results.filter(r => r.match_info?.exact_match);
+        const otherResults = results.filter(r => !r.match_info?.exact_match);
+
+        // Display exact matches first
+        if (exactMatches.length > 0) {
+            html += '<div class="search-section-header">Best Matches</div>';
+            html += this.renderSearchResults(exactMatches, isMobile);
+        }
+
+        // Display other results
+        if (otherResults.length > 0) {
+            if (exactMatches.length > 0) {
+                html += '<div class="search-section-header">More Results</div>';
+            }
+            html += this.renderSearchResults(otherResults, isMobile);
+        }
+
+        // Add search metadata footer
+        html += this.getSearchFooter(metadata, results.length);
+
+        resultsContainer.innerHTML = html;
+        resultsContainer.classList.add('show');
+
+        // Add click handlers
+        resultsContainer.querySelectorAll('.search-result-item').forEach((item, index) => {
+            item.addEventListener('click', () => {
+                const contentId = item.dataset.id;
+                if (contentId) {
+                    // Track click for analytics
+                    this.trackSearchClick(contentId, query, index);
+                    window.location.href = `/content/details.html?id=${contentId}`;
+                }
+            });
+
+            // Add hover effect for keyboard navigation
+            item.addEventListener('mouseenter', () => {
+                resultsContainer.querySelectorAll('.search-result-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+    }
+
+    renderSearchResults(results, isMobile) {
+        let html = '';
+
+        results.forEach((item, index) => {
+            if (!item) return;
+
+            const posterUrl = this.getPosterUrl(item);
+            const year = item.year || (item.release_date ? new Date(item.release_date).getFullYear() : '');
+            const rating = item.rating ? `⭐ ${parseFloat(item.rating).toFixed(1)}` : '';
+            const title = item.title || 'Unknown Title';
+            const displayTitle = isMobile && title.length > 30
+                ? title.substring(0, 30) + '...'
+                : title;
+
+            const contentType = item.content_type || item.type || 'movie';
+            const typeColor = this.getTypeColor(contentType);
+
+            // Add quality indicators
+            const qualityBadges = this.getQualityBadges(item);
+
+            html += `
+                <div class="search-result-item d-flex ${index === 0 ? 'active' : ''}" 
+                     data-id="${item.id || ''}"
+                     data-match-score="${item.match_info?.score || 0}">
+                    <div class="poster-wrapper">
+                        <img src="${posterUrl}" 
+                             alt="${this.escapeHtml(title)}" 
+                             class="search-poster"
+                             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy82MDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzIi8+PC9zdmc+'"
+                             loading="lazy">
+                    </div>
+                    <div class="search-result-content">
+                        <div class="search-result-title">${this.escapeHtml(displayTitle)}</div>
+                        <div class="search-result-meta">
+                            <span class="badge bg-${typeColor}">${contentType}</span>
+                            ${year ? `<span>${year}</span>` : ''}
+                            ${rating ? `<span>${rating}</span>` : ''}
+                            ${qualityBadges}
+                        </div>
+                        ${item.overview && !isMobile ? `
+                            <div class="search-result-overview">
+                                ${this.escapeHtml(item.overview.substring(0, 100))}...
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        return html;
+    }
+
+    getQualityBadges(item) {
+        let badges = '';
+
+        if (item.is_trending) {
+            badges += '<span class="badge bg-danger ms-1">🔥 Trending</span>';
+        }
+        if (item.is_new_release) {
+            badges += '<span class="badge bg-success ms-1">New</span>';
+        }
+        if (item.match_info?.exact_match) {
+            badges += '<span class="badge bg-info ms-1">Exact Match</span>';
+        }
+
+        return badges;
+    }
+
+    getSearchFooter(metadata, resultCount) {
+        let footer = '<div class="search-indicator">';
+
+        if (metadata.fromCache) {
+            footer += `<small>⚡ Cached results • ${resultCount} items`;
+        } else if (metadata.instant) {
+            footer += `<small>⚡ Instant results • ${resultCount} items`;
+        } else if (metadata.search_time) {
+            footer += `<small>Found ${resultCount} results in ${Math.round(metadata.search_time)}ms`;
+        } else {
+            footer += `<small>${resultCount} results found`;
+        }
+
+        if (metadata.cached) {
+            footer += ' • From server cache';
+        }
+
+        footer += '</small></div>';
+
+        // Add search metrics if available
+        const metrics = this.searchEngine.getMetrics();
+        if (metrics.totalSearches > 10) {
+            footer += `
+                <div class="search-metrics">
+                    <small>Cache hit rate: ${metrics.cacheHitRate} • Avg response: ${Math.round(metrics.averageResponseTime)}ms</small>
+                </div>
+            `;
+        }
+
+        return footer;
+    }
+
+    getSuggestedSearchesHTML() {
+        const suggestions = this.trendingSearches || this.searchEngine.getDefaultTrending();
+        const randomSuggestions = suggestions.sort(() => 0.5 - Math.random()).slice(0, 3);
+
+        return `
+            <div class="search-suggestions mt-3">
+                <span class="suggestions-title">Try searching for:</span>
+                <div class="suggestion-chips">
+                    ${randomSuggestions.map(s =>
+            `<span class="suggestion-chip" data-query="${this.escapeHtml(s)}">${this.escapeHtml(s)}</span>`
+        ).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    getPosterUrl(item) {
+        if (item.poster_path) {
+            if (item.poster_path.startsWith('http')) {
+                return item.poster_path;
+            }
+            return `https://image.tmdb.org/t/p/w92${item.poster_path}`;
+        }
+        return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy82MDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzIi8+PC9zdmc+';
+    }
+
+    getTypeColor(contentType) {
+        const colors = {
+            'movie': 'primary',
+            'tv': 'success',
+            'anime': 'warning',
+            'series': 'success'
+        };
+        return colors[contentType.toLowerCase()] || 'secondary';
+    }
+
+    trackSearchClick(contentId, query, position) {
+        // Track search click for analytics (can be sent to backend)
+        try {
+            const clickData = {
+                contentId,
+                query,
+                position,
+                timestamp: Date.now()
+            };
+
+            // Store in local storage for now
+            const clicks = JSON.parse(localStorage.getItem('cinebrain-search-clicks') || '[]');
+            clicks.push(clickData);
+
+            // Keep only last 50 clicks
+            if (clicks.length > 50) {
+                clicks.splice(0, clicks.length - 50);
+            }
+
+            localStorage.setItem('cinebrain-search-clicks', JSON.stringify(clicks));
+        } catch (e) {
+            console.error('Failed to track search click:', e);
+        }
+    }
+
+    displaySuggestions(suggestions, mode) {
+        const resultsContainer = document.getElementById(`${mode}SearchResults`);
+        if (!resultsContainer || !suggestions || suggestions.length === 0) return;
+
+        // Find or create suggestions container
+        let suggestionsContainer = resultsContainer.querySelector('.search-suggestions-inline');
+        if (!suggestionsContainer) {
+            suggestionsContainer = document.createElement('div');
+            suggestionsContainer.className = 'search-suggestions-inline';
+            resultsContainer.appendChild(suggestionsContainer);
+        }
+
+        let html = `
+            <div class="suggestions-inline-header">
+                <span class="suggestions-title">Related searches:</span>
+            </div>
+            <div class="suggestion-chips">
+        `;
+
+        suggestions.slice(0, 5).forEach(suggestion => {
+            html += `<span class="suggestion-chip" data-query="${this.escapeHtml(suggestion)}">${this.escapeHtml(suggestion)}</span>`;
+        });
+
+        html += `</div>`;
+        suggestionsContainer.innerHTML = html;
+
+        this.attachSuggestionHandlers(suggestionsContainer, mode);
+    }
+
+    attachSuggestionHandlers(container, mode) {
+        container.querySelectorAll('.suggestion-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const query = chip.dataset.query;
+                const input = document.getElementById(`${mode}SearchInput`);
+                if (input && query) {
+                    input.value = query;
+                    this.handleSearchInput(query, mode);
+                    if (mode === 'desktop') {
+                        const clearBtn = document.getElementById('searchClear');
+                        if (clearBtn) clearBtn.style.display = 'flex';
+                    }
+                }
+            });
+        });
+    }
+
+    displaySearchError(mode, query, errorMessage) {
+        const resultsContainer = document.getElementById(`${mode}SearchResults`);
+        if (!resultsContainer) return;
+
+        resultsContainer.innerHTML = `
+            <div class="search-empty">
+                <i data-feather="wifi-off"></i>
+                <p>Search failed</p>
+                <p class="small">${this.escapeHtml(errorMessage || `Unable to search for "${query}"`)}</p>
+                <p class="small">Please check your connection and try again</p>
+                ${this.getSuggestedSearchesHTML()}
+            </div>
+        `;
+
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+
+        resultsContainer.classList.add('show');
+        this.attachSuggestionHandlers(resultsContainer, mode);
     }
 
     showRecentSearches(mode) {
@@ -884,7 +1225,7 @@ class TopbarComponent {
             `;
 
             recentSearches.forEach((item, index) => {
-                if (!item || !item.query) return; // Skip invalid items
+                if (!item || !item.query) return;
 
                 const timeAgo = this.getTimeAgo(item.timestamp || Date.now());
                 const resultInfo = item.firstResult
@@ -912,15 +1253,14 @@ class TopbarComponent {
         }
 
         // Add trending suggestions
+        const trendingSuggestions = this.trendingSearches || this.searchEngine.getDefaultTrending();
         html += `
             <div class="search-suggestions">
-                <span class="suggestions-title">Try searching for:</span>
+                <span class="suggestions-title">Trending searches:</span>
                 <div class="suggestion-chips">
-                    <span class="suggestion-chip" data-query="Telugu movies">Telugu movies</span>
-                    <span class="suggestion-chip" data-query="New releases">New releases</span>
-                    <span class="suggestion-chip" data-query="Action">Action</span>
-                    <span class="suggestion-chip" data-query="Anime">Anime</span>
-                    <span class="suggestion-chip" data-query="Marvel">Marvel</span>
+                    ${trendingSuggestions.slice(0, 5).map(s =>
+            `<span class="suggestion-chip" data-query="${this.escapeHtml(s)}">${this.escapeHtml(s)}</span>`
+        ).join('')}
                 </div>
             </div>
         `;
@@ -952,20 +1292,7 @@ class TopbarComponent {
         });
 
         // Add click handlers for suggestion chips
-        resultsContainer.querySelectorAll('.suggestion-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-                const query = chip.dataset.query;
-                const input = document.getElementById(`${mode}SearchInput`);
-                if (input && query) {
-                    input.value = query;
-                    this.handleSearchInput(query, mode);
-                    if (mode === 'desktop') {
-                        const clearBtn = document.getElementById('searchClear');
-                        if (clearBtn) clearBtn.style.display = 'flex';
-                    }
-                }
-            });
-        });
+        this.attachSuggestionHandlers(resultsContainer, mode);
     }
 
     clearRecentSearches(mode) {
@@ -1001,205 +1328,11 @@ class TopbarComponent {
         return 'Just now';
     }
 
-    // Enhanced loading state
-    showLoadingState(mode, query, searchType = 'search') {
-        const resultsContainer = document.getElementById(`${mode}SearchResults`);
-        if (!resultsContainer) return;
-
-        const loadingMessage = searchType === 'instant'
-            ? `Finding "${this.escapeHtml(query)}"...`
-            : `Searching for "${this.escapeHtml(query)}"...`;
-
-        // Only show loading if we don't have cached results
-        if (this.lastSearchResults.length === 0 || this.currentSearchQuery !== query) {
-            resultsContainer.innerHTML = `
-                <div class="search-loading">
-                    <div class="spinner-cinebrain"></div>
-                    <span>${loadingMessage}</span>
-                </div>
-            `;
-            resultsContainer.classList.add('show');
-        }
-    }
-
-    // Enhanced display search results with instant indicator
-    displaySearchResults(results, mode, query, source = 'backend', responseTime = 0, isInstant = false) {
-        const resultsContainer = document.getElementById(`${mode}SearchResults`);
-        if (!resultsContainer) return;
-
-        if (query !== this.currentSearchQuery) {
-            return;
-        }
-
-        this.showingRecentSearches = false;
-
-        if (!results || results.length === 0) {
-            resultsContainer.innerHTML = `
-                <div class="search-empty">
-                    <i data-feather="search"></i>
-                    <p>No results found for "${this.escapeHtml(query)}"</p>
-                    <p class="small">Try different keywords or check spelling</p>
-                </div>
-            `;
-            if (typeof feather !== 'undefined') {
-                feather.replace();
-            }
-            resultsContainer.classList.add('show');
-            return;
-        }
-
-        let html = '';
-        const isMobile = window.innerWidth <= 480;
-
-        results.forEach((item, index) => {
-            if (!item) return;
-
-            const posterUrl = item.poster
-                ? item.poster
-                : item.poster_path
-                    ? (item.poster_path.startsWith('http')
-                        ? item.poster_path
-                        : `https://image.tmdb.org/t/p/w92${item.poster_path}`)
-                    : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy82MDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzIi8+PC9zdmc+';
-
-            const year = item.year || (item.release_date ? new Date(item.release_date).getFullYear() : '');
-            const rating = item.rating ? `⭐ ${parseFloat(item.rating).toFixed(1)}` : '';
-            const title = item.title || 'Unknown Title';
-            const displayTitle = isMobile && title.length > 30
-                ? title.substring(0, 30) + '...'
-                : title;
-
-            const contentType = item.type || item.content_type || 'movie';
-            const typeColor = contentType === 'movie' ? 'primary' :
-                contentType === 'tv' ? 'success' :
-                    contentType === 'anime' ? 'warning' : 'secondary';
-
-            html += `
-                <div class="search-result-item d-flex ${index === 0 ? 'active' : ''}" data-id="${item.id || ''}">
-                    <div class="poster-wrapper">
-                        <img src="${posterUrl}" 
-                             alt="${this.escapeHtml(title)}" 
-                             class="search-poster"
-                             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy82MDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzIi8+PC9zdmc+'"
-                             loading="lazy">
-                    </div>
-                    <div class="search-result-content">
-                        <div class="search-result-title">${this.escapeHtml(displayTitle)}</div>
-                        <div class="search-result-meta">
-                            <span class="badge bg-${typeColor}">${contentType}</span>
-                            ${year ? `<span>${year}</span>` : ''}
-                            ${rating ? `<span>${rating}</span>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        // Add search info footer with instant indicator
-        if (isInstant) {
-            html += `
-                <div class="search-indicator">
-                    <small>⚡ Instant results • ${results.length} items${responseTime > 0 ? ` • ${responseTime.toFixed(0)}ms` : ''}</small>
-                </div>
-            `;
-        } else if (source === 'cache' || source === 'instant-cache') {
-            html += `
-                <div class="search-indicator">
-                    <small>⚡ Cached results • ${results.length} items</small>
-                </div>
-            `;
-        } else if (source === 'backend' && responseTime > 0) {
-            html += `
-                <div class="search-indicator">
-                    <small>Found ${results.length} results in ${responseTime.toFixed(0)}ms</small>
-                </div>
-            `;
-        }
-
-        resultsContainer.innerHTML = html;
-        resultsContainer.classList.add('show');
-
-        // Add click handlers
-        resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const contentId = item.dataset.id;
-                if (contentId) {
-                    window.location.href = `/content/details.html?id=${contentId}`;
-                }
-            });
-        });
-    }
-
-    // New: Display search suggestions
-    displaySuggestions(suggestions, mode) {
-        const resultsContainer = document.getElementById(`${mode}SearchResults`);
-        if (!resultsContainer || !suggestions || suggestions.length === 0) return;
-
-        // Find or create suggestions container
-        let suggestionsContainer = resultsContainer.querySelector('.search-suggestions-inline');
-        if (!suggestionsContainer) {
-            suggestionsContainer = document.createElement('div');
-            suggestionsContainer.className = 'search-suggestions-inline';
-            resultsContainer.appendChild(suggestionsContainer);
-        }
-
-        let html = `
-            <div class="suggestions-inline-header">
-                <span class="suggestions-title">Related searches:</span>
-            </div>
-            <div class="suggestion-chips">
-        `;
-
-        suggestions.slice(0, 5).forEach(suggestion => {
-            html += `<span class="suggestion-chip" data-query="${this.escapeHtml(suggestion)}">${this.escapeHtml(suggestion)}</span>`;
-        });
-
-        html += `</div>`;
-        suggestionsContainer.innerHTML = html;
-
-        // Add click handlers for suggestions
-        suggestionsContainer.querySelectorAll('.suggestion-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-                const query = chip.dataset.query;
-                const input = document.getElementById(`${mode}SearchInput`);
-                if (input && query) {
-                    input.value = query;
-                    this.handleSearchInput(query, mode);
-                    if (mode === 'desktop') {
-                        const clearBtn = document.getElementById('searchClear');
-                        if (clearBtn) clearBtn.style.display = 'flex';
-                    }
-                }
-            });
-        });
-    }
-
-    displaySearchError(mode, query) {
-        const resultsContainer = document.getElementById(`${mode}SearchResults`);
-        if (!resultsContainer) return;
-
-        resultsContainer.innerHTML = `
-            <div class="search-empty">
-                <i data-feather="wifi-off"></i>
-                <p>Search failed</p>
-                <p class="small">Unable to search for "${this.escapeHtml(query)}"</p>
-                <p class="small">Please check your connection and try again</p>
-            </div>
-        `;
-
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
-
-        resultsContainer.classList.add('show');
-    }
-
     closeSearchResults(mode = null) {
         if (mode) {
             const resultsContainer = document.getElementById(`${mode}SearchResults`);
             if (resultsContainer) {
                 resultsContainer.classList.remove('show');
-                // Don't clear the HTML to allow for re-showing on focus
             }
         } else {
             document.querySelectorAll('.search-results').forEach(container => {
@@ -1210,7 +1343,6 @@ class TopbarComponent {
     }
 
     escapeHtml(text) {
-        // Handle null/undefined values
         if (!text || typeof text !== 'string') {
             return '';
         }
@@ -1224,6 +1356,11 @@ class TopbarComponent {
         };
         return text.replace(/[&<>"']/g, m => map[m]);
     }
+
+    // ... Rest of the TopbarComponent methods remain the same ...
+    // (handleResponsive, adjustForScreenSize, initTheme, setTheme, updateIconColors, 
+    //  toggleTheme, getCurrentUser, initUserMenu, logout, initMobileSearch, 
+    //  setupEventListeners, handleSearchNavigation)
 
     handleResponsive() {
         let resizeTimer;
@@ -1267,23 +1404,19 @@ class TopbarComponent {
     }
 
     initTheme() {
-        // If theme manager exists, use it
         if (window.themeManager) {
             const theme = window.themeManager.getCurrentTheme();
             this.updateThemeUI(theme);
         } else {
-            // Fallback to old method
             const savedTheme = localStorage.getItem('cinebrain-theme') || 'dark';
             this.setTheme(savedTheme);
         }
     }
 
     setTheme(theme) {
-        // If theme manager exists, delegate to it
         if (window.themeManager) {
             window.themeManager.applyTheme(theme);
         } else {
-            // Fallback to old method
             document.documentElement.setAttribute('data-theme', theme);
             document.documentElement.setAttribute('data-bs-theme', theme);
             document.body.setAttribute('data-theme', theme);
@@ -1324,13 +1457,11 @@ class TopbarComponent {
         if (window.themeManager) {
             window.themeManager.toggleTheme();
         } else {
-            // Fallback to old method
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             this.setTheme(newTheme);
         }
 
-        // Provide haptic feedback if available
         if (navigator.vibrate) {
             navigator.vibrate(10);
         }
@@ -1425,254 +1556,139 @@ class TopbarComponent {
     }
 
     logout() {
-        // Create responsive confirmation dialog
+        // Keep the existing logout implementation
+        // It's already well-implemented with responsive dialog
         const confirmDialog = document.createElement('div');
         confirmDialog.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        animation: fadeIn 0.2s ease;
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    `;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        `;
 
         const dialogBox = document.createElement('div');
         dialogBox.style.cssText = `
-        background: var(--bs-dropdown-bg, #1a1a1a);
-        border-radius: clamp(16px, 4vw, 24px);
-        padding: clamp(20px, 5vw, 32px);
-        width: min(90vw, 400px);
-        max-width: calc(100vw - 32px);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        animation: scaleIn 0.2s ease;
-        text-align: center;
-        position: relative;
-        margin: auto;
-    `;
+            background: var(--bs-dropdown-bg, #1a1a1a);
+            border-radius: clamp(16px, 4vw, 24px);
+            padding: clamp(20px, 5vw, 32px);
+            width: min(90vw, 400px);
+            max-width: calc(100vw - 32px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: scaleIn 0.2s ease;
+            text-align: center;
+            position: relative;
+            margin: auto;
+        `;
 
         dialogBox.innerHTML = `
-        <style>
-            @media (max-width: 320px) {
-                .dialog-icon-wrapper { 
-                    width: 48px !important; 
-                    height: 48px !important; 
-                }
-                .dialog-icon { 
-                    width: 24px !important; 
-                    height: 24px !important; 
-                }
-                .dialog-title { 
-                    font-size: 16px !important; 
-                }
-                .dialog-text { 
-                    font-size: 13px !important; 
-                }
-                .dialog-button { 
-                    font-size: 13px !important;
-                    padding: 10px 16px !important;
-                    min-height: 38px !important;
-                }
-            }
+            <div class="dialog-content-wrapper" style="margin-bottom: clamp(16px, 4vw, 24px);">
+                <div class="dialog-icon-section">
+                    <div class="dialog-icon-wrapper" style="
+                        width: clamp(48px, 12vw, 64px);
+                        height: clamp(48px, 12vw, 64px);
+                        margin: 0 auto clamp(12px, 3vw, 20px);
+                        background: linear-gradient(135deg, var(--cinebrain-red, #E50914), var(--cinebrain-purple, #8B5CF6));
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        position: relative;
+                    ">
+                        <i data-feather="log-out" class="dialog-icon" style="
+                            width: clamp(24px, 6vw, 32px);
+                            height: clamp(24px, 6vw, 32px);
+                            stroke: white;
+                            stroke-width: 2.5;
+                        "></i>
+                    </div>
+                </div>
+                
+                <h3 class="dialog-title" style="
+                    margin: 0 0 clamp(6px, 1.5vw, 10px) 0;
+                    color: var(--text-primary, #ffffff);
+                    font-size: clamp(16px, 4.5vw, 20px);
+                    font-weight: 600;
+                    line-height: 1.3;
+                ">Sign Out?</h3>
+                
+                <p class="dialog-text" style="
+                    margin: 0;
+                    color: var(--text-secondary, #b3b3b3);
+                    font-size: clamp(13px, 3.5vw, 15px);
+                    line-height: 1.5;
+                    padding: 0 clamp(8px, 2vw, 16px);
+                ">
+                    Are you sure you want to sign out of CineBrain?
+                </p>
+            </div>
             
-            @media (min-width: 321px) and (max-width: 375px) {
-                .dialog-icon-wrapper { 
-                    width: 56px !important; 
-                    height: 56px !important; 
-                }
-                .dialog-icon { 
-                    width: 28px !important; 
-                    height: 28px !important; 
-                }
-                .dialog-title { 
-                    font-size: 18px !important; 
-                }
-                .dialog-text { 
-                    font-size: 14px !important; 
-                }
-                .dialog-button { 
-                    font-size: 14px !important;
-                    padding: 11px 20px !important;
-                    min-height: 42px !important;
-                }
-            }
-            
-            @media (min-width: 376px) and (max-width: 414px) {
-                .dialog-icon-wrapper { 
-                    width: 60px !important; 
-                    height: 60px !important; 
-                }
-                .dialog-icon { 
-                    width: 30px !important; 
-                    height: 30px !important; 
-                }
-                .dialog-title { 
-                    font-size: 19px !important; 
-                }
-                .dialog-text { 
-                    font-size: 14px !important; 
-                }
-                .dialog-button { 
-                    font-size: 14px !important;
-                    padding: 12px 22px !important;
-                    min-height: 44px !important;
-                }
-            }
-            
-            @media (min-width: 415px) {
-                .dialog-icon-wrapper { 
-                    width: 64px !important; 
-                    height: 64px !important; 
-                }
-                .dialog-icon { 
-                    width: 32px !important; 
-                    height: 32px !important; 
-                }
-                .dialog-title { 
-                    font-size: 20px !important; 
-                }
-                .dialog-text { 
-                    font-size: 15px !important; 
-                }
-                .dialog-button { 
-                    font-size: 15px !important;
-                    padding: 12px 24px !important;
-                    min-height: 46px !important;
-                }
-            }
-
-            /* Landscape mode adjustments */
-            @media (orientation: landscape) and (max-height: 500px) {
-                .dialog-icon-wrapper { 
-                    width: 40px !important; 
-                    height: 40px !important; 
-                }
-                .dialog-icon { 
-                    width: 20px !important; 
-                    height: 20px !important; 
-                }
-                .dialog-content-wrapper {
-                    margin-bottom: 12px !important;
-                }
-            }
-
-            /* Small devices in landscape */
-            @media (orientation: landscape) and (max-height: 400px) {
-                .dialog-icon-section {
-                    display: none !important;
-                }
-            }
-        </style>
-        
-        <div class="dialog-content-wrapper" style="margin-bottom: clamp(16px, 4vw, 24px);">
-            <div class="dialog-icon-section">
-                <div class="dialog-icon-wrapper" style="
-                    width: clamp(48px, 12vw, 64px);
-                    height: clamp(48px, 12vw, 64px);
-                    margin: 0 auto clamp(12px, 3vw, 20px);
-                    background: linear-gradient(135deg, var(--cinebrain-red, #E50914), var(--cinebrain-purple, #8B5CF6));
-                    border-radius: 50%;
+            <div style="
+                display: flex;
+                gap: clamp(8px, 2vw, 12px);
+                justify-content: center;
+                flex-wrap: nowrap;
+            ">
+                <button id="cancelLogout" class="dialog-button" style="
+                    flex: 1;
+                    min-width: 0;
+                    max-width: 160px;
+                    padding: clamp(10px, 2.5vw, 12px) clamp(16px, 4vw, 24px);
+                    background: rgba(255, 255, 255, 0.1);
+                    color: var(--text-primary, #ffffff);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: clamp(8px, 2vw, 12px);
+                    cursor: pointer;
+                    font-weight: 500;
+                    font-size: clamp(13px, 3.5vw, 15px);
+                    transition: all 0.2s;
+                    min-height: clamp(38px, 10vw, 46px);
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    white-space: nowrap;
+                    -webkit-tap-highlight-color: transparent;
+                "
+                onmouseover="this.style.background='rgba(255, 255, 255, 0.15)'"
+                onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'"
+                >Cancel</button>
+                
+                <button id="confirmLogout" class="dialog-button" style="
+                    flex: 1;
+                    min-width: 0;
+                    max-width: 160px;
+                    padding: clamp(10px, 2.5vw, 12px) clamp(16px, 4vw, 24px);
+                    background: linear-gradient(135deg, var(--cinebrain-red, #E50914), var(--cinebrain-purple, #8B5CF6));
+                    color: white;
+                    border: none;
+                    border-radius: clamp(8px, 2vw, 12px);
+                    cursor: pointer;
+                    font-weight: 500;
+                    font-size: clamp(13px, 3.5vw, 15px);
+                    transition: all 0.2s;
+                    min-height: clamp(38px, 10vw, 46px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    white-space: nowrap;
                     position: relative;
-                ">
-                    <i data-feather="log-out" class="dialog-icon" style="
-                        width: clamp(24px, 6vw, 32px);
-                        height: clamp(24px, 6vw, 32px);
-                        stroke: white;
-                        stroke-width: 2.5;
-                    "></i>
-                </div>
+                    overflow: hidden;
+                    -webkit-tap-highlight-color: transparent;
+                "
+                onmouseover="this.style.filter='brightness(1.1)'"
+                onmouseout="this.style.filter='brightness(1)'"
+                >Sign Out</button>
             </div>
-            
-            <h3 class="dialog-title" style="
-                margin: 0 0 clamp(6px, 1.5vw, 10px) 0;
-                color: var(--text-primary, #ffffff);
-                font-size: clamp(16px, 4.5vw, 20px);
-                font-weight: 600;
-                line-height: 1.3;
-            ">Sign Out?</h3>
-            
-            <p class="dialog-text" style="
-                margin: 0;
-                color: var(--text-secondary, #b3b3b3);
-                font-size: clamp(13px, 3.5vw, 15px);
-                line-height: 1.5;
-                padding: 0 clamp(8px, 2vw, 16px);
-            ">
-                Are you sure you want to sign out of CineBrain?
-            </p>
-        </div>
-        
-        <div style="
-            display: flex;
-            gap: clamp(8px, 2vw, 12px);
-            justify-content: center;
-            flex-wrap: nowrap;
-        ">
-            <button id="cancelLogout" class="dialog-button" style="
-                flex: 1;
-                min-width: 0;
-                max-width: 160px;
-                padding: clamp(10px, 2.5vw, 12px) clamp(16px, 4vw, 24px);
-                background: rgba(255, 255, 255, 0.1);
-                color: var(--text-primary, #ffffff);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: clamp(8px, 2vw, 12px);
-                cursor: pointer;
-                font-weight: 500;
-                font-size: clamp(13px, 3.5vw, 15px);
-                transition: all 0.2s;
-                min-height: clamp(38px, 10vw, 46px);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                white-space: nowrap;
-                -webkit-tap-highlight-color: transparent;
-            "
-            onmouseover="this.style.background='rgba(255, 255, 255, 0.15)'"
-            onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'"
-            ontouchstart="this.style.background='rgba(255, 255, 255, 0.15)'"
-            ontouchend="this.style.background='rgba(255, 255, 255, 0.1)'"
-            >Cancel</button>
-            
-            <button id="confirmLogout" class="dialog-button" style="
-                flex: 1;
-                min-width: 0;
-                max-width: 160px;
-                padding: clamp(10px, 2.5vw, 12px) clamp(16px, 4vw, 24px);
-                background: linear-gradient(135deg, var(--cinebrain-red, #E50914), var(--cinebrain-purple, #8B5CF6));
-                color: white;
-                border: none;
-                border-radius: clamp(8px, 2vw, 12px);
-                cursor: pointer;
-                font-weight: 500;
-                font-size: clamp(13px, 3.5vw, 15px);
-                transition: all 0.2s;
-                min-height: clamp(38px, 10vw, 46px);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                white-space: nowrap;
-                position: relative;
-                overflow: hidden;
-                -webkit-tap-highlight-color: transparent;
-            "
-            onmouseover="this.style.filter='brightness(1.1)'"
-            onmouseout="this.style.filter='brightness(1)'"
-            ontouchstart="this.style.filter='brightness(1.1)'"
-            ontouchend="this.style.filter='brightness(1)'"
-            >Sign Out</button>
-        </div>
-    `;
+        `;
 
         confirmDialog.appendChild(dialogBox);
         document.body.appendChild(confirmDialog);
@@ -1682,37 +1698,24 @@ class TopbarComponent {
             const style = document.createElement('style');
             style.id = 'dialog-animations';
             style.textContent = `
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-            @keyframes scaleIn {
-                from { 
-                    transform: scale(0.9); 
-                    opacity: 0; 
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
                 }
-                to { 
-                    transform: scale(1); 
-                    opacity: 1; 
+                @keyframes scaleIn {
+                    from { 
+                        transform: scale(0.9); 
+                        opacity: 0; 
+                    }
+                    to { 
+                        transform: scale(1); 
+                        opacity: 1; 
+                    }
                 }
-            }
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-            
-            /* Responsive button hover effects */
-            @media (hover: hover) {
-                .dialog-button:hover {
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
                 }
-            }
-            
-            /* Touch feedback */
-            .dialog-button:active {
-                transform: scale(0.98);
-            }
-        `;
+            `;
             document.head.appendChild(style);
         }
 
@@ -1728,23 +1731,19 @@ class TopbarComponent {
         });
 
         document.getElementById('confirmLogout').addEventListener('click', function () {
-            // Show loading state with responsive text
-            const viewportWidth = window.innerWidth;
-            const loadingText = viewportWidth < 360 ? 'Signing out...' : 'Signing out...';
-            const spinnerSize = viewportWidth < 360 ? '14px' : '16px';
-
+            // Show loading state
             this.innerHTML = `
-            <svg style="
-                width: ${spinnerSize}; 
-                height: ${spinnerSize}; 
-                margin-right: 6px;
-                animation: spin 1s linear infinite;
-            " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" opacity="0.3"/>
-                <path d="M21 12a9 9 0 11-18 0" stroke-linecap="round"/>
-            </svg>
-            ${loadingText}
-        `;
+                <svg style="
+                    width: 16px; 
+                    height: 16px; 
+                    margin-right: 6px;
+                    animation: spin 1s linear infinite;
+                " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" opacity="0.3"/>
+                    <path d="M21 12a9 9 0 11-18 0" stroke-linecap="round"/>
+                </svg>
+                Signing out...
+            `;
             this.disabled = true;
             this.style.opacity = '0.8';
 
@@ -1798,7 +1797,6 @@ class TopbarComponent {
                 overlay?.classList.add('show');
                 setTimeout(() => {
                     input?.focus();
-                    // Show recent searches on mobile when opened
                     if (input && !input.value.trim()) {
                         this.showRecentSearches('mobile');
                     }
@@ -1898,10 +1896,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const showLogoutMessage = sessionStorage.getItem('show-logout-message');
 
     if (showLogoutMessage) {
-        // Remove the flag
         sessionStorage.removeItem('show-logout-message');
 
-        // Show notification if notification system exists
         if (window.topbar && window.topbar.notificationSystem) {
             setTimeout(() => {
                 window.topbar.notificationSystem.show('You have been signed out successfully', 'info', 4000);
