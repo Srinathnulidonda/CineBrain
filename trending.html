@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Trending - CineBrain</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS - Same as content-card -->
+    <link rel="stylesheet" href="/css/loader.css">
+    <link rel="stylesheet" href="/css/topbar.css">
+    <link rel="stylesheet" href="/css/mobile-nav.css">
+    <link rel="stylesheet" href="/css/content-card.css">
+    <link rel="stylesheet" href="/css/theme.css">
+
+    <!-- Trending Page Specific Styles -->
+    <style>
+        /* Hero Section - Enhanced Netflix/Disney+ Style */
+        .hero-trending {
+            position: relative;
+            width: 100%;
+            height: 85vh;
+            min-height: 500px;
+            max-height: 800px;
+            margin: 0 0 3rem 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%);
+        }
+
+        @media (max-width: 768px) {
+            .hero-trending {
+                height: 70vh;
+                min-height: 400px;
+                max-height: 600px;
+                margin-bottom: 2rem;
+            }
+        }
+
+        .hero-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            transform: scale(1.1);
+            animation: slowZoom 20s ease-in-out infinite alternate;
+        }
+
+        .hero-backdrop.loaded {
+            opacity: 1;
+        }
+
+        @keyframes slowZoom {
+            0% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Gradient Overlays */
+        .hero-gradient-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to right,
+                    rgba(0, 0, 0, 0.9) 0%,
+                    rgba(0, 0, 0, 0.7) 40%,
+                    rgba(0, 0, 0, 0.4) 60%,
+                    transparent 100%);
+            z-index: 1;
+        }
+
+        .hero-bottom-gradient {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background: linear-gradient(to top,
+                    rgba(0, 0, 0, 0.95) 0%,
+                    rgba(0, 0, 0, 0.7) 30%,
+                    transparent 100%);
+            z-index: 2;
+        }
+
+        @media (max-width: 768px) {
+            .hero-gradient-overlay {
+                background: linear-gradient(to top,
+                        rgba(0, 0, 0, 0.95) 0%,
+                        rgba(0, 0, 0, 0.8) 50%,
+                        rgba(0, 0, 0, 0.4) 100%);
+            }
+        }
+
+        /* Hero Content - Enhanced */
+        .hero-content {
+            position: absolute;
+            bottom: 10%;
+            left: 5%;
+            right: 5%;
+            max-width: 800px;
+            z-index: 3;
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @media (min-width: 1400px) {
+            .hero-content {
+                bottom: 15%;
+                left: 7%;
+                max-width: 900px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-content {
+                bottom: 5%;
+                left: 4%;
+                right: 4%;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Trending Badge - Animated */
+        .trending-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #ff0040, #ff0080);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: clamp(0.75rem, 1.5vw, 0.9rem);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 20px rgba(255, 0, 64, 0.5);
+            animation: pulse 2s infinite, glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                box-shadow: 0 4px 20px rgba(255, 0, 64, 0.5);
+            }
+
+            to {
+                box-shadow: 0 4px 30px rgba(255, 0, 128, 0.7);
+            }
+        }
+
+        .trending-number {
+            font-size: 1.2em;
+            font-weight: 900;
+        }
+
+        /* Hero Title - Dramatic */
+        .hero-title {
+            font-size: clamp(2rem, 7vw, 4.5rem);
+            font-weight: 900;
+            margin-bottom: 1rem;
+            line-height: 1.1;
+            letter-spacing: -1px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            background: linear-gradient(to right, #ffffff 0%, #e0e0e0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: clamp(1.8rem, 8vw, 2.5rem);
+                margin-bottom: 0.8rem;
+            }
+        }
+
+        /* Hero Meta Info */
+        .hero-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+        }
+
+        .hero-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .rating-badge-hero {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 215, 0, 0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            color: #ffd700;
+            font-weight: 700;
+        }
+
+        .content-type-badge-hero {
+            background: rgba(138, 43, 226, 0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(138, 43, 226, 0.5);
+            color: #9370db;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85em;
+        }
+
+        /* Hero Overview */
+        .hero-overview {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            color: rgba(255, 255, 255, 0.85);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+            .hero-overview {
+                font-size: clamp(0.9rem, 3vw, 1rem);
+                margin-bottom: 1.5rem;
+                -webkit-line-clamp: 2;
+            }
+        }
+
+        /* Hero Buttons - Enhanced */
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .hero-buttons .btn {
+            font-size: clamp(0.95rem, 2vw, 1.1rem);
+            padding: clamp(12px, 2.5vw, 16px) clamp(24px, 4vw, 32px);
+            border-radius: 30px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary-hero {
+            background: linear-gradient(135deg, #ff0040, #ff0080);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 20px rgba(255, 0, 64, 0.4);
+        }
+
+        .btn-primary-hero:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 30px rgba(255, 0, 64, 0.6);
+            background: linear-gradient(135deg, #ff0080, #ff00c0);
+        }
+
+        .btn-outline-hero {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .btn-outline-hero:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+        }
+
+        @media (max-width: 480px) {
+            .hero-buttons {
+                width: 100%;
+            }
+
+            .hero-buttons .btn {
+                flex: 1;
+                justify-content: center;
+                min-width: 140px;
+            }
+        }
+
+        /* Top 10 Section - Complete Redesign */
+        .top-10-container {
+            background: var(--bs-body-bg);
+            padding: 3rem 0;
+            margin-top: -2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .top-10-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            padding: 0 1rem;
+        }
+
+        .top-10-title {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--cinebrain-red), var(--cinebrain-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .top-10-title::before {
+            content: "🔥";
+            font-size: 1.2em;
+        }
+
+        /* Top 10 Grid Layout */
+        .top-10-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            padding: 0 1rem;
+        }
+
+        @media (max-width: 992px) {
+            .top-10-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+
+        /* Top 10 Card - Redesigned */
+        .top-10-card {
+            display: flex;
+            align-items: stretch;
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid var(--search-border);
+            position: relative;
+            min-height: 140px;
+        }
+
+        .top-10-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            border-color: var(--cinebrain-purple);
+        }
+
+        /* Rank Display - Large and Bold */
+        .rank-display {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--cinebrain-red);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 2;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.8) 0%, transparent 70%);
+        }
+
+        .rank-display.top-3 {
+            color: #ffd700;
+            font-size: 3rem;
+        }
+
+        /* Poster Section */
+        .top-10-poster-wrapper {
+            position: relative;
+            width: 100px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .top-10-poster {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .top-10-card:hover .top-10-poster {
+            transform: scale(1.1);
+        }
+
+        /* Content Section */
+        .top-10-info {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .top-10-info-title {
+            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.3;
+        }
+
+        .top-10-metadata {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .rating-star {
+            color: #ffd700;
+        }
+
+        /* Trend Indicator - Enhanced */
+        .trend-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .trend-badge.hot {
+            background: linear-gradient(135deg, #ff0040, #ff0080);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .trend-badge.rising {
+            background: linear-gradient(135deg, #00c851, #00ff88);
+            color: white;
+        }
+
+        .trend-badge.stable {
+            background: linear-gradient(135deg, #ff6f00, #ffab00);
+            color: white;
+        }
+
+        /* Action Buttons */
+        .top-10-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: auto;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .action-btn-primary {
+            background: linear-gradient(135deg, var(--cinebrain-red), var(--cinebrain-purple));
+            color: white;
+        }
+
+        .action-btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);
+        }
+
+        .action-btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid var(--search-border);
+        }
+
+        .action-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .action-btn-secondary.active {
+            background: var(--cinebrain-purple);
+            color: white;
+            border-color: var(--cinebrain-purple);
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 576px) {
+            .top-10-card {
+                min-height: 120px;
+            }
+
+            .rank-display {
+                width: 50px;
+                height: 50px;
+                font-size: 2rem;
+                top: -5px;
+                left: -5px;
+            }
+
+            .rank-display.top-3 {
+                font-size: 2.5rem;
+            }
+
+            .top-10-poster-wrapper {
+                width: 80px;
+            }
+
+            .top-10-info {
+                padding: 0.8rem 1rem;
+            }
+
+            .top-10-info-title {
+                font-size: 1rem;
+                margin-bottom: 0.4rem;
+            }
+
+            .metadata-item {
+                font-size: 0.8rem;
+            }
+
+            .action-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.9;
+                transform: scale(1.02);
+            }
+        }
+
+        @keyframes slideInFromLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInFromRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Staggered animations for top 10 items */
+        .top-10-card:nth-child(odd) {
+            animation: slideInFromLeft 0.6s ease-out backwards;
+        }
+
+        .top-10-card:nth-child(even) {
+            animation: slideInFromRight 0.6s ease-out backwards;
+        }
+
+        .top-10-card:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .top-10-card:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .top-10-card:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        .top-10-card:nth-child(4) {
+            animation-delay: 0.25s;
+        }
+
+        .top-10-card:nth-child(5) {
+            animation-delay: 0.3s;
+        }
+
+        .top-10-card:nth-child(6) {
+            animation-delay: 0.35s;
+        }
+
+        .top-10-card:nth-child(7) {
+            animation-delay: 0.4s;
+        }
+
+        .top-10-card:nth-child(8) {
+            animation-delay: 0.45s;
+        }
+
+        .top-10-card:nth-child(9) {
+            animation-delay: 0.5s;
+        }
+
+        .top-10-card:nth-child(10) {
+            animation-delay: 0.55s;
+        }
+
+        /* Apply theme immediately */
+        body {
+            padding-top: calc(var(--navbar-height) + 0px);
+        }
+    </style>
+
+    <!-- Apply theme immediately -->
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('cinebrain-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        })();
+    </script>
+</head>
+
+<body>
+    <!-- TopBar Navigation (Same as index.html) -->
+    <nav class="navbar navbar-expand-lg navbar-cinebrain fixed-top">
+        <div class="container-fluid">
+            <!-- Brand Section -->
+            <div class="navbar-brand-wrapper">
+                <a href="/" style="text-decoration: none;">
+                    <div class="navbar-brand-cinebrain">CineBrain</div>
+                    <div class="tagline">
+                        <span class="tagline-full">The Mind Behind Your Next Favorite</span>
+                        <span class="tagline-medium" style="display: none;">Your Next Favorite</span>
+                        <span class="tagline-short" style="display: none;">Next Favorite</span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Desktop Search -->
+            <div class="search-container desktop-search" id="desktopSearchContainer">
+                <div class="search-wrapper">
+                    <div class="search-bar-wrapper">
+                        <div class="search-input-wrapper">
+                            <i data-feather="search" class="search-icon"></i>
+                            <input type="text" class="form-control search-input" id="desktopSearchInput"
+                                placeholder="Search movies, shows, anime..." autocomplete="off">
+                            <button class="search-clear" id="searchClear" aria-label="Clear search"
+                                style="display: none;">
+                                <i data-feather="x"></i>
+                            </button>
+                        </div>
+                        <div class="search-results" id="desktopSearchResults"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Section: Icons -->
+            <div class="nav-icons-section">
+                <button class="icon-button mobile-search-trigger" id="mobileSearchTrigger" aria-label="Search">
+                    <i data-feather="search"></i>
+                </button>
+                <button class="icon-button theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <i data-feather="sun" class="theme-icon theme-icon-light"></i>
+                    <i data-feather="moon" class="theme-icon theme-icon-dark"></i>
+                </button>
+                <div class="dropdown">
+                    <div class="avatar-menu" data-bs-toggle="dropdown" aria-expanded="false" id="avatarMenu"
+                        role="button">
+                        <i data-feather="user"></i>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-cinebrain" id="userDropdown"></ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Search Overlay -->
+    <div class="mobile-search-overlay" id="mobileSearchOverlay">
+        <div class="container">
+            <div class="mobile-search-header">
+                <button class="btn-back" id="closeMobileSearch" aria-label="Close search">
+                    <i data-feather="arrow-left"></i>
+                </button>
+                <div class="mobile-search-input-wrapper">
+                    <i data-feather="search" class="search-icon"></i>
+                    <input type="text" class="form-control search-input" id="mobileSearchInput"
+                        placeholder="Search movies, shows, anime..." autocomplete="off" autofocus>
+                </div>
+            </div>
+            <div class="search-results mobile-results" id="mobileSearchResults"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section - Enhanced -->
+        <section id="heroSection" class="hero-trending">
+            <img id="heroBackdrop" class="hero-backdrop" alt="Hero backdrop">
+            <div class="hero-gradient-overlay"></div>
+            <div class="hero-bottom-gradient"></div>
+            <div class="hero-content">
+                <div class="trending-badge">
+                    <span class="trending-number">#1</span>
+                    <span>TRENDING NOW</span>
+                </div>
+                <h1 id="heroTitle" class="hero-title">Loading...</h1>
+                <div class="hero-meta">
+                    <div class="rating-badge-hero">
+                        <span>⭐</span>
+                        <span id="heroRating">--</span>
+                    </div>
+                    <div class="content-type-badge-hero" id="heroType">--</div>
+                    <div class="hero-meta-item" id="heroYear">----</div>
+                    <div class="hero-meta-item" id="heroGenres">--</div>
+                </div>
+                <p id="heroOverview" class="hero-overview">Loading amazing content...</p>
+                <div class="hero-buttons">
+                    <button id="heroWatchBtn" class="btn btn-primary-hero">
+                        <span>▶</span>
+                        <span>Play Now</span>
+                    </button>
+                    <button id="heroWatchlistBtn" class="btn btn-outline-hero">
+                        <span>+</span>
+                        <span>My List</span>
+                    </button>
+                    <button id="heroInfoBtn" class="btn btn-outline-hero">
+                        <span>ⓘ</span>
+                        <span>Details</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <div class="container-cinebrain">
+            <!-- Content Container - Same structure as content-card -->
+            <div id="content-container" class="content-container-cinebrain">
+                <!-- Content rows will be dynamically inserted here -->
+            </div>
+
+            <!-- Top 10 Section - Redesigned -->
+            <section class="top-10-container">
+                <div class="top-10-header">
+                    <h2 class="top-10-title">Top 10 Today</h2>
+                </div>
+                <div class="top-10-grid" id="top10List">
+                    <!-- Top 10 cards will be loaded here -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile navigation">
+        <div class="mobile-nav-container" id="mobileNavContainer"></div>
+    </nav>
+
+    <!-- More Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay" aria-hidden="true">
+        <div class="menu-handle" role="presentation"></div>
+        <div class="menu-header">
+            <h3 class="menu-title">Discover</h3>
+            <button class="menu-close-btn" id="mobileMenuClose" aria-label="Close menu">
+                <i data-feather="x"></i>
+            </button>
+        </div>
+        <div class="menu-section">
+            <h4 class="menu-section-title">Browse</h4>
+            <div class="mobile-menu-grid" id="mobileMenuGrid"></div>
+        </div>
+        <div class="menu-section">
+            <h4 class="menu-section-title" id="userSectionTitle">Account</h4>
+            <div class="mobile-menu-list" id="mobileMenuList"></div>
+        </div>
+        <div class="menu-footer">
+            <div class="menu-footer-info">
+                <span class="app-version">CineBrain v1.0.0</span>
+                <span class="menu-footer-separator">•</span>
+                <a href="/pages/privacy.html" class="menu-footer-link">Privacy</a>
+                <span class="menu-footer-separator">•</span>
+                <a href="/pages/terms.html" class="menu-footer-link">Terms</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backdrop -->
+    <div class="mobile-backdrop" id="mobileBackdrop" aria-hidden="true"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="/js/theme-manager.js"></script>
+    <script src="/js/topbar.js"></script>
+    <script src="/js/mobile-nav.js"></script>
+
+    <!-- Trending Page JavaScript -->
+    <script>
+        // Trending Page Manager - Integrated with content-card system
+        class TrendingPageManager {
+            constructor() {
+                this.apiBase = 'https://backend-app-970m.onrender.com/api';
+                this.posterBase = 'https://image.tmdb.org/t/p/w500';
+                this.authToken = localStorage.getItem('cinebrain-token');
+                this.isAuthenticated = !!this.authToken;
+                this.currentUser = this.getCurrentUser();
+                this.userWishlist = new Set();
+                this.allTrendingData = [];
+
+                // Content row configurations for trending page
+                this.contentRows = [
+                    {
+                        id: 'trending-movies',
+                        title: '🎬 Trending Movies',
+                        endpoint: '/recommendations/trending',
+                        params: { category: 'movies', limit: 20 }
+                    },
+                    {
+                        id: 'trending-tv',
+                        title: '📺 Trending TV Shows',
+                        endpoint: '/recommendations/trending',
+                        params: { category: 'tv_shows', limit: 20 }
+                    },
+                    {
+                        id: 'trending-anime',
+                        title: '🌸 Trending Anime',
+                        endpoint: '/recommendations/anime',
+                        params: { limit: 20 }
+                    },
+                    {
+                        id: 'rising-fast',
+                        title: '🚀 Rising Fast',
+                        endpoint: '/recommendations/new-releases',
+                        params: { type: 'movie', limit: 20 }
+                    },
+                    {
+                        id: 'popular-nearby',
+                        title: '📍 Popular Nearby',
+                        endpoint: '/recommendations/trending',
+                        params: { category: 'all', limit: 20, region: 'IN' }
+                    }
+                ];
+
+                // Register with theme manager
+                if (window.themeManager) {
+                    window.themeManager.register((theme) => this.onThemeChange(theme));
+                }
+
+                this.init();
+            }
+
+            getCurrentUser() {
+                const userStr = localStorage.getItem('cinebrain-user');
+                if (userStr) {
+                    try {
+                        return JSON.parse(userStr);
+                    } catch (e) {
+                        return null;
+                    }
+                }
+                return null;
+            }
+
+            onThemeChange(theme) {
+                console.log('Trending page theme updated to:', theme);
+                if (typeof feather !== 'undefined') {
+                    feather.replace();
+                }
+            }
+
+            async init() {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => this.setup());
+                } else {
+                    this.setup();
+                }
+            }
+
+            async setup() {
+                // Load user wishlist if authenticated
+                if (this.isAuthenticated) {
+                    await this.loadUserWishlist();
+                }
+
+                // Load hero content first
+                await this.loadHeroContent();
+
+                // Create content rows using same system as content-card
+                this.createContentRows();
+
+                // Load all content
+                await this.loadAllContent();
+
+                // Initialize feather icons
+                if (typeof feather !== 'undefined') {
+                    feather.replace();
+                }
+            }
+
+            async loadUserWishlist() {
+                if (!this.isAuthenticated) return;
+
+                try {
+                    const response = await fetch(`${this.apiBase}/user/watchlist`, {
+                        headers: { 'Authorization': `Bearer ${this.authToken}` }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.userWishlist.clear();
+                        if (data.watchlist && Array.isArray(data.watchlist)) {
+                            data.watchlist.forEach(item => {
+                                this.userWishlist.add(item.id);
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading wishlist:', error);
+                }
+            }
+
+            async loadHeroContent() {
+                try {
+                    const response = await fetch(`${this.apiBase}/recommendations/trending?category=all&limit=1`);
+                    if (!response.ok) throw new Error('Failed to fetch hero content');
+
+                    const data = await response.json();
+                    let heroContent = null;
+
+                    // Handle different response structures
+                    if (data.categories) {
+                        // Get first item from any category
+                        for (const categoryItems of Object.values(data.categories)) {
+                            if (Array.isArray(categoryItems) && categoryItems.length > 0) {
+                                heroContent = categoryItems[0];
+                                break;
+                            }
+                        }
+                    } else if (data.recommendations && data.recommendations.length > 0) {
+                        heroContent = data.recommendations[0];
+                    }
+
+                    if (heroContent) {
+                        this.displayHeroContent(heroContent);
+                    }
+                } catch (error) {
+                    console.error('Error loading hero content:', error);
+                }
+            }
+
+            displayHeroContent(content) {
+                // Set backdrop image with fade-in effect
+                const heroBackdrop = document.getElementById('heroBackdrop');
+                if (content.backdrop_path || content.poster_path) {
+                    const backdropUrl = content.backdrop_path
+                        ? `https://image.tmdb.org/t/p/original${content.backdrop_path}`
+                        : this.formatPosterUrl(content.poster_path);
+
+                    const img = new Image();
+                    img.onload = () => {
+                        heroBackdrop.src = backdropUrl;
+                        heroBackdrop.classList.add('loaded');
+                    };
+                    img.src = backdropUrl;
+                }
+
+                // Update hero content
+                document.getElementById('heroTitle').textContent = content.title || 'Untitled';
+                document.getElementById('heroRating').textContent = this.formatRating(content.rating);
+
+                const typeElement = document.getElementById('heroType');
+                typeElement.textContent = (content.content_type || 'movie').toUpperCase();
+
+                // Add year if available
+                const yearElement = document.getElementById('heroYear');
+                if (content.release_date) {
+                    yearElement.textContent = this.extractYear(content.release_date);
+                } else {
+                    yearElement.style.display = 'none';
+                }
+
+                const genres = content.genres?.slice(0, 3).join(' • ') || 'No genres';
+                document.getElementById('heroGenres').textContent = genres;
+
+                document.getElementById('heroOverview').textContent = content.overview || 'No description available.';
+
+                // Set button actions
+                document.getElementById('heroWatchBtn').onclick = () => this.watchContent(content);
+                document.getElementById('heroWatchlistBtn').onclick = () => this.handleWishlistClick(content.id);
+                document.getElementById('heroInfoBtn').onclick = () => this.redirectToDetails(content);
+            }
+
+            // New method to redirect to details page
+            redirectToDetails(content) {
+                // Store content data in sessionStorage for the details page
+                sessionStorage.setItem('contentDetails', JSON.stringify(content));
+
+                // Redirect to details page with content ID and type as query parameters
+                const contentType = content.content_type || 'movie';
+                const contentId = content.id;
+
+                window.location.href = `/details.html?id=${contentId}&type=${contentType}`;
+            }
+
+            createContentRows() {
+                const container = document.getElementById('content-container');
+                if (!container) return;
+
+                this.contentRows.forEach(rowConfig => {
+                    const row = this.createCarouselRow(rowConfig);
+                    container.appendChild(row);
+                });
+            }
+
+            createCarouselRow(rowConfig) {
+                const row = document.createElement('div');
+                row.className = 'content-row';
+                row.id = rowConfig.id;
+
+                row.innerHTML = `
+                    <div class="row-header">
+                        <h2 class="row-title">${rowConfig.title}</h2>
+                        <a href="/browse/${rowConfig.id}" class="see-all">See All →</a>
+                    </div>
+                    <div class="carousel-container">
+                        <button class="carousel-nav prev" aria-label="Previous">
+                            <span>‹</span>
+                        </button>
+                        <div class="carousel-wrapper">
+                            ${this.createSkeletons(8)}
+                        </div>
+                        <button class="carousel-nav next" aria-label="Next">
+                            <span>›</span>
+                        </button>
+                    </div>
+                `;
+
+                return row;
+            }
+
+            createSkeletons(count) {
+                return Array(count).fill('').map(() => `
+                    <div class="skeleton-card">
+                        <div class="skeleton skeleton-poster"></div>
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="skeleton skeleton-meta"></div>
+                    </div>
+                `).join('');
+            }
+
+            async loadAllContent() {
+                try {
+                    // Load content for each row
+                    for (let i = 0; i < this.contentRows.length; i++) {
+                        const rowConfig = this.contentRows[i];
+                        setTimeout(() => {
+                            this.loadContentRow(rowConfig);
+                        }, i * 150);
+                    }
+
+                    // Load top 10 list
+                    await this.loadTop10List();
+
+                } catch (error) {
+                    console.error('Error loading all content:', error);
+                }
+            }
+
+            async loadContentRow(rowConfig) {
+                const row = document.getElementById(rowConfig.id);
+                if (!row) return;
+
+                const wrapper = row.querySelector('.carousel-wrapper');
+                if (!wrapper) return;
+
+                try {
+                    const content = await this.fetchContent(rowConfig.endpoint, rowConfig.params);
+
+                    wrapper.innerHTML = '';
+
+                    if (!content || content.length === 0) {
+                        wrapper.innerHTML = `
+                            <div class="error-message">
+                                <p>No content available</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Add content cards using same system as content-card
+                    content.forEach(item => {
+                        const card = this.createContentCard(item);
+                        wrapper.appendChild(card);
+                    });
+
+                    // Setup navigation
+                    this.setupCarouselNavigation(row);
+
+                } catch (error) {
+                    console.error(`Error loading ${rowConfig.title}:`, error);
+                    wrapper.innerHTML = `
+                        <div class="error-message">
+                            <h3>Unable to load content</h3>
+                            <p>Please check your connection and try again</p>
+                            <button class="retry-btn" onclick="trendingManager.loadContentRow(${JSON.stringify(rowConfig)})">Retry</button>
+                        </div>
+                    `;
+                }
+            }
+
+            createContentCard(content) {
+                const card = document.createElement('div');
+                card.className = 'content-card';
+                card.dataset.contentId = content.id;
+
+                const posterUrl = this.formatPosterUrl(content.poster_path);
+                const rating = this.formatRating(content.rating);
+                const year = this.extractYear(content.release_date);
+                const genres = content.genres?.slice(0, 2) || [];
+                const contentType = content.content_type || 'movie';
+                const runtime = this.formatRuntime(content.runtime);
+                const isInWishlist = this.userWishlist.has(content.id);
+
+                card.innerHTML = `
+                    <div class="card-poster-container">
+                        <img 
+                            class="card-poster" 
+                            data-src="${posterUrl}" 
+                            alt="${this.escapeHtml(content.title || 'Content')}"
+                            loading="lazy"
+                            style="cursor: pointer;"
+                        >
+                        <div class="content-type-badge ${contentType}">
+                            ${contentType.toUpperCase()}
+                        </div>
+                        <div class="card-overlays">
+                            <div class="card-top-overlay">
+                                <div></div>
+                                <button class="wishlist-btn ${isInWishlist ? 'active' : ''}" 
+                                        data-content-id="${content.id}" 
+                                        title="${isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}"
+                                        aria-label="${isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}">
+                                    <span>♥</span>
+                                </button>
+                            </div>
+                            <div class="card-bottom-overlay">
+                                <div class="rating-badge">
+                                    <span>★</span>
+                                    <span>${rating}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-info">
+                        <div class="card-title">${this.escapeHtml(content.title || 'Unknown')}</div>
+                        <div class="card-meta">
+                            ${year ? `<span class="card-year">${year}</span>` : ''}
+                            ${runtime ? `<span class="card-runtime">• ${runtime}</span>` : ''}
+                        </div>
+                        ${genres.length > 0 ? `
+                            <div class="card-genres">
+                                ${genres.map(genre => `<span class="genre-chip">${this.escapeHtml(genre)}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                // Setup event handlers
+                this.setupCardHandlers(card, content);
+                this.setupLazyLoading(card);
+
+                return card;
+            }
+
+            setupCardHandlers(card, content) {
+                // Card click handler - UPDATED to redirect to details page
+                card.addEventListener('click', (e) => {
+                    if (!e.target.closest('.wishlist-btn')) {
+                        // Redirect to details page instead of showing modal
+                        this.redirectToDetails(content);
+                    }
+                });
+
+                // Wishlist button handler
+                const wishlistBtn = card.querySelector('.wishlist-btn');
+                wishlistBtn?.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await this.handleWishlistClick(content.id, wishlistBtn);
+                });
+            }
+
+            setupLazyLoading(card) {
+                const img = card.querySelector('.card-poster');
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const imgSrc = img.dataset.src;
+                            if (imgSrc) {
+                                const tempImg = new Image();
+                                tempImg.onload = () => {
+                                    img.src = imgSrc;
+                                    img.classList.add('loaded');
+                                };
+                                tempImg.onerror = () => {
+                                    img.src = this.getPlaceholderImage();
+                                    img.classList.add('loaded');
+                                };
+                                tempImg.src = imgSrc;
+                            }
+                            observer.unobserve(img);
+                        }
+                    });
+                }, {
+                    rootMargin: '50px',
+                    threshold: 0.01
+                });
+                observer.observe(img);
+            }
+
+            async loadTop10List() {
+                try {
+                    const response = await fetch(`${this.apiBase}/recommendations/trending?category=all&limit=10`);
+                    if (!response.ok) throw new Error('Failed to fetch top 10');
+
+                    const data = await response.json();
+                    let top10Items = [];
+
+                    // Handle different response structures
+                    if (data.categories) {
+                        // Collect items from all categories
+                        Object.values(data.categories).forEach(categoryItems => {
+                            if (Array.isArray(categoryItems)) {
+                                top10Items.push(...categoryItems);
+                            }
+                        });
+                        // Take first 10 unique items
+                        const seenIds = new Set();
+                        top10Items = top10Items.filter(item => {
+                            if (item && item.id && !seenIds.has(item.id)) {
+                                seenIds.add(item.id);
+                                return true;
+                            }
+                            return false;
+                        }).slice(0, 10);
+                    } else if (data.recommendations) {
+                        top10Items = data.recommendations.slice(0, 10);
+                    }
+
+                    this.displayTop10List(top10Items);
+                } catch (error) {
+                    console.error('Error loading top 10:', error);
+                }
+            }
+
+            displayTop10List(items) {
+                const container = document.getElementById('top10List');
+                if (!container) return;
+
+                container.innerHTML = '';
+
+                items.forEach((item, index) => {
+                    const listItem = this.createTop10Item(item, index + 1);
+                    container.appendChild(listItem);
+                });
+            }
+
+            createTop10Item(item, rank) {
+                const div = document.createElement('div');
+                div.className = 'top-10-card';
+
+                const trendIndicator = this.getTrendIndicator(rank);
+                const posterUrl = this.formatPosterUrl(item.poster_path);
+                const isInWishlist = this.userWishlist.has(item.id);
+
+                div.innerHTML = `
+                    <div class="rank-display ${rank <= 3 ? 'top-3' : ''}">${rank}</div>
+                    <div class="top-10-poster-wrapper">
+                        <img src="${posterUrl}" alt="${item.title}" class="top-10-poster">
+                    </div>
+                    <div class="top-10-info">
+                        <div class="top-10-info-title">${this.escapeHtml(item.title || 'Unknown')}</div>
+                        <div class="top-10-metadata">
+                            <div class="metadata-item">
+                                <span class="rating-star">★</span>
+                                <span>${this.formatRating(item.rating)}</span>
+                            </div>
+                            <div class="metadata-item">
+                                ${(item.content_type || 'movie').toUpperCase()}
+                            </div>
+                            <div class="trend-badge ${trendIndicator.class}">
+                                ${trendIndicator.icon} ${trendIndicator.text}
+                            </div>
+                        </div>
+                        <div class="top-10-actions">
+                            <button class="action-btn action-btn-secondary wishlist-btn-top10 ${isInWishlist ? 'active' : ''}" 
+                                    data-content-id="${item.id}"
+                                    title="${isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}">
+                                <span>${isInWishlist ? '✓' : '+'}</span>
+                                <span>${isInWishlist ? 'Listed' : 'Add'}</span>
+                            </button>
+                            <button class="action-btn action-btn-primary" onclick="trendingManager.watchContent(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                <span>▶</span>
+                                <span>Play</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                // Setup click handlers - UPDATED to redirect to details page
+                div.addEventListener('click', (e) => {
+                    if (!e.target.closest('.top-10-actions')) {
+                        // Redirect to details page instead of showing modal
+                        this.redirectToDetails(item);
+                    }
+                });
+
+                // Setup wishlist button
+                const wishlistBtn = div.querySelector('.wishlist-btn-top10');
+                wishlistBtn?.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await this.handleWishlistClick(item.id, wishlistBtn);
+                });
+
+                return div;
+            }
+
+            getTrendIndicator(rank) {
+                if (rank <= 3) {
+                    return { icon: '🔥', text: 'HOT', class: 'hot' };
+                } else if (rank <= 6) {
+                    return { icon: '📈', text: 'RISING', class: 'rising' };
+                } else {
+                    return { icon: '⭐', text: 'POPULAR', class: 'stable' };
+                }
+            }
+
+            async fetchContent(endpoint, params = {}) {
+                const queryString = new URLSearchParams(params).toString();
+                const url = `${this.apiBase}${endpoint}${queryString ? '?' + queryString : ''}`;
+
+                const headers = {};
+                if (this.authToken) {
+                    headers['Authorization'] = `Bearer ${this.authToken}`;
+                }
+
+                try {
+                    const response = await fetch(url, { headers, timeout: 10000 });
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const data = await response.json();
+
+                    // Handle different response structures
+                    if (data.recommendations) {
+                        return Array.isArray(data.recommendations) ? data.recommendations : [];
+                    } else if (data.categories) {
+                        const allContent = [];
+                        Object.values(data.categories).forEach(categoryItems => {
+                            if (Array.isArray(categoryItems)) {
+                                allContent.push(...categoryItems);
+                            }
+                        });
+
+                        // Remove duplicates
+                        const uniqueContent = [];
+                        const seenIds = new Set();
+                        allContent.forEach(item => {
+                            if (item && item.id && !seenIds.has(item.id)) {
+                                seenIds.add(item.id);
+                                uniqueContent.push(item);
+                            }
+                        });
+
+                        return uniqueContent.slice(0, params.limit || 20);
+                    } else if (data.results) {
+                        return Array.isArray(data.results) ? data.results : [];
+                    } else if (Array.isArray(data)) {
+                        return data;
+                    } else {
+                        console.warn('Unexpected response structure:', data);
+                        return [];
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    throw error;
+                }
+            }
+
+            setupCarouselNavigation(carouselRow) {
+                const wrapper = carouselRow.querySelector('.carousel-wrapper');
+                const prevBtn = carouselRow.querySelector('.carousel-nav.prev');
+                const nextBtn = carouselRow.querySelector('.carousel-nav.next');
+
+                if (!wrapper) return;
+
+                const getScrollAmount = () => {
+                    const containerWidth = wrapper.clientWidth;
+                    const cardWidth = wrapper.querySelector('.content-card')?.offsetWidth || 180;
+                    const gap = parseInt(getComputedStyle(wrapper).gap) || 12;
+                    const visibleCards = Math.floor(containerWidth / (cardWidth + gap));
+                    return (cardWidth + gap) * Math.max(1, visibleCards - 1);
+                };
+
+                const updateNavButtons = () => {
+                    if (!prevBtn || !nextBtn) return;
+                    const scrollLeft = wrapper.scrollLeft;
+                    const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
+                    prevBtn.classList.toggle('disabled', scrollLeft <= 0);
+                    nextBtn.classList.toggle('disabled', scrollLeft >= maxScroll - 1);
+                };
+
+                if (prevBtn && nextBtn) {
+                    prevBtn.addEventListener('click', () => {
+                        wrapper.scrollBy({ left: -getScrollAmount(), behavior: 'smooth' });
+                    });
+
+                    nextBtn.addEventListener('click', () => {
+                        wrapper.scrollBy({ left: getScrollAmount(), behavior: 'smooth' });
+                    });
+
+                    wrapper.addEventListener('scroll', updateNavButtons);
+                    updateNavButtons();
+                }
+
+                this.setupTouchScroll(wrapper);
+            }
+
+            setupTouchScroll(wrapper) {
+                let isDown = false;
+                let startX = 0;
+                let scrollLeft = 0;
+
+                wrapper.addEventListener('touchstart', (e) => {
+                    isDown = true;
+                    startX = e.touches[0].pageX;
+                    scrollLeft = wrapper.scrollLeft;
+                }, { passive: true });
+
+                wrapper.addEventListener('touchmove', (e) => {
+                    if (!isDown) return;
+                    const x = e.touches[0].pageX;
+                    const walk = (startX - x) * 1.5;
+                    wrapper.scrollLeft = scrollLeft + walk;
+                }, { passive: true });
+
+                wrapper.addEventListener('touchend', () => {
+                    isDown = false;
+                });
+
+                wrapper.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    startX = e.pageX;
+                    scrollLeft = wrapper.scrollLeft;
+                    wrapper.style.cursor = 'grabbing';
+                });
+
+                wrapper.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX;
+                    const walk = (startX - x) * 2;
+                    wrapper.scrollLeft = scrollLeft + walk;
+                });
+
+                wrapper.addEventListener('mouseup', () => {
+                    isDown = false;
+                    wrapper.style.cursor = 'grab';
+                });
+
+                wrapper.addEventListener('mouseleave', () => {
+                    isDown = false;
+                    wrapper.style.cursor = 'grab';
+                });
+            }
+
+            async handleWishlistClick(contentId, button) {
+                if (!this.isAuthenticated) {
+                    if (window.topbar?.notificationSystem) {
+                        window.topbar.notificationSystem.show('Please login to add to wishlist', 'warning');
+                    } else {
+                        alert('Please login to add to wishlist');
+                    }
+                    setTimeout(() => {
+                        window.location.href = '/auth/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                    }, 1000);
+                    return;
+                }
+
+                try {
+                    const isCurrentlyInWishlist = button?.classList.contains('active') || this.userWishlist.has(contentId);
+
+                    // Optimistic UI update
+                    if (button) {
+                        button.classList.toggle('active');
+                        button.disabled = true;
+
+                        // Update text for top10 buttons
+                        const spans = button.querySelectorAll('span');
+                        if (spans.length >= 2) {
+                            spans[0].textContent = isCurrentlyInWishlist ? '+' : '✓';
+                            spans[1].textContent = isCurrentlyInWishlist ? 'Add' : 'Listed';
+                        }
+
+                        button.setAttribute('title', isCurrentlyInWishlist ? 'Add to Wishlist' : 'Remove from Wishlist');
+                    }
+
+                    if (isCurrentlyInWishlist) {
+                        this.userWishlist.delete(contentId);
+                    } else {
+                        this.userWishlist.add(contentId);
+                    }
+
+                    // Send request to backend
+                    const response = await fetch(`${this.apiBase}/interactions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.authToken}`
+                        },
+                        body: JSON.stringify({
+                            content_id: contentId,
+                            interaction_type: isCurrentlyInWishlist ? 'remove_watchlist' : 'watchlist'
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to update wishlist: ${response.status}`);
+                    }
+
+                    // Show notification
+                    const message = isCurrentlyInWishlist ? 'Removed from wishlist' : 'Added to wishlist';
+                    if (window.topbar?.notificationSystem) {
+                        window.topbar.notificationSystem.show(message, 'success', 2000);
+                    }
+
+                    // Update feather icons
+                    if (typeof feather !== 'undefined') {
+                        feather.replace();
+                    }
+
+                } catch (error) {
+                    // Revert on error
+                    if (button) {
+                        button.classList.toggle('active');
+                        const spans = button.querySelectorAll('span');
+                        if (spans.length >= 2) {
+                            const isActive = button.classList.contains('active');
+                            spans[0].textContent = isActive ? '✓' : '+';
+                            spans[1].textContent = isActive ? 'Listed' : 'Add';
+                        }
+                    }
+
+                    if (button?.classList.contains('active')) {
+                        this.userWishlist.add(contentId);
+                    } else {
+                        this.userWishlist.delete(contentId);
+                    }
+
+                    if (window.topbar?.notificationSystem) {
+                        window.topbar.notificationSystem.show('Failed to update wishlist', 'error');
+                    } else {
+                        alert('Failed to update wishlist');
+                    }
+                    console.error('Error updating wishlist:', error);
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                    }
+
+                    // Ensure feather icons are updated
+                    if (typeof feather !== 'undefined') {
+                        feather.replace();
+                    }
+                }
+            }
+
+            watchContent(content) {
+                if (content.youtube_trailer) {
+                    window.open(content.youtube_trailer, '_blank');
+                } else {
+                    if (window.topbar?.notificationSystem) {
+                        window.topbar.notificationSystem.show(`Opening ${content.title}...`, 'info');
+                    } else {
+                        alert(`Opening ${content.title}...\n\nThis would normally play the content or redirect to a streaming service.`);
+                    }
+                }
+            }
+
+            // Utility methods (same as content-card)
+            formatPosterUrl(posterPath) {
+                if (!posterPath) {
+                    return this.getPlaceholderImage();
+                }
+                if (posterPath.startsWith('http')) return posterPath;
+                return `${this.posterBase}${posterPath}`;
+            }
+
+            getPlaceholderImage() {
+                return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgZmlsbD0iIzFhMWYzYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSIjNjY3IiBmb250LXNpemU9IjE4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
+            }
+
+            formatRating(rating) {
+                if (!rating) return 'N/A';
+                return Number(rating).toFixed(1);
+            }
+
+            extractYear(dateString) {
+                if (!dateString) return '';
+                try {
+                    return new Date(dateString).getFullYear();
+                } catch {
+                    return '';
+                }
+            }
+
+            formatRuntime(minutes) {
+                if (!minutes) return '';
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+            }
+
+            escapeHtml(text) {
+                if (!text || typeof text !== 'string') return '';
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+        }
+
+        // Initialize Trending Page Manager
+        const trendingManager = new TrendingPageManager();
+
+        // Make it globally available
+        window.trendingManager = trendingManager;
+
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('Trending page loaded successfully!');
+
+            // Ensure body theme attributes are set
+            const savedTheme = localStorage.getItem('cinebrain-theme') || 'dark';
+            document.body.setAttribute('data-theme', savedTheme);
+            document.body.setAttribute('data-bs-theme', savedTheme);
+        });
+    </script>
+</body>
+
+</html>
