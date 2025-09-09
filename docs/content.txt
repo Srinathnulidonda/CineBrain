@@ -1,12 +1,11 @@
-1. content-card.html 
+1.content-card.html
 
 <div class="container-cinebrain">
     <!-- Content Rows will be dynamically inserted here -->
     <div id="content-container" class="content-container-cinebrain"></div>
 </div>
 
-
-2. content-card.css
+2.content-card.css 
 
 /* Content Card Styles - Unified with TopBar Theme System */
 
@@ -657,7 +656,9 @@
     }
 }
 
+
 3. content-card.js
+
 // Content Card Component - Unified with TopBar and Theme Manager
 class ContentCardManager {
     constructor() {
@@ -798,7 +799,6 @@ class ContentCardManager {
         if (!this.isAuthenticated) return;
 
         try {
-            // Fixed endpoint: /user/watchlist not /users/watchlist
             const response = await fetch(`${this.apiBase}/user/watchlist`, {
                 headers: {
                     'Authorization': `Bearer ${this.authToken}`
@@ -809,6 +809,8 @@ class ContentCardManager {
                 const data = await response.json();
                 // Clear and repopulate wishlist
                 this.userWishlist.clear();
+                this.interactionStates.clear(); // Clear all interaction states
+
                 if (data.watchlist && Array.isArray(data.watchlist)) {
                     data.watchlist.forEach(item => {
                         this.userWishlist.add(item.id);
@@ -817,11 +819,38 @@ class ContentCardManager {
                     });
                 }
                 console.log('Loaded wishlist with', this.userWishlist.size, 'items');
+
+                // Update all wishlist buttons after loading
+                this.updateWishlistButtons();
+            } else if (response.status === 401) {
+                // Token might be expired
+                console.error('Authentication failed, clearing token');
+                localStorage.removeItem('cinebrain-token');
+                this.authToken = null;
+                this.isAuthenticated = false;
+                this.userWishlist.clear();
+                this.interactionStates.clear();
             } else {
                 console.error('Failed to load wishlist:', response.status);
             }
         } catch (error) {
             console.error('Error loading wishlist:', error);
+        }
+    }
+
+    async syncWishlistState() {
+        // This method ensures the UI is in sync with the backend
+        if (!this.isAuthenticated) {
+            this.userWishlist.clear();
+            this.interactionStates.clear();
+            this.updateWishlistButtons();
+            return;
+        }
+
+        try {
+            await this.loadUserWishlist();
+        } catch (error) {
+            console.error('Error syncing wishlist state:', error);
         }
     }
 
@@ -833,7 +862,7 @@ class ContentCardManager {
         row.innerHTML = `
             <div class="row-header">
                 <h2 class="row-title">${rowConfig.title}</h2>
-                <a href="/browse/${rowConfig.id}" class="see-all">See All →</a>
+                <a href="/content/${rowConfig.id}.html" class="see-all">See All →</a>
             </div>
             <div class="carousel-container">
                 <button class="carousel-nav prev" aria-label="Previous">
@@ -994,66 +1023,109 @@ class ContentCardManager {
             // Check current state
             const isCurrentlyInWishlist = button.classList.contains('active');
 
-            // Optimistic UI update
-            button.classList.toggle('active');
-            button.disabled = true; // Prevent double clicks
+            // Prevent double clicks
+            if (button.disabled) return;
+            button.disabled = true;
 
+            // For removing from wishlist, we need to handle it differently
             if (isCurrentlyInWishlist) {
-                // Remove from wishlist
-                this.userWishlist.delete(contentId);
-                this.interactionStates.delete(contentId);
-                button.setAttribute('title', 'Add to Wishlist');
-                button.setAttribute('aria-label', 'Add to Wishlist');
+                // First, try to remove using DELETE method (if backend supports it)
+                try {
+                    const deleteResponse = await fetch(`${this.apiBase}/user/watchlist/${contentId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${this.authToken}`
+                        }
+                    });
+
+                    if (deleteResponse.ok || deleteResponse.status === 404) {
+                        // Successfully removed or already removed
+                        button.classList.remove('active');
+                        this.userWishlist.delete(contentId);
+                        this.interactionStates.delete(contentId);
+                        button.setAttribute('title', 'Add to Wishlist');
+                        button.setAttribute('aria-label', 'Add to Wishlist');
+
+                        if (window.topbar?.notificationSystem) {
+                            window.topbar.notificationSystem.show('Removed from wishlist', 'success', 2000);
+                        }
+                        return;
+                    }
+                } catch (deleteError) {
+                    console.log('DELETE method not supported, trying alternative method');
+                }
+
+                // Fallback: Record removal interaction
+                const removeResponse = await fetch(`${this.apiBase}/interactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.authToken}`
+                    },
+                    body: JSON.stringify({
+                        content_id: contentId,
+                        interaction_type: 'remove_watchlist' // Make sure this interaction type is handled
+                    })
+                });
+
+                if (removeResponse.ok) {
+                    button.classList.remove('active');
+                    this.userWishlist.delete(contentId);
+                    this.interactionStates.delete(contentId);
+                    button.setAttribute('title', 'Add to Wishlist');
+                    button.setAttribute('aria-label', 'Add to Wishlist');
+
+                    if (window.topbar?.notificationSystem) {
+                        window.topbar.notificationSystem.show('Removed from wishlist', 'success', 2000);
+                    }
+                } else {
+                    throw new Error('Failed to remove from wishlist');
+                }
             } else {
                 // Add to wishlist
+                const response = await fetch(`${this.apiBase}/interactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.authToken}`
+                    },
+                    body: JSON.stringify({
+                        content_id: contentId,
+                        interaction_type: 'watchlist'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to add to wishlist: ${response.status}`);
+                }
+
+                // Update UI on success
+                button.classList.add('active');
                 this.userWishlist.add(contentId);
                 this.interactionStates.set(contentId, 'watchlist');
                 button.setAttribute('title', 'Remove from Wishlist');
                 button.setAttribute('aria-label', 'Remove from Wishlist');
-            }
 
-            // Send request to backend
-            const response = await fetch(`${this.apiBase}/interactions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.authToken}`
-                },
-                body: JSON.stringify({
-                    content_id: contentId,
-                    interaction_type: isCurrentlyInWishlist ? 'remove_watchlist' : 'watchlist'
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to update wishlist: ${response.status}`);
-            }
-
-            // Show notification
-            if (window.topbar?.notificationSystem) {
-                const message = isCurrentlyInWishlist ? 'Removed from wishlist' : 'Added to wishlist';
-                window.topbar.notificationSystem.show(message, 'success', 2000);
+                if (window.topbar?.notificationSystem) {
+                    window.topbar.notificationSystem.show('Added to wishlist', 'success', 2000);
+                }
             }
 
         } catch (error) {
-            // Revert on error
-            button.classList.toggle('active');
-            if (button.classList.contains('active')) {
-                this.userWishlist.add(contentId);
-                this.interactionStates.set(contentId, 'watchlist');
-                button.setAttribute('title', 'Remove from Wishlist');
-            } else {
-                this.userWishlist.delete(contentId);
-                this.interactionStates.delete(contentId);
-                button.setAttribute('title', 'Add to Wishlist');
-            }
+            // Revert UI on error
+            const isActive = button.classList.contains('active');
 
             if (window.topbar?.notificationSystem) {
                 window.topbar.notificationSystem.show('Failed to update wishlist', 'error');
             }
             console.error('Error updating wishlist:', error);
+
+            // Don't change the state if there was an error
         } finally {
-            button.disabled = false;
+            // Re-enable button after a short delay to prevent rapid clicks
+            setTimeout(() => {
+                button.disabled = false;
+            }, 500);
         }
     }
 
@@ -1305,6 +1377,20 @@ class ContentCardManager {
                 }
                 // Update UI without full reload
                 this.updateWishlistButtons();
+            }
+        });
+
+        // Sync wishlist state when page becomes visible again
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.isAuthenticated) {
+                this.syncWishlistState();
+            }
+        });
+
+        // Sync wishlist state when window gains focus
+        window.addEventListener('focus', () => {
+            if (this.isAuthenticated) {
+                this.syncWishlistState();
             }
         });
     }

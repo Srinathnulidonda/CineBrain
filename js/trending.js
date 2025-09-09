@@ -1,7 +1,7 @@
 /**
  * CineBrain Trending Page Manager
  * Integrated with content-card system and theme management
- * Updated with small top-right notification system and TrailerModal
+ * Updated with small top-right notification system
  */
 
 class TrendingPageManager {
@@ -410,7 +410,6 @@ class TrendingPageManager {
             <div class="hero-actions">
                 <div class="hero-skeleton" style="width: 120px; height: 44px; border-radius: 8px;"></div>
                 <div class="hero-skeleton" style="width: 100px; height: 44px; border-radius: 8px;"></div>
-                <div class="hero-skeleton" style="width: 110px; height: 44px; border-radius: 8px;"></div>
             </div>
         `;
     }
@@ -476,7 +475,7 @@ class TrendingPageManager {
     }
 
     /**
-     * Display hero content with trailer button
+     * Display hero content
      */
     async displayHeroContent(content) {
         try {
@@ -506,9 +505,6 @@ class TrendingPageManager {
                 </div>
                 <p class="hero-description">${this.escapeHtml(content.overview || 'No description available.')}</p>
                 <div class="hero-actions">
-                    <button class="hero-btn hero-btn-trailer" id="heroTrailerBtn">
-                        ▶ Trailer
-                    </button>
                     <button class="hero-btn hero-btn-secondary ${isInWishlist ? 'added' : ''}" id="heroWatchlistBtn" data-content-id="${content.id}">
                         ${isInWishlist ? '✓ In List' : '+ My List'}
                     </button>
@@ -564,13 +560,8 @@ class TrendingPageManager {
      * Setup hero button event listeners
      */
     setupHeroButtons(content) {
-        const trailerBtn = document.getElementById('heroTrailerBtn');
         const watchlistBtn = document.getElementById('heroWatchlistBtn');
         const infoBtn = document.getElementById('heroInfoBtn');
-
-        if (trailerBtn) {
-            trailerBtn.addEventListener('click', () => this.playTrailer(content));
-        }
 
         if (watchlistBtn) {
             watchlistBtn.addEventListener('click', () => this.handleWishlistClick(content.id, watchlistBtn));
@@ -579,53 +570,6 @@ class TrendingPageManager {
         if (infoBtn) {
             infoBtn.addEventListener('click', () => this.redirectToDetails(content));
         }
-    }
-
-    /**
-     * Play trailer for content using the TrailerModal
-     */
-    async playTrailer(content) {
-        try {
-            // Check if TrailerModal is available
-            if (!window.TrailerModal) {
-                console.error('TrailerModal not initialized');
-                this.showNotification('Trailer player not available', 'error');
-                return;
-            }
-
-            // If content has an ID and content_type, fetch from backend
-            if (content.id && content.content_type) {
-                await window.TrailerModal.open(content.id, content.content_type);
-            }
-            // If content has YouTube trailer URL or ID
-            else if (content.youtube_trailer || content.youtube_trailer_id) {
-                const videoIdOrUrl = content.youtube_trailer || content.youtube_trailer_id;
-                await window.TrailerModal.openByVideoId(videoIdOrUrl, content.title);
-            }
-            // Fallback to YouTube search
-            else {
-                this.fallbackToYouTubeSearch(content);
-            }
-
-        } catch (error) {
-            console.error('Error playing trailer:', error);
-            this.showNotification('Unable to load trailer', 'error');
-            this.fallbackToYouTubeSearch(content);
-        }
-    }
-
-    /**
-     * Fallback to YouTube search when trailer is not available
-     */
-    fallbackToYouTubeSearch(content) {
-        const searchQuery = encodeURIComponent(`${content.title} ${content.content_type || 'movie'} trailer`);
-        const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery}`;
-
-        this.showNotification('Trailer not found. Opening YouTube search...', 'info', 3000);
-
-        setTimeout(() => {
-            window.open(youtubeSearchUrl, '_blank');
-        }, 1000);
     }
 
     /**
@@ -774,7 +718,7 @@ class TrendingPageManager {
     }
 
     /**
-     * Create content card with trailer button
+     * Create content card
      */
     createContentCard(content) {
         const card = document.createElement('div');
@@ -964,7 +908,7 @@ class TrendingPageManager {
     }
 
     /**
-     * Create top 10 list item with trailer button
+     * Create top 10 list item
      */
     createTop10Item(item, rank) {
         const div = document.createElement('div');
@@ -1000,9 +944,6 @@ class TrendingPageManager {
                         title="${isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}">
                     ${isInWishlist ? '✓ Added' : '+ Add'}
                 </button>
-                <button class="item-btn item-btn-play">
-                    ▶ Trailer
-                </button>
             </div>
         `;
 
@@ -1028,13 +969,6 @@ class TrendingPageManager {
         wishlistBtn?.addEventListener('click', async (e) => {
             e.stopPropagation();
             await this.handleWishlistClick(item.id, wishlistBtn);
-        });
-
-        // Trailer button - now uses TrailerModal
-        const trailerBtn = div.querySelector('.item-btn-play');
-        trailerBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.playTrailer(item);
         });
     }
 
@@ -1605,11 +1539,6 @@ class TrendingPageManager {
         // Clear timers and observers
         if (this.resizeTimer) {
             clearTimeout(this.resizeTimer);
-        }
-
-        // Destroy TrailerModal if exists
-        if (window.TrailerModal && window.TrailerModal.destroy) {
-            window.TrailerModal.destroy();
         }
 
         // Clear caches
