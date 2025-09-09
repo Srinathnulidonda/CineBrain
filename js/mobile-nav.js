@@ -1,6 +1,7 @@
 /**
  * CineBrain Mobile Navigation Component
  * Enhanced with Spotify-like interactions and theme support
+ * Fixed: Navigation highlighting properly updates when switching pages
  * Fixed: Pull-to-refresh prevention when closing menu
  * Fixed: Navigation is always visible (no auto-hide)
  * Fixed: No rotation animations on buttons
@@ -66,14 +67,16 @@ class MobileNavigation {
         // Setup navigation
         this.setupNavigation();
 
+        // Ensure active state is set after navigation is rendered
+        setTimeout(() => {
+            this.detectCurrentPage();
+        }, 0);
+
         // Load menu content
         this.loadMenuContent();
 
         // Setup event listeners
         this.setupEventListeners();
-
-        // Detect current page
-        this.detectCurrentPage();
 
         // Initialize theme
         this.detectAndApplyTheme();
@@ -421,10 +424,16 @@ class MobileNavigation {
         const isAuthenticated = !!this.state.currentUser;
         const isAdmin = this.state.currentUser?.is_admin;
 
+        // Get current path for comparison
+        let currentPath = window.location.pathname;
+        if (currentPath === '/' || currentPath === '') {
+            currentPath = '/index.html';
+        }
+
         let navItems = [
             { id: 'home', label: 'Home', icon: 'home', route: '/index.html' },
             { id: 'trending', label: 'Trending', icon: 'trending-up', route: '/content/trending.html' },
-            { id: 'discover', label: 'Discover', icon: 'compass', route: '/content/discover.html' }
+            { id: 'discover', label: 'Discover', icon: 'compass', route: '/content/movies.html' }
         ];
 
         if (isAuthenticated) {
@@ -441,14 +450,14 @@ class MobileNavigation {
                     id: 'admin',
                     label: 'Admin',
                     icon: 'shield',
-                    route: '/admin/dashboard.html'
+                    route: '/admin/index.html'
                 });
             } else {
                 navItems.push({
                     id: 'profile',
                     label: 'Profile',
                     icon: 'user',
-                    route: `/user/${this.state.currentUser.username}/profile.html`
+                    route: '/user/profile.html'
                 });
             }
         } else {
@@ -463,22 +472,47 @@ class MobileNavigation {
             navItems[4] = { id: 'more', label: 'More', icon: 'grid', action: 'openMenu' };
         }
 
-        // Render navigation with Spotify-style animations
-        this.elements.navContainer.innerHTML = navItems.map((item, index) => `
-            <button class="mobile-nav-item" 
-                    data-nav="${item.id}"
-                    data-route="${item.route || ''}"
-                    data-action="${item.action || ''}"
-                    aria-label="${item.label}"
-                    role="button"
-                    style="animation-delay: ${index * 50}ms">
-                ${item.badge && this.state.watchlistCount > 0 ? `
-                    <span class="mobile-nav-badge">${this.formatBadgeCount(this.state.watchlistCount)}</span>
-                ` : ''}
-                <i data-feather="${item.icon}" class="mobile-nav-icon"></i>
-                <span class="mobile-nav-label">${item.label}</span>
-            </button>
-        `).join('');
+        // Render navigation with active state
+        this.elements.navContainer.innerHTML = navItems.map((item, index) => {
+            // Determine if this item should be active
+            let isActive = false;
+            if (item.route) {
+                const normalizedRoute = item.route === '/' ? '/index.html' : item.route;
+                isActive = normalizedRoute === currentPath;
+
+                // Special cases
+                if (!isActive) {
+                    if (item.id === 'home' && (currentPath === '/' || currentPath === '/index.html')) {
+                        isActive = true;
+                    } else if (item.id === 'discover' && currentPath.includes('/content/') &&
+                        !currentPath.includes('trending') && !currentPath.includes('anime')) {
+                        isActive = true;
+                    }
+                }
+            }
+
+            return `
+                <button class="mobile-nav-item ${isActive ? 'active' : ''}" 
+                        data-nav="${item.id}"
+                        data-route="${item.route || ''}"
+                        data-action="${item.action || ''}"
+                        aria-label="${item.label}"
+                        role="button"
+                        style="animation-delay: ${index * 50}ms">
+                    ${item.badge && this.state.watchlistCount > 0 ? `
+                        <span class="mobile-nav-badge">${this.formatBadgeCount(this.state.watchlistCount)}</span>
+                    ` : ''}
+                    <i data-feather="${item.icon}" class="mobile-nav-icon"></i>
+                    <span class="mobile-nav-label">${item.label}</span>
+                </button>
+            `;
+        }).join('');
+
+        // Set current page state
+        const activeItem = this.elements.navContainer.querySelector('.mobile-nav-item.active');
+        if (activeItem) {
+            this.state.currentPage = activeItem.dataset.nav;
+        }
     }
 
     /**
@@ -564,7 +598,7 @@ class MobileNavigation {
                     icon: 'user',
                     title: 'Your Profile',
                     subtitle: 'View and edit your profile',
-                    route: `/user/${this.state.currentUser.username}/profile.html`
+                    route: '/user/profile.html'
                 },
                 {
                     icon: 'settings',
@@ -585,7 +619,7 @@ class MobileNavigation {
                     icon: 'shield',
                     title: 'Admin Panel',
                     subtitle: 'Manage CineBrain',
-                    route: '/admin/dashboard.html'
+                    route: '/admin/index.html'
                 });
             }
 
@@ -595,7 +629,7 @@ class MobileNavigation {
                     icon: 'help-circle',
                     title: 'Help',
                     subtitle: 'Get support',
-                    route: '/help.html'
+                    route: '/pages/help.html'
                 },
                 {
                     icon: 'log-out',
@@ -625,7 +659,7 @@ class MobileNavigation {
                     icon: 'help-circle',
                     title: 'Help',
                     subtitle: 'Get support',
-                    route: '/help.html'
+                    route: '/pages/help.html'
                 }
             ];
         }
@@ -677,6 +711,23 @@ class MobileNavigation {
                 this.closeMenu();
             }
         });
+
+        // Handle page visibility change (for when user comes back to tab)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                this.detectCurrentPage();
+            }
+        });
+
+        // Handle page focus (for when navigating back)
+        window.addEventListener('focus', () => {
+            this.detectCurrentPage();
+        });
+
+        // Handle page load/reload
+        window.addEventListener('pageshow', () => {
+            this.detectCurrentPage();
+        });
     }
 
     /**
@@ -689,18 +740,131 @@ class MobileNavigation {
     }
 
     /**
-     * Detect current page
+     * Detect current page and set active state
      */
     detectCurrentPage() {
-        const currentPath = window.location.pathname;
+        // Get current path and normalize it
+        let currentPath = window.location.pathname;
 
+        // Normalize path - remove trailing slash except for root
+        if (currentPath.length > 1 && currentPath.endsWith('/')) {
+            currentPath = currentPath.slice(0, -1);
+        }
+
+        // Handle root path
+        if (currentPath === '/' || currentPath === '') {
+            currentPath = '/index.html';
+        }
+
+        // Remove all active states first
+        this.elements.navContainer.querySelectorAll('.mobile-nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+
+        // Find and set the active item
         this.elements.navContainer.querySelectorAll('.mobile-nav-item').forEach(item => {
             const route = item.dataset.route;
-            if (route && currentPath.includes(route)) {
+            if (!route) return;
+
+            // Normalize the route for comparison
+            let normalizedRoute = route;
+            if (normalizedRoute === '/') {
+                normalizedRoute = '/index.html';
+            }
+
+            // Check for exact match or if current path contains the route
+            // Special handling for different route patterns
+            let isActive = false;
+
+            if (normalizedRoute === currentPath) {
+                // Exact match
+                isActive = true;
+            } else if (normalizedRoute === '/index.html' && (currentPath === '/' || currentPath === '')) {
+                // Home page special case
+                isActive = true;
+            } else if (normalizedRoute.includes('/content/') && currentPath.includes('/content/')) {
+                // For content pages, check if the base name matches
+                const routeBaseName = normalizedRoute.split('/').pop().split('.')[0];
+                const pathBaseName = currentPath.split('/').pop().split('.')[0];
+                isActive = routeBaseName === pathBaseName;
+            } else if (normalizedRoute.includes('/user/') && currentPath.includes('/user/')) {
+                // For user pages, check if it's the same section
+                const routeSection = normalizedRoute.split('/')[2]?.split('.')[0];
+                const pathSection = currentPath.split('/')[2]?.split('.')[0];
+                isActive = routeSection === pathSection;
+            } else if (normalizedRoute.includes('/admin/') && currentPath.includes('/admin/')) {
+                // For admin pages
+                const routeSection = normalizedRoute.split('/')[2]?.split('.')[0];
+                const pathSection = currentPath.split('/')[2]?.split('.')[0];
+                isActive = routeSection === pathSection;
+            }
+
+            if (isActive) {
                 item.classList.add('active');
                 this.state.currentPage = item.dataset.nav;
+
+                // Log for debugging
+                console.log(`Active nav item: ${item.dataset.nav} for path: ${currentPath}`);
             }
         });
+
+        // If no exact match found, try to determine based on nav ID
+        if (!this.state.currentPage) {
+            this.detectCurrentPageByContent();
+        }
+    }
+
+    /**
+     * Fallback detection based on page content
+     */
+    detectCurrentPageByContent() {
+        const currentPath = window.location.pathname.toLowerCase();
+
+        // Map paths to nav IDs
+        const pathMapping = {
+            'trending': 'trending',
+            'discover': 'discover',
+            'anime': 'anime',
+            'watchlist': 'watchlist',
+            'profile': 'profile',
+            'admin': 'admin',
+            'movies': 'discover',
+            'tv-shows': 'discover',
+            'top-rated': 'discover',
+            'new-releases': 'discover',
+            'regional': 'discover',
+            'genre': 'discover',
+            'details': 'discover'
+        };
+
+        // Check each mapping
+        for (const [pathKeyword, navId] of Object.entries(pathMapping)) {
+            if (currentPath.includes(pathKeyword)) {
+                const navItem = this.elements.navContainer.querySelector(`[data-nav="${navId}"]`);
+                if (navItem) {
+                    // Remove all active states
+                    this.elements.navContainer.querySelectorAll('.mobile-nav-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+
+                    // Set this item as active
+                    navItem.classList.add('active');
+                    this.state.currentPage = navId;
+
+                    console.log(`Fallback active nav: ${navId} for path: ${currentPath}`);
+                    break;
+                }
+            }
+        }
+
+        // Default to home if nothing matches
+        if (!this.state.currentPage) {
+            const homeItem = this.elements.navContainer.querySelector('[data-nav="home"]');
+            if (homeItem) {
+                homeItem.classList.add('active');
+                this.state.currentPage = 'home';
+            }
+        }
     }
 
     /**
@@ -1139,12 +1303,24 @@ class MobileNavigation {
                     border: 2px solid rgba(255, 255, 255, 0.3);
                     border-top-color: white;
                     border-radius: 50%;
-                    opacity: 0.8;
+                    animation: spin 0.8s linear infinite;
                 "></span>
                 <span style="font-size: clamp(12px, 3.5vmin, 16px);">${loadingText}</span>
             `;
             this.disabled = true;
             this.style.opacity = '0.8';
+
+            // Add spin animation if not exists
+            if (!document.getElementById('spin-animation')) {
+                const style = document.createElement('style');
+                style.id = 'spin-animation';
+                style.textContent = `
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
 
             // Clear all auth data
             localStorage.removeItem('cinebrain-token');
@@ -1250,6 +1426,9 @@ class MobileNavigation {
         // Remove event listeners
         window.removeEventListener('resize', this.handleResize);
         window.removeEventListener('popstate', this.handlePopstate);
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+        window.removeEventListener('focus', this.handleFocus);
+        window.removeEventListener('pageshow', this.handlePageShow);
 
         // Remove DOM elements
         this.elements.nav?.remove();
