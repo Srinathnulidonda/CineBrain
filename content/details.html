@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://www.youtube.com https://player.vimeo.com;
+        style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: https: blob:;
+        frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com;
+        connect-src 'self' https://backend-app-970m.onrender.com https://api.themoviedb.org https://api.jikan.moe https://www.omdbapi.com https://www.googleapis.com https://cdn.jsdelivr.net;
+        base-uri 'self';
+        form-action 'self';
+    ">
+
+    <title id="pageTitle">Loading... - CineBrain</title>
+    <meta name="description" id="pageDescription"
+        content="Watch trailers, read reviews, and find streaming options on CineBrain">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" id="canonicalUrl" href="">
+
+    <!-- Favicon Setup -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="manifest" href="/site.webmanifest">
+
+    <!-- Open Graph Meta -->
+    <meta property="og:type" content="video.movie">
+    <meta property="og:title" id="ogTitle" content="">
+    <meta property="og:description" id="ogDescription" content="">
+    <meta property="og:image" id="ogImage" content="">
+    <meta property="og:url" id="ogUrl" content="">
+
+    <!-- Preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://image.tmdb.org">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+    <link rel="stylesheet" href="/assets/css/mobile-nav.css">
+    <link rel="stylesheet" href="/assets/css/content-card.css">
+    <link rel="stylesheet" href="/assets/css/theme.css">
+    <link rel="stylesheet" href="/assets/css/details.css">
+
+    <!-- Theme Script -->
+    <script>
+        (function () {
+            try {
+                const savedTheme = localStorage.getItem('cinebrain-theme');
+                const theme = (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+        })();
+    </script>
+</head>
+
+<body>
+    <!-- TopBar Navigation (Reused from index.html) -->
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-cinebrain fixed-top">
+            <div class="container-fluid">
+                <div class="navbar-brand-wrapper">
+                    <a href="/" style="text-decoration: none;">
+                        <div class="navbar-brand-cinebrain">CineBrain</div>
+                        <div class="tagline">
+                            <span class="tagline-full">The Mind Behind Your Next Favorite</span>
+                            <span class="tagline-medium" style="display: none;">Your Next Favorite</span>
+                            <span class="tagline-short" style="display: none;">Next Favorite</span>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="search-container desktop-search" id="desktopSearchContainer">
+                    <div class="search-wrapper">
+                        <div class="search-bar-wrapper">
+                            <div class="search-input-wrapper">
+                                <i data-feather="search" class="search-icon"></i>
+                                <input type="text" class="form-control search-input" id="desktopSearchInput"
+                                    placeholder="Search movies, shows, anime..." autocomplete="off">
+                                <button class="search-clear" id="searchClear" style="display: none;">
+                                    <i data-feather="x"></i>
+                                </button>
+                            </div>
+                            <div class="search-results" id="desktopSearchResults"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-icons-section">
+                    <button class="icon-button mobile-search-trigger" id="mobileSearchTrigger">
+                        <i data-feather="search"></i>
+                    </button>
+                    <button class="icon-button theme-toggle" id="themeToggle">
+                        <i data-feather="sun" class="theme-icon theme-icon-light"></i>
+                        <i data-feather="moon" class="theme-icon theme-icon-dark"></i>
+                    </button>
+                    <div class="dropdown">
+                        <div class="avatar-menu" data-bs-toggle="dropdown" id="avatarMenu">
+                            <i data-feather="user"></i>
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-cinebrain" id="userDropdown"></ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Mobile Search Overlay -->
+    <div class="mobile-search-overlay" id="mobileSearchOverlay">
+        <div class="container">
+            <div class="mobile-search-header">
+                <button class="btn-back" id="closeMobileSearch">
+                    <i data-feather="arrow-left"></i>
+                </button>
+                <div class="mobile-search-input-wrapper">
+                    <i data-feather="search" class="search-icon"></i>
+                    <input type="text" class="form-control search-input" id="mobileSearchInput"
+                        placeholder="Search movies, shows, anime..." autocomplete="off">
+                </div>
+            </div>
+            <div class="search-results mobile-results" id="mobileSearchResults"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="details-main">
+        <!-- Loading State -->
+        <div class="details-loading" id="detailsLoading">
+            <div class="spinner-container">
+                <div class="loading-spinner"></div>
+                <p>Loading content details...</p>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div class="details-error" id="detailsError" style="display: none;">
+            <div class="error-container">
+                <i data-feather="alert-circle"></i>
+                <h2>Content Not Found</h2>
+                <p>The content you're looking for doesn't exist or has been removed.</p>
+                <a href="/" class="btn-primary-cinebrain">Go Home</a>
+            </div>
+        </div>
+
+        <!-- Hero Section -->
+        <section class="hero-section" id="heroSection" style="display: none;">
+            <div class="hero-backdrop" id="heroBackdrop"></div>
+            <div class="hero-overlay"></div>
+            <div class="hero-content container">
+                <div class="hero-grid">
+                    <!-- Poster -->
+                    <div class="hero-poster">
+                        <img id="heroPoster" src="" alt="" class="poster-img">
+                        <div class="content-badge" id="contentTypeBadge"></div>
+                    </div>
+
+                    <!-- Details -->
+                    <div class="hero-details">
+                        <h1 class="hero-title" id="heroTitle"></h1>
+                        <div class="hero-meta">
+                            <span class="meta-year" id="metaYear"></span>
+                            <span class="meta-separator">•</span>
+                            <span class="meta-runtime" id="metaRuntime"></span>
+                            <span class="meta-separator">•</span>
+                            <span class="meta-rating">
+                                <i data-feather="star" class="star-icon"></i>
+                                <span id="metaRating"></span>
+                            </span>
+                        </div>
+
+                        <!-- Genres -->
+                        <div class="genre-list" id="genreList"></div>
+
+                        <!-- Language & Release -->
+                        <div class="additional-info">
+                            <div class="info-item">
+                                <span class="info-label">Languages:</span>
+                                <span class="info-value" id="infoLanguages"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Release Date:</span>
+                                <span class="info-value" id="infoReleaseDate"></span>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-buttons">
+                            <button class="btn-action btn-primary" id="watchTrailerBtn">
+                                <i data-feather="play-circle"></i>
+                                <span>Watch Trailer</span>
+                            </button>
+                            <button class="btn-action btn-secondary" id="watchlistBtn">
+                                <i data-feather="bookmark"></i>
+                                <span>Watchlist</span>
+                            </button>
+                            <button class="btn-action btn-secondary" id="favoriteBtn">
+                                <i data-feather="heart"></i>
+                                <span>Favorite</span>
+                            </button>
+                            <button class="btn-action btn-ott" id="ottBtn">
+                                <i data-feather="tv"></i>
+                                <span>Where to Watch</span>
+                            </button>
+                        </div>
+
+                        <!-- OTT Platforms -->
+                        <div class="ott-section" id="ottSection" style="display: none;">
+                            <h3 class="ott-title">Available On</h3>
+                            <div class="ott-platforms" id="ottPlatforms"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Overview Section -->
+        <section class="overview-section container" id="overviewSection" style="display: none;">
+            <h2 class="section-title">Overview</h2>
+            <div class="overview-content">
+                <p class="overview-text" id="overviewText"></p>
+                <button class="show-more-btn" id="showMoreBtn" style="display: none;">Show More</button>
+            </div>
+        </section>
+
+        <!-- Cast & Crew Section -->
+        <section class="cast-section container" id="castSection" style="display: none;">
+            <h2 class="section-title">Cast & Crew</h2>
+            <div class="cast-carousel">
+                <button class="carousel-nav prev" id="castPrevBtn">
+                    <i data-feather="chevron-left"></i>
+                </button>
+                <div class="cast-wrapper" id="castWrapper"></div>
+                <button class="carousel-nav next" id="castNextBtn">
+                    <i data-feather="chevron-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Similar Content Section -->
+        <section class="similar-section container" id="similarSection" style="display: none;">
+            <div class="content-row">
+                <div class="row-header">
+                    <h2 class="row-title">Similar Titles</h2>
+                </div>
+                <div class="carousel-container">
+                    <button class="carousel-nav prev">
+                        <svg viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-width="2" d="M15 18l-6-6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="carousel-wrapper" id="similarCarousel"></div>
+                    <button class="carousel-nav next">
+                        <svg viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-width="2" d="M9 18l6-6-6-6" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- More Recommendations -->
+        <section class="recommendations-section container" id="recommendationsSection" style="display: none;">
+            <div class="content-row">
+                <div class="row-header">
+                    <h2 class="row-title">You May Also Like</h2>
+                </div>
+                <div class="carousel-container">
+                    <button class="carousel-nav prev">
+                        <svg viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-width="2" d="M15 18l-6-6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="carousel-wrapper" id="recommendationsCarousel"></div>
+                    <button class="carousel-nav next">
+                        <svg viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-width="2" d="M9 18l6-6-6-6" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Trailer Modal -->
+    <div class="trailer-modal" id="trailerModal" style="display: none;">
+        <div class="modal-backdrop" id="modalBackdrop"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">
+                <i data-feather="x"></i>
+            </button>
+            <div class="trailer-container" id="trailerContainer"></div>
+        </div>
+    </div>
+
+    <!-- OTT Modal -->
+    <div class="ott-modal" id="ottModal" style="display: none;">
+        <div class="modal-backdrop" id="ottModalBackdrop"></div>
+        <div class="modal-content ott-modal-content">
+            <div class="modal-header">
+                <h3>Where to Watch</h3>
+                <button class="modal-close" id="ottModalClose">
+                    <i data-feather="x"></i>
+                </button>
+            </div>
+            <div class="ott-modal-body" id="ottModalBody">
+                <div class="ott-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Checking availability...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav">
+        <div class="mobile-nav-container" id="mobileNavContainer"></div>
+    </nav>
+
+    <!-- More Menu Overlay -->
+    <aside class="mobile-menu-overlay" id="mobileMenuOverlay">
+        <div class="menu-handle"></div>
+        <div class="menu-header">
+            <h3 class="menu-title">CineBrain Menu</h3>
+            <button class="menu-close-btn" id="mobileMenuClose">
+                <i data-feather="x"></i>
+            </button>
+        </div>
+        <section class="menu-section">
+            <h4 class="menu-section-title">Browse Categories</h4>
+            <div class="mobile-menu-grid" id="mobileMenuGrid"></div>
+        </section>
+        <section class="menu-section">
+            <h4 class="menu-section-title" id="userSectionTitle">Account</h4>
+            <div class="mobile-menu-list" id="mobileMenuList"></div>
+        </section>
+        <footer class="menu-footer">
+            <div class="menu-footer-info">
+                <span class="app-version">CineBrain v1.0.0</span>
+            </div>
+        </footer>
+    </aside>
+
+    <div class="mobile-backdrop" id="mobileBackdrop"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="/assets/js/theme-manager.js"></script>
+    <script src="/assets/js/topbar.js"></script>
+    <script src="/assets/js/mobile-nav.js"></script>
+    <script src="/assets/js/content-card.js"></script>
+    <script src="/assets/js/details.js"></script>
+</body>
+
+</html>
