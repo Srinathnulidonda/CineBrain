@@ -89,8 +89,10 @@ class ContentCardManager {
 
     async setup() {
         const container = document.getElementById('content-container');
+
+        // Only initialize if we're on a page with content-container (homepage)
         if (!container) {
-            console.warn('Content container not found');
+            console.log('Content container not found - skipping content card initialization (this is normal for details pages)');
             return;
         }
 
@@ -304,9 +306,9 @@ class ContentCardManager {
     }
 
     setupCardHandlers(card, content) {
-        // Card click handler
         card.addEventListener('click', (e) => {
             if (!e.target.closest('.wishlist-btn')) {
+                // Use the correct path to details.html
                 window.location.href = `/content/details.html?id=${content.id}`;
             }
         });
@@ -800,8 +802,10 @@ class ContentCardManager {
     }
 }
 
-// Initialize Content Card Manager
-const contentCardManager = new ContentCardManager();
-
-// Export for global access if needed
-window.contentCardManager = contentCardManager;
+// Only initialize if we're on the homepage (not details page)
+if (document.getElementById('content-container')) {
+    const contentCardManager = new ContentCardManager();
+    window.contentCardManager = contentCardManager;
+} else {
+    console.log('ContentCardManager: Skipped initialization - not on homepage');
+}
