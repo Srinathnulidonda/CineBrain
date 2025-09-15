@@ -1,3 +1,5 @@
+// topbar.js
+
 // Initialize Feather Icons first
 if (typeof feather !== 'undefined') {
     feather.replace();
@@ -60,7 +62,8 @@ class SearchEngine {
             resultCount: result ? result.length : 0,
             firstResult: result && result[0] ? {
                 title: result[0].title || 'Unknown',
-                type: result[0].content_type || 'unknown'
+                type: result[0].content_type || 'unknown',
+                slug: result[0].slug || this.generateSlug(result[0].title, result[0].release_date) // Add slug info
             } : null
         };
 
@@ -93,6 +96,43 @@ class SearchEngine {
             item && item.query && item.query.toLowerCase() !== query.toLowerCase()
         );
         this.saveRecentSearches();
+    }
+
+    // Add slug generation method (same as content.js)
+    generateSlug(title, releaseDate) {
+        if (!title) return '';
+
+        // Convert title to lowercase and replace spaces/special chars with hyphens
+        let slug = title.toLowerCase()
+            .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+            .replace(/\s+/g, '-')      // Replace spaces with hyphens
+            .replace(/-+/g, '-')       // Replace multiple hyphens with single hyphen
+            .replace(/^-+|-+$/g, '')   // Remove leading/trailing hyphens
+            .trim();
+
+        // Add year if available (for movies/shows)
+        if (releaseDate) {
+            const year = this.extractYear(releaseDate);
+            if (year) {
+                slug += `-${year}`;
+            }
+        }
+
+        // Ensure slug is not too long
+        if (slug.length > 100) {
+            slug = slug.substring(0, 100).replace(/-[^-]*$/, ''); // Cut at word boundary
+        }
+
+        return slug;
+    }
+
+    extractYear(dateString) {
+        if (!dateString) return '';
+        try {
+            return new Date(dateString).getFullYear();
+        } catch {
+            return '';
+        }
     }
 
     async search(query, signal) {
@@ -819,8 +859,13 @@ class TopbarComponent {
                 contentType === 'tv' ? 'success' :
                     contentType === 'anime' ? 'warning' : 'secondary';
 
+            // Get slug from backend or generate one
+            const slug = item.slug || this.generateSlug(title, item.release_date);
+
             html += `
-                <div class="search-result-item d-flex ${index === 0 ? 'active' : ''}" data-id="${item.id || ''}">
+                <div class="search-result-item d-flex ${index === 0 ? 'active' : ''}" 
+                     data-id="${item.id || ''}" 
+                     data-slug="${this.escapeHtml(slug)}">
                     <div class="poster-wrapper">
                         <img src="${posterUrl}" 
                              alt="${this.escapeHtml(title)}" 
@@ -858,15 +903,64 @@ class TopbarComponent {
         resultsContainer.innerHTML = html;
         resultsContainer.classList.add('show');
 
-        // Add click handlers
+        // Add click handlers with slug-based navigation
         resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
             item.addEventListener('click', () => {
+                const slug = item.dataset.slug;
                 const contentId = item.dataset.id;
-                if (contentId) {
+
+                if (slug) {
+                    // Use slug-based navigation (same as content.js)
                     window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+                } else if (contentId) {
+                    // Fallback to ID-based navigation
+                    console.warn('No slug available, using ID-based navigation');
+                    window.location.href = `/content/details.html?id=${contentId}`;
+                } else {
+                    console.error('No slug or ID available for navigation');
+                    if (this.notificationSystem) {
+                        this.notificationSystem.show('Unable to view details', 'error');
+                    }
                 }
             });
         });
+    }
+
+    // Add slug generation method to TopbarComponent (same as content.js)
+    generateSlug(title, releaseDate) {
+        if (!title) return '';
+
+        // Convert title to lowercase and replace spaces/special chars with hyphens
+        let slug = title.toLowerCase()
+            .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+            .replace(/\s+/g, '-')      // Replace spaces with hyphens
+            .replace(/-+/g, '-')       // Replace multiple hyphens with single hyphen
+            .replace(/^-+|-+$/g, '')   // Remove leading/trailing hyphens
+            .trim();
+
+        // Add year if available (for movies/shows)
+        if (releaseDate) {
+            const year = this.extractYear(releaseDate);
+            if (year) {
+                slug += `-${year}`;
+            }
+        }
+
+        // Ensure slug is not too long
+        if (slug.length > 100) {
+            slug = slug.substring(0, 100).replace(/-[^-]*$/, ''); // Cut at word boundary
+        }
+
+        return slug;
+    }
+
+    extractYear(dateString) {
+        if (!dateString) return '';
+        try {
+            return new Date(dateString).getFullYear();
+        } catch {
+            return '';
+        }
     }
 
     displaySearchError(mode, query) {
