@@ -863,7 +863,7 @@ class TopbarComponent {
             item.addEventListener('click', () => {
                 const contentId = item.dataset.id;
                 if (contentId) {
-                    window.location.href = `/content/details.html?id=${contentId}`;
+                    window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
                 }
             });
         });
@@ -1455,11 +1455,12 @@ class TopbarComponent {
             sessionStorage.clear();
 
             // Store flag to show logout message on home page
-            sessionStorage.setItem('show-logout-message', 'true');
-
-            // Redirect to home page (guest view) after delay
             setTimeout(() => {
-                window.location.href = '/index.html';
+                if (stayOnPage) {
+                    window.location.reload();
+                } else {
+                    window.location.href = '/index.html';
+                }
             }, 1000);
         });
 

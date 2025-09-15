@@ -240,7 +240,12 @@ class ContentCardManager {
         card.className = 'content-card';
         card.dataset.contentId = content.id;
 
-        const posterUrl = this.formatPosterUrl(content.poster_path);
+        // Store slug for navigation
+        if (content.slug) {
+            card.dataset.contentSlug = content.slug;
+        }
+
+        const posterUrl = this.formatPosterUrl(content.poster_path || content.poster_url);
         const rating = this.formatRating(content.rating);
         const ratingValue = parseFloat(content.rating) || 0;
         const year = this.extractYear(content.release_date);
@@ -308,8 +313,21 @@ class ContentCardManager {
     setupCardHandlers(card, content) {
         card.addEventListener('click', (e) => {
             if (!e.target.closest('.wishlist-btn')) {
-                // Use the correct path to details.html
-                window.location.href = `/content/details.html?id=${content.id}`;
+                // Always use slug-based navigation
+                let slug = content.slug;
+
+                // If no slug provided by backend, generate one from title
+                if (!slug && content.title) {
+                    slug = this.generateSlug(content.title, content.release_date);
+                }
+
+                if (slug) {
+                    // Use slug-based URL (no parameter, just the slug after ?)
+                    window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+                } else {
+                    console.error('No slug available for content:', content);
+                    this.showToast('Unable to view details', 'error');
+                }
             }
         });
 
@@ -319,6 +337,34 @@ class ContentCardManager {
             e.stopPropagation();
             await this.handleWishlistClick(content.id, wishlistBtn);
         });
+    }
+
+    // Add this helper method to the ContentCardManager class
+    generateSlug(title, releaseDate) {
+        if (!title) return '';
+
+        // Convert title to lowercase and replace spaces/special chars with hyphens
+        let slug = title.toLowerCase()
+            .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+            .replace(/\s+/g, '-')      // Replace spaces with hyphens
+            .replace(/-+/g, '-')       // Replace multiple hyphens with single hyphen
+            .replace(/^-+|-+$/g, '')   // Remove leading/trailing hyphens
+            .trim();
+
+        // Add year if available (for movies/shows)
+        if (releaseDate) {
+            const year = this.extractYear(releaseDate);
+            if (year) {
+                slug += `-${year}`;
+            }
+        }
+
+        // Ensure slug is not too long
+        if (slug.length > 100) {
+            slug = slug.substring(0, 100).replace(/-[^-]*$/, ''); // Cut at word boundary
+        }
+
+        return slug;
     }
 
     setupLazyLoading(card) {
@@ -760,7 +806,9 @@ class ContentCardManager {
         if (!posterPath) {
             return this.getPlaceholderImage();
         }
+        // If it's already a full URL, return as-is
         if (posterPath.startsWith('http')) return posterPath;
+        // Otherwise, prepend TMDB base URL
         return `${this.posterBase}${posterPath}`;
     }
 
