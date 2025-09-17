@@ -1,31 +1,29 @@
-// Enhanced Details Page with Modern Design
 class DetailsPage {
     constructor() {
-        // API Configuration
         this.apiBase = 'https://backend-app-970m.onrender.com/api';
         this.posterBase = 'https://image.tmdb.org/t/p/w500';
         this.backdropBase = 'https://image.tmdb.org/t/p/w1280';
-
-        // Content Data
         this.contentSlug = this.getContentSlugFromUrl();
         this.contentData = null;
-
-        // Authentication
         this.authToken = localStorage.getItem('cinebrain-token');
         this.isAuthenticated = !!this.authToken;
         this.currentUser = this.getCurrentUser();
-
-        // User Lists
         this.userWatchlist = new Set();
         this.userFavorites = new Set();
-
-        // UI State
         this.currentTab = 'overview';
-        this.expandedSynopsis = false;
-        this.currentMediaType = 'backdrops';
-
-        // Initialize
+        this.currentImageIndex = 0;
+        this.currentImageSet = [];
+        this.currentImageType = 'backdrops';
+        this.setupSmoothScrolling();
         this.init();
+    }
+
+    setupSmoothScrolling() {
+        if (!CSS.supports('scroll-behavior', 'smooth')) {
+            const style = document.createElement('style');
+            style.textContent = `* { scroll-behavior: smooth !important; }`;
+            document.head.appendChild(style);
+        }
     }
 
     getContentSlugFromUrl() {
@@ -51,32 +49,24 @@ class DetailsPage {
                 return;
             }
 
-            // Load user lists if authenticated
             if (this.isAuthenticated) {
                 await this.loadUserLists();
             }
 
-            // Load content details
             await this.loadContentDetails();
-
-            // Setup UI
             this.setupEventListeners();
             this.setupTabNavigation();
-            this.setupMediaTabs();
             this.setupModals();
 
-            // Initialize icons
             if (typeof feather !== 'undefined') {
                 feather.replace();
             }
 
-            // Hide loader
             this.hideLoader();
 
-            // Load additional content
             setTimeout(() => {
                 this.loadRecommendations();
-            }, 500);
+            }, 300);
 
         } catch (error) {
             console.error('Initialization error:', error);
@@ -113,48 +103,69 @@ class DetailsPage {
         const data = this.contentData;
         if (!data) return;
 
-        // Update page title
-        document.title = `${data.title || 'Content'} - CineBrain`;
-
-        // Hero Section
+        this.updatePageMeta(data);
         this.renderHero(data);
-
-        // Overview Tab
         this.renderOverview(data);
-
-        // Cast & Crew Tab
         this.renderCastCrew(data);
-
-        // Media Tab
         this.renderMedia(data);
-
-        // Reviews Tab
         this.renderReviews(data);
-
-        // Update action buttons
         this.updateActionButtons();
 
-        // Re-initialize icons
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
     }
 
+    updatePageMeta(data) {
+        const title = `${data.title || 'Content'} - CineBrain`;
+        const description = data.synopsis?.overview || data.overview || 'Watch detailed information, trailers, cast & crew on CineBrain.';
+
+        document.title = title;
+
+        this.updateMetaTag('meta-title', 'content', title);
+        this.updateMetaTag('meta-description', 'content', description);
+        this.updateMetaTag('og-title', 'content', title);
+        this.updateMetaTag('og-description', 'content', description);
+
+        if (data.poster_url) {
+            this.updateMetaTag('og-image', 'content', data.poster_url);
+        }
+
+        const canonicalUrl = window.location.href;
+        this.updateMetaTag('canonical-url', 'href', canonicalUrl);
+        this.updateMetaTag('og-url', 'content', canonicalUrl);
+    }
+
+    updateMetaTag(id, attribute, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.setAttribute(attribute, value);
+        }
+    }
+
     renderHero(data) {
-        // Backdrop
         if (data.backdrop_url) {
             const backdrop = document.getElementById('heroBackdrop');
             if (backdrop) {
                 backdrop.style.backgroundImage = `url(${data.backdrop_url})`;
-                // Add parallax effect on scroll
-                window.addEventListener('scroll', () => {
-                    const scrolled = window.pageYOffset;
-                    backdrop.style.transform = `translateY(${scrolled * 0.5}px)`;
-                });
+
+                let ticking = false;
+                const handleScroll = () => {
+                    if (!ticking) {
+                        requestAnimationFrame(() => {
+                            const scrolled = window.pageYOffset;
+                            const rate = scrolled * -0.3;
+                            backdrop.style.transform = `translate3d(0, ${rate}px, 0) scale(1.05)`;
+                            ticking = false;
+                        });
+                        ticking = true;
+                    }
+                };
+
+                window.addEventListener('scroll', handleScroll, { passive: true });
             }
         }
 
-        // Poster
         const poster = document.getElementById('posterImage');
         if (poster && data.poster_url) {
             const img = new Image();
@@ -162,17 +173,12 @@ class DetailsPage {
                 poster.src = img.src;
                 poster.classList.add('loaded');
             };
+            img.onerror = () => {
+                poster.src = this.getPlaceholderImage();
+                poster.classList.add('loaded');
+            };
             img.src = data.poster_url;
-            poster.alt = data.title || 'Poster';
-        }
-
-        // Badges
-        if (data.quality) {
-            const qualityBadge = document.getElementById('qualityBadge');
-            if (qualityBadge) {
-                qualityBadge.textContent = data.quality;
-                qualityBadge.style.display = 'inline-block';
-            }
+            poster.alt = data.title || 'Content Poster';
         }
 
         const typeBadge = document.getElementById('contentTypeBadge');
@@ -180,43 +186,40 @@ class DetailsPage {
             typeBadge.textContent = (data.content_type || 'movie').toUpperCase();
         }
 
-        // Title
         this.updateElement('contentTitle', data.title);
         if (data.original_title && data.original_title !== data.title) {
             this.updateElement('originalTitle', data.original_title);
         }
 
-        // Meta Pills
         if (data.metadata?.release_date) {
             const year = new Date(data.metadata.release_date).getFullYear();
-            document.querySelector('#releaseYear span').textContent = year;
+            const yearSpan = document.querySelector('#releaseYear span');
+            if (yearSpan) yearSpan.textContent = year;
         }
 
         if (data.metadata?.runtime) {
-            document.querySelector('#runtime span').textContent = this.formatRuntime(data.metadata.runtime);
+            const runtimeSpan = document.querySelector('#runtime span');
+            if (runtimeSpan) runtimeSpan.textContent = this.formatRuntime(data.metadata.runtime);
         }
 
         if (data.ratings?.tmdb) {
-            document.querySelector('#contentRating span').textContent = data.ratings.tmdb.score.toFixed(1);
+            const ratingSpan = document.querySelector('#contentRating span');
+            if (ratingSpan) ratingSpan.textContent = data.ratings.tmdb.score.toFixed(1);
         }
 
         if (data.metadata?.original_language) {
-            document.querySelector('#originalLanguage span').textContent =
-                this.getLanguageName(data.metadata.original_language);
+            const langSpan = document.querySelector('#originalLanguage span');
+            if (langSpan) langSpan.textContent = this.getLanguageName(data.metadata.original_language);
         }
 
-        // Genres
         this.renderGenres(data.metadata?.genres || []);
 
-        // Quick Synopsis
         const synopsis = data.synopsis?.overview || data.overview || '';
         const quickSynopsis = document.getElementById('quickSynopsis');
         if (quickSynopsis) {
-            quickSynopsis.textContent = synopsis.substring(0, 200) +
-                (synopsis.length > 200 ? '...' : '');
+            quickSynopsis.textContent = synopsis.substring(0, 200) + (synopsis.length > 200 ? '...' : '');
         }
 
-        // Stats Bar
         if (data.ratings?.tmdb) {
             this.updateElement('voteCount', this.formatNumber(data.ratings.tmdb.count));
         }
@@ -229,57 +232,58 @@ class DetailsPage {
             document.getElementById('imdbStat').style.display = 'block';
             this.updateElement('imdbRating', data.ratings.imdb.score.toFixed(1));
         }
-
-        if (data.trending_rank) {
-            document.getElementById('trendingStat').style.display = 'block';
-            this.updateElement('trendingRank', data.trending_rank);
-        }
     }
 
     renderGenres(genres) {
         const container = document.getElementById('genreChips');
-        if (!container) return;
+        if (!container || !Array.isArray(genres)) return;
 
-        container.innerHTML = genres.map(genre => `
-            <span class="genre-tag" data-genre="${this.escapeHtml(genre.toLowerCase())}">
-                ${this.escapeHtml(genre)}
-            </span>
-        `).join('');
+        container.innerHTML = genres.slice(0, 4).map(genre => {
+            const genreName = typeof genre === 'string' ? genre : genre.name;
+            return `
+                <span class="genre-tag" data-genre="${this.escapeHtml(genreName.toLowerCase())}">
+                    ${this.escapeHtml(genreName)}
+                </span>
+            `;
+        }).join('');
 
-        // Add click handlers
         container.querySelectorAll('.genre-tag').forEach(tag => {
-            tag.addEventListener('click', () => {
-                const genre = tag.dataset.genre;
-                window.location.href = `/explore.html?genre=${encodeURIComponent(genre)}`;
+            tag.addEventListener('click', (e) => {
+                tag.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    tag.style.transform = '';
+                    const genre = tag.dataset.genre;
+                    window.location.href = `/explore.html?genre=${encodeURIComponent(genre)}`;
+                }, 100);
             });
         });
     }
 
     renderOverview(data) {
-        // Synopsis
         const overviewText = document.getElementById('overviewText');
         if (overviewText) {
-            overviewText.textContent = data.synopsis?.overview || data.overview || '';
+            overviewText.textContent = data.synopsis?.overview || data.overview || 'No synopsis available.';
         }
 
-        // Streaming Providers
         if (data.streaming_info) {
             this.renderStreamingProviders(data.streaming_info);
         }
 
-        // Information
         this.updateElement('status', data.metadata?.status || 'Released');
         this.updateElement('releaseDate', this.formatDate(data.metadata?.release_date));
 
         if (data.metadata?.budget) {
             this.updateElement('budget', this.formatCurrency(data.metadata.budget));
+        } else {
+            this.updateElement('budget', 'N/A');
         }
 
         if (data.metadata?.revenue) {
             this.updateElement('revenue', this.formatCurrency(data.metadata.revenue));
+        } else {
+            this.updateElement('revenue', 'N/A');
         }
 
-        // TV Show specific
         if (data.seasons_episodes) {
             if (data.seasons_episodes.season_count) {
                 document.getElementById('seasonsRow').style.display = 'flex';
@@ -292,14 +296,12 @@ class DetailsPage {
             }
         }
 
-        // Production Companies
         if (data.metadata?.production_companies) {
             this.renderProductionCompanies(data.metadata.production_companies);
         }
 
-        // Keywords
-        if (data.keywords && data.keywords.length > 0) {
-            this.renderKeywords(data.keywords);
+        if (data.synopsis?.keywords && data.synopsis.keywords.length > 0) {
+            this.renderKeywords(data.synopsis.keywords);
         }
     }
 
@@ -317,7 +319,6 @@ class DetailsPage {
 
         if (allProviders.length > 0) {
             card.style.display = 'block';
-
             container.innerHTML = allProviders.map(provider => `
                 <div class="streaming-provider">
                     <img src="${provider.logo_path}" alt="${provider.provider_name}" class="provider-logo">
@@ -348,8 +349,7 @@ class DetailsPage {
         if (!container) return;
 
         card.style.display = 'block';
-
-        container.innerHTML = keywords.map(keyword => `
+        container.innerHTML = keywords.slice(0, 20).map(keyword => `
             <span class="keyword-tag" data-keyword="${this.escapeHtml(keyword)}">
                 ${this.escapeHtml(keyword)}
             </span>
@@ -359,55 +359,136 @@ class DetailsPage {
     renderCastCrew(data) {
         if (!data.cast_crew) return;
 
-        // Cast
         const castGrid = document.getElementById('castGrid');
-        if (castGrid && data.cast_crew.cast) {
-            const cast = data.cast_crew.cast.slice(0, 12); // Show first 12
+        const noCast = document.getElementById('noCast');
+
+        if (castGrid && data.cast_crew.cast && data.cast_crew.cast.length > 0) {
+            const cast = data.cast_crew.cast.slice(0, 20);
 
             castGrid.innerHTML = cast.map(member => `
-                <div class="cast-card" data-person-id="${member.id}">
+                <div class="cast-card" data-person-slug="${member.slug}" tabindex="0" role="button">
                     <img class="person-photo" 
                          src="${member.profile_path || this.getPlaceholderAvatar()}" 
                          alt="${this.escapeHtml(member.name)}"
                          loading="lazy">
                     <div class="person-name">${this.escapeHtml(member.name)}</div>
-                    <div class="person-role">${this.escapeHtml(member.character || '')}</div>
+                    <div class="person-role">${this.escapeHtml(member.character || 'Unknown Character')}</div>
                 </div>
             `).join('');
+
+            castGrid.querySelectorAll('.cast-card').forEach(card => {
+                const clickHandler = () => {
+                    card.style.transform = 'scale(0.98)';
+                    setTimeout(() => {
+                        card.style.transform = '';
+                        const personSlug = card.dataset.personSlug;
+                        if (personSlug) {
+                            window.location.href = `/person.html?${personSlug}`;
+                        }
+                    }, 100);
+                };
+
+                card.addEventListener('click', clickHandler);
+                card.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        clickHandler();
+                    }
+                });
+            });
+
+            noCast.style.display = 'none';
+        } else {
+            castGrid.innerHTML = '';
+            noCast.style.display = 'flex';
         }
 
-        // Crew
         const crewGrid = document.getElementById('crewGrid');
+        const noCrew = document.getElementById('noCrew');
+
         if (crewGrid && data.cast_crew.crew) {
             const crew = [
                 ...(data.cast_crew.crew.directors || []),
                 ...(data.cast_crew.crew.writers || []),
                 ...(data.cast_crew.crew.producers || [])
-            ].slice(0, 12);
+            ].slice(0, 20);
 
-            crewGrid.innerHTML = crew.map(member => `
-                <div class="crew-card" data-person-id="${member.id}">
-                    <img class="person-photo" 
-                         src="${member.profile_path || this.getPlaceholderAvatar()}" 
-                         alt="${this.escapeHtml(member.name)}"
-                         loading="lazy">
-                    <div class="person-name">${this.escapeHtml(member.name)}</div>
-                    <div class="person-role">${this.escapeHtml(member.job || '')}</div>
-                </div>
-            `).join('');
+            if (crew.length > 0) {
+                crewGrid.innerHTML = crew.map(member => `
+                    <div class="crew-card" data-person-slug="${member.slug}" tabindex="0" role="button">
+                        <img class="person-photo" 
+                             src="${member.profile_path || this.getPlaceholderAvatar()}" 
+                             alt="${this.escapeHtml(member.name)}"
+                             loading="lazy">
+                        <div class="person-name">${this.escapeHtml(member.name)}</div>
+                        <div class="person-role">${this.escapeHtml(member.job || 'Unknown Job')}</div>
+                    </div>
+                `).join('');
+
+                crewGrid.querySelectorAll('.crew-card').forEach(card => {
+                    const clickHandler = () => {
+                        card.style.transform = 'scale(0.98)';
+                        setTimeout(() => {
+                            card.style.transform = '';
+                            const personSlug = card.dataset.personSlug;
+                            if (personSlug) {
+                                window.location.href = `/person.html?${personSlug}`;
+                            }
+                        }, 100);
+                    };
+
+                    card.addEventListener('click', clickHandler);
+                    card.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            clickHandler();
+                        }
+                    });
+                });
+
+                noCrew.style.display = 'none';
+            } else {
+                crewGrid.innerHTML = '';
+                noCrew.style.display = 'flex';
+            }
         }
     }
 
     renderMedia(data) {
-        // Videos
-        if (data.videos && data.videos.length > 0) {
-            this.renderVideos(data.videos);
+        const videos = this.getVideosFromData(data);
+        if (videos && videos.length > 0) {
+            this.renderVideos(videos);
+            document.getElementById('noVideos').style.display = 'none';
+        } else {
+            document.getElementById('videosGrid').innerHTML = '';
+            document.getElementById('noVideos').style.display = 'flex';
         }
 
-        // Images
-        if (data.images) {
-            this.renderImages(data.images);
+        if (data.gallery && (data.gallery.backdrops?.length > 0 || data.gallery.posters?.length > 0)) {
+            this.renderImages(data.gallery);
+            document.getElementById('noImages').style.display = 'none';
+        } else {
+            document.getElementById('imagesGrid').innerHTML = '';
+            document.getElementById('noImages').style.display = 'flex';
         }
+    }
+
+    getVideosFromData(data) {
+        const videos = [];
+
+        if (data.trailer && data.trailer.youtube_id) {
+            videos.push({
+                key: data.trailer.youtube_id,
+                name: data.trailer.title || 'Official Trailer',
+                type: 'Trailer'
+            });
+        }
+
+        if (data.videos && Array.isArray(data.videos)) {
+            videos.push(...data.videos);
+        }
+
+        return videos;
     }
 
     renderVideos(videos) {
@@ -415,10 +496,11 @@ class DetailsPage {
         if (!container) return;
 
         container.innerHTML = videos.map(video => `
-            <div class="video-card" data-video-key="${video.key}">
+            <div class="video-card" data-video-key="${video.key}" tabindex="0" role="button">
                 <img src="https://img.youtube.com/vi/${video.key}/hqdefault.jpg" 
                      alt="${this.escapeHtml(video.name)}"
-                     class="video-thumbnail">
+                     class="video-thumbnail"
+                     loading="lazy">
                 <div class="video-play-btn">
                     <svg viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
@@ -428,49 +510,127 @@ class DetailsPage {
             </div>
         `).join('');
 
-        // Add click handlers
         container.querySelectorAll('.video-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const key = card.dataset.videoKey;
-                this.playVideo(key);
+            const clickHandler = () => {
+                card.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    card.style.transform = '';
+                    const key = card.dataset.videoKey;
+                    this.playVideo(key);
+                }, 100);
+            };
+
+            card.addEventListener('click', clickHandler);
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    clickHandler();
+                }
             });
         });
+
+        this.setupHorizontalScroll(container);
     }
 
-    renderImages(images) {
+    renderImages(gallery) {
         const container = document.getElementById('imagesGrid');
         if (!container) return;
 
         const renderImageType = (type) => {
-            const imageList = images[type] || [];
+            this.currentImageType = type;
+            const imageList = gallery[type] || [];
+            this.currentImageSet = imageList;
 
-            container.innerHTML = imageList.map(image => `
-                <div class="image-card" data-image-url="${image.url}">
-                    <img src="${image.thumbnail || image.url}" 
-                         alt="Image"
-                         loading="lazy">
-                </div>
-            `).join('');
+            if (imageList.length > 0) {
+                container.innerHTML = imageList.map((image, index) => {
+                    const imageUrl = image.url || image.file_path || image;
+                    const thumbnailUrl = image.thumbnail || imageUrl;
 
-            // Add click handlers
-            container.querySelectorAll('.image-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const url = card.dataset.imageUrl;
-                    this.openLightbox(url);
+                    return `
+                        <div class="image-card" 
+                             data-image-url="${imageUrl}" 
+                             data-image-index="${index}"
+                             tabindex="0" 
+                             role="button"
+                             title="Click to view full size">
+                            <img src="${thumbnailUrl}" 
+                                 alt="Image ${index + 1}"
+                                 loading="lazy">
+                        </div>
+                    `;
+                }).join('');
+
+                container.querySelectorAll('.image-card').forEach((card, index) => {
+                    const clickHandler = () => {
+                        card.style.transform = 'scale(0.98)';
+                        setTimeout(() => {
+                            card.style.transform = '';
+                            this.openLightbox(index);
+                        }, 100);
+                    };
+
+                    card.addEventListener('click', clickHandler);
+                    card.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            clickHandler();
+                        }
+                    });
                 });
-            });
+
+                document.getElementById('noImages').style.display = 'none';
+            } else {
+                container.innerHTML = '';
+                this.currentImageSet = [];
+                document.getElementById('noImages').style.display = 'flex';
+            }
         };
 
-        // Default to backdrops
         renderImageType('backdrops');
 
-        // Media tab handlers
         document.querySelectorAll('.media-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                renderImageType(tab.dataset.media);
+
+                container.style.opacity = '0.5';
+                setTimeout(() => {
+                    renderImageType(tab.dataset.media);
+                    container.style.opacity = '1';
+                }, 150);
             });
+        });
+
+        this.setupHorizontalScroll(container);
+    }
+
+    setupHorizontalScroll(container) {
+        container.addEventListener('wheel', (e) => {
+            if (e.deltaY !== 0) {
+                e.preventDefault();
+                container.scrollLeft += e.deltaY > 0 ? 100 : -100;
+            }
+        }, { passive: false });
+
+        let isScrolling = false;
+        let startX = 0;
+        let scrollLeft = 0;
+
+        container.addEventListener('touchstart', (e) => {
+            isScrolling = true;
+            startX = e.touches[0].pageX;
+            scrollLeft = container.scrollLeft;
+        }, { passive: true });
+
+        container.addEventListener('touchmove', (e) => {
+            if (!isScrolling) return;
+            const x = e.touches[0].pageX;
+            const walk = (startX - x) * 1.5;
+            container.scrollLeft = scrollLeft + walk;
+        }, { passive: true });
+
+        container.addEventListener('touchend', () => {
+            isScrolling = false;
         });
     }
 
@@ -486,25 +646,29 @@ class DetailsPage {
             return;
         }
 
+        container.style.display = 'flex';
+        if (noReviews) noReviews.style.display = 'none';
+
         container.innerHTML = data.reviews.map(review => `
             <div class="review-card">
                 <div class="review-header">
                     <div class="reviewer-info">
                         <img class="reviewer-avatar" 
-                             src="${review.user.avatar || this.getPlaceholderAvatar()}" 
-                             alt="${this.escapeHtml(review.user.username)}">
+                             src="${review.user?.avatar || this.getPlaceholderAvatar()}" 
+                             alt="${this.escapeHtml(review.user?.username || 'Anonymous')}"
+                             loading="lazy">
                         <div class="reviewer-details">
-                            <div class="reviewer-name">${this.escapeHtml(review.user.username)}</div>
+                            <div class="reviewer-name">${this.escapeHtml(review.user?.username || 'Anonymous')}</div>
                             <div class="review-date">${this.formatDate(review.created_at)}</div>
                         </div>
                     </div>
                     <div class="review-rating">
-                        ${this.renderStars(review.rating)}
+                        ${this.renderStars(review.rating || 0)}
                     </div>
                 </div>
                 <div class="review-content">
                     ${review.title ? `<h4 class="review-title">${this.escapeHtml(review.title)}</h4>` : ''}
-                    <p class="review-text">${this.escapeHtml(review.review_text)}</p>
+                    <p class="review-text">${this.escapeHtml(review.review_text || review.content)}</p>
                 </div>
                 <div class="review-actions">
                     <button class="review-action-btn" data-review-id="${review.id}">
@@ -515,17 +679,13 @@ class DetailsPage {
             </div>
         `).join('');
 
-        // Re-initialize icons
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
     }
 
     async loadRecommendations() {
-        // Load similar content
         await this.loadSimilarContent();
-
-        // Load genre-based content
         await this.loadGenreContent();
     }
 
@@ -539,39 +699,48 @@ class DetailsPage {
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.similar_content) {
+                if (data.similar_content && data.similar_content.length > 0) {
                     this.renderCarousel('similarContent', data.similar_content);
+                    document.getElementById('noSimilar').style.display = 'none';
+                } else {
+                    document.getElementById('noSimilar').style.display = 'flex';
                 }
             }
         } catch (error) {
             console.error('Error loading similar content:', error);
+            document.getElementById('noSimilar').style.display = 'flex';
         }
     }
 
     async loadGenreContent() {
         if (!this.contentData?.metadata?.genres?.[0]) return;
 
-        const primaryGenre = this.contentData.metadata.genres[0].toLowerCase();
+        const primaryGenre = typeof this.contentData.metadata.genres[0] === 'string'
+            ? this.contentData.metadata.genres[0]
+            : this.contentData.metadata.genres[0].name;
 
-        // Update title
         const genreTitle = document.getElementById('genreTitle');
         if (genreTitle) {
-            genreTitle.textContent = `More ${primaryGenre.charAt(0).toUpperCase() + primaryGenre.slice(1)}`;
+            genreTitle.textContent = `More ${primaryGenre}`;
         }
 
         try {
             const response = await fetch(
-                `${this.apiBase}/recommendations/genre/${primaryGenre}?type=${this.contentData.content_type}&limit=20`
+                `${this.apiBase}/recommendations/genre/${encodeURIComponent(primaryGenre.toLowerCase())}?type=${this.contentData.content_type}&limit=20`
             );
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.recommendations) {
+                if (data.recommendations && data.recommendations.length > 0) {
                     this.renderCarousel('genreContent', data.recommendations);
+                    document.getElementById('noGenre').style.display = 'none';
+                } else {
+                    document.getElementById('noGenre').style.display = 'flex';
                 }
             }
         } catch (error) {
             console.error('Error loading genre content:', error);
+            document.getElementById('noGenre').style.display = 'flex';
         }
     }
 
@@ -579,7 +748,6 @@ class DetailsPage {
         const container = document.getElementById(containerId);
         if (!container || !items) return;
 
-        // Use content card structure from content-card.js
         container.innerHTML = '';
 
         items.forEach(item => {
@@ -589,7 +757,6 @@ class DetailsPage {
             }
         });
 
-        // Setup navigation
         const carouselContainer = container.closest('.carousel-container');
         if (carouselContainer) {
             this.setupCarouselNavigation(carouselContainer);
@@ -597,37 +764,48 @@ class DetailsPage {
     }
 
     createContentCard(content) {
-        // Create card following content-card.js structure
         const card = document.createElement('div');
         card.className = 'content-card';
         card.dataset.contentId = content.id;
 
+        if (content.slug) {
+            card.dataset.contentSlug = content.slug;
+        }
+
         const posterUrl = this.formatPosterUrl(content.poster_url || content.poster_path);
-        const rating = content.rating ? content.rating.toFixed(1) : 'N/A';
-        const year = content.year || (content.release_date ? new Date(content.release_date).getFullYear() : '');
+        const rating = this.formatRating(content.rating);
+        const ratingValue = parseFloat(content.rating) || 0;
+        const year = this.extractYear(content.release_date);
+        const genres = content.genres?.slice(0, 2) || [];
+        const contentType = content.content_type || 'movie';
+        const runtime = this.formatRuntime(content.runtime);
         const isInWatchlist = this.userWatchlist.has(parseInt(content.id));
 
         card.innerHTML = `
             <div class="card-poster-container">
-                <img class="card-poster" 
-                     data-src="${posterUrl}" 
-                     alt="${this.escapeHtml(content.title || 'Content')}" 
-                     loading="lazy">
-                <div class="content-type-badge ${content.content_type || 'movie'}">
-                    ${(content.content_type || 'movie').toUpperCase()}
+                <img 
+                    class="card-poster" 
+                    data-src="${posterUrl}" 
+                    alt="${this.escapeHtml(content.title || 'Content')}"
+                    loading="lazy"
+                >
+                <div class="content-type-badge ${contentType}">
+                    ${contentType.toUpperCase()}
                 </div>
                 <div class="card-overlays">
                     <div class="card-top-overlay">
                         <div></div>
                         <button class="wishlist-btn ${isInWatchlist ? 'active' : ''}" 
-                                data-content-id="${content.id}">
+                                data-content-id="${content.id}" 
+                                title="${isInWatchlist ? 'Remove from Wishlist' : 'Add to Wishlist'}"
+                                aria-label="${isInWatchlist ? 'Remove from Wishlist' : 'Add to Wishlist'}">
                             <svg viewBox="0 0 24 24">
                                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                             </svg>
                         </button>
                     </div>
                     <div class="card-bottom-overlay">
-                        <div class="rating-badge">
+                        <div class="rating-badge" ${ratingValue >= 8.0 ? 'data-high-rating="true"' : ''}>
                             <svg viewBox="0 0 24 24">
                                 <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
                             </svg>
@@ -640,50 +818,94 @@ class DetailsPage {
                 <div class="card-title">${this.escapeHtml(content.title || 'Unknown')}</div>
                 <div class="card-meta">
                     ${year ? `<span class="card-year">${year}</span>` : ''}
+                    ${runtime ? `<span class="card-runtime">• ${runtime}</span>` : ''}
                 </div>
+                ${genres.length > 0 ? `
+                    <div class="card-genres">
+                        ${genres.map(genre => `<span class="genre-chip">${this.escapeHtml(genre)}</span>`).join('')}
+                    </div>
+                ` : ''}
             </div>
         `;
 
-        // Setup lazy loading
         this.setupLazyLoading(card);
-
-        // Add click handler
-        card.addEventListener('click', (e) => {
-            if (!e.target.closest('.wishlist-btn')) {
-                const slug = content.slug || `content-${content.id}`;
-                window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
-            }
-        });
+        this.setupCardHandlers(card, content);
 
         return card;
     }
 
+    setupCardHandlers(card, content) {
+        card.addEventListener('click', (e) => {
+            if (!e.target.closest('.wishlist-btn')) {
+                card.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    card.style.transform = '';
+
+                    let slug = content.slug;
+
+                    if (!slug && content.title) {
+                        slug = this.generateSlug(content.title, content.release_date);
+                    }
+
+                    if (slug) {
+                        window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+                    } else {
+                        console.error('No slug available for content:', content);
+                        this.showToast('Unable to view details', 'error');
+                    }
+                }, 100);
+            }
+        });
+
+        const wishlistBtn = card.querySelector('.wishlist-btn');
+        wishlistBtn?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await this.handleWishlistClick(content.id, wishlistBtn);
+        });
+    }
+
+    generateSlug(title, releaseDate) {
+        if (!title) return '';
+
+        let slug = title.toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .trim();
+
+        if (releaseDate) {
+            const year = this.extractYear(releaseDate);
+            if (year) {
+                slug += `-${year}`;
+            }
+        }
+
+        if (slug.length > 100) {
+            slug = slug.substring(0, 100).replace(/-[^-]*$/, '');
+        }
+
+        return slug;
+    }
+
     setupEventListeners() {
-        // Play trailer
-        const trailerBtn = document.getElementById('watchTrailerBtn');
-        if (trailerBtn) {
-            trailerBtn.addEventListener('click', () => {
-                if (this.contentData?.trailer) {
-                    this.playTrailer(this.contentData.trailer);
-                } else {
-                    this.showToast('No trailer available', 'warning');
-                }
-            });
-        }
+        ['watchTrailerBtn', 'mobilePlayBtn'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', (e) => {
+                    btn.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        btn.style.transform = '';
+                        if (this.contentData?.trailer) {
+                            this.playTrailer(this.contentData.trailer);
+                        } else {
+                            this.showToast('No trailer available', 'warning');
+                        }
+                    }, 100);
+                });
+            }
+        });
 
-        // Mobile play button
-        const mobilePlayBtn = document.getElementById('mobilePlayBtn');
-        if (mobilePlayBtn) {
-            mobilePlayBtn.addEventListener('click', () => {
-                if (this.contentData?.trailer) {
-                    this.playTrailer(this.contentData.trailer);
-                } else {
-                    this.showToast('No trailer available', 'warning');
-                }
-            });
-        }
-
-        // Watchlist buttons
         ['watchlistBtn', 'mobileWatchlistBtn'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -691,7 +913,6 @@ class DetailsPage {
             }
         });
 
-        // Favorite buttons
         ['favoriteBtn', 'mobileFavoriteBtn'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -699,7 +920,6 @@ class DetailsPage {
             }
         });
 
-        // Share buttons
         ['shareBtn', 'mobileShareBtn'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -707,25 +927,29 @@ class DetailsPage {
             }
         });
 
-        // Rate button
         const rateBtn = document.getElementById('rateBtn');
         if (rateBtn) {
             rateBtn.addEventListener('click', () => this.openRatingModal());
         }
 
-        // Expand synopsis
         const expandBtn = document.getElementById('expandSynopsisBtn');
         if (expandBtn) {
             expandBtn.addEventListener('click', () => {
                 const synopsisText = document.getElementById('overviewText');
+                const isExpanded = synopsisText.classList.contains('expanded');
+
                 synopsisText.classList.toggle('expanded');
                 expandBtn.classList.toggle('expanded');
-                expandBtn.querySelector('span').textContent =
-                    synopsisText.classList.contains('expanded') ? 'Show Less' : 'Show More';
+                expandBtn.querySelector('span').textContent = isExpanded ? 'Show More' : 'Show Less';
+
+                if (!isExpanded) {
+                    setTimeout(() => {
+                        synopsisText.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 200);
+                }
             });
         }
 
-        // Write review button
         const writeReviewBtn = document.getElementById('writeReviewBtn');
         if (writeReviewBtn) {
             writeReviewBtn.addEventListener('click', () => {
@@ -734,7 +958,6 @@ class DetailsPage {
                 } else {
                     this.showToast('Please login to write a review', 'warning');
                     setTimeout(() => {
-                        // Include current page URL as redirect parameter
                         window.location.href = '/auth/login.html?redirect=' + encodeURIComponent(window.location.href);
                     }, 1000);
                 }
@@ -744,55 +967,63 @@ class DetailsPage {
 
     setupTabNavigation() {
         const tabs = document.querySelectorAll('.nav-tab');
-        const panes = document.querySelectorAll('.tab-pane');
 
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 const targetTab = tab.dataset.tab;
 
-                // Update tabs
-                tabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
+                const currentPane = document.querySelector('.tab-pane.active');
+                if (currentPane) {
+                    currentPane.style.opacity = '0';
+                    setTimeout(() => {
+                        currentPane.classList.remove('active');
 
-                // Update panes
-                panes.forEach(pane => {
-                    pane.classList.remove('active');
-                    if (pane.id === `${targetTab}Tab`) {
-                        pane.classList.add('active');
-                    }
-                });
+                        tabs.forEach(t => {
+                            t.classList.remove('active');
+                            t.setAttribute('aria-selected', 'false');
+                        });
 
-                this.currentTab = targetTab;
+                        tab.classList.add('active');
+                        tab.setAttribute('aria-selected', 'true');
+
+                        const newPane = document.getElementById(`${targetTab}Tab`);
+                        if (newPane) {
+                            newPane.classList.add('active');
+                            newPane.style.opacity = '0';
+                            setTimeout(() => {
+                                newPane.style.opacity = '1';
+                            }, 50);
+                        }
+
+                        this.currentTab = targetTab;
+
+                        if (typeof feather !== 'undefined') {
+                            feather.replace();
+                        }
+                    }, 150);
+                }
             });
         });
     }
 
-    setupMediaTabs() {
-        // Handled in renderImages
-    }
-
     setupModals() {
-        // Share modal handlers
         this.setupShareHandlers();
-
-        // Rating modal
         this.setupRatingModal();
     }
 
     setupShareHandlers() {
         const shareUrl = window.location.href;
-        const shareTitle = this.contentData?.title || 'Check out this on CineBrain';
+        const shareTitle = this.contentData?.title || 'Check this out on CineBrain';
+        const shareText = `${shareTitle}\n\n${this.contentData?.synopsis?.overview?.substring(0, 100) || 'Discover amazing content on CineBrain'}...`;
 
-        // WhatsApp
         const whatsappBtn = document.getElementById('shareWhatsApp');
         if (whatsappBtn) {
             whatsappBtn.addEventListener('click', () => {
-                const url = `https://wa.me/?text=${encodeURIComponent(shareTitle + '\n' + shareUrl)}`;
+                const url = `https://wa.me/?text=${encodeURIComponent(shareText + '\n' + shareUrl)}`;
                 window.open(url, '_blank');
             });
         }
 
-        // Twitter
         const twitterBtn = document.getElementById('shareTwitter');
         if (twitterBtn) {
             twitterBtn.addEventListener('click', () => {
@@ -801,7 +1032,6 @@ class DetailsPage {
             });
         }
 
-        // Facebook
         const facebookBtn = document.getElementById('shareFacebook');
         if (facebookBtn) {
             facebookBtn.addEventListener('click', () => {
@@ -810,19 +1040,64 @@ class DetailsPage {
             });
         }
 
-        // Copy Link
+        const linkedinBtn = document.getElementById('shareLinkedIn');
+        if (linkedinBtn) {
+            linkedinBtn.addEventListener('click', () => {
+                const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+                window.open(url, '_blank');
+            });
+        }
+
         const copyLinkBtn = document.getElementById('copyLink');
         if (copyLinkBtn) {
             copyLinkBtn.addEventListener('click', async () => {
                 try {
                     await navigator.clipboard.writeText(shareUrl);
-                    this.showToast('Link copied to clipboard', 'success');
 
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('shareModal'));
-                    if (modal) modal.hide();
+                    copyLinkBtn.classList.add('copied');
+                    const originalHTML = copyLinkBtn.innerHTML;
+                    copyLinkBtn.innerHTML = `
+                        <i data-feather="check"></i>
+                        <span>Copied!</span>
+                    `;
+
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+
+                    setTimeout(() => {
+                        copyLinkBtn.classList.remove('copied');
+                        copyLinkBtn.innerHTML = originalHTML;
+                        if (typeof feather !== 'undefined') {
+                            feather.replace();
+                        }
+                    }, 2000);
+
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('shareModal'));
+                        if (modal) modal.hide();
+                    }, 1500);
                 } catch (error) {
                     this.showToast('Failed to copy link', 'error');
+                }
+            });
+        }
+
+        const shareMoreBtn = document.getElementById('shareMore');
+        if (shareMoreBtn) {
+            shareMoreBtn.addEventListener('click', async () => {
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: shareTitle,
+                            text: shareText,
+                            url: shareUrl
+                        });
+                    } catch (error) {
+                        console.log('Share cancelled or failed');
+                    }
+                } else {
+                    this.showToast('Native sharing not supported', 'warning');
                 }
             });
         }
@@ -837,21 +1112,31 @@ class DetailsPage {
 
         let selectedRating = 0;
 
-        // Create 10 stars
+        starsContainer.innerHTML = '';
         for (let i = 1; i <= 10; i++) {
             const star = document.createElement('span');
             star.className = 'rating-star';
             star.innerHTML = '★';
             star.dataset.rating = i;
+            star.setAttribute('role', 'radio');
+            star.setAttribute('aria-label', `${i} stars`);
+            star.setAttribute('tabindex', '0');
 
-            star.addEventListener('click', () => {
+            const selectStar = () => {
                 selectedRating = i;
-                ratingDisplay.textContent = i;
+                if (ratingDisplay) ratingDisplay.textContent = i;
 
-                // Update star display
                 starsContainer.querySelectorAll('.rating-star').forEach((s, index) => {
                     s.classList.toggle('active', index < i);
                 });
+            };
+
+            star.addEventListener('click', selectStar);
+            star.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    selectStar();
+                }
             });
 
             star.addEventListener('mouseenter', () => {
@@ -873,25 +1158,179 @@ class DetailsPage {
             submitBtn.addEventListener('click', () => {
                 if (selectedRating > 0) {
                     this.submitRating(selectedRating);
+                } else {
+                    this.showToast('Please select a rating', 'warning');
                 }
             });
         }
     }
 
-    async toggleWatchlist() {
+    openLightbox(imageIndex = 0) {
+        if (!this.currentImageSet || this.currentImageSet.length === 0) return;
+
+        this.currentImageIndex = imageIndex;
+        const lightbox = document.getElementById('imageLightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxCounter = document.getElementById('lightboxCounter');
+        const prevBtn = document.getElementById('lightboxPrev');
+        const nextBtn = document.getElementById('lightboxNext');
+
+        if (!lightbox || !lightboxImage) return;
+
+        this.updateLightboxImage();
+
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.navigateLightbox(-1), { once: false });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.navigateLightbox(1), { once: false });
+        }
+
+        const closeBtn = document.getElementById('closeLightbox');
+        const closeLightbox = () => {
+            lightbox.style.opacity = '0';
+            setTimeout(() => {
+                lightbox.classList.remove('active');
+                lightbox.style.opacity = '1';
+                document.body.style.overflow = '';
+                document.removeEventListener('keydown', this.handleLightboxKeyboard);
+            }, 200);
+        };
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeLightbox, { once: true });
+        }
+
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                closeLightbox();
+            }
+        }, { once: true });
+
+        this.handleLightboxKeyboard = (e) => {
+            switch (e.key) {
+                case 'Escape':
+                    e.preventDefault();
+                    closeLightbox();
+                    break;
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.navigateLightbox(-1);
+                    break;
+                case 'ArrowRight':
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.navigateLightbox(1);
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    this.currentImageIndex = 0;
+                    this.updateLightboxImage();
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    this.currentImageIndex = this.currentImageSet.length - 1;
+                    this.updateLightboxImage();
+                    break;
+                case ' ':
+                case 'Enter':
+                    e.preventDefault();
+                    this.navigateLightbox(1);
+                    break;
+                case 'Backspace':
+                    e.preventDefault();
+                    this.navigateLightbox(-1);
+                    break;
+                default:
+                    if (e.key >= '1' && e.key <= '9') {
+                        e.preventDefault();
+                        const targetIndex = parseInt(e.key) - 1;
+                        if (targetIndex < this.currentImageSet.length) {
+                            this.currentImageIndex = targetIndex;
+                            this.updateLightboxImage();
+                        }
+                    }
+                    break;
+            }
+        };
+
+        document.addEventListener('keydown', this.handleLightboxKeyboard);
+
+        this.updateLightboxImage();
+    }
+
+    updateLightboxImage() {
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxCounter = document.getElementById('lightboxCounter');
+        const prevBtn = document.getElementById('lightboxPrev');
+        const nextBtn = document.getElementById('lightboxNext');
+
+        if (!lightboxImage || !this.currentImageSet.length) return;
+
+        const currentImage = this.currentImageSet[this.currentImageIndex];
+        const imageUrl = currentImage.url || currentImage.file_path || currentImage;
+
+        lightboxImage.style.opacity = '0.5';
+        lightboxImage.src = imageUrl;
+        lightboxImage.alt = `Image ${this.currentImageIndex + 1} of ${this.currentImageSet.length}`;
+
+        lightboxImage.onload = () => {
+            lightboxImage.style.opacity = '1';
+        };
+
+        if (lightboxCounter) {
+            lightboxCounter.textContent = `${this.currentImageIndex + 1} / ${this.currentImageSet.length}`;
+        }
+
+        if (prevBtn) {
+            prevBtn.classList.toggle('disabled', this.currentImageIndex === 0);
+            prevBtn.disabled = this.currentImageIndex === 0;
+        }
+
+        if (nextBtn) {
+            nextBtn.classList.toggle('disabled', this.currentImageIndex === this.currentImageSet.length - 1);
+            nextBtn.disabled = this.currentImageIndex === this.currentImageSet.length - 1;
+        }
+    }
+
+    navigateLightbox(direction) {
+        if (!this.currentImageSet.length) return;
+
+        const newIndex = this.currentImageIndex + direction;
+
+        if (newIndex >= 0 && newIndex < this.currentImageSet.length) {
+            this.currentImageIndex = newIndex;
+            this.updateLightboxImage();
+
+            const lightboxContent = document.querySelector('.lightbox-content');
+            if (lightboxContent) {
+                lightboxContent.style.transform = `translateX(${direction > 0 ? '10px' : '-10px'})`;
+                setTimeout(() => {
+                    lightboxContent.style.transform = '';
+                }, 150);
+            }
+        }
+    }
+
+    async handleWishlistClick(contentId, button) {
         if (!this.isAuthenticated) {
-            this.redirectToLogin('Please login to add to watchlist');
+            this.showToast('Please login to add to watchlist', 'warning');
+            setTimeout(() => {
+                window.location.href = '/auth/login.html?redirect=' + encodeURIComponent(window.location.href);
+            }, 1000);
             return;
         }
 
-        const btns = ['watchlistBtn', 'mobileWatchlistBtn'].map(id => document.getElementById(id)).filter(Boolean);
-
-        btns.forEach(btn => btn.disabled = true);
-
-        const isActive = btns[0]?.classList.contains('active');
-        const contentId = this.contentData.id;
-
         try {
+            const isCurrentlyInWishlist = button.classList.contains('active');
+            button.disabled = true;
+            button.style.transform = 'scale(0.9)';
+
             const response = await fetch(`${this.apiBase}/interactions`, {
                 method: 'POST',
                 headers: {
@@ -900,34 +1339,23 @@ class DetailsPage {
                 },
                 body: JSON.stringify({
                     content_id: parseInt(contentId),
-                    interaction_type: isActive ? 'remove_watchlist' : 'watchlist'
+                    interaction_type: isCurrentlyInWishlist ? 'remove_watchlist' : 'watchlist'
                 })
             });
 
             if (response.ok) {
-                btns.forEach(btn => {
-                    btn.classList.toggle('active');
-                    const icon = btn.querySelector('svg');
-                    if (icon) {
-                        icon.setAttribute('fill', btn.classList.contains('active') ? 'currentColor' : 'none');
-                    }
-                });
+                button.classList.toggle('active');
+                const icon = button.querySelector('svg path');
+                if (icon) {
+                    icon.setAttribute('fill', button.classList.contains('active') ? 'currentColor' : 'none');
+                }
 
-                if (!isActive) {
+                if (!isCurrentlyInWishlist) {
                     this.userWatchlist.add(parseInt(contentId));
                     this.showToast('Added to watchlist', 'success');
                 } else {
                     this.userWatchlist.delete(parseInt(contentId));
                     this.showToast('Removed from watchlist', 'success');
-                }
-
-                // Update global state if available
-                if (window.contentCardManager) {
-                    if (!isActive) {
-                        window.contentCardManager.userWatchlist.add(parseInt(contentId));
-                    } else {
-                        window.contentCardManager.userWatchlist.delete(parseInt(contentId));
-                    }
                 }
             } else {
                 throw new Error('Failed to update watchlist');
@@ -937,20 +1365,39 @@ class DetailsPage {
             this.showToast('Failed to update watchlist', 'error');
         } finally {
             setTimeout(() => {
-                btns.forEach(btn => btn.disabled = false);
-            }, 500);
+                button.disabled = false;
+                button.style.transform = '';
+            }, 200);
+        }
+    }
+
+    async toggleWatchlist() {
+        const btns = ['watchlistBtn', 'mobileWatchlistBtn'].map(id => document.getElementById(id)).filter(Boolean);
+        if (btns.length > 0) {
+            await this.handleWishlistClick(this.contentData.id, btns[0]);
+
+            const isActive = btns[0].classList.contains('active');
+            btns.forEach(btn => {
+                btn.classList.toggle('active', isActive);
+            });
         }
     }
 
     async toggleFavorite() {
         if (!this.isAuthenticated) {
-            this.redirectToLogin('Please login to add to favorites');
+            this.showToast('Please login to add to favorites', 'warning');
+            setTimeout(() => {
+                window.location.href = '/auth/login.html?redirect=' + encodeURIComponent(window.location.href);
+            }, 1000);
             return;
         }
 
         const btns = ['favoriteBtn', 'mobileFavoriteBtn'].map(id => document.getElementById(id)).filter(Boolean);
 
-        btns.forEach(btn => btn.disabled = true);
+        btns.forEach(btn => {
+            btn.disabled = true;
+            btn.style.transform = 'scale(0.9)';
+        });
 
         const isActive = btns[0]?.classList.contains('active');
         const contentId = this.contentData.id;
@@ -971,7 +1418,7 @@ class DetailsPage {
             if (response.ok) {
                 btns.forEach(btn => {
                     btn.classList.toggle('active');
-                    const icon = btn.querySelector('svg');
+                    const icon = btn.querySelector('svg path');
                     if (icon) {
                         icon.setAttribute('fill', btn.classList.contains('active') ? 'currentColor' : 'none');
                     }
@@ -984,15 +1431,6 @@ class DetailsPage {
                     this.userFavorites.delete(parseInt(contentId));
                     this.showToast('Removed from favorites', 'success');
                 }
-
-                // Update global state if available
-                if (window.contentCardManager) {
-                    if (!isActive) {
-                        window.contentCardManager.userFavorites.add(parseInt(contentId));
-                    } else {
-                        window.contentCardManager.userFavorites.delete(parseInt(contentId));
-                    }
-                }
             } else {
                 throw new Error('Failed to update favorites');
             }
@@ -1001,10 +1439,14 @@ class DetailsPage {
             this.showToast('Failed to update favorites', 'error');
         } finally {
             setTimeout(() => {
-                btns.forEach(btn => btn.disabled = false);
-            }, 500);
+                btns.forEach(btn => {
+                    btn.disabled = false;
+                    btn.style.transform = '';
+                });
+            }, 200);
         }
     }
+
     async submitRating(rating) {
         if (!this.isAuthenticated) {
             this.showToast('Please login to rate', 'warning');
@@ -1026,11 +1468,12 @@ class DetailsPage {
             });
 
             if (response.ok) {
-                this.showToast('Rating submitted', 'success');
+                this.showToast('Rating submitted successfully!', 'success');
 
-                // Close modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('ratingModal'));
                 if (modal) modal.hide();
+            } else {
+                throw new Error('Failed to submit rating');
             }
         } catch (error) {
             console.error('Error submitting rating:', error);
@@ -1046,9 +1489,13 @@ class DetailsPage {
 
         const modal = document.getElementById('trailerModal');
         const trailerFrame = document.getElementById('trailerFrame');
+        const trailerTitle = document.getElementById('trailerTitle');
 
         if (modal && trailerFrame) {
             trailerFrame.src = trailer.embed_url;
+            if (trailerTitle) {
+                trailerTitle.textContent = trailer.name || 'Trailer';
+            }
 
             const bsModal = new bootstrap.Modal(modal);
             bsModal.show();
@@ -1060,33 +1507,8 @@ class DetailsPage {
     }
 
     playVideo(key) {
-        const url = `https://www.youtube.com/embed/${key}?autoplay=1`;
-        this.playTrailer({ embed_url: url });
-    }
-
-    openLightbox(imageUrl) {
-        const lightbox = document.getElementById('imageLightbox');
-        const lightboxImage = document.getElementById('lightboxImage');
-
-        if (lightbox && lightboxImage) {
-            lightboxImage.src = imageUrl;
-            lightbox.classList.add('active');
-
-            // Close button
-            const closeBtn = document.getElementById('closeLightbox');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', () => {
-                    lightbox.classList.remove('active');
-                }, { once: true });
-            }
-
-            // Click outside to close
-            lightbox.addEventListener('click', (e) => {
-                if (e.target === lightbox) {
-                    lightbox.classList.remove('active');
-                }
-            }, { once: true });
-        }
+        const url = `https://www.youtube.com/embed/${key}?autoplay=1&rel=0`;
+        this.playTrailer({ embed_url: url, name: 'Video' });
     }
 
     openShareModal() {
@@ -1096,9 +1518,8 @@ class DetailsPage {
 
     openRatingModal() {
         if (!this.isAuthenticated) {
-            this.showToast('Please login to rate', 'warning');
+            this.showToast('Please login to rate content', 'warning');
             setTimeout(() => {
-                // Include current page URL as redirect parameter
                 window.location.href = '/auth/login.html?redirect=' + encodeURIComponent(window.location.href);
             }, 1000);
             return;
@@ -1117,8 +1538,8 @@ class DetailsPage {
 
         const getScrollAmount = () => {
             const containerWidth = wrapper.clientWidth;
-            const cardWidth = wrapper.querySelector('.content-card')?.offsetWidth || 180;
-            const gap = parseInt(getComputedStyle(wrapper).gap) || 12;
+            const cardWidth = wrapper.querySelector('.content-card')?.offsetWidth || 200;
+            const gap = parseInt(getComputedStyle(wrapper).gap) || 16;
             const visibleCards = Math.floor(containerWidth / (cardWidth + gap));
             return (cardWidth + gap) * Math.max(1, visibleCards - 1);
         };
@@ -1151,6 +1572,61 @@ class DetailsPage {
             wrapper.addEventListener('scroll', updateNavButtons);
             updateNavButtons();
         }
+
+        this.setupTouchScroll(wrapper);
+    }
+
+    setupTouchScroll(wrapper) {
+        let isDown = false;
+        let startX = 0;
+        let scrollLeft = 0;
+
+        wrapper.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startX = e.pageX - wrapper.offsetLeft;
+            scrollLeft = wrapper.scrollLeft;
+            wrapper.style.cursor = 'grabbing';
+            wrapper.style.scrollBehavior = 'auto';
+        });
+
+        wrapper.addEventListener('mouseleave', () => {
+            isDown = false;
+            wrapper.style.cursor = 'grab';
+            wrapper.style.scrollBehavior = 'smooth';
+        });
+
+        wrapper.addEventListener('mouseup', () => {
+            isDown = false;
+            wrapper.style.cursor = 'grab';
+            wrapper.style.scrollBehavior = 'smooth';
+        });
+
+        wrapper.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - wrapper.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            wrapper.scrollLeft = scrollLeft - walk;
+        });
+
+        wrapper.addEventListener('touchstart', (e) => {
+            isDown = true;
+            startX = e.touches[0].pageX;
+            scrollLeft = wrapper.scrollLeft;
+            wrapper.style.scrollBehavior = 'auto';
+        }, { passive: true });
+
+        wrapper.addEventListener('touchmove', (e) => {
+            if (!isDown) return;
+            const x = e.touches[0].pageX;
+            const walk = (startX - x) * 1.2;
+            wrapper.scrollLeft = scrollLeft + walk;
+        }, { passive: true });
+
+        wrapper.addEventListener('touchend', () => {
+            isDown = false;
+            wrapper.style.scrollBehavior = 'smooth';
+        });
     }
 
     setupLazyLoading(card) {
@@ -1166,10 +1642,12 @@ class DetailsPage {
                         tempImg.onload = () => {
                             img.src = imgSrc;
                             img.classList.add('loaded');
+                            img.style.opacity = '1';
                         };
                         tempImg.onerror = () => {
                             img.src = this.getPlaceholderImage();
                             img.classList.add('loaded');
+                            img.style.opacity = '1';
                         };
                         tempImg.src = imgSrc;
                     }
@@ -1184,40 +1662,73 @@ class DetailsPage {
     }
 
     updateActionButtons() {
-        // Update watchlist buttons
         const isInWatchlist = this.userWatchlist.has(parseInt(this.contentData.id));
         ['watchlistBtn', 'mobileWatchlistBtn'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
                 btn.classList.toggle('active', isInWatchlist);
+                btn.setAttribute('title', isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist');
             }
         });
 
-        // Update favorite buttons
         const isInFavorites = this.userFavorites.has(parseInt(this.contentData.id));
         ['favoriteBtn', 'mobileFavoriteBtn'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
                 btn.classList.toggle('active', isInFavorites);
+                btn.setAttribute('title', isInFavorites ? 'Remove from Favorites' : 'Add to Favorites');
             }
         });
     }
 
     async loadUserLists() {
-        // Implementation to load user's watchlist and favorites
-        // ... (similar to original)
+        if (!this.authToken) return;
+
+        try {
+            const watchlistResponse = await fetch(`${this.apiBase}/user/watchlist`, {
+                headers: { 'Authorization': `Bearer ${this.authToken}` }
+            });
+
+            if (watchlistResponse.ok) {
+                const watchlistData = await watchlistResponse.json();
+                this.userWatchlist.clear();
+                if (watchlistData.watchlist && Array.isArray(watchlistData.watchlist)) {
+                    watchlistData.watchlist.forEach(item => {
+                        this.userWatchlist.add(parseInt(item.id));
+                    });
+                }
+            }
+
+            const favoritesResponse = await fetch(`${this.apiBase}/user/favorites`, {
+                headers: { 'Authorization': `Bearer ${this.authToken}` }
+            });
+
+            if (favoritesResponse.ok) {
+                const favoritesData = await favoritesResponse.json();
+                this.userFavorites.clear();
+                if (favoritesData.favorites && Array.isArray(favoritesData.favorites)) {
+                    favoritesData.favorites.forEach(item => {
+                        this.userFavorites.add(parseInt(item.id));
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error loading user lists:', error);
+        }
     }
 
-    // Helper methods
     hideLoader() {
         const loader = document.getElementById('pageLoader');
         if (loader) {
-            loader.classList.add('hidden');
+            loader.style.opacity = '0';
             setTimeout(() => {
-                if (loader.parentNode) {
-                    loader.parentNode.removeChild(loader);
-                }
-            }, 300);
+                loader.classList.add('hidden');
+                setTimeout(() => {
+                    if (loader.parentNode) {
+                        loader.parentNode.removeChild(loader);
+                    }
+                }, 300);
+            }, 200);
         }
     }
 
@@ -1236,6 +1747,20 @@ class DetailsPage {
             return posterPath;
         }
         return `${this.posterBase}${posterPath}`;
+    }
+
+    formatRating(rating) {
+        if (!rating) return 'N/A';
+        return Number(rating).toFixed(1);
+    }
+
+    extractYear(dateString) {
+        if (!dateString) return '';
+        try {
+            return new Date(dateString).getFullYear();
+        } catch {
+            return '';
+        }
     }
 
     formatRuntime(minutes) {
@@ -1275,15 +1800,9 @@ class DetailsPage {
 
     getLanguageName(code) {
         const languages = {
-            'en': 'EN',
-            'es': 'ES',
-            'fr': 'FR',
-            'de': 'DE',
-            'ja': 'JA',
-            'ko': 'KO',
-            'zh': 'ZH',
-            'hi': 'HI',
-            'te': 'TE'
+            'en': 'EN', 'es': 'ES', 'fr': 'FR', 'de': 'DE', 'ja': 'JA',
+            'ko': 'KO', 'zh': 'ZH', 'hi': 'HI', 'te': 'TE', 'ta': 'TA',
+            'ml': 'ML', 'kn': 'KN', 'bn': 'BN', 'gu': 'GU', 'mr': 'MR'
         };
         return languages[code] || code?.toUpperCase() || 'Unknown';
     }
@@ -1306,6 +1825,8 @@ class DetailsPage {
     showToast(message, type = 'success') {
         if (window.topbar?.notificationSystem) {
             window.topbar.notificationSystem.show(message, type);
+        } else {
+            console.log(`Toast: ${message} (${type})`);
         }
     }
 
@@ -1313,12 +1834,17 @@ class DetailsPage {
         const container = document.querySelector('#main-content');
         if (container) {
             container.innerHTML = `
-                <div style="text-align: center; padding: 50px 20px;">
-                    <h2 style="color: var(--text-primary);">Error</h2>
-                    <p style="color: var(--text-secondary);">${this.escapeHtml(message)}</p>
-                    <a href="/" style="color: var(--cinebrain-primary);">Go Home</a>
+                <div style="text-align: center; padding: 50px 20px; min-height: 400px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <i data-feather="alert-circle" style="width: 64px; height: 64px; color: var(--text-secondary); margin-bottom: 16px;"></i>
+                    <h2 style="color: var(--text-primary); margin-bottom: 8px;">Error</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">${this.escapeHtml(message)}</p>
+                    <a href="/" style="color: var(--cinebrain-primary); text-decoration: none; padding: 12px 24px; border: 1px solid var(--cinebrain-primary); border-radius: 8px;">Go Home</a>
                 </div>
             `;
+
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
         }
     }
 
@@ -1339,11 +1865,10 @@ class DetailsPage {
     }
 
     getPlaceholderAvatar() {
-        return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSI2MCIgZmlsbD0iIzFhMWYzYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSIjNjY3IiBmb250LXNpemU9IjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+PzwvdGV4dD48L3N2Zz4=';
+        return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSI2MCIgZmlsbD0iIzFhMWYzYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSIjNjY3IiBmb250LXNpemU9IjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Pz8vdGV4dD48L3N2Zz4=';
     }
 }
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     try {
         const detailsPage = new DetailsPage();
