@@ -383,7 +383,7 @@ class DetailsPage {
                         card.style.transform = '';
                         const personSlug = card.dataset.personSlug;
                         if (personSlug) {
-                            window.location.href = `/person.html?${personSlug}`;
+                            window.location.href = `/content/person.html?${personSlug}`;
                         }
                     }, 100);
                 };
@@ -432,7 +432,7 @@ class DetailsPage {
                             card.style.transform = '';
                             const personSlug = card.dataset.personSlug;
                             if (personSlug) {
-                                window.location.href = `/person.html?${personSlug}`;
+                                window.location.href = `/content/person.html?${personSlug}`;
                             }
                         }, 100);
                     };
@@ -954,7 +954,7 @@ class DetailsPage {
         if (writeReviewBtn) {
             writeReviewBtn.addEventListener('click', () => {
                 if (this.isAuthenticated) {
-                    window.location.href = `/review/write.html?content=${this.contentSlug}`;
+                    window.location.href = `/content/review-write.html?content=${this.contentSlug}`;
                 } else {
                     this.showToast('Please login to write a review', 'warning');
                     setTimeout(() => {
