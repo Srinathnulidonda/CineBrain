@@ -543,68 +543,982 @@
 
 </html>
 
-2. content-card.js 
 
-// Content Card Component - Unified with TopBar and Theme Manager
+2. content-card.css 
+
+:root {
+    --card-width: clamp(120px, 25vw, 200px);
+    --card-poster-ratio: 150%;
+    --card-border-radius: clamp(4px, 1vw, 8px);
+    --card-gap: clamp(8px, 2vw, 16px);
+    --card-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --carousel-scroll: smooth;
+
+    --cinebrain-primary: #113CCF;
+    --cinebrain-primary-light: #1E4FE5;
+
+    --rating-gold: #FFD700;
+    --rating-gold-light: #FFED4E;
+    --rating-gold-dark: #FFA500;
+}
+
+@media (max-width: 768px) {
+    :root {
+        --carousel-scroll: auto;
+    }
+
+    .carousel-nav,
+    .wishlist-btn,
+    .rating-badge,
+    .content-type-badge {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    .content-card {
+        will-change: auto;
+        contain: layout style paint;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        transition: none;
+    }
+
+    .content-card:hover {
+        transform: none;
+    }
+
+    .carousel-wrapper {
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: none;
+        overscroll-behavior-x: contain;
+        scroll-behavior: auto;
+    }
+
+    .card-poster,
+    .card-overlays {
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+    }
+
+    .card-overlays {
+        background: none;
+    }
+
+    .card-bottom-overlay {
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 60%);
+    }
+
+    .wishlist-btn:active {
+        transform: scale(0.95);
+        transition: transform 0.1s ease;
+    }
+
+    .skeleton-shimmer {
+        animation-duration: 2s;
+    }
+}
+
+[data-theme="dark"] {
+    --card-bg: #000000;
+    --card-hover-bg: rgba(255, 255, 255, 0.05);
+    --card-overlay-gradient: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 60%);
+    --skeleton-bg: rgba(255, 255, 255, 0.08);
+    --skeleton-shine: rgba(255, 255, 255, 0.12);
+    --row-title-color: #ffffff;
+    --see-all-color: #888888;
+    --see-all-hover-color: #ffffff;
+    --nav-button-bg: rgba(0, 0, 0, 0.7);
+    --nav-button-hover-bg: rgba(0, 0, 0, 0.9);
+    --nav-button-border: rgba(255, 255, 255, 0.2);
+    --nav-icon-color: #ffffff;
+    --badge-bg: rgba(0, 0, 0, 0.8);
+    --badge-text: #ffffff;
+    --badge-border: rgba(255, 255, 255, 0.1);
+    --wishlist-btn-bg: rgba(0, 0, 0, 0.6);
+    --wishlist-btn-border: rgba(255, 255, 255, 0.2);
+    --wishlist-icon-color: #ffffff;
+    --wishlist-active: var(--cinebrain-primary);
+
+    --rating-star-color: var(--rating-gold);
+    --rating-text-color: var(--rating-gold-light);
+
+    --genre-chip-bg: rgba(255, 255, 255, 0.08);
+    --genre-chip-border: rgba(255, 255, 255, 0.1);
+    --genre-chip-text: #888888;
+    --genre-chip-hover-bg: rgba(255, 255, 255, 0.12);
+    --genre-chip-hover-text: #ffffff;
+    --text-primary: #ffffff;
+    --text-secondary: #888888;
+    --text-muted: #666666;
+    --error-color: #ffffff;
+    --error-text-secondary: #888888;
+    --retry-btn-bg: rgba(255, 255, 255, 0.1);
+    --retry-btn-text: #ffffff;
+    --retry-btn-border: rgba(255, 255, 255, 0.2);
+    --retry-btn-hover-bg: rgba(255, 255, 255, 0.15);
+    --content-border: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="light"] {
+    --card-bg: #ffffff;
+    --card-hover-bg: rgba(0, 0, 0, 0.02);
+    --card-overlay-gradient: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 60%);
+    --skeleton-bg: rgba(0, 0, 0, 0.06);
+    --skeleton-shine: rgba(0, 0, 0, 0.08);
+    --row-title-color: #000000;
+    --see-all-color: #666666;
+    --see-all-hover-color: #000000;
+    --nav-button-bg: rgba(255, 255, 255, 0.9);
+    --nav-button-hover-bg: rgba(255, 255, 255, 0.95);
+    --nav-button-border: rgba(0, 0, 0, 0.15);
+    --nav-icon-color: #000000;
+    --badge-bg: rgba(0, 0, 0, 0.8);
+    --badge-text: #ffffff;
+    --badge-border: transparent;
+    --wishlist-btn-bg: rgba(255, 255, 255, 0.9);
+    --wishlist-btn-border: rgba(0, 0, 0, 0.1);
+    --wishlist-icon-color: #000000;
+    --wishlist-active: var(--cinebrain-primary);
+
+    --rating-star-color: var(--rating-gold-dark);
+    --rating-text-color: var(--rating-gold-dark);
+
+    --genre-chip-bg: rgba(0, 0, 0, 0.05);
+    --genre-chip-border: rgba(0, 0, 0, 0.08);
+    --genre-chip-text: #666666;
+    --genre-chip-hover-bg: rgba(0, 0, 0, 0.08);
+    --genre-chip-hover-text: #000000;
+    --text-primary: #000000;
+    --text-secondary: #666666;
+    --text-muted: #999999;
+    --error-color: #000000;
+    --error-text-secondary: #666666;
+    --retry-btn-bg: rgba(0, 0, 0, 0.05);
+    --retry-btn-text: #000000;
+    --retry-btn-border: rgba(0, 0, 0, 0.1);
+    --retry-btn-hover-bg: rgba(0, 0, 0, 0.08);
+    --content-border: rgba(0, 0, 0, 0.05);
+}
+
+.container-cinebrain {
+    max-width: 1920px;
+    margin: 0 auto;
+    padding: clamp(12px, 3vw, 20px);
+    padding-top: calc(var(--navbar-height) + clamp(12px, 3vw, 20px));
+}
+
+.content-container-cinebrain {
+    position: relative;
+    width: 100%;
+}
+
+.content-row {
+    margin-bottom: clamp(24px, 6vw, 40px);
+    position: relative;
+    opacity: 0;
+    animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.content-row:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.content-row:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.content-row:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.content-row:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.content-row:nth-child(5) {
+    animation-delay: 0.5s;
+}
+
+.content-row:nth-child(6) {
+    animation-delay: 0.6s;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: clamp(8px, 2vw, 16px);
+    padding: 0 clamp(4px, 1vw, 8px);
+}
+
+.row-title {
+    font-size: clamp(1.1rem, 4vw, 1.5rem);
+    font-weight: 600;
+    color: var(--row-title-color);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.see-all {
+    color: var(--see-all-color);
+    text-decoration: none;
+    font-size: clamp(0.75rem, 2vw, 0.875rem);
+    font-weight: 500;
+    transition: var(--card-transition);
+    padding: clamp(4px, 1vw, 8px) clamp(8px, 2vw, 12px);
+    border-radius: clamp(4px, 1vw, 6px);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.see-all:hover {
+    color: var(--see-all-hover-color);
+    transform: translateX(2px);
+}
+
+.carousel-container {
+    position: relative;
+    overflow: hidden;
+    margin: 0 calc(clamp(12px, 3vw, 20px) * -1);
+    padding: 0 clamp(12px, 3vw, 20px);
+}
+
+.carousel-wrapper {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--card-width);
+    gap: var(--card-gap);
+    overflow-x: auto;
+    scroll-behavior: var(--carousel-scroll);
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: clamp(4px, 1vw, 8px) 0 clamp(16px, 4vw, 24px);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
+.carousel-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+.carousel-nav {
+    position: absolute;
+    top: 45%;
+    transform: translateY(-50%);
+    width: clamp(36px, 8vw, 44px);
+    height: clamp(36px, 8vw, 44px);
+    background: var(--nav-button-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--nav-button-border);
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: var(--card-transition);
+    opacity: 0;
+}
+
+@media (min-width: 1024px) {
+    .carousel-nav {
+        display: flex;
+    }
+
+    .carousel-container:hover .carousel-nav:not(.disabled) {
+        opacity: 1;
+    }
+}
+
+.carousel-nav:hover:not(.disabled) {
+    background: var(--nav-button-hover-bg);
+    transform: translateY(-50%) scale(1.05);
+    border-color: var(--nav-icon-color);
+}
+
+.carousel-nav.prev {
+    left: clamp(4px, 1vw, 8px);
+}
+
+.carousel-nav.next {
+    right: clamp(4px, 1vw, 8px);
+}
+
+.carousel-nav svg {
+    width: 50%;
+    height: 50%;
+    stroke: var(--nav-icon-color);
+    fill: none;
+    stroke-width: 2;
+}
+
+.carousel-nav.disabled {
+    opacity: 0.2 !important;
+    cursor: not-allowed;
+}
+
+.content-card {
+    scroll-snap-align: start;
+    position: relative;
+    cursor: pointer;
+    transition: var(--card-transition), opacity 0.3s ease, transform 0.3s ease;
+    will-change: transform;
+    border-radius: var(--card-border-radius);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.content-card:hover {
+    transform: scale(1.04);
+    z-index: 5;
+}
+
+.card-poster-container {
+    position: relative;
+    width: 100%;
+    padding-bottom: var(--card-poster-ratio);
+    background: var(--skeleton-bg);
+    border-radius: var(--card-border-radius);
+    overflow: hidden;
+    border: 1px solid var(--content-border);
+}
+
+.content-card:hover .card-poster-container {
+    border-color: var(--nav-button-border);
+}
+
+.card-poster {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.card-poster.loaded {
+    opacity: 1;
+}
+
+.content-type-badge {
+    position: absolute;
+    top: clamp(6px, 1.5vw, 8px);
+    left: clamp(6px, 1.5vw, 8px);
+    background: var(--badge-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--badge-border);
+    padding: clamp(2px, 0.5vw, 3px) clamp(6px, 1.5vw, 8px);
+    border-radius: clamp(2px, 0.5vw, 4px);
+    font-size: clamp(0.5rem, 1.3vw, 0.65rem);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    z-index: 3;
+    color: var(--badge-text);
+}
+
+.content-type-badge.movie,
+.content-type-badge.tv,
+.content-type-badge.anime {
+    background: var(--badge-bg);
+    color: var(--badge-text);
+}
+
+.card-overlays {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(6px, 1.5vw, 8px);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.card-top-overlay {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: all;
+}
+
+.card-bottom-overlay {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    pointer-events: all;
+    background: var(--card-overlay-gradient);
+    margin: 0 calc(clamp(6px, 1.5vw, 8px) * -1) calc(clamp(6px, 1.5vw, 8px) * -1);
+    padding: clamp(16px, 4vw, 20px) clamp(6px, 1.5vw, 8px) clamp(6px, 1.5vw, 8px);
+}
+
+.wishlist-btn {
+    width: clamp(28px, 7vw, 32px);
+    height: clamp(28px, 7vw, 32px);
+    background: var(--wishlist-btn-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--wishlist-btn-border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--card-transition);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.wishlist-btn:hover {
+    transform: scale(1.1);
+    background: var(--nav-button-hover-bg);
+}
+
+.wishlist-btn svg {
+    width: 55%;
+    height: 55%;
+    fill: none;
+    stroke: var(--wishlist-icon-color);
+    stroke-width: 2;
+    transition: all 0.3s;
+}
+
+.wishlist-btn.active svg {
+    fill: var(--wishlist-active);
+    stroke: var(--wishlist-active);
+    animation: heartBeat 0.3s ease;
+}
+
+@keyframes heartBeat {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+}
+
+.rating-badge {
+    background: var(--badge-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--badge-border);
+    padding: clamp(2px, 0.5vw, 3px) clamp(6px, 1.5vw, 8px);
+    border-radius: clamp(2px, 0.5vw, 4px);
+    font-size: clamp(0.6rem, 1.5vw, 0.7rem);
+    font-weight: 600;
+    color: var(--rating-text-color);
+    display: flex;
+    align-items: center;
+    gap: clamp(2px, 0.5vw, 3px);
+    transition: var(--card-transition);
+}
+
+.rating-badge svg {
+    width: clamp(10px, 2.5vw, 11px);
+    height: clamp(10px, 2.5vw, 11px);
+    fill: var(--rating-star-color);
+}
+
+.card-info {
+    padding: clamp(8px, 2vw, 10px) clamp(6px, 1.5vw, 8px);
+    background: var(--card-bg);
+}
+
+.card-title {
+    font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+    font-weight: 500;
+    line-height: 1.3;
+    margin-bottom: clamp(2px, 0.5vw, 3px);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+    min-height: 2.6em;
+}
+
+.card-meta {
+    display: flex;
+    align-items: center;
+    gap: clamp(4px, 1vw, 6px);
+    margin-bottom: clamp(4px, 1vw, 6px);
+    font-size: clamp(0.6rem, 1.5vw, 0.7rem);
+}
+
+.card-year {
+    color: var(--text-secondary);
+}
+
+.card-runtime {
+    color: var(--text-muted);
+}
+
+.card-genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(2px, 0.5vw, 3px);
+}
+
+.genre-chip {
+    background: var(--genre-chip-bg);
+    border: 1px solid var(--genre-chip-border);
+    padding: clamp(1px, 0.25vw, 2px) clamp(4px, 1vw, 6px);
+    border-radius: clamp(2px, 0.5vw, 3px);
+    font-size: clamp(0.55rem, 1.4vw, 0.65rem);
+    color: var(--genre-chip-text);
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.genre-chip:hover {
+    background: var(--genre-chip-hover-bg);
+    color: var(--genre-chip-hover-text);
+}
+
+.skeleton {
+    background: linear-gradient(90deg,
+            var(--skeleton-bg) 0%,
+            var(--skeleton-shine) 50%,
+            var(--skeleton-bg) 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.skeleton-card {
+    scroll-snap-align: start;
+    width: var(--card-width);
+    opacity: 0;
+    animation: skeletonFadeIn 0.5s ease forwards;
+}
+
+@keyframes skeletonFadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
+.skeleton-poster {
+    position: relative;
+    width: 100%;
+    padding-bottom: var(--card-poster-ratio);
+    border-radius: var(--card-border-radius);
+    overflow: hidden;
+    background: var(--skeleton-bg);
+}
+
+.skeleton-info {
+    padding: clamp(8px, 2vw, 10px) clamp(6px, 1.5vw, 8px);
+}
+
+.skeleton-title {
+    height: clamp(12px, 3vw, 14px);
+    margin-bottom: clamp(4px, 1vw, 6px);
+    border-radius: 2px;
+    width: 80%;
+    background: var(--skeleton-bg);
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-meta {
+    height: clamp(10px, 2.5vw, 12px);
+    border-radius: 2px;
+    width: 60%;
+    background: var(--skeleton-bg);
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-shimmer {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            var(--skeleton-shine) 50%,
+            transparent 100%);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: clamp(16px, 4vw, 20px);
+    height: clamp(16px, 4vw, 20px);
+    border: 2px solid var(--skeleton-bg);
+    border-top-color: var(--row-title-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.error-message {
+    grid-column: span 12;
+    text-align: center;
+    padding: clamp(24px, 6vw, 40px) clamp(16px, 4vw, 24px);
+}
+
+.error-message h3 {
+    font-size: clamp(1rem, 2.5vw, 1.2rem);
+    margin-bottom: clamp(6px, 1.5vw, 8px);
+    color: var(--error-color);
+    font-weight: 500;
+}
+
+.error-message p {
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    color: var(--error-text-secondary);
+}
+
+.retry-btn {
+    margin-top: clamp(12px, 3vw, 16px);
+    padding: clamp(8px, 2vw, 10px) clamp(16px, 4vw, 20px);
+    background: var(--retry-btn-bg);
+    color: var(--retry-btn-text);
+    border: 1px solid var(--retry-btn-border);
+    border-radius: clamp(4px, 1vw, 6px);
+    cursor: pointer;
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    font-weight: 500;
+    transition: var(--card-transition);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.retry-btn:hover {
+    background: var(--retry-btn-hover-bg);
+    transform: translateY(-1px);
+}
+
+.retry-btn:active {
+    transform: translateY(0);
+}
+
+@media (hover: none) {
+    .content-card:active {
+        transform: scale(0.98);
+    }
+
+    .wishlist-btn:active {
+        transform: scale(0.9);
+    }
+}
+
+@media (min-width: 480px) {
+    :root {
+        --card-width: clamp(140px, 20vw, 200px);
+    }
+}
+
+@media (min-width: 640px) {
+    :root {
+        --card-width: clamp(160px, 18vw, 200px);
+    }
+}
+
+@media (min-width: 768px) {
+    :root {
+        --card-width: clamp(170px, 16vw, 200px);
+    }
+}
+
+@media (min-width: 1024px) {
+    :root {
+        --card-width: clamp(180px, 14vw, 200px);
+    }
+}
+
+@media (min-width: 1280px) {
+    :root {
+        --card-width: clamp(190px, 12vw, 200px);
+    }
+}
+
+@media (min-width: 1536px) {
+    :root {
+        --card-width: 200px;
+    }
+}
+
+.content-card:focus-visible,
+.wishlist-btn:focus-visible,
+.carousel-nav:focus-visible,
+.see-all:focus-visible,
+.retry-btn:focus-visible {
+    outline: 2px solid var(--cinebrain-primary);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    :root {
+        --carousel-scroll: auto;
+    }
+
+    .skeleton-shimmer {
+        animation: none;
+    }
+
+    .skeleton-card {
+        animation: none;
+        opacity: 1;
+    }
+
+    .content-card {
+        transition: none;
+    }
+}
+
+@media print {
+
+    .carousel-nav,
+    .wishlist-btn,
+    .see-all {
+        display: none !important;
+    }
+
+    .carousel-wrapper {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+        overflow: visible !important;
+    }
+}
+
+.dots-loader {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+}
+
+.dot {
+    width: 14px;
+    height: 14px;
+    background: var(--cinebrain-primary);
+    border-radius: 50%;
+    animation: dot-wave 1.4s ease-in-out infinite;
+}
+
+.dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+.dot:nth-child(4) {
+    animation-delay: 0.6s;
+}
+
+@keyframes dot-wave {
+
+    0%,
+    80%,
+    100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+
+    40% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+}
+
+.carousel-wrapper.loading {
+    min-height: 250px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.content-row.loading .carousel-nav {
+    opacity: 0 !important;
+}
+
+.content-row.loaded .carousel-nav {
+    transition: opacity 0.3s ease;
+}
+
+.loading-image {
+    position: relative;
+}
+
+.loading-image::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--skeleton-bg);
+    border-top-color: var(--row-title-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.content-row.loading .row-title::after {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-left: 8px;
+    border: 2px solid var(--skeleton-bg);
+    border-top-color: var(--row-title-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.content-row.error .row-title {
+    opacity: 0.6;
+}
+
+
+3. content-card.js 
+
+// Enhanced Content Card Component - Instant Loading with Better Skeletons
 class ContentCardManager {
     constructor() {
-        // Use same API base as TopBar
         this.apiBase = 'https://backend-app-970m.onrender.com/api';
         this.posterBase = 'https://image.tmdb.org/t/p/w500';
 
-        // Auth state from TopBar
+        // Auth state
         this.authToken = localStorage.getItem('cinebrain-token');
         this.isAuthenticated = !!this.authToken;
         this.currentUser = this.getCurrentUser();
 
-        // User data cache
+        // Enhanced caching system
         this.userWishlist = new Set();
         this.contentCache = new Map();
+        this.interactionStates = new Map();
+        this.loadingStates = new Map(); // Track loading states
+        this.preloadedContent = new Map(); // Preloaded content for instant display
 
-        // Track interaction states
-        this.interactionStates = new Map(); // Track which items have been interacted with
+        // Loading management
+        this.loadingControllers = new Map(); // AbortControllers for cancelling requests
+        this.isInitialLoad = true;
+        this.backgroundLoader = null;
 
-        // Content row configurations - Updated with correct endpoints
+        // Content row configurations with priority levels
         this.contentRows = [
             {
                 id: 'trending',
                 title: 'Trending Now',
                 endpoint: '/recommendations/trending',
-                params: { category: 'all', limit: 20 }
+                params: { category: 'all', limit: 20 },
+                priority: 1, // High priority - load first
+                cached: true // Cache this content
             },
             {
                 id: 'new-releases',
                 title: 'New Releases',
                 endpoint: '/recommendations/new-releases',
-                params: { type: 'movie', limit: 20 }
+                params: { type: 'movie', limit: 20 },
+                priority: 2,
+                cached: true
             },
             {
                 id: 'critics-choice',
                 title: 'Critics Choice',
                 endpoint: '/recommendations/critics-choice',
-                params: { type: 'movie', limit: 20 }
+                params: { type: 'movie', limit: 20 },
+                priority: 3,
+                cached: true
             },
             {
                 id: 'popular-movies',
                 title: 'Popular Movies',
                 endpoint: '/recommendations/trending',
-                params: { category: 'movies', limit: 20 }
+                params: { category: 'movies', limit: 20 },
+                priority: 2,
+                cached: true
             },
             {
                 id: 'top-tv-shows',
-                title: 'Top Rated TV Shows',
+                title: 'Top TV Shows',
                 endpoint: '/recommendations/trending',
-                params: { category: 'tv_shows', limit: 20 }
+                params: { category: 'tv_shows', limit: 20 },
+                priority: 3,
+                cached: true
             },
             {
                 id: 'anime-picks',
-                title: 'Anime Picks',
+                title: 'Anime Collection',
                 endpoint: '/recommendations/anime',
-                params: { limit: 20 }
+                params: { limit: 20 },
+                priority: 4,
+                cached: false // Don't cache anime for now
             }
         ];
 
-        // Register with theme manager if available
         if (window.themeManager) {
             window.themeManager.register((theme) => this.onThemeChange(theme));
         }
@@ -612,21 +1526,14 @@ class ContentCardManager {
         this.init();
     }
 
-    /**
-     * Theme change callback from Theme Manager
-     */
     onThemeChange(theme) {
-        // Content cards use CSS variables, so they update automatically
         console.log('Content cards theme updated to:', theme);
-
-        // Re-initialize any feather icons if needed
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
     }
 
     async init() {
-        // Wait for DOM to be ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setup());
         } else {
@@ -636,38 +1543,201 @@ class ContentCardManager {
 
     async setup() {
         const container = document.getElementById('content-container');
-
-        // Only initialize if we're on a page with content-container (homepage)
         if (!container) {
-            console.log('Content container not found - skipping content card initialization (this is normal for details pages)');
+            console.log('Content container not found - skipping initialization');
             return;
         }
 
-        // Load user wishlist if authenticated
-        if (this.isAuthenticated) {
-            await this.loadUserWishlist();
-        }
+        // Start background preloading immediately
+        this.startBackgroundPreloading();
 
-        // Create all carousel rows
+        // Create all carousel rows immediately with skeletons
         this.contentRows.forEach(rowConfig => {
             const row = this.createCarouselRow(rowConfig);
             container.appendChild(row);
+            // Set initial loading state
+            this.setRowLoadingState(rowConfig.id, 'loading');
         });
 
-        // Load content with staggered loading
-        this.contentRows.forEach((rowConfig, index) => {
-            setTimeout(() => {
-                this.loadContentRow(rowConfig);
-            }, index * 150);
-        });
+        // Load user data and content in parallel
+        const promises = [];
 
-        // Setup event listeners
+        // Load user wishlist if authenticated (don't wait for it)
+        if (this.isAuthenticated) {
+            promises.push(this.loadUserWishlist().catch(err => console.error('Wishlist load error:', err)));
+        }
+
+        // Load content with smart priority and parallel loading
+        promises.push(this.loadAllContentIntelligently());
+
+        // Don't wait for wishlist to complete before showing content
+        await Promise.allSettled(promises);
+
         this.setupEventListeners();
 
-        // Initialize feather icons if available
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
+
+        this.isInitialLoad = false;
+    }
+
+    async startBackgroundPreloading() {
+        // Preload critical content in the background
+        try {
+            const highPriorityRows = this.contentRows
+                .filter(row => row.priority <= 2 && row.cached)
+                .slice(0, 2); // Only preload top 2 most important
+
+            const preloadPromises = highPriorityRows.map(async rowConfig => {
+                try {
+                    const content = await this.fetchContent(rowConfig.endpoint, rowConfig.params, true);
+                    if (content && content.length > 0) {
+                        this.preloadedContent.set(rowConfig.id, content);
+                        console.log(`Preloaded ${rowConfig.id} with ${content.length} items`);
+                    }
+                } catch (err) {
+                    console.warn(`Preload failed for ${rowConfig.id}:`, err);
+                }
+            });
+
+            await Promise.allSettled(preloadPromises);
+        } catch (error) {
+            console.warn('Background preloading error:', error);
+        }
+    }
+
+    async loadAllContentIntelligently() {
+        // Sort rows by priority
+        const sortedRows = [...this.contentRows].sort((a, b) => a.priority - b.priority);
+
+        // Load high priority content first (parallel)
+        const highPriorityRows = sortedRows.filter(row => row.priority <= 2);
+        const lowPriorityRows = sortedRows.filter(row => row.priority > 2);
+
+        // Load high priority content in parallel
+        const highPriorityPromises = highPriorityRows.map(async (rowConfig, index) => {
+            // Small delay to stagger the loading for better UX
+            await new Promise(resolve => setTimeout(resolve, index * 50));
+            return this.loadContentRowWithInstantDisplay(rowConfig);
+        });
+
+        // Wait for high priority content
+        await Promise.allSettled(highPriorityPromises);
+
+        // Load low priority content with longer delays
+        lowPriorityRows.forEach((rowConfig, index) => {
+            setTimeout(() => {
+                this.loadContentRowWithInstantDisplay(rowConfig);
+            }, index * 200 + 300); // Start after high priority is done
+        });
+    }
+
+    async loadContentRowWithInstantDisplay(rowConfig) {
+        const rowId = rowConfig.id;
+
+        try {
+            // Check if we have preloaded content for instant display
+            if (this.preloadedContent.has(rowId)) {
+                const preloadedContent = this.preloadedContent.get(rowId);
+                this.displayContent(rowId, preloadedContent);
+                this.setRowLoadingState(rowId, 'loaded');
+
+                // Still fetch fresh content in background
+                this.loadContentRowInBackground(rowConfig);
+                return;
+            }
+
+            // Check cache for instant display
+            const cacheKey = this.getCacheKey(rowConfig);
+            if (this.contentCache.has(cacheKey)) {
+                const cachedContent = this.contentCache.get(cacheKey);
+                this.displayContent(rowId, cachedContent);
+                this.setRowLoadingState(rowId, 'loaded');
+
+                // Refresh in background if cache is old
+                if (this.isCacheStale(cacheKey)) {
+                    this.loadContentRowInBackground(rowConfig);
+                }
+                return;
+            }
+
+            // No cached content, load normally
+            await this.loadContentRow(rowConfig);
+
+        } catch (error) {
+            console.error(`Error loading row ${rowId}:`, error);
+            this.setRowLoadingState(rowId, 'error');
+        }
+    }
+
+    async loadContentRowInBackground(rowConfig) {
+        try {
+            const content = await this.fetchContent(rowConfig.endpoint, rowConfig.params, false);
+            if (content && content.length > 0) {
+                const cacheKey = this.getCacheKey(rowConfig);
+                this.contentCache.set(cacheKey, {
+                    content,
+                    timestamp: Date.now()
+                });
+
+                // Update display if content is different
+                this.displayContent(rowConfig.id, content);
+            }
+        } catch (error) {
+            console.warn(`Background refresh failed for ${rowConfig.id}:`, error);
+        }
+    }
+
+    setRowLoadingState(rowId, state) {
+        this.loadingStates.set(rowId, state);
+        const row = document.getElementById(rowId);
+        if (row) {
+            row.classList.remove('loading', 'loaded', 'error');
+            row.classList.add(state);
+        }
+    }
+
+    displayContent(rowId, content) {
+        const row = document.getElementById(rowId);
+        if (!row) return;
+
+        const wrapper = row.querySelector('.carousel-wrapper');
+        if (!wrapper) return;
+
+        // Clear current content
+        wrapper.innerHTML = '';
+
+        // Add content cards with smooth animation
+        content.forEach((item, index) => {
+            const card = this.createContentCard(item);
+
+            // Add staggered animation
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            wrapper.appendChild(card);
+
+            // Animate in with delay
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 20); // Stagger animation
+        });
+
+        this.setupCarouselNavigation(row);
+    }
+
+    getCacheKey(rowConfig) {
+        return `${rowConfig.endpoint}-${JSON.stringify(rowConfig.params)}-${this.isAuthenticated ? 'auth' : 'anon'}`;
+    }
+
+    isCacheStale(cacheKey) {
+        const cached = this.contentCache.get(cacheKey);
+        if (!cached || !cached.timestamp) return true;
+
+        const fiveMinutes = 5 * 60 * 1000;
+        return Date.now() - cached.timestamp > fiveMinutes;
     }
 
     getCurrentUser() {
@@ -684,50 +1754,6 @@ class ContentCardManager {
     }
 
     async loadUserWishlist() {
-        if (!this.isAuthenticated) return;
-
-        try {
-            const response = await fetch(`${this.apiBase}/user/watchlist`, {
-                headers: {
-                    'Authorization': `Bearer ${this.authToken}`
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Clear and repopulate wishlist
-                this.userWishlist.clear();
-                this.interactionStates.clear(); // Clear all interaction states
-
-                if (data.watchlist && Array.isArray(data.watchlist)) {
-                    data.watchlist.forEach(item => {
-                        this.userWishlist.add(item.id);
-                        // Mark as already in wishlist
-                        this.interactionStates.set(item.id, 'watchlist');
-                    });
-                }
-                console.log('Loaded wishlist with', this.userWishlist.size, 'items');
-
-                // Update all wishlist buttons after loading
-                this.updateWishlistButtons();
-            } else if (response.status === 401) {
-                // Token might be expired
-                console.error('Authentication failed, clearing token');
-                localStorage.removeItem('cinebrain-token');
-                this.authToken = null;
-                this.isAuthenticated = false;
-                this.userWishlist.clear();
-                this.interactionStates.clear();
-            } else {
-                console.error('Failed to load wishlist:', response.status);
-            }
-        } catch (error) {
-            console.error('Error loading wishlist:', error);
-        }
-    }
-
-    async syncWishlistState() {
-        // This method ensures the UI is in sync with the backend
         if (!this.isAuthenticated) {
             this.userWishlist.clear();
             this.interactionStates.clear();
@@ -736,15 +1762,53 @@ class ContentCardManager {
         }
 
         try {
-            await this.loadUserWishlist();
+            const response = await fetch(`${this.apiBase}/users/profile`, {
+                headers: {
+                    'Authorization': `Bearer ${this.authToken}`
+                },
+                signal: AbortSignal.timeout(5000) // 5 second timeout
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.userWishlist.clear();
+                this.interactionStates.clear();
+
+                if (data.watchlist && Array.isArray(data.watchlist)) {
+                    data.watchlist.forEach(item => {
+                        this.userWishlist.add(item.content_id);
+                        this.interactionStates.set(item.content_id, 'watchlist');
+                    });
+                }
+                console.log('Loaded wishlist with', this.userWishlist.size, 'items');
+
+                // Update wishlist buttons immediately
+                this.updateWishlistButtons();
+            } else if (response.status === 401) {
+                console.error('Authentication failed, clearing token');
+                this.handleAuthFailure();
+            }
         } catch (error) {
-            console.error('Error syncing wishlist state:', error);
+            console.error('Error loading wishlist:', error);
         }
+    }
+
+    handleAuthFailure() {
+        localStorage.removeItem('cinebrain-token');
+        localStorage.removeItem('cinebrain-user');
+        this.authToken = null;
+        this.isAuthenticated = false;
+        this.userWishlist.clear();
+        this.interactionStates.clear();
+        this.updateWishlistButtons();
+
+        // Clear authenticated content cache
+        this.contentCache.clear();
     }
 
     createCarouselRow(rowConfig) {
         const row = document.createElement('div');
-        row.className = 'content-row';
+        row.className = 'content-row loading'; // Start with loading state
         row.id = rowConfig.id;
 
         row.innerHTML = `
@@ -753,15 +1817,15 @@ class ContentCardManager {
                 <a href="/content/${rowConfig.id}.html" class="see-all">See All →</a>
             </div>
             <div class="carousel-container">
-                <button class="carousel-nav prev" aria-label="Previous">
+                <button class="carousel-nav prev" aria-label="Previous" style="opacity: 0;">
                     <svg viewBox="0 0 24 24">
                         <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/>
                     </svg>
                 </button>
                 <div class="carousel-wrapper">
-                    ${this.createSkeletons(8)}
+                    ${this.createEnhancedSkeletons(8)}
                 </div>
-                <button class="carousel-nav next" aria-label="Next">
+                <button class="carousel-nav next" aria-label="Next" style="opacity: 0;">
                     <svg viewBox="0 0 24 24">
                         <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/>
                     </svg>
@@ -772,12 +1836,20 @@ class ContentCardManager {
         return row;
     }
 
-    createSkeletons(count) {
-        return Array(count).fill('').map(() => `
-            <div class="skeleton-card">
-                <div class="skeleton skeleton-poster"></div>
-                <div class="skeleton skeleton-title"></div>
-                <div class="skeleton skeleton-meta"></div>
+    createEnhancedSkeletons(count) {
+        return Array(count).fill('').map((_, index) => `
+            <div class="skeleton-card" style="animation-delay: ${index * 0.1}s;">
+                <div class="skeleton skeleton-poster">
+                    <div class="skeleton-shimmer"></div>
+                </div>
+                <div class="skeleton-info">
+                    <div class="skeleton skeleton-title">
+                        <div class="skeleton-shimmer"></div>
+                    </div>
+                    <div class="skeleton skeleton-meta">
+                        <div class="skeleton-shimmer"></div>
+                    </div>
+                </div>
             </div>
         `).join('');
     }
@@ -787,7 +1859,6 @@ class ContentCardManager {
         card.className = 'content-card';
         card.dataset.contentId = content.id;
 
-        // Store slug for navigation
         if (content.slug) {
             card.dataset.contentSlug = content.slug;
         }
@@ -848,10 +1919,7 @@ class ContentCardManager {
             </div>
         `;
 
-        // Setup event handlers
         this.setupCardHandlers(card, content);
-
-        // Setup lazy loading
         this.setupLazyLoading(card);
 
         return card;
@@ -860,25 +1928,21 @@ class ContentCardManager {
     setupCardHandlers(card, content) {
         card.addEventListener('click', (e) => {
             if (!e.target.closest('.wishlist-btn')) {
-                // Always use slug-based navigation
                 let slug = content.slug;
 
-                // If no slug provided by backend, generate one from title
                 if (!slug && content.title) {
                     slug = this.generateSlug(content.title, content.release_date);
                 }
 
                 if (slug) {
-                    // Use slug-based URL (no parameter, just the slug after ?)
                     window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
                 } else {
                     console.error('No slug available for content:', content);
-                    this.showToast('Unable to view details', 'error');
+                    this.showNotification('Unable to view details', 'error');
                 }
             }
         });
 
-        // Wishlist button handler
         const wishlistBtn = card.querySelector('.wishlist-btn');
         wishlistBtn?.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -886,19 +1950,16 @@ class ContentCardManager {
         });
     }
 
-    // Add this helper method to the ContentCardManager class
     generateSlug(title, releaseDate) {
         if (!title) return '';
 
-        // Convert title to lowercase and replace spaces/special chars with hyphens
         let slug = title.toLowerCase()
-            .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
-            .replace(/\s+/g, '-')      // Replace spaces with hyphens
-            .replace(/-+/g, '-')       // Replace multiple hyphens with single hyphen
-            .replace(/^-+|-+$/g, '')   // Remove leading/trailing hyphens
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '')
             .trim();
 
-        // Add year if available (for movies/shows)
         if (releaseDate) {
             const year = this.extractYear(releaseDate);
             if (year) {
@@ -906,9 +1967,8 @@ class ContentCardManager {
             }
         }
 
-        // Ensure slug is not too long
         if (slug.length > 100) {
-            slug = slug.substring(0, 100).replace(/-[^-]*$/, ''); // Cut at word boundary
+            slug = slug.substring(0, 100).replace(/-[^-]*$/, '');
         }
 
         return slug;
@@ -916,19 +1976,27 @@ class ContentCardManager {
 
     setupLazyLoading(card) {
         const img = card.querySelector('.card-poster');
+
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const imgSrc = img.dataset.src;
                     if (imgSrc) {
+                        // Create a temporary image to preload
                         const tempImg = new Image();
+
+                        // Add loading state
+                        img.parentElement.classList.add('loading-image');
+
                         tempImg.onload = () => {
                             img.src = imgSrc;
                             img.classList.add('loaded');
+                            img.parentElement.classList.remove('loading-image');
                         };
                         tempImg.onerror = () => {
                             img.src = this.getPlaceholderImage();
                             img.classList.add('loaded');
+                            img.parentElement.classList.remove('loading-image');
                         };
                         tempImg.src = imgSrc;
                     }
@@ -936,18 +2004,16 @@ class ContentCardManager {
                 }
             });
         }, {
-            rootMargin: '50px',
+            rootMargin: window.innerWidth <= 768 ? '50px' : '100px',
             threshold: 0.01
         });
+
         observer.observe(img);
     }
 
     async handleWishlistClick(contentId, button) {
         if (!this.isAuthenticated) {
-            // Use TopBar's notification system
-            if (window.topbar?.notificationSystem) {
-                window.topbar.notificationSystem.show('Please login to add to wishlist', 'warning');
-            }
+            this.showNotification('Please login to add to wishlist', 'warning');
             setTimeout(() => {
                 window.location.href = '/auth/login.html?redirect=' + encodeURIComponent(window.location.pathname);
             }, 1000);
@@ -955,112 +2021,70 @@ class ContentCardManager {
         }
 
         try {
-            // Check current state
-            const isCurrentlyInWishlist = button.classList.contains('active');
-
-            // Prevent double clicks
             if (button.disabled) return;
             button.disabled = true;
 
-            // For removing from wishlist, we need to handle it differently
+            const isCurrentlyInWishlist = button.classList.contains('active');
+
+            // Optimistic UI update
             if (isCurrentlyInWishlist) {
-                // First, try to remove using DELETE method (if backend supports it)
-                try {
-                    const deleteResponse = await fetch(`${this.apiBase}/user/watchlist/${contentId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${this.authToken}`
-                        }
-                    });
-
-                    if (deleteResponse.ok || deleteResponse.status === 404) {
-                        // Successfully removed or already removed
-                        button.classList.remove('active');
-                        this.userWishlist.delete(contentId);
-                        this.interactionStates.delete(contentId);
-                        button.setAttribute('title', 'Add to Wishlist');
-                        button.setAttribute('aria-label', 'Add to Wishlist');
-
-                        if (window.topbar?.notificationSystem) {
-                            window.topbar.notificationSystem.show('Removed from wishlist', 'success', 2000);
-                        }
-                        return;
-                    }
-                } catch (deleteError) {
-                    console.log('DELETE method not supported, trying alternative method');
-                }
-
-                // Fallback: Record removal interaction
-                const removeResponse = await fetch(`${this.apiBase}/interactions`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${this.authToken}`
-                    },
-                    body: JSON.stringify({
-                        content_id: contentId,
-                        interaction_type: 'remove_watchlist' // Make sure this interaction type is handled
-                    })
-                });
-
-                if (removeResponse.ok) {
-                    button.classList.remove('active');
-                    this.userWishlist.delete(contentId);
-                    this.interactionStates.delete(contentId);
-                    button.setAttribute('title', 'Add to Wishlist');
-                    button.setAttribute('aria-label', 'Add to Wishlist');
-
-                    if (window.topbar?.notificationSystem) {
-                        window.topbar.notificationSystem.show('Removed from wishlist', 'success', 2000);
-                    }
-                } else {
-                    throw new Error('Failed to remove from wishlist');
-                }
+                button.classList.remove('active');
+                this.userWishlist.delete(contentId);
+                this.interactionStates.delete(contentId);
+                button.setAttribute('title', 'Add to Wishlist');
+                button.setAttribute('aria-label', 'Add to Wishlist');
             } else {
-                // Add to wishlist
-                const response = await fetch(`${this.apiBase}/interactions`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${this.authToken}`
-                    },
-                    body: JSON.stringify({
-                        content_id: contentId,
-                        interaction_type: 'watchlist'
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Failed to add to wishlist: ${response.status}`);
-                }
-
-                // Update UI on success
                 button.classList.add('active');
                 this.userWishlist.add(contentId);
                 this.interactionStates.set(contentId, 'watchlist');
                 button.setAttribute('title', 'Remove from Wishlist');
                 button.setAttribute('aria-label', 'Remove from Wishlist');
+            }
 
-                if (window.topbar?.notificationSystem) {
-                    window.topbar.notificationSystem.show('Added to wishlist', 'success', 2000);
+            // Send request to backend
+            const response = await fetch(`${this.apiBase}/users/watchlist`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.authToken}`
+                },
+                body: JSON.stringify({
+                    content_id: contentId,
+                    action: isCurrentlyInWishlist ? 'remove' : 'add'
+                }),
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (response.ok) {
+                this.showNotification(
+                    isCurrentlyInWishlist ? 'Removed from wishlist' : 'Added to wishlist',
+                    'success'
+                );
+            } else {
+                // Revert optimistic update on failure
+                if (isCurrentlyInWishlist) {
+                    button.classList.add('active');
+                    this.userWishlist.add(contentId);
+                    this.interactionStates.set(contentId, 'watchlist');
+                    button.setAttribute('title', 'Remove from Wishlist');
+                    button.setAttribute('aria-label', 'Remove from Wishlist');
+                } else {
+                    button.classList.remove('active');
+                    this.userWishlist.delete(contentId);
+                    this.interactionStates.delete(contentId);
+                    button.setAttribute('title', 'Add to Wishlist');
+                    button.setAttribute('aria-label', 'Add to Wishlist');
                 }
+                throw new Error('Failed to update wishlist');
             }
 
         } catch (error) {
-            // Revert UI on error
-            const isActive = button.classList.contains('active');
-
-            if (window.topbar?.notificationSystem) {
-                window.topbar.notificationSystem.show('Failed to update wishlist', 'error');
-            }
+            this.showNotification('Failed to update wishlist', 'error');
             console.error('Error updating wishlist:', error);
-
-            // Don't change the state if there was an error
         } finally {
-            // Re-enable button after a short delay to prevent rapid clicks
             setTimeout(() => {
                 button.disabled = false;
-            }, 500);
+            }, 300);
         }
     }
 
@@ -1072,42 +2096,47 @@ class ContentCardManager {
         if (!wrapper) return;
 
         try {
-            // Check cache first
-            const cacheKey = `${rowConfig.endpoint}-${JSON.stringify(rowConfig.params)}`;
+            this.setRowLoadingState(rowConfig.id, 'loading');
+
+            const cacheKey = this.getCacheKey(rowConfig);
             let content;
 
-            if (this.contentCache.has(cacheKey)) {
-                content = this.contentCache.get(cacheKey);
+            // Check cache first
+            const cached = this.contentCache.get(cacheKey);
+            if (cached && !this.isCacheStale(cacheKey)) {
+                content = cached.content;
             } else {
-                content = await this.fetchContent(rowConfig.endpoint, rowConfig.params);
-                if (content && content.length > 0) {
-                    this.contentCache.set(cacheKey, content);
+                // Cancel any existing request for this row
+                if (this.loadingControllers.has(rowConfig.id)) {
+                    this.loadingControllers.get(rowConfig.id).abort();
+                }
+
+                const controller = new AbortController();
+                this.loadingControllers.set(rowConfig.id, controller);
+
+                content = await this.fetchContent(rowConfig.endpoint, rowConfig.params, false, controller.signal);
+
+                if (content && content.length > 0 && rowConfig.cached) {
+                    this.contentCache.set(cacheKey, {
+                        content,
+                        timestamp: Date.now()
+                    });
                 }
             }
 
-            // Clear loading skeletons
-            wrapper.innerHTML = '';
+            this.displayContent(rowConfig.id, content || []);
+            this.setRowLoadingState(rowConfig.id, 'loaded');
 
-            if (!content || content.length === 0) {
-                wrapper.innerHTML = `
-                    <div class="error-message">
-                        <p>No content available</p>
-                    </div>
-                `;
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log(`Request aborted for ${rowConfig.id}`);
                 return;
             }
 
-            // Add content cards
-            content.forEach(item => {
-                const card = this.createContentCard(item);
-                wrapper.appendChild(card);
-            });
-
-            // Setup navigation
-            this.setupCarouselNavigation(row);
-
-        } catch (error) {
             console.error(`Error loading ${rowConfig.title}:`, error);
+            this.setRowLoadingState(rowConfig.id, 'error');
+
+            const wrapper = row.querySelector('.carousel-wrapper');
             wrapper.innerHTML = `
                 <div class="error-message">
                     <h3>Unable to load content</h3>
@@ -1116,16 +2145,15 @@ class ContentCardManager {
                 </div>
             `;
 
-            // Setup retry button
             const retryBtn = wrapper.querySelector('.retry-btn');
             retryBtn?.addEventListener('click', () => {
-                wrapper.innerHTML = this.createSkeletons(8);
+                wrapper.innerHTML = this.createEnhancedSkeletons(8);
                 this.loadContentRow(rowConfig);
             });
         }
     }
 
-    async fetchContent(endpoint, params = {}) {
+    async fetchContent(endpoint, params = {}, isPreload = false, signal = null) {
         const queryString = new URLSearchParams(params).toString();
         const url = `${this.apiBase}${endpoint}${queryString ? '?' + queryString : ''}`;
 
@@ -1134,11 +2162,13 @@ class ContentCardManager {
             headers['Authorization'] = `Bearer ${this.authToken}`;
         }
 
+        const requestOptions = {
+            headers,
+            signal: signal || AbortSignal.timeout(isPreload ? 15000 : 8000)
+        };
+
         try {
-            const response = await fetch(url, {
-                headers,
-                timeout: 10000 // 10 second timeout
-            });
+            const response = await fetch(url, requestOptions);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -1146,24 +2176,21 @@ class ContentCardManager {
 
             const data = await response.json();
 
-            // Handle different response structures
-            if (data.recommendations) {
-                return Array.isArray(data.recommendations) ? data.recommendations : [];
+            // Handle different response structures from backend
+            if (data.recommendations && Array.isArray(data.recommendations)) {
+                return data.recommendations;
             } else if (data.categories) {
                 // For trending endpoint with categories
                 const allContent = [];
-
-                // Process each category
                 Object.values(data.categories).forEach(categoryItems => {
                     if (Array.isArray(categoryItems)) {
                         allContent.push(...categoryItems);
                     }
                 });
 
-                // Remove duplicates based on id
+                // Remove duplicates and limit results
                 const uniqueContent = [];
                 const seenIds = new Set();
-
                 allContent.forEach(item => {
                     if (item && item.id && !seenIds.has(item.id)) {
                         seenIds.add(item.id);
@@ -1172,8 +2199,8 @@ class ContentCardManager {
                 });
 
                 return uniqueContent.slice(0, params.limit || 20);
-            } else if (data.results) {
-                return Array.isArray(data.results) ? data.results : [];
+            } else if (data.results && Array.isArray(data.results)) {
+                return data.results;
             } else if (Array.isArray(data)) {
                 return data;
             } else {
@@ -1181,6 +2208,9 @@ class ContentCardManager {
                 return [];
             }
         } catch (error) {
+            if (error.name === 'AbortError') {
+                throw error;
+            }
             console.error('Fetch error:', error);
             throw error;
         }
@@ -1193,7 +2223,6 @@ class ContentCardManager {
 
         if (!wrapper) return;
 
-        // Calculate scroll amount
         const getScrollAmount = () => {
             const containerWidth = wrapper.clientWidth;
             const cardWidth = wrapper.querySelector('.content-card')?.offsetWidth || 180;
@@ -1202,19 +2231,31 @@ class ContentCardManager {
             return (cardWidth + gap) * Math.max(1, visibleCards - 1);
         };
 
-        // Update navigation buttons state
+        let ticking = false;
         const updateNavButtons = () => {
-            if (!prevBtn || !nextBtn) return;
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    if (!prevBtn || !nextBtn) return;
 
-            const scrollLeft = wrapper.scrollLeft;
-            const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
+                    const scrollLeft = wrapper.scrollLeft;
+                    const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
 
-            prevBtn.classList.toggle('disabled', scrollLeft <= 0);
-            nextBtn.classList.toggle('disabled', scrollLeft >= maxScroll - 1);
+                    const shouldShowPrev = scrollLeft > 0;
+                    const shouldShowNext = scrollLeft < maxScroll - 1;
+
+                    prevBtn.style.opacity = shouldShowPrev ? '1' : '0';
+                    nextBtn.style.opacity = shouldShowNext ? '1' : '0';
+
+                    prevBtn.classList.toggle('disabled', !shouldShowPrev);
+                    nextBtn.classList.toggle('disabled', !shouldShowNext);
+
+                    ticking = false;
+                });
+                ticking = true;
+            }
         };
 
-        // Navigation handlers
-        if (prevBtn && nextBtn) {
+        if (prevBtn && nextBtn && window.innerWidth > 768) {
             prevBtn.addEventListener('click', () => {
                 wrapper.scrollBy({
                     left: -getScrollAmount(),
@@ -1229,66 +2270,52 @@ class ContentCardManager {
                 });
             });
 
-            wrapper.addEventListener('scroll', updateNavButtons);
+            wrapper.addEventListener('scroll', updateNavButtons, { passive: true });
             updateNavButtons();
         }
 
-        // Touch/swipe support
         this.setupTouchScroll(wrapper);
     }
 
     setupTouchScroll(wrapper) {
-        let isDown = false;
-        let startX = 0;
-        let scrollLeft = 0;
+        if (window.innerWidth > 768) {
+            let isDown = false;
+            let startX = 0;
+            let scrollLeft = 0;
 
-        // Touch events
-        wrapper.addEventListener('touchstart', (e) => {
-            isDown = true;
-            startX = e.touches[0].pageX;
-            scrollLeft = wrapper.scrollLeft;
-        }, { passive: true });
+            wrapper.addEventListener('mousedown', (e) => {
+                isDown = true;
+                startX = e.pageX;
+                scrollLeft = wrapper.scrollLeft;
+                wrapper.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
 
-        wrapper.addEventListener('touchmove', (e) => {
-            if (!isDown) return;
-            const x = e.touches[0].pageX;
-            const walk = (startX - x) * 1.5;
-            wrapper.scrollLeft = scrollLeft + walk;
-        }, { passive: true });
+            wrapper.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX;
+                const walk = (startX - x) * 2;
+                wrapper.scrollLeft = scrollLeft + walk;
+            });
 
-        wrapper.addEventListener('touchend', () => {
-            isDown = false;
-        });
+            wrapper.addEventListener('mouseup', () => {
+                isDown = false;
+                wrapper.style.cursor = 'grab';
+            });
 
-        // Mouse events for desktop
-        wrapper.addEventListener('mousedown', (e) => {
-            isDown = true;
-            startX = e.pageX;
-            scrollLeft = wrapper.scrollLeft;
-            wrapper.style.cursor = 'grabbing';
-        });
-
-        wrapper.addEventListener('mousemove', (e) => {
-            if (!isDown) return;
-            e.preventDefault();
-            const x = e.pageX;
-            const walk = (startX - x) * 2;
-            wrapper.scrollLeft = scrollLeft + walk;
-        });
-
-        wrapper.addEventListener('mouseup', () => {
-            isDown = false;
-            wrapper.style.cursor = 'grab';
-        });
-
-        wrapper.addEventListener('mouseleave', () => {
-            isDown = false;
-            wrapper.style.cursor = 'grab';
-        });
+            wrapper.addEventListener('mouseleave', () => {
+                isDown = false;
+                wrapper.style.cursor = 'grab';
+            });
+        } else {
+            wrapper.style.cursor = 'default';
+            wrapper.style.webkitOverflowScrolling = 'touch';
+            wrapper.style.overscrollBehaviorX = 'contain';
+        }
     }
 
     setupEventListeners() {
-        // Handle window resize
         let resizeTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
@@ -1299,39 +2326,73 @@ class ContentCardManager {
             }, 250);
         });
 
-        // Listen for auth changes
+        // Enhanced auth state change handling
         window.addEventListener('storage', (e) => {
             if (e.key === 'cinebrain-token') {
+                const oldAuth = this.isAuthenticated;
                 this.authToken = e.newValue;
                 this.isAuthenticated = !!this.authToken;
-                if (this.isAuthenticated) {
-                    this.loadUserWishlist();
-                } else {
-                    this.userWishlist.clear();
-                    this.interactionStates.clear();
+
+                if (oldAuth !== this.isAuthenticated) {
+                    // Auth state changed - refresh content
+                    this.handleAuthStateChange();
                 }
-                // Update UI without full reload
-                this.updateWishlistButtons();
             }
         });
 
-        // Sync wishlist state when page becomes visible again
+        // Listen for login success events
+        window.addEventListener('userLoggedIn', () => {
+            this.handleAuthStateChange();
+        });
+
+        // Listen for logout events
+        window.addEventListener('userLoggedOut', () => {
+            this.handleAuthStateChange();
+        });
+
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden && this.isAuthenticated) {
-                this.syncWishlistState();
+                this.loadUserWishlist();
             }
         });
 
-        // Sync wishlist state when window gains focus
         window.addEventListener('focus', () => {
             if (this.isAuthenticated) {
-                this.syncWishlistState();
+                this.loadUserWishlist();
             }
         });
     }
 
+    async handleAuthStateChange() {
+        console.log('Auth state changed - refreshing content');
+
+        // Show loading state immediately
+        this.contentRows.forEach(rowConfig => {
+            this.setRowLoadingState(rowConfig.id, 'loading');
+            const wrapper = document.getElementById(rowConfig.id)?.querySelector('.carousel-wrapper');
+            if (wrapper) {
+                wrapper.innerHTML = this.createEnhancedSkeletons(8);
+            }
+        });
+
+        // Clear caches
+        this.contentCache.clear();
+        this.preloadedContent.clear();
+
+        // Reload user data and content
+        if (this.isAuthenticated) {
+            await this.loadUserWishlist();
+        } else {
+            this.userWishlist.clear();
+            this.interactionStates.clear();
+        }
+
+        // Reload all content
+        await this.loadAllContentIntelligently();
+        this.updateWishlistButtons();
+    }
+
     updateWishlistButtons() {
-        // Update all wishlist buttons based on current state
         document.querySelectorAll('.wishlist-btn').forEach(btn => {
             const contentId = parseInt(btn.dataset.contentId);
             const isInWishlist = this.userWishlist.has(contentId);
@@ -1348,14 +2409,20 @@ class ContentCardManager {
         });
     }
 
+    showNotification(message, type = 'info') {
+        if (window.topbar?.notificationSystem) {
+            window.topbar.notificationSystem.show(message, type);
+        } else {
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
+    }
+
     // Utility methods
     formatPosterUrl(posterPath) {
         if (!posterPath) {
             return this.getPlaceholderImage();
         }
-        // If it's already a full URL, return as-is
         if (posterPath.startsWith('http')) return posterPath;
-        // Otherwise, prepend TMDB base URL
         return `${this.posterBase}${posterPath}`;
     }
 
@@ -1397,784 +2464,10 @@ class ContentCardManager {
     }
 }
 
-// Only initialize if we're on the homepage (not details page)
+// Initialize only on homepage
 if (document.getElementById('content-container')) {
     const contentCardManager = new ContentCardManager();
     window.contentCardManager = contentCardManager;
 } else {
     console.log('ContentCardManager: Skipped initialization - not on homepage');
-}
-
-
-
-3. content-card.css 
-
-:root {
-    /* Sizing variables */
-    --card-width: clamp(120px, 25vw, 200px);
-    --card-poster-ratio: 150%;
-    --card-border-radius: clamp(4px, 1vw, 8px);
-    --card-gap: clamp(8px, 2vw, 16px);
-    --card-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --carousel-scroll: smooth;
-
-    /* Brand blue (matching topbar) - only accent color */
-    --cinebrain-primary: #113CCF;
-    --cinebrain-primary-light: #1E4FE5;
-
-    /* Gold color palette for ratings - simplified */
-    --rating-gold: #FFD700;
-    --rating-gold-light: #FFED4E;
-    --rating-gold-dark: #FFA500;
-}
-
-/* Dark Theme - Clean monochrome palette */
-[data-theme="dark"] {
-    --card-bg: #000000;
-    --card-hover-bg: rgba(255, 255, 255, 0.05);
-    --card-overlay-gradient: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 60%);
-    --skeleton-bg: rgba(255, 255, 255, 0.08);
-    --skeleton-shine: rgba(255, 255, 255, 0.12);
-    --row-title-color: #ffffff;
-    --see-all-color: #888888;
-    --see-all-hover-color: #ffffff;
-    --nav-button-bg: rgba(0, 0, 0, 0.7);
-    --nav-button-hover-bg: rgba(0, 0, 0, 0.9);
-    --nav-button-border: rgba(255, 255, 255, 0.2);
-    --nav-icon-color: #ffffff;
-    --badge-bg: rgba(0, 0, 0, 0.8);
-    --badge-text: #ffffff;
-    --badge-border: rgba(255, 255, 255, 0.1);
-    --wishlist-btn-bg: rgba(0, 0, 0, 0.6);
-    --wishlist-btn-border: rgba(255, 255, 255, 0.2);
-    --wishlist-icon-color: #ffffff;
-    --wishlist-active: var(--cinebrain-primary);
-
-    /* Gold rating colors for dark theme - star and text only */
-    --rating-star-color: var(--rating-gold);
-    --rating-text-color: var(--rating-gold-light);
-
-    --genre-chip-bg: rgba(255, 255, 255, 0.08);
-    --genre-chip-border: rgba(255, 255, 255, 0.1);
-    --genre-chip-text: #888888;
-    --genre-chip-hover-bg: rgba(255, 255, 255, 0.12);
-    --genre-chip-hover-text: #ffffff;
-    --text-primary: #ffffff;
-    --text-secondary: #888888;
-    --text-muted: #666666;
-    --error-color: #ffffff;
-    --error-text-secondary: #888888;
-    --retry-btn-bg: rgba(255, 255, 255, 0.1);
-    --retry-btn-text: #ffffff;
-    --retry-btn-border: rgba(255, 255, 255, 0.2);
-    --retry-btn-hover-bg: rgba(255, 255, 255, 0.15);
-    --content-border: rgba(255, 255, 255, 0.05);
-}
-
-/* Light Theme - Clean monochrome palette */
-[data-theme="light"] {
-    --card-bg: #ffffff;
-    --card-hover-bg: rgba(0, 0, 0, 0.02);
-    --card-overlay-gradient: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 60%);
-    --skeleton-bg: rgba(0, 0, 0, 0.06);
-    --skeleton-shine: rgba(0, 0, 0, 0.08);
-    --row-title-color: #000000;
-    --see-all-color: #666666;
-    --see-all-hover-color: #000000;
-    --nav-button-bg: rgba(255, 255, 255, 0.9);
-    --nav-button-hover-bg: rgba(255, 255, 255, 0.95);
-    --nav-button-border: rgba(0, 0, 0, 0.15);
-    --nav-icon-color: #000000;
-    --badge-bg: rgba(0, 0, 0, 0.8);
-    --badge-text: #ffffff;
-    --badge-border: transparent;
-    --wishlist-btn-bg: rgba(255, 255, 255, 0.9);
-    --wishlist-btn-border: rgba(0, 0, 0, 0.1);
-    --wishlist-icon-color: #000000;
-    --wishlist-active: var(--cinebrain-primary);
-
-    /* Gold rating colors for light theme - star and text only */
-    --rating-star-color: var(--rating-gold-dark);
-    --rating-text-color: var(--rating-gold-dark);
-
-    --genre-chip-bg: rgba(0, 0, 0, 0.05);
-    --genre-chip-border: rgba(0, 0, 0, 0.08);
-    --genre-chip-text: #666666;
-    --genre-chip-hover-bg: rgba(0, 0, 0, 0.08);
-    --genre-chip-hover-text: #000000;
-    --text-primary: #000000;
-    --text-secondary: #666666;
-    --text-muted: #999999;
-    --error-color: #000000;
-    --error-text-secondary: #666666;
-    --retry-btn-bg: rgba(0, 0, 0, 0.05);
-    --retry-btn-text: #000000;
-    --retry-btn-border: rgba(0, 0, 0, 0.1);
-    --retry-btn-hover-bg: rgba(0, 0, 0, 0.08);
-    --content-border: rgba(0, 0, 0, 0.05);
-}
-
-/* Container styles */
-.container-cinebrain {
-    max-width: 1920px;
-    margin: 0 auto;
-    padding: clamp(12px, 3vw, 20px);
-    padding-top: calc(var(--navbar-height) + clamp(12px, 3vw, 20px));
-}
-
-.content-container-cinebrain {
-    position: relative;
-    width: 100%;
-}
-
-/* Content Row */
-.content-row {
-    margin-bottom: clamp(24px, 6vw, 40px);
-    position: relative;
-    opacity: 0;
-    animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.content-row:nth-child(1) {
-    animation-delay: 0.1s;
-}
-
-.content-row:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.content-row:nth-child(3) {
-    animation-delay: 0.3s;
-}
-
-.content-row:nth-child(4) {
-    animation-delay: 0.4s;
-}
-
-.content-row:nth-child(5) {
-    animation-delay: 0.5s;
-}
-
-.content-row:nth-child(6) {
-    animation-delay: 0.6s;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Row Header - Clean typography */
-.row-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: clamp(8px, 2vw, 16px);
-    padding: 0 clamp(4px, 1vw, 8px);
-}
-
-.row-title {
-    font-size: clamp(1.1rem, 4vw, 1.5rem);
-    font-weight: 600;
-    color: var(--row-title-color);
-    letter-spacing: -0.02em;
-    line-height: 1.2;
-}
-
-.see-all {
-    color: var(--see-all-color);
-    text-decoration: none;
-    font-size: clamp(0.75rem, 2vw, 0.875rem);
-    font-weight: 500;
-    transition: var(--card-transition);
-    padding: clamp(4px, 1vw, 8px) clamp(8px, 2vw, 12px);
-    border-radius: clamp(4px, 1vw, 6px);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.see-all:hover {
-    color: var(--see-all-hover-color);
-    transform: translateX(2px);
-}
-
-/* Carousel Container */
-.carousel-container {
-    position: relative;
-    overflow: hidden;
-    margin: 0 calc(clamp(12px, 3vw, 20px) * -1);
-    padding: 0 clamp(12px, 3vw, 20px);
-}
-
-.carousel-wrapper {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: var(--card-width);
-    gap: var(--card-gap);
-    overflow-x: auto;
-    scroll-behavior: var(--carousel-scroll);
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    padding: clamp(4px, 1vw, 8px) 0 clamp(16px, 4vw, 24px);
-    -webkit-overflow-scrolling: touch;
-}
-
-.carousel-wrapper::-webkit-scrollbar {
-    display: none;
-}
-
-/* Navigation Buttons - Clean monochrome */
-.carousel-nav {
-    position: absolute;
-    top: 45%;
-    transform: translateY(-50%);
-    width: clamp(36px, 8vw, 44px);
-    height: clamp(36px, 8vw, 44px);
-    background: var(--nav-button-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--nav-button-border);
-    border-radius: 50%;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 10;
-    transition: var(--card-transition);
-    opacity: 0;
-}
-
-@media (min-width: 1024px) {
-    .carousel-nav {
-        display: flex;
-    }
-
-    .carousel-container:hover .carousel-nav:not(.disabled) {
-        opacity: 1;
-    }
-}
-
-.carousel-nav:hover:not(.disabled) {
-    background: var(--nav-button-hover-bg);
-    transform: translateY(-50%) scale(1.05);
-    border-color: var(--nav-icon-color);
-}
-
-.carousel-nav.prev {
-    left: clamp(4px, 1vw, 8px);
-}
-
-.carousel-nav.next {
-    right: clamp(4px, 1vw, 8px);
-}
-
-.carousel-nav svg {
-    width: 50%;
-    height: 50%;
-    stroke: var(--nav-icon-color);
-    fill: none;
-    stroke-width: 2;
-}
-
-.carousel-nav.disabled {
-    opacity: 0.2 !important;
-    cursor: not-allowed;
-}
-
-/* Content Card - Clean design */
-.content-card {
-    scroll-snap-align: start;
-    position: relative;
-    cursor: pointer;
-    transition: var(--card-transition);
-    will-change: transform;
-    border-radius: var(--card-border-radius);
-    overflow: hidden;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.content-card:hover {
-    transform: scale(1.04);
-    z-index: 5;
-}
-
-.card-poster-container {
-    position: relative;
-    width: 100%;
-    padding-bottom: var(--card-poster-ratio);
-    background: var(--skeleton-bg);
-    border-radius: var(--card-border-radius);
-    overflow: hidden;
-    border: 1px solid var(--content-border);
-}
-
-.content-card:hover .card-poster-container {
-    border-color: var(--nav-button-border);
-}
-
-.card-poster {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.card-poster.loaded {
-    opacity: 1;
-}
-
-/* Content Type Badge - Monochrome */
-.content-type-badge {
-    position: absolute;
-    top: clamp(6px, 1.5vw, 8px);
-    left: clamp(6px, 1.5vw, 8px);
-    background: var(--badge-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--badge-border);
-    padding: clamp(2px, 0.5vw, 3px) clamp(6px, 1.5vw, 8px);
-    border-radius: clamp(2px, 0.5vw, 4px);
-    font-size: clamp(0.5rem, 1.3vw, 0.65rem);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    z-index: 3;
-    color: var(--badge-text);
-}
-
-/* All badges use same monochrome style */
-.content-type-badge.movie,
-.content-type-badge.tv,
-.content-type-badge.anime {
-    background: var(--badge-bg);
-    color: var(--badge-text);
-}
-
-/* Card Overlays */
-.card-overlays {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: clamp(6px, 1.5vw, 8px);
-    pointer-events: none;
-    z-index: 2;
-}
-
-.card-top-overlay {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    pointer-events: all;
-}
-
-.card-bottom-overlay {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    pointer-events: all;
-    background: var(--card-overlay-gradient);
-    margin: 0 calc(clamp(6px, 1.5vw, 8px) * -1) calc(clamp(6px, 1.5vw, 8px) * -1);
-    padding: clamp(16px, 4vw, 20px) clamp(6px, 1.5vw, 8px) clamp(6px, 1.5vw, 8px);
-}
-
-/* Wishlist Button - Clean with blue accent only when active */
-.wishlist-btn {
-    width: clamp(28px, 7vw, 32px);
-    height: clamp(28px, 7vw, 32px);
-    background: var(--wishlist-btn-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--wishlist-btn-border);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: var(--card-transition);
-    -webkit-tap-highlight-color: transparent;
-}
-
-.wishlist-btn:hover {
-    transform: scale(1.1);
-    background: var(--nav-button-hover-bg);
-}
-
-.wishlist-btn svg {
-    width: 55%;
-    height: 55%;
-    fill: none;
-    stroke: var(--wishlist-icon-color);
-    stroke-width: 2;
-    transition: all 0.3s;
-}
-
-/* Blue accent only for active state */
-.wishlist-btn.active svg {
-    fill: var(--wishlist-active);
-    stroke: var(--wishlist-active);
-    animation: heartBeat 0.3s ease;
-}
-
-@keyframes heartBeat {
-
-    0%,
-    100% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.2);
-    }
-}
-
-/* Rating Badge - Clean with gold star and text only */
-.rating-badge {
-    background: var(--badge-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--badge-border);
-    padding: clamp(2px, 0.5vw, 3px) clamp(6px, 1.5vw, 8px);
-    border-radius: clamp(2px, 0.5vw, 4px);
-    font-size: clamp(0.6rem, 1.5vw, 0.7rem);
-    font-weight: 600;
-    color: var(--rating-text-color);
-    display: flex;
-    align-items: center;
-    gap: clamp(2px, 0.5vw, 3px);
-    transition: var(--card-transition);
-}
-
-.rating-badge svg {
-    width: clamp(10px, 2.5vw, 11px);
-    height: clamp(10px, 2.5vw, 11px);
-    fill: var(--rating-star-color);
-}
-
-/* Card Info Section */
-.card-info {
-    padding: clamp(8px, 2vw, 10px) clamp(6px, 1.5vw, 8px);
-    background: var(--card-bg);
-}
-
-.card-title {
-    font-size: clamp(0.7rem, 1.8vw, 0.85rem);
-    font-weight: 500;
-    line-height: 1.3;
-    margin-bottom: clamp(2px, 0.5vw, 3px);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--text-primary);
-    min-height: 2.6em;
-}
-
-.card-meta {
-    display: flex;
-    align-items: center;
-    gap: clamp(4px, 1vw, 6px);
-    margin-bottom: clamp(4px, 1vw, 6px);
-    font-size: clamp(0.6rem, 1.5vw, 0.7rem);
-}
-
-.card-year {
-    color: var(--text-secondary);
-}
-
-.card-runtime {
-    color: var(--text-muted);
-}
-
-/* Genre Chips - Clean monochrome */
-.card-genres {
-    display: flex;
-    flex-wrap: wrap;
-    gap: clamp(2px, 0.5vw, 3px);
-}
-
-.genre-chip {
-    background: var(--genre-chip-bg);
-    border: 1px solid var(--genre-chip-border);
-    padding: clamp(1px, 0.25vw, 2px) clamp(4px, 1vw, 6px);
-    border-radius: clamp(2px, 0.5vw, 3px);
-    font-size: clamp(0.55rem, 1.4vw, 0.65rem);
-    color: var(--genre-chip-text);
-    white-space: nowrap;
-    transition: all 0.2s;
-}
-
-.genre-chip:hover {
-    background: var(--genre-chip-hover-bg);
-    color: var(--genre-chip-hover-text);
-}
-
-/* Skeleton Loading - Clean style */
-.skeleton {
-    background: linear-gradient(90deg,
-            var(--skeleton-bg) 0%,
-            var(--skeleton-shine) 50%,
-            var(--skeleton-bg) 100%);
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
-}
-
-@keyframes skeleton-loading {
-    0% {
-        background-position: 200% 0;
-    }
-
-    100% {
-        background-position: -200% 0;
-    }
-}
-
-.skeleton-card {
-    scroll-snap-align: start;
-    width: var(--card-width);
-}
-
-.skeleton-poster {
-    width: 100%;
-    padding-bottom: var(--card-poster-ratio);
-    border-radius: var(--card-border-radius);
-}
-
-.skeleton-title {
-    height: clamp(12px, 3vw, 14px);
-    margin: clamp(8px, 2vw, 10px) clamp(6px, 1.5vw, 8px) clamp(4px, 1vw, 6px);
-    border-radius: 2px;
-    width: 80%;
-}
-
-.skeleton-meta {
-    height: clamp(10px, 2.5vw, 12px);
-    margin: 0 clamp(6px, 1.5vw, 8px) clamp(6px, 1.5vw, 8px);
-    border-radius: 2px;
-    width: 60%;
-}
-
-/* Loading Spinner */
-.loading-spinner {
-    display: inline-block;
-    width: clamp(16px, 4vw, 20px);
-    height: clamp(16px, 4vw, 20px);
-    border: 2px solid var(--skeleton-bg);
-    border-top-color: var(--row-title-color);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Error Message - Clean style */
-.error-message {
-    grid-column: span 12;
-    text-align: center;
-    padding: clamp(24px, 6vw, 40px) clamp(16px, 4vw, 24px);
-}
-
-.error-message h3 {
-    font-size: clamp(1rem, 2.5vw, 1.2rem);
-    margin-bottom: clamp(6px, 1.5vw, 8px);
-    color: var(--error-color);
-    font-weight: 500;
-}
-
-.error-message p {
-    font-size: clamp(0.8rem, 2vw, 0.9rem);
-    color: var(--error-text-secondary);
-}
-
-/* Retry Button - Clean monochrome */
-.retry-btn {
-    margin-top: clamp(12px, 3vw, 16px);
-    padding: clamp(8px, 2vw, 10px) clamp(16px, 4vw, 20px);
-    background: var(--retry-btn-bg);
-    color: var(--retry-btn-text);
-    border: 1px solid var(--retry-btn-border);
-    border-radius: clamp(4px, 1vw, 6px);
-    cursor: pointer;
-    font-size: clamp(0.8rem, 2vw, 0.9rem);
-    font-weight: 500;
-    transition: var(--card-transition);
-    -webkit-tap-highlight-color: transparent;
-}
-
-.retry-btn:hover {
-    background: var(--retry-btn-hover-bg);
-    transform: translateY(-1px);
-}
-
-.retry-btn:active {
-    transform: translateY(0);
-}
-
-/* Touch Device Adjustments */
-@media (hover: none) {
-    .content-card:active {
-        transform: scale(0.98);
-    }
-
-    .wishlist-btn:active {
-        transform: scale(0.9);
-    }
-}
-
-/* Responsive breakpoints */
-@media (min-width: 480px) {
-    :root {
-        --card-width: clamp(140px, 20vw, 200px);
-    }
-}
-
-@media (min-width: 640px) {
-    :root {
-        --card-width: clamp(160px, 18vw, 200px);
-    }
-}
-
-@media (min-width: 768px) {
-    :root {
-        --card-width: clamp(170px, 16vw, 200px);
-    }
-}
-
-@media (min-width: 1024px) {
-    :root {
-        --card-width: clamp(180px, 14vw, 200px);
-    }
-}
-
-@media (min-width: 1280px) {
-    :root {
-        --card-width: clamp(190px, 12vw, 200px);
-    }
-}
-
-@media (min-width: 1536px) {
-    :root {
-        --card-width: 200px;
-    }
-}
-
-/* Accessibility - Blue accent for focus */
-.content-card:focus-visible,
-.wishlist-btn:focus-visible,
-.carousel-nav:focus-visible,
-.see-all:focus-visible,
-.retry-btn:focus-visible {
-    outline: 2px solid var(--cinebrain-primary);
-    outline-offset: 2px;
-}
-
-/* Reduced Motion */
-@media (prefers-reduced-motion: reduce) {
-
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-    }
-
-    :root {
-        --carousel-scroll: auto;
-    }
-}
-
-/* Print Styles */
-@media print {
-
-    .carousel-nav,
-    .wishlist-btn,
-    .see-all {
-        display: none !important;
-    }
-
-    .carousel-wrapper {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
-        overflow: visible !important;
-    }
-}
-
-/* Dots Loader for Content Loading */
-.dots-loader {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    align-items: center;
-    padding: 40px 20px;
-}
-
-.dot {
-    width: 14px;
-    height: 14px;
-    background: var(--cinebrain-primary);
-    border-radius: 50%;
-    animation: dot-wave 1.4s ease-in-out infinite;
-}
-
-.dot:nth-child(1) {
-    animation-delay: 0s;
-}
-
-.dot:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.dot:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-.dot:nth-child(4) {
-    animation-delay: 0.6s;
-}
-
-@keyframes dot-wave {
-
-    0%,
-    80%,
-    100% {
-        transform: scale(0.8);
-        opacity: 0.5;
-    }
-
-    40% {
-        transform: scale(1.2);
-        opacity: 1;
-    }
-}
-
-/* Loading state for carousel wrapper */
-.carousel-wrapper.loading {
-    min-height: 250px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
