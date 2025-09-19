@@ -369,6 +369,8 @@ class ContentCardManager {
 
     setupLazyLoading(card) {
         const img = card.querySelector('.card-poster');
+
+        // Use a more efficient intersection observer with better thresholds for mobile
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -389,9 +391,11 @@ class ContentCardManager {
                 }
             });
         }, {
-            rootMargin: '50px',
+            // Optimize for mobile performance
+            rootMargin: window.innerWidth <= 768 ? '25px' : '50px',
             threshold: 0.01
         });
+
         observer.observe(img);
     }
 
@@ -655,19 +659,27 @@ class ContentCardManager {
             return (cardWidth + gap) * Math.max(1, visibleCards - 1);
         };
 
-        // Update navigation buttons state
+        // Throttled update function for better performance
+        let ticking = false;
         const updateNavButtons = () => {
-            if (!prevBtn || !nextBtn) return;
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    if (!prevBtn || !nextBtn) return;
 
-            const scrollLeft = wrapper.scrollLeft;
-            const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
+                    const scrollLeft = wrapper.scrollLeft;
+                    const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
 
-            prevBtn.classList.toggle('disabled', scrollLeft <= 0);
-            nextBtn.classList.toggle('disabled', scrollLeft >= maxScroll - 1);
+                    prevBtn.classList.toggle('disabled', scrollLeft <= 0);
+                    nextBtn.classList.toggle('disabled', scrollLeft >= maxScroll - 1);
+
+                    ticking = false;
+                });
+                ticking = true;
+            }
         };
 
-        // Navigation handlers
-        if (prevBtn && nextBtn) {
+        // Navigation handlers (only for desktop)
+        if (prevBtn && nextBtn && window.innerWidth > 768) {
             prevBtn.addEventListener('click', () => {
                 wrapper.scrollBy({
                     left: -getScrollAmount(),
@@ -682,62 +694,56 @@ class ContentCardManager {
                 });
             });
 
-            wrapper.addEventListener('scroll', updateNavButtons);
+            // Throttled scroll listener
+            wrapper.addEventListener('scroll', updateNavButtons, { passive: true });
             updateNavButtons();
         }
 
-        // Touch/swipe support
+        // Setup touch scroll
         this.setupTouchScroll(wrapper);
     }
 
     setupTouchScroll(wrapper) {
-        let isDown = false;
-        let startX = 0;
-        let scrollLeft = 0;
+        // Only add custom touch handling on desktop
+        if (window.innerWidth > 768) {
+            let isDown = false;
+            let startX = 0;
+            let scrollLeft = 0;
 
-        // Touch events
-        wrapper.addEventListener('touchstart', (e) => {
-            isDown = true;
-            startX = e.touches[0].pageX;
-            scrollLeft = wrapper.scrollLeft;
-        }, { passive: true });
+            // Mouse events for desktop
+            wrapper.addEventListener('mousedown', (e) => {
+                isDown = true;
+                startX = e.pageX;
+                scrollLeft = wrapper.scrollLeft;
+                wrapper.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
 
-        wrapper.addEventListener('touchmove', (e) => {
-            if (!isDown) return;
-            const x = e.touches[0].pageX;
-            const walk = (startX - x) * 1.5;
-            wrapper.scrollLeft = scrollLeft + walk;
-        }, { passive: true });
+            wrapper.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX;
+                const walk = (startX - x) * 2;
+                wrapper.scrollLeft = scrollLeft + walk;
+            });
 
-        wrapper.addEventListener('touchend', () => {
-            isDown = false;
-        });
+            wrapper.addEventListener('mouseup', () => {
+                isDown = false;
+                wrapper.style.cursor = 'grab';
+            });
 
-        // Mouse events for desktop
-        wrapper.addEventListener('mousedown', (e) => {
-            isDown = true;
-            startX = e.pageX;
-            scrollLeft = wrapper.scrollLeft;
-            wrapper.style.cursor = 'grabbing';
-        });
+            wrapper.addEventListener('mouseleave', () => {
+                isDown = false;
+                wrapper.style.cursor = 'grab';
+            });
+        } else {
+            // On mobile, let native scrolling handle everything
+            wrapper.style.cursor = 'default';
 
-        wrapper.addEventListener('mousemove', (e) => {
-            if (!isDown) return;
-            e.preventDefault();
-            const x = e.pageX;
-            const walk = (startX - x) * 2;
-            wrapper.scrollLeft = scrollLeft + walk;
-        });
-
-        wrapper.addEventListener('mouseup', () => {
-            isDown = false;
-            wrapper.style.cursor = 'grab';
-        });
-
-        wrapper.addEventListener('mouseleave', () => {
-            isDown = false;
-            wrapper.style.cursor = 'grab';
-        });
+            // Add momentum scrolling for iOS
+            wrapper.style.webkitOverflowScrolling = 'touch';
+            wrapper.style.overscrollBehaviorX = 'contain';
+        }
     }
 
     setupEventListeners() {

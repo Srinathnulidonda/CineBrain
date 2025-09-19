@@ -649,38 +649,103 @@ class DetailsPage {
         container.style.display = 'flex';
         if (noReviews) noReviews.style.display = 'none';
 
-        container.innerHTML = data.reviews.map(review => `
-            <div class="review-card">
-                <div class="review-header">
-                    <div class="reviewer-info">
-                        <img class="reviewer-avatar" 
-                             src="${review.user?.avatar || this.getPlaceholderAvatar()}" 
-                             alt="${this.escapeHtml(review.user?.username || 'Anonymous')}"
-                             loading="lazy">
-                        <div class="reviewer-details">
-                            <div class="reviewer-name">${this.escapeHtml(review.user?.username || 'Anonymous')}</div>
-                            <div class="review-date">${this.formatDate(review.created_at)}</div>
-                        </div>
-                    </div>
-                    <div class="review-rating">
-                        ${this.renderStars(review.rating || 0)}
+        // Sort reviews by creation date (newest first)
+        const sortedReviews = [...data.reviews].sort((a, b) =>
+            new Date(b.created_at) - new Date(a.created_at)
+        );
+
+        container.innerHTML = sortedReviews.map(review => `
+        <div class="review-card">
+            <div class="review-header">
+                <div class="reviewer-info">
+                    <img class="reviewer-avatar" 
+                         src="${review.user?.avatar || this.getPlaceholderAvatar()}" 
+                         alt="${this.escapeHtml(review.user?.username || 'Anonymous')}"
+                         loading="lazy">
+                    <div class="reviewer-details">
+                        <div class="reviewer-name">${this.escapeHtml(review.user?.username || 'Anonymous')}</div>
+                        <div class="review-date">${this.formatDate(review.created_at)}</div>
+                        ${review.has_spoilers ? '<div class="spoiler-warning">⚠️ Contains Spoilers</div>' : ''}
                     </div>
                 </div>
-                <div class="review-content">
-                    ${review.title ? `<h4 class="review-title">${this.escapeHtml(review.title)}</h4>` : ''}
-                    <p class="review-text">${this.escapeHtml(review.review_text || review.content)}</p>
-                </div>
-                <div class="review-actions">
-                    <button class="review-action-btn" data-review-id="${review.id}">
-                        <i data-feather="thumbs-up"></i>
-                        Helpful (${review.helpful_count || 0})
-                    </button>
+                <div class="review-rating">
+                    ${this.renderStars(review.rating || 0)}
+                    <span class="rating-value">${(review.rating || 0).toFixed(1)}</span>
                 </div>
             </div>
-        `).join('');
+            <div class="review-content">
+                ${review.title ? `<h4 class="review-title">${this.escapeHtml(review.title)}</h4>` : ''}
+                <p class="review-text ${review.has_spoilers ? 'spoiler-content' : ''}">${this.escapeHtml(review.review_text || review.content)}</p>
+                ${review.has_spoilers ? '<button class="show-spoiler-btn" onclick="this.previousElementSibling.classList.toggle(\'revealed\'); this.textContent = this.textContent === \'Show Spoilers\' ? \'Hide Spoilers\' : \'Show Spoilers\'">Show Spoilers</button>' : ''}
+            </div>
+            <div class="review-actions">
+                <button class="review-action-btn" data-review-id="${review.id}" onclick="detailsPage.voteReviewHelpful(${review.id}, true)">
+                    <i data-feather="thumbs-up"></i>
+                    Helpful (${review.helpful_count || 0})
+                </button>
+                ${this.currentUser?.id === review.user?.id ? `
+                    <button class="review-action-btn edit-review" data-review-id="${review.id}">
+                        <i data-feather="edit"></i>
+                        Edit
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
 
         if (typeof feather !== 'undefined') {
             feather.replace();
+        }
+    }
+
+    // Add method to refresh reviews after submission
+    async refreshReviews() {
+        try {
+            const response = await fetch(`${this.apiBase}/details/${encodeURIComponent(this.contentSlug)}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(this.authToken && { 'Authorization': `Bearer ${this.authToken}` })
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.contentData.reviews = data.reviews;
+                this.renderReviews(data);
+                console.log('Reviews refreshed');
+            }
+        } catch (error) {
+            console.error('Error refreshing reviews:', error);
+        }
+    }
+
+    // Add method to vote on review helpfulness
+    async voteReviewHelpful(reviewId, isHelpful = true) {
+        if (!this.isAuthenticated) {
+            this.showToast('Please login to vote on reviews', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiBase}/reviews/${reviewId}/helpful`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.authToken}`
+                },
+                body: JSON.stringify({ is_helpful: isHelpful })
+            });
+
+            if (response.ok) {
+                this.showToast('Thank you for your feedback!', 'success');
+                // Refresh reviews to show updated helpful count
+                this.refreshReviews();
+            } else {
+                throw new Error('Failed to vote on review');
+            }
+        } catch (error) {
+            console.error('Error voting on review:', error);
+            this.showToast('Failed to submit vote', 'error');
         }
     }
 
