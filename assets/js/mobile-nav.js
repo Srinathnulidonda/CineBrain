@@ -2,7 +2,7 @@ class MobileNavigation {
     constructor(config = {}) {
         // Configuration
         this.config = {
-            apiBase: config.apiBase || 'https://backend-app-970m.onrender.com/api',
+            apiBase: config.apiBase || 'https://cinebrain.onrender.com/api',
             enableHaptic: config.enableHaptic !== false,
             swipeThreshold: config.swipeThreshold || 50,
             swipeVelocity: config.swipeVelocity || 0.3,

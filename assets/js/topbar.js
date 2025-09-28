@@ -413,7 +413,7 @@ class NotificationSystem {
 // Optimized TopBar Component with Theme Manager Integration
 class TopbarComponent {
     constructor() {
-        this.apiBase = 'https://backend-app-970m.onrender.com/api';
+        this.apiBase = 'https://cinebrain.onrender.com/api';
         this.searchEngine = new SearchEngine(this.apiBase);
         this.notificationSystem = new NotificationSystem();
         this.searchDebounceTimer = null;
