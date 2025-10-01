@@ -1,6 +1,5 @@
 class MobileNavigation {
     constructor(config = {}) {
-        // Configuration
         this.config = {
             apiBase: config.apiBase || 'https://cinebrain.onrender.com/api',
             enableHaptic: config.enableHaptic !== false,
@@ -9,7 +8,6 @@ class MobileNavigation {
             ...config
         };
 
-        // State
         this.state = {
             currentUser: null,
             isMenuOpen: false,
@@ -22,76 +20,45 @@ class MobileNavigation {
             scrollPosition: 0
         };
 
-        // Cache DOM elements
         this.elements = {};
-
-        // Touch tracking
         this.touchStartTime = 0;
         this.touchStartY = 0;
 
-        // Register with theme manager if available
         if (window.themeManager) {
             window.themeManager.register((theme) => this.onThemeChange(theme));
         }
 
-        // Initialize
         this.init();
     }
 
-    /**
-     * Initialize the mobile navigation
-     */
     async init() {
-        // Check if mobile
         if (!this.isMobile()) {
             console.log('Mobile navigation disabled on desktop');
             return;
         }
 
-        // Cache elements
         this.cacheElements();
-
-        // Get current user
         this.state.currentUser = this.getCurrentUser();
-
-        // Setup navigation
         this.setupNavigation();
 
-        // Ensure active state is set after navigation is rendered
         setTimeout(() => {
             this.detectCurrentPage();
         }, 0);
 
-        // Load menu content
         this.loadMenuContent();
-
-        // Setup event listeners
         this.setupEventListeners();
-
-        // Initialize theme
         this.detectAndApplyTheme();
-
-        // Setup swipe gestures
         this.setupSwipeGestures();
 
-        // Load user data if authenticated
         if (this.state.currentUser) {
             this.loadUserData();
         }
 
-        // Initialize Feather icons
         this.initIcons();
-
-        // Add Spotify-like animations
         this.initSpotifyAnimations();
-
-        // Dispatch ready event
         this.dispatchEvent('ready');
     }
 
-    /**
-     * Cache DOM elements
-     */
     cacheElements() {
         this.elements = {
             nav: document.getElementById('mobileBottomNav'),
@@ -106,34 +73,20 @@ class MobileNavigation {
         };
     }
 
-    /**
-     * Theme change callback from Theme Manager
-     */
     onThemeChange(theme) {
         this.updateThemeUI(theme);
     }
 
-    /**
-     * Update UI for theme change
-     */
     updateThemeUI(theme) {
-        // Just update icons, the theme is already applied by Theme Manager
         this.initIcons();
-
-        // Dispatch theme change event for component
         this.dispatchEvent('themeChanged', { theme });
     }
 
-    /**
-     * Detect and apply current theme
-     */
     detectAndApplyTheme() {
-        // If theme manager exists, use it
         if (window.themeManager) {
             const theme = window.themeManager.getCurrentTheme();
             this.updateThemeUI(theme);
         } else {
-            // Fallback to old method
             const htmlElement = document.documentElement;
             const currentTheme = htmlElement.getAttribute('data-theme') ||
                 htmlElement.getAttribute('data-bs-theme') ||
@@ -144,23 +97,12 @@ class MobileNavigation {
         }
     }
 
-    /**
-     * Apply theme to navigation (fallback method)
-     */
     applyTheme(theme) {
-        // The CSS already handles this via [data-bs-theme] attribute
-        // Just ensure icons are updated
         this.initIcons();
-
-        // Dispatch theme change event
         this.dispatchEvent('themeChanged', { theme });
     }
 
-    /**
-     * Observe theme changes (simplified)
-     */
     observeThemeChanges() {
-        // Only listen for storage events for cross-tab sync
         window.addEventListener('storage', (e) => {
             if (e.key === 'cinebrain-theme' && window.themeManager) {
                 window.themeManager.applyTheme(e.newValue || 'dark');
@@ -168,10 +110,6 @@ class MobileNavigation {
         });
     }
 
-    /**
-     * Setup swipe gestures for menu
-     * FIXED: Prevents pull-to-refresh when closing menu
-     */
     setupSwipeGestures() {
         if (!this.elements.menuOverlay) return;
 
@@ -180,7 +118,6 @@ class MobileNavigation {
         let startTime = 0;
         let isSwipeValid = false;
 
-        // Touch start
         this.elements.menuOverlay.addEventListener('touchstart', (e) => {
             if (!this.state.isMenuOpen) return;
 
@@ -190,45 +127,37 @@ class MobileNavigation {
             this.state.isDragging = false;
             isSwipeValid = false;
 
-            // Check if touch started near the top of the menu (for handle or header area)
             const rect = this.elements.menuOverlay.getBoundingClientRect();
-            if (startY - rect.top < 100) { // Within 100px of menu top
+            if (startY - rect.top < 100) {
                 isSwipeValid = true;
             }
 
-            // Store initial menu height
             this.state.menuHeight = this.elements.menuOverlay.offsetHeight;
         }, { passive: true });
 
-        // Touch move - NON-PASSIVE to allow preventDefault
         this.elements.menuOverlay.addEventListener('touchmove', (e) => {
             if (!this.state.isMenuOpen) return;
 
             currentY = e.touches[0].clientY;
             const deltaY = currentY - startY;
 
-            // Only handle swipe down from valid start position
             if (isSwipeValid && deltaY > 0) {
-                // Prevent browser pull-to-refresh
                 e.preventDefault();
                 e.stopPropagation();
 
                 this.state.isDragging = true;
                 this.elements.menuOverlay.classList.add('dragging');
 
-                // Apply transform with resistance
                 const resistance = 1 - (deltaY / (this.state.menuHeight * 2));
                 const transform = deltaY * resistance;
 
                 this.elements.menuOverlay.style.transform = `translateY(${Math.max(0, transform)}px)`;
 
-                // Adjust backdrop opacity
                 const opacity = 1 - (deltaY / this.state.menuHeight);
                 this.elements.backdrop.style.opacity = Math.max(0, opacity);
             }
-        }, { passive: false }); // IMPORTANT: Set passive to false
+        }, { passive: false });
 
-        // Touch end
         this.elements.menuOverlay.addEventListener('touchend', (e) => {
             if (!this.state.isMenuOpen || !this.state.isDragging) return;
 
@@ -240,7 +169,6 @@ class MobileNavigation {
             this.elements.menuOverlay.style.transform = '';
             this.elements.backdrop.style.opacity = '';
 
-            // Close if swiped down enough or with enough velocity
             if (deltaY > this.config.swipeThreshold || velocity > this.config.swipeVelocity) {
                 this.closeMenu();
                 this.hapticFeedback('light');
@@ -250,7 +178,6 @@ class MobileNavigation {
             isSwipeValid = false;
         }, { passive: true });
 
-        // Handle swipe on menu handle specifically
         if (this.elements.menuHandle) {
             let handleStartY = 0;
             let handleCurrentY = 0;
@@ -263,11 +190,10 @@ class MobileNavigation {
                 this.state.isDragging = true;
             }, { passive: true });
 
-            // NON-PASSIVE for handle drag
             this.elements.menuHandle.addEventListener('touchmove', (e) => {
                 if (!this.state.isMenuOpen) return;
 
-                e.preventDefault(); // Prevent refresh
+                e.preventDefault();
                 e.stopPropagation();
 
                 handleCurrentY = e.touches[0].clientY;
@@ -279,7 +205,7 @@ class MobileNavigation {
                     const opacity = 1 - (deltaY / 300);
                     this.elements.backdrop.style.opacity = Math.max(0, opacity);
                 }
-            }, { passive: false }); // IMPORTANT: Set passive to false
+            }, { passive: false });
 
             this.elements.menuHandle.addEventListener('touchend', (e) => {
                 e.stopPropagation();
@@ -298,14 +224,12 @@ class MobileNavigation {
             }, { passive: true });
         }
 
-        // Prevent pull-to-refresh on the backdrop when menu is open
         this.elements.backdrop?.addEventListener('touchmove', (e) => {
             if (this.state.isMenuOpen) {
                 e.preventDefault();
             }
         }, { passive: false });
 
-        // Prevent overscroll on the menu content area
         const menuContent = this.elements.menuOverlay?.querySelector('.menu-section');
         if (menuContent) {
             let scrollStartY = 0;
@@ -322,7 +246,6 @@ class MobileNavigation {
                 const currentY = e.touches[0].clientY;
                 const deltaY = currentY - scrollStartY;
 
-                // Prevent overscroll at boundaries
                 if ((scrollTop === 0 && deltaY > 0) ||
                     (scrollTop >= menuContent.scrollHeight - menuContent.clientHeight && deltaY < 0)) {
                     e.preventDefault();
@@ -331,26 +254,18 @@ class MobileNavigation {
         }
     }
 
-    /**
-     * Initialize Spotify-like animations
-     */
     initSpotifyAnimations() {
-        // Add micro-interactions to nav items
         this.elements.navContainer?.querySelectorAll('.mobile-nav-item').forEach(item => {
             item.addEventListener('touchstart', () => {
                 this.hapticFeedback('light');
             });
         });
 
-        // Add animations to menu items
         if (this.state.isMenuOpen) {
             this.animateMenuItems();
         }
     }
 
-    /**
-     * Animate menu items on open
-     */
     animateMenuItems() {
         const items = this.elements.menuOverlay?.querySelectorAll('.mobile-menu-item, .mobile-menu-list-item');
         items?.forEach((item, index) => {
@@ -361,13 +276,10 @@ class MobileNavigation {
                 item.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                 item.style.opacity = '1';
                 item.style.transform = 'translateY(0)';
-            }, index * 30); // Stagger animation
+            }, index * 30);
         });
     }
 
-    /**
-     * Enhanced haptic feedback
-     */
     hapticFeedback(type = 'light') {
         if (!this.config.enableHaptic || !('vibrate' in navigator)) return;
 
@@ -378,22 +290,16 @@ class MobileNavigation {
             success: [10, 50, 10],
             warning: [30, 50, 30],
             error: [50, 100, 50],
-            spotify: [5, 10, 5] // Quick double tap
+            spotify: [5, 10, 5]
         };
 
         navigator.vibrate(patterns[type] || patterns.light);
     }
 
-    /**
-     * Check if device is mobile
-     */
     isMobile() {
         return window.innerWidth <= 768;
     }
 
-    /**
-     * Get current user from localStorage
-     */
     getCurrentUser() {
         const userStr = localStorage.getItem('cinebrain-user');
         if (userStr) {
@@ -407,14 +313,10 @@ class MobileNavigation {
         return null;
     }
 
-    /**
-     * Setup navigation items
-     */
     setupNavigation() {
         const isAuthenticated = !!this.state.currentUser;
         const isAdmin = this.state.currentUser?.is_admin;
 
-        // Get current path for comparison
         let currentPath = window.location.pathname;
         if (currentPath === '/' || currentPath === '') {
             currentPath = '/index.html';
@@ -457,20 +359,16 @@ class MobileNavigation {
             );
         }
 
-        // Always add more menu for authenticated users
         if (isAuthenticated && navItems.length === 4) {
             navItems[4] = { id: 'more', label: 'More', icon: 'grid', action: 'openMenu' };
         }
 
-        // Render navigation with active state
         this.elements.navContainer.innerHTML = navItems.map((item, index) => {
-            // Determine if this item should be active
             let isActive = false;
             if (item.route) {
                 const normalizedRoute = item.route === '/' ? '/index.html' : item.route;
                 isActive = normalizedRoute === currentPath;
 
-                // Special cases
                 if (!isActive) {
                     if (item.id === 'home' && (currentPath === '/' || currentPath === '/index.html')) {
                         isActive = true;
@@ -498,20 +396,15 @@ class MobileNavigation {
             `;
         }).join('');
 
-        // Set current page state
         const activeItem = this.elements.navContainer.querySelector('.mobile-nav-item.active');
         if (activeItem) {
             this.state.currentPage = activeItem.dataset.nav;
         }
     }
 
-    /**
-     * Load menu content
-     */
     loadMenuContent() {
         const isAuthenticated = !!this.state.currentUser;
 
-        // Add class to menu overlay based on auth state
         if (this.elements.menuOverlay) {
             if (isAuthenticated) {
                 this.elements.menuOverlay.classList.add('authenticated');
@@ -522,7 +415,6 @@ class MobileNavigation {
             }
         }
 
-        // Grid items with clean, professional design
         const gridItems = [
             { icon: 'film', label: 'Movies', route: '/content/movies.html' },
             { icon: 'tv', label: 'Shows', route: '/content/tv-shows.html' },
@@ -534,7 +426,6 @@ class MobileNavigation {
             { icon: 'activity', label: 'Activity', route: '/user/activity.html' }
         ];
 
-        // Render clean circular icons for all users
         this.elements.menuGrid.innerHTML = gridItems.map(item => `
             <a href="${item.route}" class="mobile-menu-item">
                 <i data-feather="${item.icon}"></i>
@@ -542,7 +433,6 @@ class MobileNavigation {
             </a>
         `).join('');
 
-        // List items
         const listItems = this.getMenuListItems();
 
         this.elements.menuList.innerHTML = listItems.map(item => {
@@ -567,20 +457,15 @@ class MobileNavigation {
             `;
         }).join('');
 
-        // Update section title
         if (this.state.currentUser) {
             this.elements.userSectionTitle.textContent = `Hey ${this.state.currentUser.username}!`;
         } else {
             this.elements.userSectionTitle.textContent = 'Quick Access';
         }
 
-        // Initialize icons after content is loaded
         this.initIcons();
     }
 
-    /**
-     * Get menu list items based on user state
-     */
     getMenuListItems() {
         if (this.state.currentUser) {
             const items = [
@@ -619,7 +504,7 @@ class MobileNavigation {
                     icon: 'help-circle',
                     title: 'Help',
                     subtitle: 'Get support',
-                    route: '/pages/help.html'
+                    route: '/support/help-center.html'
                 },
                 {
                     icon: 'log-out',
@@ -649,17 +534,13 @@ class MobileNavigation {
                     icon: 'help-circle',
                     title: 'Help',
                     subtitle: 'Get support',
-                    route: '/pages/help.html'
+                    route: '/support/help-center.html'
                 }
             ];
         }
     }
 
-    /**
-     * Setup event listeners
-     */
     setupEventListeners() {
-        // Navigation clicks with haptic feedback
         this.elements.navContainer.addEventListener('click', (e) => {
             const navItem = e.target.closest('.mobile-nav-item');
             if (!navItem) return;
@@ -676,25 +557,21 @@ class MobileNavigation {
             }
         });
 
-        // Menu close button
         this.elements.menuClose?.addEventListener('click', () => {
             this.hapticFeedback('light');
             this.closeMenu();
         });
 
-        // Backdrop click
         this.elements.backdrop?.addEventListener('click', () => {
             this.closeMenu();
         });
 
-        // Handle resize
         window.addEventListener('resize', () => {
             if (!this.isMobile()) {
                 this.destroy();
             }
         });
 
-        // Handle back button when menu is open
         window.addEventListener('popstate', (e) => {
             if (this.state.isMenuOpen) {
                 e.preventDefault();
@@ -702,88 +579,91 @@ class MobileNavigation {
             }
         });
 
-        // Handle page visibility change (for when user comes back to tab)
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 this.detectCurrentPage();
             }
         });
 
-        // Handle page focus (for when navigating back)
         window.addEventListener('focus', () => {
             this.detectCurrentPage();
         });
 
-        // Handle page load/reload
         window.addEventListener('pageshow', () => {
             this.detectCurrentPage();
         });
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'cinebrain-token') {
+                this.state.currentUser = this.getCurrentUser();
+                this.setupNavigation();
+                this.loadMenuContent();
+                if (this.state.currentUser) {
+                    this.loadUserData();
+                }
+            }
+        });
+
+        window.addEventListener('userLoggedIn', () => {
+            this.state.currentUser = this.getCurrentUser();
+            this.setupNavigation();
+            this.loadMenuContent();
+            this.loadUserData();
+        });
+
+        window.addEventListener('userLoggedOut', () => {
+            this.state.currentUser = null;
+            this.state.watchlistCount = 0;
+            this.setupNavigation();
+            this.loadMenuContent();
+        });
     }
 
-    /**
-     * Initialize icons
-     */
     initIcons() {
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
     }
 
-    /**
-     * Detect current page and set active state
-     */
     detectCurrentPage() {
-        // Get current path and normalize it
         let currentPath = window.location.pathname;
 
-        // Normalize path - remove trailing slash except for root
         if (currentPath.length > 1 && currentPath.endsWith('/')) {
             currentPath = currentPath.slice(0, -1);
         }
 
-        // Handle root path
         if (currentPath === '/' || currentPath === '') {
             currentPath = '/index.html';
         }
 
-        // Remove all active states first
         this.elements.navContainer.querySelectorAll('.mobile-nav-item').forEach(item => {
             item.classList.remove('active');
         });
 
-        // Find and set the active item
         this.elements.navContainer.querySelectorAll('.mobile-nav-item').forEach(item => {
             const route = item.dataset.route;
             if (!route) return;
 
-            // Normalize the route for comparison
             let normalizedRoute = route;
             if (normalizedRoute === '/') {
                 normalizedRoute = '/index.html';
             }
 
-            // Check for exact match or if current path contains the route
-            // Special handling for different route patterns
             let isActive = false;
 
             if (normalizedRoute === currentPath) {
-                // Exact match
                 isActive = true;
             } else if (normalizedRoute === '/index.html' && (currentPath === '/' || currentPath === '')) {
-                // Home page special case
                 isActive = true;
             } else if (normalizedRoute.includes('/content/') && currentPath.includes('/content/')) {
-                // For content pages, check if the base name matches
                 const routeBaseName = normalizedRoute.split('/').pop().split('.')[0];
                 const pathBaseName = currentPath.split('/').pop().split('.')[0];
                 isActive = routeBaseName === pathBaseName;
             } else if (normalizedRoute.includes('/user/') && currentPath.includes('/user/')) {
-                // For user pages, check if it's the same section
                 const routeSection = normalizedRoute.split('/')[2]?.split('.')[0];
                 const pathSection = currentPath.split('/')[2]?.split('.')[0];
                 isActive = routeSection === pathSection;
             } else if (normalizedRoute.includes('/admin/') && currentPath.includes('/admin/')) {
-                // For admin pages
                 const routeSection = normalizedRoute.split('/')[2]?.split('.')[0];
                 const pathSection = currentPath.split('/')[2]?.split('.')[0];
                 isActive = routeSection === pathSection;
@@ -792,25 +672,18 @@ class MobileNavigation {
             if (isActive) {
                 item.classList.add('active');
                 this.state.currentPage = item.dataset.nav;
-
-                // Log for debugging
                 console.log(`Active nav item: ${item.dataset.nav} for path: ${currentPath}`);
             }
         });
 
-        // If no exact match found, try to determine based on nav ID
         if (!this.state.currentPage) {
             this.detectCurrentPageByContent();
         }
     }
 
-    /**
-     * Fallback detection based on page content
-     */
     detectCurrentPageByContent() {
         const currentPath = window.location.pathname.toLowerCase();
 
-        // Map paths to nav IDs
         const pathMapping = {
             'trending': 'trending',
             'discover': 'discover',
@@ -827,17 +700,14 @@ class MobileNavigation {
             'details': 'discover'
         };
 
-        // Check each mapping
         for (const [pathKeyword, navId] of Object.entries(pathMapping)) {
             if (currentPath.includes(pathKeyword)) {
                 const navItem = this.elements.navContainer.querySelector(`[data-nav="${navId}"]`);
                 if (navItem) {
-                    // Remove all active states
                     this.elements.navContainer.querySelectorAll('.mobile-nav-item').forEach(item => {
                         item.classList.remove('active');
                     });
 
-                    // Set this item as active
                     navItem.classList.add('active');
                     this.state.currentPage = navId;
 
@@ -847,7 +717,6 @@ class MobileNavigation {
             }
         }
 
-        // Default to home if nothing matches
         if (!this.state.currentPage) {
             const homeItem = this.elements.navContainer.querySelector('[data-nav="home"]');
             if (homeItem) {
@@ -857,22 +726,17 @@ class MobileNavigation {
         }
     }
 
-    /**
-     * Load user data
-     */
     async loadUserData() {
         try {
             const token = localStorage.getItem('cinebrain-token');
             if (!token) return;
 
-            // Try cache first
             const cachedCount = sessionStorage.getItem('cinebrain-watchlist-count');
             if (cachedCount) {
                 this.state.watchlistCount = parseInt(cachedCount);
                 this.updateWatchlistBadge();
             }
 
-            // Fetch fresh data
             const response = await fetch(`${this.config.apiBase}/user/watchlist`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -884,15 +748,18 @@ class MobileNavigation {
                 this.state.watchlistCount = data.watchlist?.length || 0;
                 sessionStorage.setItem('cinebrain-watchlist-count', this.state.watchlistCount);
                 this.updateWatchlistBadge();
+            } else if (response.status === 401) {
+                localStorage.removeItem('cinebrain-token');
+                localStorage.removeItem('cinebrain-user');
+                this.state.currentUser = null;
+                this.setupNavigation();
+                this.loadMenuContent();
             }
         } catch (error) {
             console.error('Error loading user data:', error);
         }
     }
 
-    /**
-     * Update watchlist badge
-     */
     updateWatchlistBadge() {
         const watchlistItem = this.elements.navContainer.querySelector('[data-nav="watchlist"]');
         if (!watchlistItem) return;
@@ -911,40 +778,27 @@ class MobileNavigation {
         }
     }
 
-    /**
-     * Format badge count
-     */
     formatBadgeCount(count) {
         return count > 99 ? '99+' : count.toString();
     }
 
-    /**
-     * Navigate to route
-     */
     navigate(route) {
-        // Add loading state WITHOUT rotation (CSS handles this now)
         const activeItem = this.elements.navContainer.querySelector(`[data-route="${route}"]`);
         if (activeItem) {
             activeItem.classList.add('loading');
         }
 
-        // Navigate after small delay for feedback
         setTimeout(() => {
             window.location.href = route;
         }, 100);
     }
 
-    /**
-     * Open menu with Spotify-style animation
-     * FIXED: Prevents background scroll when menu is open
-     */
     openMenu() {
         this.state.isMenuOpen = true;
         this.elements.menuOverlay.classList.add('show');
         this.elements.backdrop.classList.add('show');
         this.elements.menuOverlay.setAttribute('aria-hidden', 'false');
 
-        // Store current scroll position and lock body
         this.state.scrollPosition = window.scrollY;
         document.body.classList.add('menu-open');
         document.body.style.top = `-${this.state.scrollPosition}px`;
@@ -953,7 +807,6 @@ class MobileNavigation {
         this.animateMenuItems();
         this.initIcons();
 
-        // Add to browser history for back button support
         if (window.history && window.history.pushState) {
             window.history.pushState({ menuOpen: true }, '');
         }
@@ -961,10 +814,6 @@ class MobileNavigation {
         this.dispatchEvent('menuOpen');
     }
 
-    /**
-     * Close menu
-     * FIXED: Restores scroll position properly
-     */
     closeMenu() {
         if (!this.state.isMenuOpen) return;
 
@@ -973,11 +822,9 @@ class MobileNavigation {
         this.elements.backdrop.classList.remove('show');
         this.elements.menuOverlay.setAttribute('aria-hidden', 'true');
 
-        // Remove body lock and restore scroll position
         document.body.classList.remove('menu-open');
         document.body.style.top = '';
 
-        // Restore scroll position
         if (this.state.scrollPosition !== undefined) {
             window.scrollTo(0, this.state.scrollPosition);
             this.state.scrollPosition = 0;
@@ -986,11 +833,7 @@ class MobileNavigation {
         this.dispatchEvent('menuClose');
     }
 
-    /**
-     * Logout with fully responsive confirmation dialog
-     */
     logout() {
-        // Create responsive confirmation dialog
         const confirmDialog = document.createElement('div');
         confirmDialog.style.cssText = `
             position: fixed;
@@ -1024,100 +867,11 @@ class MobileNavigation {
             margin: auto;
         `;
 
-        // Detect viewport size for dynamic adjustments
         const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
         const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
         const isLandscape = vw > vh;
 
         dialogBox.innerHTML = `
-            <style>
-                /* Responsive styles for different screen sizes */
-                @media (max-width: 280px) {
-                    .m-dialog-icon-wrapper { 
-                        width: 44px !important; 
-                        height: 44px !important; 
-                    }
-                    .m-dialog-icon { 
-                        width: 22px !important; 
-                        height: 22px !important; 
-                    }
-                    .m-dialog-title { 
-                        font-size: 15px !important; 
-                    }
-                    .m-dialog-text { 
-                        font-size: 12px !important; 
-                    }
-                    .m-dialog-button { 
-                        font-size: 12px !important;
-                        padding: 8px 12px !important;
-                        min-height: 36px !important;
-                    }
-                }
-                
-                @media (min-width: 281px) and (max-width: 375px) {
-                    .m-dialog-icon-wrapper { 
-                        width: 54px !important; 
-                        height: 54px !important; 
-                    }
-                    .m-dialog-icon { 
-                        width: 27px !important; 
-                        height: 27px !important; 
-                    }
-                    .m-dialog-title { 
-                        font-size: 17px !important; 
-                    }
-                    .m-dialog-text { 
-                        font-size: 14px !important; 
-                    }
-                    .m-dialog-button { 
-                        font-size: 14px !important;
-                        padding: 11px 18px !important;
-                        min-height: 42px !important;
-                    }
-                }
-                
-                @media (min-width: 376px) {
-                    .m-dialog-icon-wrapper { 
-                        width: 64px !important; 
-                        height: 64px !important; 
-                    }
-                    .m-dialog-icon { 
-                        width: 32px !important; 
-                        height: 32px !important; 
-                    }
-                    .m-dialog-title { 
-                        font-size: 19px !important; 
-                    }
-                    .m-dialog-text { 
-                        font-size: 15px !important; 
-                    }
-                    .m-dialog-button { 
-                        font-size: 15px !important;
-                        padding: 12px 22px !important;
-                        min-height: 46px !important;
-                    }
-                }
-
-                /* Landscape adjustments */
-                @media (orientation: landscape) and (max-height: 500px) {
-                    .m-dialog-icon-wrapper { 
-                        width: 40px !important; 
-                        height: 40px !important;
-                        margin-bottom: 8px !important;
-                    }
-                    .m-dialog-icon { 
-                        width: 20px !important; 
-                        height: 20px !important; 
-                    }
-                }
-
-                @media (orientation: landscape) and (max-height: 400px) {
-                    .m-dialog-icon-section {
-                        display: none !important;
-                    }
-                }
-            </style>
-            
             <div class="m-dialog-content-wrapper" style="margin-bottom: clamp(12px, 3vh, 24px);">
                 <div class="m-dialog-icon-section" style="${(isLandscape && vh < 400) ? 'display: none;' : ''}">
                     <div class="m-dialog-icon-wrapper" style="
@@ -1219,7 +973,6 @@ class MobileNavigation {
         confirmDialog.appendChild(dialogBox);
         document.body.appendChild(confirmDialog);
 
-        // Add animations
         if (!document.getElementById('m-dialog-animations')) {
             const style = document.createElement('style');
             style.id = 'm-dialog-animations';
@@ -1239,17 +992,14 @@ class MobileNavigation {
                     }
                 }
                 
-                /* Button press effect - NO ROTATION */
                 .m-dialog-button:active {
                     transform: scale(0.97);
                 }
                 
-                /* Cancel button hover/touch */
                 #cancelLogout:active {
                     background: rgba(255, 255, 255, 0.08) !important;
                 }
                 
-                /* Confirm button hover/touch */
                 #confirmLogout:active {
                     filter: brightness(1.1);
                     box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4) !important;
@@ -1258,15 +1008,12 @@ class MobileNavigation {
             document.head.appendChild(style);
         }
 
-        // Initialize feather icons
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
 
-        // Haptic feedback on dialog open
         this.hapticFeedback('medium');
 
-        // Handle button clicks with haptic feedback
         document.getElementById('cancelLogout').addEventListener('click', () => {
             this.hapticFeedback('light');
             confirmDialog.style.animation = 'fadeIn 0.2s ease reverse';
@@ -1274,12 +1021,10 @@ class MobileNavigation {
         });
 
         document.getElementById('confirmLogout').addEventListener('click', function () {
-            // Haptic feedback for confirmation
             if (window.mobileNav) {
                 window.mobileNav.hapticFeedback('success');
             }
 
-            // Show loading state
             const viewportWidth = window.innerWidth;
             const loadingText = viewportWidth < 320 ? 'Signing out...' : 'Signing out...';
             const spinnerSize = viewportWidth < 360 ? '14px' : '16px';
@@ -1300,7 +1045,6 @@ class MobileNavigation {
             this.disabled = true;
             this.style.opacity = '0.8';
 
-            // Add spin animation if not exists
             if (!document.getElementById('spin-animation')) {
                 const style = document.createElement('style');
                 style.id = 'spin-animation';
@@ -1312,27 +1056,22 @@ class MobileNavigation {
                 document.head.appendChild(style);
             }
 
-            // Clear all auth data
             localStorage.removeItem('cinebrain-token');
             localStorage.removeItem('cinebrain-user');
             localStorage.removeItem('cinebrain-role');
             sessionStorage.clear();
 
-            // Store flag to show logout message on home page
             sessionStorage.setItem('show-logout-message', 'true');
 
-            // Show notification toast
             if (window.mobileNav) {
                 window.mobileNav.showToast('Signing out...', 'success');
             }
 
-            // Redirect to home page after delay
             setTimeout(() => {
                 window.location.href = '/index.html';
             }, 800);
         });
 
-        // Close on backdrop click with haptic feedback
         confirmDialog.addEventListener('click', (e) => {
             if (e.target === confirmDialog) {
                 this.hapticFeedback('light');
@@ -1341,7 +1080,6 @@ class MobileNavigation {
             }
         });
 
-        // Handle back button/gesture
         const handlePopState = (e) => {
             confirmDialog.style.animation = 'fadeIn 0.2s ease reverse';
             setTimeout(() => confirmDialog.remove(), 200);
@@ -1350,15 +1088,11 @@ class MobileNavigation {
         window.addEventListener('popstate', handlePopState);
     }
 
-    /**
-     * Show responsive toast notification
-     */
     showToast(message, type = 'info') {
         const screenWidth = window.innerWidth;
         const isSmallPhone = screenWidth <= 360;
         const isMediumPhone = screenWidth > 360 && screenWidth <= 414;
 
-        // Calculate responsive sizes
         const padding = isSmallPhone ? '10px 16px' : isMediumPhone ? '12px 18px' : '12px 20px';
         const fontSize = isSmallPhone ? '13px' : '14px';
         const borderRadius = isSmallPhone ? '20px' : '24px';
@@ -1402,33 +1136,23 @@ class MobileNavigation {
         }, 2000);
     }
 
-    /**
-     * Dispatch custom event
-     */
     dispatchEvent(eventName, detail = {}) {
         window.dispatchEvent(new CustomEvent(`mobileNav:${eventName}`, { detail }));
     }
 
-    /**
-     * Destroy component
-     */
     destroy() {
-        // Remove event listeners
         window.removeEventListener('resize', this.handleResize);
         window.removeEventListener('popstate', this.handlePopstate);
         document.removeEventListener('visibilitychange', this.handleVisibilityChange);
         window.removeEventListener('focus', this.handleFocus);
         window.removeEventListener('pageshow', this.handlePageShow);
 
-        // Remove DOM elements
         this.elements.nav?.remove();
         this.elements.menuOverlay?.remove();
         this.elements.backdrop?.remove();
 
-        // Clear state
         this.state = {};
 
-        // Remove body classes and styles
         document.body.classList.remove('menu-open');
         document.body.style.paddingBottom = '';
         document.body.style.top = '';
@@ -1437,25 +1161,20 @@ class MobileNavigation {
     }
 }
 
-// Initialize mobile navigation
 const mobileNav = new MobileNavigation({
     enableHaptic: true,
     swipeThreshold: 50,
     swipeVelocity: 0.3
 });
 
-// Make it globally available
 window.mobileNav = mobileNav;
 
-// Check for logout message on page load
 document.addEventListener('DOMContentLoaded', () => {
     const showLogoutMessage = sessionStorage.getItem('show-logout-message');
 
     if (showLogoutMessage) {
-        // Remove the flag
         sessionStorage.removeItem('show-logout-message');
 
-        // Show notification if mobile navigation exists
         if (window.mobileNav) {
             setTimeout(() => {
                 window.mobileNav.showToast('You have been signed out', 'info');
@@ -1464,7 +1183,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Export for module usage
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = MobileNavigation;
 }
