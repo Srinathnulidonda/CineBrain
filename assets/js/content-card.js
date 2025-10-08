@@ -1,35 +1,30 @@
-// Enhanced Content Card Component - Instant Loading with Better Skeletons
 class ContentCardManager {
     constructor() {
         this.apiBase = 'https://cinebrain.onrender.com/api';
         this.posterBase = 'https://image.tmdb.org/t/p/w500';
 
-        // Auth state
         this.authToken = localStorage.getItem('cinebrain-token');
         this.isAuthenticated = !!this.authToken;
         this.currentUser = this.getCurrentUser();
 
-        // Enhanced caching system
-        this.userWishlist = new Set();
+        this.userFavorites = new Set();
         this.contentCache = new Map();
         this.interactionStates = new Map();
-        this.loadingStates = new Map(); // Track loading states
-        this.preloadedContent = new Map(); // Preloaded content for instant display
+        this.loadingStates = new Map();
+        this.preloadedContent = new Map();
 
-        // Loading management
-        this.loadingControllers = new Map(); // AbortControllers for cancelling requests
+        this.loadingControllers = new Map();
         this.isInitialLoad = true;
         this.backgroundLoader = null;
 
-        // Content row configurations with priority levels
         this.contentRows = [
             {
                 id: 'trending',
                 title: 'Trending Now',
                 endpoint: '/recommendations/trending',
                 params: { category: 'all', limit: 20 },
-                priority: 1, // High priority - load first
-                cached: true // Cache this content
+                priority: 1,
+                cached: true
             },
             {
                 id: 'new-releases',
@@ -69,7 +64,7 @@ class ContentCardManager {
                 endpoint: '/recommendations/anime',
                 params: { limit: 20 },
                 priority: 4,
-                cached: false // Don't cache anime for now
+                cached: false
             }
         ];
 
@@ -102,29 +97,22 @@ class ContentCardManager {
             return;
         }
 
-        // Start background preloading immediately
         this.startBackgroundPreloading();
 
-        // Create all carousel rows immediately with skeletons
         this.contentRows.forEach(rowConfig => {
             const row = this.createCarouselRow(rowConfig);
             container.appendChild(row);
-            // Set initial loading state
             this.setRowLoadingState(rowConfig.id, 'loading');
         });
 
-        // Load user data and content in parallel
         const promises = [];
 
-        // Load user wishlist if authenticated (don't wait for it)
         if (this.isAuthenticated) {
-            promises.push(this.loadUserWishlist().catch(err => console.error('Wishlist load error:', err)));
+            promises.push(this.loadUserFavorites().catch(err => console.error('Favorites load error:', err)));
         }
 
-        // Load content with smart priority and parallel loading
         promises.push(this.loadAllContentIntelligently());
 
-        // Don't wait for wishlist to complete before showing content
         await Promise.allSettled(promises);
 
         this.setupEventListeners();
@@ -137,11 +125,10 @@ class ContentCardManager {
     }
 
     async startBackgroundPreloading() {
-        // Preload critical content in the background
         try {
             const highPriorityRows = this.contentRows
                 .filter(row => row.priority <= 2 && row.cached)
-                .slice(0, 2); // Only preload top 2 most important
+                .slice(0, 2);
 
             const preloadPromises = highPriorityRows.map(async rowConfig => {
                 try {
@@ -162,28 +149,22 @@ class ContentCardManager {
     }
 
     async loadAllContentIntelligently() {
-        // Sort rows by priority
         const sortedRows = [...this.contentRows].sort((a, b) => a.priority - b.priority);
 
-        // Load high priority content first (parallel)
         const highPriorityRows = sortedRows.filter(row => row.priority <= 2);
         const lowPriorityRows = sortedRows.filter(row => row.priority > 2);
 
-        // Load high priority content in parallel
         const highPriorityPromises = highPriorityRows.map(async (rowConfig, index) => {
-            // Small delay to stagger the loading for better UX
             await new Promise(resolve => setTimeout(resolve, index * 50));
             return this.loadContentRowWithInstantDisplay(rowConfig);
         });
 
-        // Wait for high priority content
         await Promise.allSettled(highPriorityPromises);
 
-        // Load low priority content with longer delays
         lowPriorityRows.forEach((rowConfig, index) => {
             setTimeout(() => {
                 this.loadContentRowWithInstantDisplay(rowConfig);
-            }, index * 200 + 300); // Start after high priority is done
+            }, index * 200 + 300);
         });
     }
 
@@ -191,32 +172,27 @@ class ContentCardManager {
         const rowId = rowConfig.id;
 
         try {
-            // Check if we have preloaded content for instant display
             if (this.preloadedContent.has(rowId)) {
                 const preloadedContent = this.preloadedContent.get(rowId);
                 this.displayContent(rowId, preloadedContent);
                 this.setRowLoadingState(rowId, 'loaded');
 
-                // Still fetch fresh content in background
                 this.loadContentRowInBackground(rowConfig);
                 return;
             }
 
-            // Check cache for instant display
             const cacheKey = this.getCacheKey(rowConfig);
             if (this.contentCache.has(cacheKey)) {
                 const cachedContent = this.contentCache.get(cacheKey);
                 this.displayContent(rowId, cachedContent);
                 this.setRowLoadingState(rowId, 'loaded');
 
-                // Refresh in background if cache is old
                 if (this.isCacheStale(cacheKey)) {
                     this.loadContentRowInBackground(rowConfig);
                 }
                 return;
             }
 
-            // No cached content, load normally
             await this.loadContentRow(rowConfig);
 
         } catch (error) {
@@ -235,7 +211,6 @@ class ContentCardManager {
                     timestamp: Date.now()
                 });
 
-                // Update display if content is different
                 this.displayContent(rowConfig.id, content);
             }
         } catch (error) {
@@ -259,24 +234,20 @@ class ContentCardManager {
         const wrapper = row.querySelector('.carousel-wrapper');
         if (!wrapper) return;
 
-        // Clear current content
         wrapper.innerHTML = '';
 
-        // Add content cards with smooth animation
         content.forEach((item, index) => {
             const card = this.createContentCard(item);
 
-            // Add staggered animation
             card.style.opacity = '0';
             card.style.transform = 'translateY(20px)';
             wrapper.appendChild(card);
 
-            // Animate in with delay
             setTimeout(() => {
                 card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                 card.style.opacity = '1';
                 card.style.transform = 'translateY(0)';
-            }, index * 20); // Stagger animation
+            }, index * 20);
         });
 
         this.setupCarouselNavigation(row);
@@ -307,43 +278,42 @@ class ContentCardManager {
         return null;
     }
 
-    async loadUserWishlist() {
+    async loadUserFavorites() {
         if (!this.isAuthenticated) {
-            this.userWishlist.clear();
+            this.userFavorites.clear();
             this.interactionStates.clear();
             this.updateWishlistButtons();
             return;
         }
 
         try {
-            const response = await fetch(`${this.apiBase}/users/profile`, {
+            const response = await fetch(`${this.apiBase}/user/favorites`, {
                 headers: {
                     'Authorization': `Bearer ${this.authToken}`
                 },
-                signal: AbortSignal.timeout(5000) // 5 second timeout
+                signal: AbortSignal.timeout(5000)
             });
 
             if (response.ok) {
                 const data = await response.json();
-                this.userWishlist.clear();
+                this.userFavorites.clear();
                 this.interactionStates.clear();
 
-                if (data.watchlist && Array.isArray(data.watchlist)) {
-                    data.watchlist.forEach(item => {
-                        this.userWishlist.add(item.content_id);
-                        this.interactionStates.set(item.content_id, 'watchlist');
+                if (data.favorites && Array.isArray(data.favorites)) {
+                    data.favorites.forEach(item => {
+                        this.userFavorites.add(item.id);
+                        this.interactionStates.set(item.id, 'favorite');
                     });
                 }
-                console.log('Loaded wishlist with', this.userWishlist.size, 'items');
+                console.log('Loaded favorites with', this.userFavorites.size, 'items');
 
-                // Update wishlist buttons immediately
                 this.updateWishlistButtons();
             } else if (response.status === 401) {
                 console.error('Authentication failed, clearing token');
                 this.handleAuthFailure();
             }
         } catch (error) {
-            console.error('Error loading wishlist:', error);
+            console.error('Error loading favorites:', error);
         }
     }
 
@@ -352,17 +322,16 @@ class ContentCardManager {
         localStorage.removeItem('cinebrain-user');
         this.authToken = null;
         this.isAuthenticated = false;
-        this.userWishlist.clear();
+        this.userFavorites.clear();
         this.interactionStates.clear();
         this.updateWishlistButtons();
 
-        // Clear authenticated content cache
         this.contentCache.clear();
     }
 
     createCarouselRow(rowConfig) {
         const row = document.createElement('div');
-        row.className = 'content-row loading'; // Start with loading state
+        row.className = 'content-row loading';
         row.id = rowConfig.id;
 
         row.innerHTML = `
@@ -424,7 +393,7 @@ class ContentCardManager {
         const genres = content.genres?.slice(0, 2) || [];
         const contentType = content.content_type || 'movie';
         const runtime = this.formatRuntime(content.runtime);
-        const isInWishlist = this.userWishlist.has(content.id);
+        const isInFavorites = this.userFavorites.has(content.id);
 
         card.innerHTML = `
             <div class="card-poster-container">
@@ -440,10 +409,10 @@ class ContentCardManager {
                 <div class="card-overlays">
                     <div class="card-top-overlay">
                         <div></div>
-                        <button class="wishlist-btn ${isInWishlist ? 'active' : ''}" 
+                        <button class="wishlist-btn ${isInFavorites ? 'active' : ''}" 
                                 data-content-id="${content.id}" 
-                                title="${isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}"
-                                aria-label="${isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}">
+                                title="${isInFavorites ? 'Remove from Favorites' : 'Add to Favorites'}"
+                                aria-label="${isInFavorites ? 'Remove from Favorites' : 'Add to Favorites'}">
                             <svg viewBox="0 0 24 24">
                                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                             </svg>
@@ -536,10 +505,8 @@ class ContentCardManager {
                 if (entry.isIntersecting) {
                     const imgSrc = img.dataset.src;
                     if (imgSrc) {
-                        // Create a temporary image to preload
                         const tempImg = new Image();
 
-                        // Add loading state
                         img.parentElement.classList.add('loading-image');
 
                         tempImg.onload = () => {
@@ -567,7 +534,7 @@ class ContentCardManager {
 
     async handleWishlistClick(contentId, button) {
         if (!this.isAuthenticated) {
-            this.showNotification('Please login to add to wishlist', 'warning');
+            this.showNotification('Please login to add to favorites', 'warning');
             setTimeout(() => {
                 window.location.href = '/auth/login.html?redirect=' + encodeURIComponent(window.location.pathname);
             }, 1000);
@@ -578,25 +545,23 @@ class ContentCardManager {
             if (button.disabled) return;
             button.disabled = true;
 
-            const isCurrentlyInWishlist = button.classList.contains('active');
+            const isCurrentlyInFavorites = button.classList.contains('active');
 
-            // Optimistic UI update
-            if (isCurrentlyInWishlist) {
+            if (isCurrentlyInFavorites) {
                 button.classList.remove('active');
-                this.userWishlist.delete(contentId);
+                this.userFavorites.delete(contentId);
                 this.interactionStates.delete(contentId);
-                button.setAttribute('title', 'Add to Wishlist');
-                button.setAttribute('aria-label', 'Add to Wishlist');
+                button.setAttribute('title', 'Add to Favorites');
+                button.setAttribute('aria-label', 'Add to Favorites');
             } else {
                 button.classList.add('active');
-                this.userWishlist.add(contentId);
-                this.interactionStates.set(contentId, 'watchlist');
-                button.setAttribute('title', 'Remove from Wishlist');
-                button.setAttribute('aria-label', 'Remove from Wishlist');
+                this.userFavorites.add(contentId);
+                this.interactionStates.set(contentId, 'favorite');
+                button.setAttribute('title', 'Remove from Favorites');
+                button.setAttribute('aria-label', 'Remove from Favorites');
             }
 
-            // Send request to backend
-            const response = await fetch(`${this.apiBase}/users/watchlist`, {
+            const response = await fetch(`${this.apiBase}/interactions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -604,37 +569,36 @@ class ContentCardManager {
                 },
                 body: JSON.stringify({
                     content_id: contentId,
-                    action: isCurrentlyInWishlist ? 'remove' : 'add'
+                    interaction_type: isCurrentlyInFavorites ? 'remove_favorite' : 'favorite'
                 }),
                 signal: AbortSignal.timeout(5000)
             });
 
             if (response.ok) {
                 this.showNotification(
-                    isCurrentlyInWishlist ? 'Removed from wishlist' : 'Added to wishlist',
+                    isCurrentlyInFavorites ? 'Removed from favorites' : 'Added to favorites',
                     'success'
                 );
             } else {
-                // Revert optimistic update on failure
-                if (isCurrentlyInWishlist) {
+                if (isCurrentlyInFavorites) {
                     button.classList.add('active');
-                    this.userWishlist.add(contentId);
-                    this.interactionStates.set(contentId, 'watchlist');
-                    button.setAttribute('title', 'Remove from Wishlist');
-                    button.setAttribute('aria-label', 'Remove from Wishlist');
+                    this.userFavorites.add(contentId);
+                    this.interactionStates.set(contentId, 'favorite');
+                    button.setAttribute('title', 'Remove from Favorites');
+                    button.setAttribute('aria-label', 'Remove from Favorites');
                 } else {
                     button.classList.remove('active');
-                    this.userWishlist.delete(contentId);
+                    this.userFavorites.delete(contentId);
                     this.interactionStates.delete(contentId);
-                    button.setAttribute('title', 'Add to Wishlist');
-                    button.setAttribute('aria-label', 'Add to Wishlist');
+                    button.setAttribute('title', 'Add to Favorites');
+                    button.setAttribute('aria-label', 'Add to Favorites');
                 }
-                throw new Error('Failed to update wishlist');
+                throw new Error('Failed to update favorites');
             }
 
         } catch (error) {
-            this.showNotification('Failed to update wishlist', 'error');
-            console.error('Error updating wishlist:', error);
+            this.showNotification('Failed to update favorites', 'error');
+            console.error('Error updating favorites:', error);
         } finally {
             setTimeout(() => {
                 button.disabled = false;
@@ -655,12 +619,10 @@ class ContentCardManager {
             const cacheKey = this.getCacheKey(rowConfig);
             let content;
 
-            // Check cache first
             const cached = this.contentCache.get(cacheKey);
             if (cached && !this.isCacheStale(cacheKey)) {
                 content = cached.content;
             } else {
-                // Cancel any existing request for this row
                 if (this.loadingControllers.has(rowConfig.id)) {
                     this.loadingControllers.get(rowConfig.id).abort();
                 }
@@ -730,11 +692,9 @@ class ContentCardManager {
 
             const data = await response.json();
 
-            // Handle different response structures from backend
             if (data.recommendations && Array.isArray(data.recommendations)) {
                 return data.recommendations;
             } else if (data.categories) {
-                // For trending endpoint with categories
                 const allContent = [];
                 Object.values(data.categories).forEach(categoryItems => {
                     if (Array.isArray(categoryItems)) {
@@ -742,7 +702,6 @@ class ContentCardManager {
                     }
                 });
 
-                // Remove duplicates and limit results
                 const uniqueContent = [];
                 const seenIds = new Set();
                 allContent.forEach(item => {
@@ -880,7 +839,6 @@ class ContentCardManager {
             }, 250);
         });
 
-        // Enhanced auth state change handling
         window.addEventListener('storage', (e) => {
             if (e.key === 'cinebrain-token') {
                 const oldAuth = this.isAuthenticated;
@@ -888,31 +846,28 @@ class ContentCardManager {
                 this.isAuthenticated = !!this.authToken;
 
                 if (oldAuth !== this.isAuthenticated) {
-                    // Auth state changed - refresh content
                     this.handleAuthStateChange();
                 }
             }
         });
 
-        // Listen for login success events
         window.addEventListener('userLoggedIn', () => {
             this.handleAuthStateChange();
         });
 
-        // Listen for logout events
         window.addEventListener('userLoggedOut', () => {
             this.handleAuthStateChange();
         });
 
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden && this.isAuthenticated) {
-                this.loadUserWishlist();
+                this.loadUserFavorites();
             }
         });
 
         window.addEventListener('focus', () => {
             if (this.isAuthenticated) {
-                this.loadUserWishlist();
+                this.loadUserFavorites();
             }
         });
     }
@@ -920,7 +875,6 @@ class ContentCardManager {
     async handleAuthStateChange() {
         console.log('Auth state changed - refreshing content');
 
-        // Show loading state immediately
         this.contentRows.forEach(rowConfig => {
             this.setRowLoadingState(rowConfig.id, 'loading');
             const wrapper = document.getElementById(rowConfig.id)?.querySelector('.carousel-wrapper');
@@ -929,19 +883,16 @@ class ContentCardManager {
             }
         });
 
-        // Clear caches
         this.contentCache.clear();
         this.preloadedContent.clear();
 
-        // Reload user data and content
         if (this.isAuthenticated) {
-            await this.loadUserWishlist();
+            await this.loadUserFavorites();
         } else {
-            this.userWishlist.clear();
+            this.userFavorites.clear();
             this.interactionStates.clear();
         }
 
-        // Reload all content
         await this.loadAllContentIntelligently();
         this.updateWishlistButtons();
     }
@@ -949,16 +900,16 @@ class ContentCardManager {
     updateWishlistButtons() {
         document.querySelectorAll('.wishlist-btn').forEach(btn => {
             const contentId = parseInt(btn.dataset.contentId);
-            const isInWishlist = this.userWishlist.has(contentId);
+            const isInFavorites = this.userFavorites.has(contentId);
 
-            if (isInWishlist) {
+            if (isInFavorites) {
                 btn.classList.add('active');
-                btn.setAttribute('title', 'Remove from Wishlist');
-                btn.setAttribute('aria-label', 'Remove from Wishlist');
+                btn.setAttribute('title', 'Remove from Favorites');
+                btn.setAttribute('aria-label', 'Remove from Favorites');
             } else {
                 btn.classList.remove('active');
-                btn.setAttribute('title', 'Add to Wishlist');
-                btn.setAttribute('aria-label', 'Add to Wishlist');
+                btn.setAttribute('title', 'Add to Favorites');
+                btn.setAttribute('aria-label', 'Add to Favorites');
             }
         });
     }
@@ -971,7 +922,6 @@ class ContentCardManager {
         }
     }
 
-    // Utility methods
     formatPosterUrl(posterPath) {
         if (!posterPath) {
             return this.getPlaceholderImage();
@@ -1018,7 +968,6 @@ class ContentCardManager {
     }
 }
 
-// Initialize only on homepage
 if (document.getElementById('content-container')) {
     const contentCardManager = new ContentCardManager();
     window.contentCardManager = contentCardManager;
