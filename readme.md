@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/cinebrain-banner.png" alt="CineBrain Banner" width="100%">
+<img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/cinebrain banner.png" alt="CineBrain Banner" width="100%">
 
 
 <p align="center">
@@ -28,7 +28,7 @@
 ## 🌟 The CineBrain Revolution
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/cinebrain-hero.png" alt="CineBrain Hero" width="90%">
+  <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/cinebrain hero.png" alt="CineBrain Hero" width="90%">
 </div>
 
 CineBrain represents a **paradigm shift in entertainment discovery**. Our proprietary **Cinematic DNA™** technology doesn't just recommend what to watch—it understands the emotional essence of why you love certain content and finds your perfect matches across cultures, languages, and genres.
@@ -48,7 +48,7 @@ CineBrain represents a **paradigm shift in entertainment discovery**. Our propri
       <br><sub>Telugu-first with global awareness</sub>
     </td>
     <td align="center" width="25%">
-      <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/realtime_ml.webp" width="80" alt="Real-time Learning">
+      <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/realtime ml.webp" width="80" alt="Real-time Learning">
       <br><strong>Real-time Learning</strong>
       <br><sub>Evolves with every interaction</sub>
     </td>
@@ -66,13 +66,13 @@ CineBrain represents a **paradigm shift in entertainment discovery**. Our propri
 
 ### 🏠 **Immersive Home Experience**
 <div align="center">
-  <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Cine-Brain-Homepage.png" alt="CineBrain Homepage" width="90%">
+  <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/CineBrain Homepage.png" alt="CineBrain Homepage" width="90%">
   <p><em>Dynamic hero sections with AI-curated content that adapts to your preferences in real-time</em></p>
 </div>
 
 ### 🎬 **Cinematic Content Details**
 <div align="center">
-  <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Content-Details.png" alt="Content Details" width="90%">
+  <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Content Details.png" alt="Content Details" width="90%">
   <p><em>Rich, immersive content pages with comprehensive information and smart recommendations</em></p>
 </div>
 
@@ -80,8 +80,8 @@ CineBrain represents a **paradigm shift in entertainment discovery**. Our propri
 <div align="center">
   <table>
     <tr>
-      <td><img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Mobile-Home.png" alt="Mobile Home" width="300"></td>
-      <td><img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Mobile-Details.png" alt="Mobile Details" width="300"></td>
+      <td><img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Mobile Home.png" alt="Mobile Home" width="300"></td>
+      <td><img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Mobile Details.png" alt="Mobile Details" width="300"></td>
       <td><img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/person.png" alt="Mobile Profile" width="300"></td>
     </tr>
     <tr>
