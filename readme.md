@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="https://i.postimg.cc/KjSXNCWj/cinebrain-banner.png" alt="CineBrain Banner" width="100%">
+<img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/cinebrain-banner.png" alt="CineBrain Banner" width="100%">
 
 
 <p align="center">
@@ -28,7 +28,7 @@
 ## 🌟 The CineBrain Revolution
 
 <div align="center">
-  <img src="https://i.postimg.cc/HxQmfpXP/cinebrain-hero.png" alt="CineBrain Hero" width="90%">
+  <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/cinebrain-hero.png" alt="CineBrain Hero" width="90%">
 </div>
 
 CineBrain represents a **paradigm shift in entertainment discovery**. Our proprietary **Cinematic DNA™** technology doesn't just recommend what to watch—it understands the emotional essence of why you love certain content and finds your perfect matches across cultures, languages, and genres.
@@ -38,22 +38,22 @@ CineBrain represents a **paradigm shift in entertainment discovery**. Our propri
 <table align="center">
   <tr>
     <td align="center" width="25%">
-      <img src="https://i.postimg.cc/nVWzBLT4/film-reel.png" width="80" alt="Cinematic DNA">
+      <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/film-reel.png" width="80" alt="Cinematic DNA">
       <br><strong>Cinematic DNA™</strong>
       <br><sub>Deep thematic analysis beyond genres</sub>
     </td>
     <td align="center" width="25%">
-      <img src="https://i.postimg.cc/7PR60LX1/culture.png" width="80" alt="Cultural Intelligence">
+      <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/culture.png" width="80" alt="Cultural Intelligence">
       <br><strong>Cultural Intelligence</strong>
       <br><sub>Telugu-first with global awareness</sub>
     </td>
     <td align="center" width="25%">
-      <img src="https://i.postimg.cc/qMC7LdZC/realtime_ml.webp" width="80" alt="Real-time Learning">
+      <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/realtime_ml.webp" width="80" alt="Real-time Learning">
       <br><strong>Real-time Learning</strong>
       <br><sub>Evolves with every interaction</sub>
     </td>
     <td align="center" width="25%">
-      <img src="https://i.postimg.cc/sfLX72KR/privacy-icon.png" width="80" alt="Privacy Shield">
+      <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/privacy-icon.png" width="80" alt="Privacy Shield">
       <br><strong>Privacy Shield</strong>
       <br><sub>Your data stays yours</sub>
     </td>
@@ -66,13 +66,13 @@ CineBrain represents a **paradigm shift in entertainment discovery**. Our propri
 
 ### 🏠 **Immersive Home Experience**
 <div align="center">
-  <img src="https://i.postimg.cc/440dV3ws/Cine-Brain-Homepage.png" alt="CineBrain Homepage" width="90%">
+  <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Cine-Brain-Homepage.png" alt="CineBrain Homepage" width="90%">
   <p><em>Dynamic hero sections with AI-curated content that adapts to your preferences in real-time</em></p>
 </div>
 
 ### 🎬 **Cinematic Content Details**
 <div align="center">
-  <img src="https://i.postimg.cc/QxWMbrnb/Content-Details.png" alt="Content Details" width="90%">
+  <img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Content-Details.png" alt="Content Details" width="90%">
   <p><em>Rich, immersive content pages with comprehensive information and smart recommendations</em></p>
 </div>
 
@@ -80,9 +80,9 @@ CineBrain represents a **paradigm shift in entertainment discovery**. Our propri
 <div align="center">
   <table>
     <tr>
-      <td><img src="https://i.postimg.cc/90sQhxz4/Mobile-Home.png" alt="Mobile Home" width="300"></td>
-      <td><img src="https://i.postimg.cc/zv4Grd3w/Mobile-Details.png" alt="Mobile Details" width="300"></td>
-      <td><img src="https://i.postimg.cc/PfvgPf75/person.png" alt="Mobile Profile" width="300"></td>
+      <td><img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Mobile-Home.png" alt="Mobile Home" width="300"></td>
+      <td><img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/Mobile-Details.png" alt="Mobile Details" width="300"></td>
+      <td><img src="https://raw.githubusercontent.com/srinathnulidonda/CineBrain/main/assets/images/person.png" alt="Mobile Profile" width="300"></td>
     </tr>
     <tr>
       <td align="center"><em>Fluid Navigation</em></td>
