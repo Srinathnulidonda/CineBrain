@@ -5,34 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - CineBrain</title>
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="/assets/images/favicon.png">
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Google Fonts - Bangers -->
     <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <!-- Feather Icons -->
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <link rel="stylesheet" href="/assets/css/auth.css">
-
 </head>
 
 <body>
-    <!-- Login Card -->
     <div class="login-card">
-        <!-- Brand -->
         <div class="brand">
             <h1 class="brand-name">CineBrain</h1>
             <p class="brand-tagline">Your Personal Entertainment Companion</p>
         </div>
 
-        <!-- Alert -->
         <div class="alert alert-error" id="alertBox"></div>
 
-        <!-- Login Form -->
         <form id="loginForm" novalidate>
-            <!-- Username/Email -->
             <div class="form-group">
                 <label for="username" class="form-label">Username or Email</label>
                 <div class="input-wrapper">
@@ -41,7 +31,6 @@
                 </div>
             </div>
 
-            <!-- Password -->
             <div class="form-group">
                 <label for="password" class="form-label">Password</label>
                 <div class="input-wrapper">
@@ -54,16 +43,14 @@
                 </div>
             </div>
 
-            <!-- Login Button -->
             <button type="submit" class="login-button" id="loginButton">
                 <div class="login-button-content">
-                    <span class="button-text">Login</span>
+                    <span class="button-text">Login to CineBrain</span>
                     <div class="spinner"></div>
                 </div>
             </button>
         </form>
 
-        <!-- Links -->
         <div class="form-links">
             <a href="/auth/forgot-password.html" class="forgot-link">Forgot password?</a>
             <p class="register-prompt">
@@ -73,76 +60,62 @@
         </div>
     </div>
 
-    <!-- Scripts -->
     <script>
-        // Configuration
         const API_BASE = 'https://cinebrain.onrender.com/api';
+        const DEBUG_MODE = true;
 
-        // Theme Detection and Application
+        function debugLog(message, data = null) {
+            if (DEBUG_MODE) {
+                console.log(`[CineBrain Login] ${message}`, data || '');
+            }
+        }
+
         function detectAndApplyTheme() {
-            // Check localStorage for saved theme
             const savedTheme = localStorage.getItem('cinebrain-theme');
-
-            // If no saved theme, check system preference
             let theme = savedTheme || 'dark';
 
             if (!savedTheme && window.matchMedia) {
-                // Check system preference
                 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 theme = prefersDark ? 'dark' : 'light';
             }
 
-            // Apply theme to document
             applyTheme(theme);
         }
 
         function applyTheme(theme) {
-            // Set both attributes for compatibility
             document.documentElement.setAttribute('data-theme', theme);
             document.documentElement.setAttribute('data-bs-theme', theme);
-
-            // Also set on body for nested components
             document.body.setAttribute('data-theme', theme);
             document.body.setAttribute('data-bs-theme', theme);
         }
 
-        // Listen for theme changes from other tabs
         window.addEventListener('storage', (e) => {
             if (e.key === 'cinebrain-theme' && e.newValue) {
                 applyTheme(e.newValue);
             }
         });
 
-        // Listen for system theme changes
         if (window.matchMedia) {
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-                // Only apply if no saved theme
                 if (!localStorage.getItem('cinebrain-theme')) {
                     applyTheme(e.matches ? 'dark' : 'light');
                 }
             });
         }
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            // Apply theme first
             detectAndApplyTheme();
 
-            // Initialize Feather icons
             if (typeof feather !== 'undefined') {
                 feather.replace();
             }
 
-            // Setup event listeners
             setupPasswordToggle();
             setupFormValidation();
             setupLoginForm();
-
-            // Check if already logged in
             checkAuthStatus();
         });
 
-        // Password Toggle
         function setupPasswordToggle() {
             const passwordToggle = document.getElementById('passwordToggle');
             const passwordInput = document.getElementById('password');
@@ -163,12 +136,10 @@
             });
         }
 
-        // Form Validation
         function setupFormValidation() {
             const usernameInput = document.getElementById('username');
             const passwordInput = document.getElementById('password');
 
-            // Clear error on input
             usernameInput.addEventListener('input', () => {
                 hideAlert();
             });
@@ -197,7 +168,6 @@
             return true;
         }
 
-        // Login Form
         function setupLoginForm() {
             const loginForm = document.getElementById('loginForm');
 
@@ -207,12 +177,10 @@
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value;
 
-                // Validate
                 if (!validateForm(username, password)) {
                     return;
                 }
 
-                // Attempt login
                 await loginUser(username, password);
             });
         }
@@ -221,12 +189,12 @@
             const loginButton = document.getElementById('loginButton');
 
             try {
-                // Show loading state
                 loginButton.classList.add('loading');
                 loginButton.disabled = true;
                 hideAlert();
 
-                // Make API call
+                debugLog('Attempting CineBrain login', { username, passwordLength: password.length });
+
                 const response = await fetch(`${API_BASE}/login`, {
                     method: 'POST',
                     headers: {
@@ -235,59 +203,141 @@
                     body: JSON.stringify({ username, password })
                 });
 
+                debugLog('CineBrain login response status', response.status);
+
                 const data = await response.json();
+                debugLog('CineBrain login response data', data);
 
                 if (response.ok && data.token) {
-                    // Save user data
                     localStorage.setItem('cinebrain-token', data.token);
                     localStorage.setItem('cinebrain-user', JSON.stringify(data.user));
 
-                    // Determine user role
                     const role = data.user.is_admin ? 'admin' : 'user';
                     localStorage.setItem('cinebrain-role', role);
 
-                    // Show success message
-                    showAlert('Login successful! Redirecting...', 'success');
+                    if (data.user.preferred_languages) {
+                        localStorage.setItem('cinebrain-user-languages', JSON.stringify(data.user.preferred_languages));
+                    }
 
-                    // Redirect after a short delay
+                    if (data.user.preferred_genres) {
+                        localStorage.setItem('cinebrain-user-genres', JSON.stringify(data.user.preferred_genres));
+                    }
+
+                    if (data.user.stats) {
+                        localStorage.setItem('cinebrain-user-stats', JSON.stringify(data.user.stats));
+                    }
+
+                    if (data.user.recommendation_effectiveness) {
+                        localStorage.setItem('cinebrain-rec-effectiveness', JSON.stringify(data.user.recommendation_effectiveness));
+                    }
+
+                    localStorage.setItem('cinebrain-login-time', new Date().toISOString());
+
+                    debugLog('CineBrain login successful, user data stored', {
+                        userId: data.user.id,
+                        username: data.user.username,
+                        isAdmin: data.user.is_admin,
+                        hasStats: !!data.user.stats,
+                        hasRecEffectiveness: !!data.user.recommendation_effectiveness
+                    });
+
+                    showAlert('CineBrain login successful! Welcome back!', 'success');
+
                     setTimeout(() => {
-                        window.location.href = '/index.html';
-                    }, 1000);
+                        if (data.user.is_admin) {
+                            const redirectTo = localStorage.getItem('cinebrain-redirect-after-login') || '/index.html';
+                            window.location.href = redirectTo;
+                        } else {
+                            window.location.href = '/index.html';
+                        }
+
+                        localStorage.removeItem('cinebrain-redirect-after-login');
+                    }, 1200);
                 } else {
-                    // Show error
-                    showAlert(data.error || 'Invalid credentials', 'error');
+                    let errorMessage = data.error || 'Invalid credentials';
+
+                    if (data.error === 'Invalid credentials') {
+                        errorMessage = 'Username/email or password is incorrect';
+                    } else if (data.error === 'Missing username or password') {
+                        errorMessage = 'Please fill in all required fields';
+                    } else if (data.error === 'User not found') {
+                        errorMessage = 'No CineBrain account found with this username/email';
+                    }
+
+                    debugLog('CineBrain login failed', { error: data.error, status: response.status });
+                    showAlert(errorMessage, 'error');
                 }
             } catch (error) {
-                console.error('Login error:', error);
-                showAlert('Network error. Please try again later.', 'error');
+                debugLog('CineBrain login error', error);
+                console.error('CineBrain login error:', error);
+
+                let errorMessage = 'Network error. Please check your connection and try again.';
+
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    errorMessage = 'Unable to connect to CineBrain servers. Please try again later.';
+                }
+
+                showAlert(errorMessage, 'error');
             } finally {
-                // Remove loading state
                 loginButton.classList.remove('loading');
                 loginButton.disabled = false;
             }
         }
 
-        // Check Auth Status
         function checkAuthStatus() {
             const token = localStorage.getItem('cinebrain-token');
             const user = localStorage.getItem('cinebrain-user');
 
             if (token && user) {
-                // Already logged in, redirect to home
-                window.location.href = '/index.html';
+                try {
+                    const userData = JSON.parse(user);
+                    debugLog('CineBrain user already logged in', {
+                        username: userData.username,
+                        isAdmin: userData.is_admin
+                    });
+
+                    const loginTime = localStorage.getItem('cinebrain-login-time');
+                    if (loginTime) {
+                        const loginDate = new Date(loginTime);
+                        const now = new Date();
+                        const daysSinceLogin = (now - loginDate) / (1000 * 60 * 60 * 24);
+
+                        if (daysSinceLogin > 30) {
+                            clearAuthData();
+                            showAlert('Your CineBrain session has expired. Please login again.', 'warning');
+                            return;
+                        }
+                    }
+
+                    window.location.href = '/index.html';
+                } catch (e) {
+                    debugLog('Error parsing CineBrain user data, clearing auth', e);
+                    clearAuthData();
+                }
             }
         }
 
-        // Alert Management
+        function clearAuthData() {
+            localStorage.removeItem('cinebrain-token');
+            localStorage.removeItem('cinebrain-user');
+            localStorage.removeItem('cinebrain-role');
+            localStorage.removeItem('cinebrain-user-languages');
+            localStorage.removeItem('cinebrain-user-genres');
+            localStorage.removeItem('cinebrain-user-stats');
+            localStorage.removeItem('cinebrain-rec-effectiveness');
+            localStorage.removeItem('cinebrain-login-time');
+        }
+
         function showAlert(message, type = 'error') {
             const alertBox = document.getElementById('alertBox');
 
             alertBox.textContent = message;
             alertBox.className = `alert alert-${type} show`;
 
-            // Auto-hide success messages
             if (type === 'success') {
-                setTimeout(() => hideAlert(), 3000);
+                setTimeout(() => hideAlert(), 5000);
+            } else if (type === 'warning') {
+                setTimeout(() => hideAlert(), 8000);
             }
         }
 
@@ -296,10 +346,16 @@
             alertBox.classList.remove('show');
         }
 
-        // Prevent going back if already logged in
         window.addEventListener('pageshow', (event) => {
             if (event.persisted) {
                 checkAuthStatus();
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            const passwordInput = document.getElementById('password');
+            if (passwordInput) {
+                passwordInput.value = '';
             }
         });
     </script>
