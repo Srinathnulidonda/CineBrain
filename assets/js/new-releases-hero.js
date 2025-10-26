@@ -1172,7 +1172,7 @@ class CineBrainNewReleasesHeroManager {
 
         const slug = content.slug || this.generateSlug(content.title || content.name, content.release_date);
         if (slug) {
-            window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+            window.location.href = `/explore/details.html?${encodeURIComponent(slug)}`;
         } else {
             this.showNotification('Unable to view CineBrain details', 'error');
         }

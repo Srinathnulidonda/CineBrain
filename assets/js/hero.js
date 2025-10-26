@@ -712,7 +712,7 @@ class CineBrainHeroManager {
     handleViewDetails(content) {
         const slug = content.slug || this.generateSlug(content.title, content.release_date);
         if (slug) {
-            window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+            window.location.href = `/explore/details.html?${encodeURIComponent(slug)}`;
         } else {
             console.error('CineBrain Hero: No slug available for content:', content);
             this.showNotification('Unable to view CineBrain details', 'error');

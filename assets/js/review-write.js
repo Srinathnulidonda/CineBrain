@@ -820,9 +820,9 @@ class ReviewWritePage {
         this.stopAutoSave();
 
         if (this.contentData?.slug) {
-            window.location.href = `/content/details.html?${encodeURIComponent(this.contentData.slug)}`;
+            window.location.href = `/explore/details.html?${encodeURIComponent(this.contentData.slug)}`;
         } else if (this.contentSlug) {
-            window.location.href = `/content/details.html?${encodeURIComponent(this.contentSlug)}`;
+            window.location.href = `/explore/details.html?${encodeURIComponent(this.contentSlug)}`;
         } else {
             window.history.back();
         }

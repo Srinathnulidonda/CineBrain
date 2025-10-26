@@ -487,7 +487,7 @@ class CineBrainTrendingContentManager {
         row.innerHTML = `
             <div class="row-header">
                 <h2 class="row-title">${rowConfig.title}</h2>
-                <a href="/content/${rowConfig.id}.html" class="see-all">See All →</a>
+                <a href="/explore/${rowConfig.id}.html" class="see-all">See All →</a>
             </div>
             <div class="carousel-container">
                 <button class="carousel-nav prev" aria-label="Previous" style="opacity: 0;">
@@ -730,7 +730,7 @@ class CineBrainTrendingContentManager {
                 }
 
                 if (slug) {
-                    window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+                    window.location.href = `/explore/details.html?${encodeURIComponent(slug)}`;
                 } else {
                     console.error('CineBrain: No slug available for trending content:', content);
                     this.showNotification('Unable to view details', 'error');

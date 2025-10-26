@@ -282,7 +282,7 @@ class CineBrainNewReleasesManager {
         row.innerHTML = `
             <div class="row-header">
                 <h2 class="row-title">${this.escapeHtml(category.title)}</h2>
-                <a href="/content/${category.id}.html" class="see-all">See All →</a>
+                <a href="/explore/${category.id}.html" class="see-all">See All →</a>
             </div>
             <div class="carousel-container">
                 <button class="carousel-nav prev" aria-label="Previous" style="opacity: 0;">
@@ -809,7 +809,7 @@ class CineBrainNewReleasesManager {
             }
 
             if (slug) {
-                window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+                window.location.href = `/explore/details.html?${encodeURIComponent(slug)}`;
             } else {
                 this.showNotification('Unable to view CineBrain details', 'error');
             }

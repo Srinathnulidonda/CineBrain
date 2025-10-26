@@ -659,13 +659,13 @@ class PersonPage {
                     card.style.transform = '';
 
                     if (work.slug) {
-                        window.location.href = `/content/details.html?${encodeURIComponent(work.slug)}`;
+                        window.location.href = `/explore/details.html?${encodeURIComponent(work.slug)}`;
                     } else if (isUpcoming || isTBA) {
                         this.showToast(isTBA ? 'Release date TBA' : 'Coming soon', 'info');
                     } else {
                         const slug = this.generateSlug(work.title, work.year);
                         if (slug) {
-                            window.location.href = `/content/details.html?${encodeURIComponent(slug)}`;
+                            window.location.href = `/explore/details.html?${encodeURIComponent(slug)}`;
                         }
                     }
                 }, 100);

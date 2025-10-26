@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineBrain - Loading</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Montserrat:wght@600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* ===== GLOBAL STYLES ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', 'Montserrat', sans-serif;
+            overflow: hidden;
+            position: relative;
+            height: 100vh;
+        }
+
+        /* ===== LOADER CONTAINER ===== */
+        .loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1f3a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            animation: fadeInBackground 0.5s ease forwards;
+        }
+
+        @keyframes fadeInBackground {
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Fade out animation at 4.5s */
+        .loader-container.fade-out {
+            animation: fadeOutLoader 0.5s ease forwards;
+        }
+
+        @keyframes fadeOutLoader {
+            to {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+        }
+
+        /* ===== FILM REEL ===== */
+        .film-reel {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            opacity: 0;
+            transform: scale(0) rotate(0deg);
+            animation:
+                reelAppear 1s ease forwards 0.5s,
+                reelSpin 2.5s linear infinite 0.5s;
+        }
+
+        @keyframes reelAppear {
+            to {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+
+        @keyframes reelSpin {
+            0% {
+                transform: scale(1) rotate(0deg);
+            }
+
+            100% {
+                transform: scale(1) rotate(360deg);
+            }
+        }
+
+        /* Reel structure */
+        .reel-outer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #2a2a2a;
+            border-radius: 50%;
+            box-shadow:
+                0 0 0 15px #3a3a3a,
+                0 0 0 16px #2a2a2a,
+                0 0 30px rgba(99, 102, 241, 0.3),
+                inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .reel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60px;
+            height: 60px;
+            background: #1a1a1a;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.8);
+        }
+
+        .reel-hole {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            background: #6366f1;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
+        }
+
+        /* Reel spokes */
+        .spoke {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 70px;
+            background: linear-gradient(to bottom, transparent, #3a3a3a, transparent);
+            transform-origin: center;
+        }
+
+        .spoke:nth-child(1) {
+            transform: translate(-50%, -50%) rotate(0deg);
+        }
+
+        .spoke:nth-child(2) {
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        .spoke:nth-child(3) {
+            transform: translate(-50%, -50%) rotate(90deg);
+        }
+
+        .spoke:nth-child(4) {
+            transform: translate(-50%, -50%) rotate(135deg);
+        }
+
+        /* Film frames on reel */
+        .film-frame-marker {
+            position: absolute;
+            width: 15px;
+            height: 12px;
+            background: #6366f1;
+            opacity: 0.7;
+        }
+
+        .film-frame-marker:nth-child(1) {
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .film-frame-marker:nth-child(2) {
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .film-frame-marker:nth-child(3) {
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .film-frame-marker:nth-child(4) {
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* ===== POPCORN KERNELS ===== */
+        .popcorn-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .popcorn-kernel {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            bottom: -50px;
+            background: radial-gradient(circle at 30% 30%, #fff8dc, #f5deb3);
+            border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%;
+            box-shadow:
+                inset -3px -3px 6px rgba(0, 0, 0, 0.1),
+                inset 3px 3px 6px rgba(255, 255, 255, 0.4),
+                0 4px 8px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transform: scale(0.5);
+        }
+
+        .popcorn-kernel::before {
+            content: '';
+            position: absolute;
+            width: 70%;
+            height: 70%;
+            background: inherit;
+            border-radius: inherit;
+            top: -8px;
+            left: 5px;
+            transform: rotate(45deg);
+        }
+
+        /* Individual kernel animations */
+        .kernel-1 {
+            left: 40%;
+            animation: popKernel1 1.5s ease-out forwards 2s;
+        }
+
+        .kernel-2 {
+            left: 50%;
+            animation: popKernel2 1.5s ease-out forwards 2.1s;
+        }
+
+        .kernel-3 {
+            left: 60%;
+            animation: popKernel3 1.5s ease-out forwards 2.2s;
+        }
+
+        .kernel-4 {
+            left: 45%;
+            animation: popKernel4 1.5s ease-out forwards 2.3s;
+        }
+
+        .kernel-5 {
+            left: 55%;
+            animation: popKernel5 1.5s ease-out forwards 2.4s;
+        }
+
+        @keyframes popKernel1 {
+            0% {
+                bottom: -50px;
+                opacity: 0;
+                transform: scale(0.5) rotate(0deg);
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            50% {
+                bottom: 60%;
+                transform: scale(1) rotate(180deg);
+            }
+
+            60% {
+                box-shadow:
+                    0 0 20px #f59e0b,
+                    inset -3px -3px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            100% {
+                bottom: 55%;
+                opacity: 1;
+                transform: scale(1) rotate(360deg) translateX(-30px);
+            }
+        }
+
+        @keyframes popKernel2 {
+            0% {
+                bottom: -50px;
+                opacity: 0;
+                transform: scale(0.5) rotate(0deg);
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            50% {
+                bottom: 65%;
+                transform: scale(1.1) rotate(-180deg);
+            }
+
+            60% {
+                box-shadow:
+                    0 0 25px #f59e0b,
+                    inset -3px -3px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            100% {
+                bottom: 60%;
+                opacity: 1;
+                transform: scale(1) rotate(-360deg) translateX(10px);
+            }
+        }
+
+        @keyframes popKernel3 {
+            0% {
+                bottom: -50px;
+                opacity: 0;
+                transform: scale(0.5) rotate(0deg);
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            50% {
+                bottom: 58%;
+                transform: scale(1) rotate(200deg);
+            }
+
+            60% {
+                box-shadow:
+                    0 0 22px #f59e0b,
+                    inset -3px -3px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            100% {
+                bottom: 53%;
+                opacity: 1;
+                transform: scale(1) rotate(380deg) translateX(25px);
+            }
+        }
+
+        @keyframes popKernel4 {
+            0% {
+                bottom: -50px;
+                opacity: 0;
+                transform: scale(0.5) rotate(0deg);
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            50% {
+                bottom: 62%;
+                transform: scale(1.05) rotate(-160deg);
+            }
+
+            60% {
+                box-shadow:
+                    0 0 18px #f59e0b,
+                    inset -3px -3px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            100% {
+                bottom: 57%;
+                opacity: 1;
+                transform: scale(1) rotate(-340deg) translateX(-20px);
+            }
+        }
+
+        @keyframes popKernel5 {
+            0% {
+                bottom: -50px;
+                opacity: 0;
+                transform: scale(0.5) rotate(0deg);
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            50% {
+                bottom: 59%;
+                transform: scale(1) rotate(170deg);
+            }
+
+            60% {
+                box-shadow:
+                    0 0 24px #f59e0b,
+                    inset -3px -3px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            100% {
+                bottom: 54%;
+                opacity: 1;
+                transform: scale(1) rotate(350deg) translateX(15px);
+            }
+        }
+
+        /* ===== CINEBRAIN LOGO ===== */
+        .logo-container {
+            position: absolute;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: logoReveal 1s ease forwards 3s;
+        }
+
+        @keyframes logoReveal {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            font-size: 3.5em;
+            font-weight: 700;
+            color: #6366f1;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow:
+                0 0 30px rgba(99, 102, 241, 0.5),
+                0 0 60px rgba(99, 102, 241, 0.3);
+            position: relative;
+        }
+
+        .logo::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #6366f1, transparent);
+            opacity: 0;
+            animation: logoGlow 0.5s ease forwards 3.5s;
+        }
+
+        @keyframes logoGlow {
+            to {
+                opacity: 1;
+                box-shadow: 0 0 20px #6366f1;
+            }
+        }
+
+        /* ===== QUOTE TEXT ===== */
+        .quote-container {
+            position: absolute;
+            bottom: 25%;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: quoteReveal 0.5s ease forwards 4s;
+        }
+
+        @keyframes quoteReveal {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .quote {
+            font-size: 1.1em;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        /* ===== HOMEPAGE PREVIEW (for smooth transition) ===== */
+        .homepage-preview {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1f3a 0%, #2d1b69 100%);
+            opacity: 0;
+            z-index: 9998;
+            display: none;
+        }
+
+        .homepage-preview.show {
+            display: block;
+            animation: homepageFadeIn 0.5s ease forwards;
+        }
+
+        @keyframes homepageFadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .film-reel {
+                width: 150px;
+                height: 150px;
+            }
+
+            .logo {
+                font-size: 2.5em;
+            }
+
+            .quote {
+                font-size: 1em;
+                padding: 0 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Loader -->
+    <div class="loader-container" id="loader">
+        <!-- Film Reel -->
+        <div class="film-reel">
+            <div class="reel-outer">
+                <div class="spoke"></div>
+                <div class="spoke"></div>
+                <div class="spoke"></div>
+                <div class="spoke"></div>
+                <div class="film-frame-marker"></div>
+                <div class="film-frame-marker"></div>
+                <div class="film-frame-marker"></div>
+                <div class="film-frame-marker"></div>
+            </div>
+            <div class="reel-center">
+                <div class="reel-hole"></div>
+            </div>
+        </div>
+
+        <!-- Popcorn Container -->
+        <div class="popcorn-container">
+            <div class="popcorn-kernel kernel-1"></div>
+            <div class="popcorn-kernel kernel-2"></div>
+            <div class="popcorn-kernel kernel-3"></div>
+            <div class="popcorn-kernel kernel-4"></div>
+            <div class="popcorn-kernel kernel-5"></div>
+        </div>
+
+        <!-- Logo -->
+        <div class="logo-container">
+            <h1 class="logo">CineBrain</h1>
+        </div>
+
+        <!-- Quote -->
+        <div class="quote-container">
+            <p class="quote" id="quote">Discovering your next cinematic obsession...</p>
+        </div>
+    </div>
+
+    <!-- Homepage Preview (for smooth transition) -->
+    <div class="homepage-preview" id="homepagePreview">
+        <!-- Your homepage content would go here -->
+    </div>
+
+    <script>
+        // Quote rotation
+        const quotes = [
+            "Discovering your next cinematic obsession...",
+            "Where stories find their perfect audience...",
+            "Curating cinema, powered by AI...",
+            "Your personal movie sommelier...",
+            "Every film has its viewer, we find yours..."
+        ];
+
+        // Random quote on load
+        document.getElementById('quote').textContent = quotes[Math.floor(Math.random() * quotes.length)];
+
+        // Audio support (optional)
+        class LoaderAudio {
+            constructor() {
+                this.audioContext = null;
+                this.reelSound = null;
+                this.popSound = null;
+            }
+
+            init() {
+                // Initialize Web Audio API if needed
+                // This is where you'd load and play sounds
+            }
+
+            playReelWhir() {
+                // Play film reel sound
+            }
+
+            playPopcornPop() {
+                // Play popcorn pop sound
+            }
+        }
+
+        // Loader controller
+        class CineBrainLoader {
+            constructor() {
+                this.loader = document.getElementById('loader');
+                this.homepagePreview = document.getElementById('homepagePreview');
+                this.audio = new LoaderAudio();
+
+                this.init();
+            }
+
+            init() {
+                // Start fade out at 4.5s
+                setTimeout(() => {
+                    this.fadeOut();
+                }, 4500);
+            }
+
+            fadeOut() {
+                // Add fade out class
+                this.loader.classList.add('fade-out');
+
+                // Show homepage preview for smooth transition
+                this.homepagePreview.classList.add('show');
+
+                // Remove loader after animation
+                setTimeout(() => {
+                    this.loader.style.display = 'none';
+                    this.onLoadComplete();
+                }, 500);
+            }
+
+            onLoadComplete() {
+                // Dispatch event for main app
+                document.dispatchEvent(new CustomEvent('cinebrainLoaded', {
+                    detail: { timestamp: Date.now() }
+                }));
+
+                // Redirect or initialize main app
+                console.log('CineBrain loaded successfully!');
+
+                // Example: window.location.href = '/home';
+                // Or: initializeApp();
+            }
+        }
+
+        // Initialize loader
+        document.addEventListener('DOMContentLoaded', () => {
+            new CineBrainLoader();
+        });
+
+        // Listen for load complete
+        document.addEventListener('cinebrainLoaded', (e) => {
+            console.log('Load complete at:', e.detail.timestamp);
+            // Initialize your main application here
+        });
+    </script>
+</body>
+
+</html>
