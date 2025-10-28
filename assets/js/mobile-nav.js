@@ -1,11 +1,12 @@
 class MobileNavigation {
     constructor(config = {}) {
         this.config = {
-            apiBase: config.apiBase || 'https://cinebrain.onrender.com/api',
+            apiBase: config.apiBase || window.CineBrainConfig.apiBase,
             enableHaptic: config.enableHaptic !== false,
             swipeThreshold: config.swipeThreshold || 50,
             swipeVelocity: config.swipeVelocity || 0.3,
             ...config
+
         };
 
         this.state = {

@@ -1,8 +1,8 @@
 class DetailsPage {
     constructor() {
-        this.apiBase = 'https://cinebrain.onrender.com/api';
-        this.posterBase = 'https://image.tmdb.org/t/p/w500';
-        this.backdropBase = 'https://image.tmdb.org/t/p/w1280';
+        this.apiBase = window.CineBrainConfig.apiBase;
+        this.posterBase = window.CineBrainConfig.posterBase;
+        this.backdropBase = window.CineBrainConfig.backdropBase;
         this.contentSlug = this.getContentSlugFromUrl();
         this.contentData = null;
         this.authToken = localStorage.getItem('cinebrain-token');

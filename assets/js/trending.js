@@ -1,6 +1,6 @@
 class CineBrainTrendingContentManager {
     constructor() {
-        this.apiBase = 'https://cinebrain.onrender.com/api';
+        this.apiBase = window.CineBrainConfig.apiBase;
         this.authToken = localStorage.getItem('cinebrain-token');
         this.isAuthenticated = !!this.authToken;
         this.currentUser = this.getCurrentUser();

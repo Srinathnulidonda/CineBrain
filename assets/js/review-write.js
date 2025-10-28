@@ -1,7 +1,7 @@
 class ReviewWritePage {
     constructor() {
-        this.apiBase = 'https://cinebrain.onrender.com/api';
-        this.posterBase = 'https://image.tmdb.org/t/p/w500';
+        this.apiBase = window.CineBrainConfig.apiBase;
+        this.posterBase = window.CineBrainConfig.posterBase;
         this.contentSlug = this.getContentSlugFromUrl();
         this.contentData = null;
         this.authToken = localStorage.getItem('cinebrain-token');

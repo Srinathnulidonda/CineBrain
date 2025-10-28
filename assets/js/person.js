@@ -1,6 +1,6 @@
 class PersonPage {
     constructor() {
-        this.apiBase = 'https://cinebrain.onrender.com/api';
+        this.apiBase = window.CineBrainConfig.apiBase;
         this.personSlug = this.getPersonSlugFromUrl();
         this.personData = null;
         this.authToken = localStorage.getItem('cinebrain-token');
