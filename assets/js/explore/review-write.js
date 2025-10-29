@@ -12,6 +12,7 @@ class ReviewWritePage {
         this.formChanged = false;
         this.autoSaveInterval = null;
         this.lastAutoSave = null;
+        this.isSubmitting = false;
 
         this.init();
     }
@@ -37,7 +38,6 @@ class ReviewWritePage {
             console.log('Content slug:', this.contentSlug);
             console.log('Is authenticated:', this.isAuthenticated);
 
-            // Check authentication
             if (!this.isAuthenticated) {
                 console.log('User not authenticated, redirecting to login');
                 this.redirectToLogin();
@@ -105,10 +105,32 @@ class ReviewWritePage {
 
             this.renderContentInfo();
             this.updatePageMeta();
+            this.checkExistingReview();
 
         } catch (error) {
             console.error('Error loading content:', error);
             throw error;
+        }
+    }
+
+    async checkExistingReview() {
+        if (!this.contentData?.reviews || !Array.isArray(this.contentData.reviews)) {
+            return;
+        }
+
+        const existingReview = this.contentData.reviews.find(
+            review => review.user?.id === this.currentUser?.id
+        );
+
+        if (existingReview) {
+            const shouldEdit = confirm(
+                'You have already reviewed this content. Would you like to edit your existing review instead?'
+            );
+
+            if (shouldEdit) {
+                window.location.href = `/explore/review-edit.html?review=${existingReview.id}&content=${this.contentSlug}`;
+                return;
+            }
         }
     }
 
@@ -118,7 +140,6 @@ class ReviewWritePage {
 
         console.log('Rendering content info for:', data.title);
 
-        // Update content poster
         const poster = document.getElementById('contentPoster');
         if (poster && data.poster_url) {
             const img = new Image();
@@ -134,23 +155,19 @@ class ReviewWritePage {
             poster.alt = `${data.title} poster`;
         }
 
-        // Update content type badge
         const typeBadge = document.getElementById('contentTypeBadge');
         if (typeBadge) {
             typeBadge.textContent = (data.content_type || 'movie').toUpperCase();
         }
 
-        // Update content title
         this.updateElement('contentTitle', data.title);
 
-        // Update content year and genres
         const year = data.metadata?.release_date ? new Date(data.metadata.release_date).getFullYear() : '';
         const genres = data.metadata?.genres?.slice(0, 3).join(', ') || '';
 
         this.updateElement('contentYear', year);
         this.updateElement('contentGenres', genres);
 
-        // Update content rating
         if (data.ratings?.tmdb?.score) {
             this.updateElement('contentRating', data.ratings.tmdb.score.toFixed(1));
         }
@@ -188,7 +205,6 @@ class ReviewWritePage {
     setupEventListeners() {
         console.log('Setting up event listeners...');
 
-        // Back button
         const backBtn = document.getElementById('backToContent');
         if (backBtn) {
             backBtn.addEventListener('click', () => {
@@ -196,7 +212,6 @@ class ReviewWritePage {
             });
         }
 
-        // Form submission
         const form = document.getElementById('reviewForm');
         if (form) {
             form.addEventListener('submit', (e) => {
@@ -205,27 +220,20 @@ class ReviewWritePage {
             });
         }
 
-        // Rating stars
         this.setupRatingStars();
-
-        // Form inputs with real-time validation
         this.setupFormInputs();
-
-        // Action buttons
         this.setupActionButtons();
 
-        // Before unload warning
         window.addEventListener('beforeunload', (e) => {
-            if (this.formChanged && !this.isDraftSaved) {
+            if (this.formChanged && !this.isDraftSaved && !this.isSubmitting) {
                 e.preventDefault();
                 e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
             }
         });
 
-        // Auto-save on visibility change
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden' && this.formChanged) {
-                this.saveDraft(true); // Silent save
+                this.saveDraft(true);
             }
         });
     }
@@ -238,7 +246,6 @@ class ReviewWritePage {
 
         console.log('Setting up rating stars...');
 
-        // Generate 10 stars
         starsContainer.innerHTML = '';
         for (let i = 1; i <= 10; i++) {
             const star = document.createElement('span');
@@ -262,7 +269,6 @@ class ReviewWritePage {
                 this.triggerAutoSave();
                 console.log('Rating selected:', i);
 
-                // Add visual feedback
                 star.style.transform = 'scale(1.2)';
                 setTimeout(() => {
                     star.style.transform = '';
@@ -299,7 +305,6 @@ class ReviewWritePage {
         const titleCounter = document.getElementById('titleCharCount');
         const textCounter = document.getElementById('textCharCount');
 
-        // Title input with real-time validation
         if (titleInput && titleCounter) {
             titleInput.addEventListener('input', () => {
                 const length = titleInput.value.length;
@@ -315,13 +320,11 @@ class ReviewWritePage {
                 this.triggerAutoSave();
             });
 
-            // Real-time validation feedback
             titleInput.addEventListener('blur', () => {
                 this.validateTitleField();
             });
         }
 
-        // Text input with real-time validation and auto-resize
         if (textInput && textCounter) {
             let inputTimeout;
 
@@ -337,28 +340,23 @@ class ReviewWritePage {
                 this.formChanged = true;
                 this.validateForm();
 
-                // Auto-resize textarea
                 textInput.style.height = 'auto';
                 textInput.style.height = textInput.scrollHeight + 'px';
 
-                // Debounced auto-save
                 clearTimeout(inputTimeout);
                 inputTimeout = setTimeout(() => {
                     this.triggerAutoSave();
                 }, 1000);
             });
 
-            // Real-time validation feedback
             textInput.addEventListener('blur', () => {
                 this.validateTextField();
             });
 
-            // Initial resize
             textInput.style.height = 'auto';
             textInput.style.height = textInput.scrollHeight + 'px';
         }
 
-        // Expand textarea button
         const expandBtn = document.getElementById('expandTextarea');
         if (expandBtn && textInput) {
             expandBtn.addEventListener('click', () => {
@@ -374,7 +372,6 @@ class ReviewWritePage {
             });
         }
 
-        // Checkboxes
         const spoilerCheckbox = document.getElementById('spoilerWarning');
         const publicCheckbox = document.getElementById('publicReview');
 
@@ -389,7 +386,6 @@ class ReviewWritePage {
     }
 
     setupActionButtons() {
-        // Cancel button
         const cancelBtn = document.getElementById('cancelBtn');
         if (cancelBtn) {
             cancelBtn.addEventListener('click', () => {
@@ -397,15 +393,13 @@ class ReviewWritePage {
             });
         }
 
-        // Save draft button
         const saveDraftBtn = document.getElementById('saveDraftBtn');
         if (saveDraftBtn) {
             saveDraftBtn.addEventListener('click', () => {
-                this.saveDraft(false); // Manual save with feedback
+                this.saveDraft(false);
             });
         }
 
-        // Submit button
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
             submitBtn.addEventListener('click', () => {
@@ -413,7 +407,6 @@ class ReviewWritePage {
             });
         }
 
-        // Success modal back button
         const backFromSuccessBtn = document.getElementById('backToContentFromSuccess');
         if (backFromSuccessBtn) {
             backFromSuccessBtn.addEventListener('click', () => {
@@ -439,7 +432,6 @@ class ReviewWritePage {
         submitBtn.disabled = !isValid;
         submitBtn.classList.toggle('disabled', !isValid);
 
-        // Update submit button text with better feedback
         const submitText = submitBtn.querySelector('span');
         if (submitText) {
             if (!hasRating && !hasText) {
@@ -513,22 +505,26 @@ class ReviewWritePage {
     async handleSubmit() {
         console.log('Handling form submission...');
 
+        if (this.isSubmitting) {
+            console.log('Already submitting, ignoring duplicate request');
+            return;
+        }
+
         if (!this.validateFormData()) {
             console.log('Form validation failed');
             return;
         }
 
+        this.isSubmitting = true;
         const submitBtn = document.getElementById('submitBtn');
         const form = document.getElementById('reviewForm');
 
         try {
-            // Show loading state
             if (submitBtn) {
                 submitBtn.disabled = true;
                 const originalHTML = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i data-feather="loader"></i><span>Submitting...</span>';
 
-                // Animate loader
                 const loader = submitBtn.querySelector('[data-feather="loader"]');
                 if (loader) {
                     loader.style.animation = 'spin 1s linear infinite';
@@ -541,7 +537,6 @@ class ReviewWritePage {
             const reviewData = this.getFormData();
             console.log('Submitting review data:', reviewData);
 
-            // Use the correct API endpoint that matches backend route
             const url = `${this.apiBase}/details/${encodeURIComponent(this.contentSlug)}/reviews`;
             console.log('POST to:', url);
 
@@ -559,12 +554,10 @@ class ReviewWritePage {
             console.log('Review submission result:', result);
 
             if (response.ok && result.success) {
-                // Clear draft and form state
                 this.clearDraft();
                 this.formChanged = false;
                 this.stopAutoSave();
 
-                // Show success with auto-approval info
                 const message = result.auto_approved ?
                     'Review published successfully!' :
                     'Review submitted for moderation';
@@ -572,16 +565,28 @@ class ReviewWritePage {
                 console.log('Review submitted successfully, ID:', result.review_id);
                 this.showSuccessModal(message);
 
-                // If auto-approved, refresh the parent page's reviews
-                if (result.auto_approved && window.opener) {
+                if (window.opener) {
                     try {
                         if (window.opener.detailsPage && window.opener.detailsPage.refreshReviews) {
-                            window.opener.detailsPage.refreshReviews();
+                            await window.opener.detailsPage.refreshReviews();
+                            console.log('Parent page reviews refreshed');
+                        }
+
+                        if (window.opener.detailsPage && window.opener.detailsPage.loadReviews) {
+                            await window.opener.detailsPage.loadReviews();
                         }
                     } catch (e) {
-                        console.log('Could not refresh parent page reviews');
+                        console.log('Could not refresh parent page reviews:', e);
                     }
                 }
+
+                localStorage.setItem('cinebrain_reviews_updated', JSON.stringify({
+                    contentSlug: this.contentSlug,
+                    timestamp: Date.now(),
+                    reviewId: result.review_id,
+                    autoApproved: result.auto_approved
+                }));
+
             } else {
                 throw new Error(result.error || result.message || 'Failed to submit review');
             }
@@ -604,7 +609,7 @@ class ReviewWritePage {
             this.showToast(errorMessage, 'error');
 
         } finally {
-            // Reset button state
+            this.isSubmitting = false;
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i data-feather="send"></i><span>Submit Review</span>';
@@ -622,7 +627,6 @@ class ReviewWritePage {
         const textInput = document.getElementById('reviewText');
         const titleInput = document.getElementById('reviewTitle');
 
-        // Validate review text
         if (!textInput || textInput.value.trim().length < 10) {
             this.showToast('Review text must be at least 10 characters', 'warning');
             textInput?.focus();
@@ -636,14 +640,12 @@ class ReviewWritePage {
             return false;
         }
 
-        // Validate rating
         if (this.selectedRating === 0) {
             this.showToast('Please select a rating', 'warning');
             document.getElementById('ratingStars')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return false;
         }
 
-        // Validate title length if provided
         if (titleInput && titleInput.value.trim().length > 100) {
             this.showToast('Review title must be less than 100 characters', 'warning');
             titleInput.focus();
@@ -666,12 +668,10 @@ class ReviewWritePage {
         };
     }
 
-    // Auto-save functionality
     startAutoSave() {
-        // Auto-save every 30 seconds if there are changes
         this.autoSaveInterval = setInterval(() => {
             if (this.formChanged && !this.isDraftSaved) {
-                this.saveDraft(true); // Silent auto-save
+                this.saveDraft(true);
             }
         }, 30000);
     }
@@ -684,7 +684,6 @@ class ReviewWritePage {
     }
 
     triggerAutoSave() {
-        // Trigger auto-save after 3 seconds of inactivity
         clearTimeout(this.autoSaveTimeout);
         this.autoSaveTimeout = setTimeout(() => {
             if (this.formChanged) {
@@ -743,7 +742,6 @@ class ReviewWritePage {
             console.log('Loading draft for:', this.contentSlug);
             const draft = JSON.parse(draftData);
 
-            // Check if draft is from the same user
             if (draft.user_id && this.currentUser?.id && draft.user_id !== this.currentUser.id) {
                 console.log('Draft from different user, clearing...');
                 this.clearDraft();
@@ -752,7 +750,6 @@ class ReviewWritePage {
 
             const formData = draft.form_data;
 
-            // Load rating
             if (formData.rating) {
                 this.selectedRating = formData.rating;
                 const ratingDisplay = document.getElementById('selectedRating');
@@ -766,7 +763,6 @@ class ReviewWritePage {
                 }
             }
 
-            // Load title
             const titleInput = document.getElementById('reviewTitle');
             if (titleInput && formData.title) {
                 titleInput.value = formData.title;
@@ -774,19 +770,16 @@ class ReviewWritePage {
                 if (titleCounter) titleCounter.textContent = formData.title.length;
             }
 
-            // Load review text
             const textInput = document.getElementById('reviewText');
             if (textInput && formData.review_text) {
                 textInput.value = formData.review_text;
                 const textCounter = document.getElementById('textCharCount');
                 if (textCounter) textCounter.textContent = formData.review_text.length;
 
-                // Auto-resize
                 textInput.style.height = 'auto';
                 textInput.style.height = textInput.scrollHeight + 'px';
             }
 
-            // Load spoiler warning
             const spoilerCheckbox = document.getElementById('spoilerWarning');
             if (spoilerCheckbox) {
                 spoilerCheckbox.checked = formData.has_spoilers || false;
@@ -795,13 +788,12 @@ class ReviewWritePage {
             this.isDraftSaved = true;
             this.validateForm();
 
-            // Show draft loaded message with timestamp
             const draftTime = new Date(draft.timestamp).toLocaleString();
             this.showToast(`Draft loaded from ${draftTime}`, 'info');
 
         } catch (error) {
             console.error('Error loading draft:', error);
-            this.clearDraft(); // Clear corrupted draft
+            this.clearDraft();
         }
     }
 
@@ -816,7 +808,6 @@ class ReviewWritePage {
     }
 
     navigateBack() {
-        // Stop auto-save before navigation
         this.stopAutoSave();
 
         if (this.contentData?.slug) {
@@ -859,12 +850,10 @@ class ReviewWritePage {
             bootstrap.Modal.getInstance(modal)?.hide();
         };
 
-        // Remove existing listeners
         if (this.currentConfirmHandler) {
             confirmBtn.removeEventListener('click', this.currentConfirmHandler);
         }
 
-        // Add new listeners
         this.currentConfirmHandler = handleConfirm;
         confirmBtn.addEventListener('click', this.currentConfirmHandler);
 
@@ -902,7 +891,6 @@ class ReviewWritePage {
         if (window.topbar?.notificationSystem) {
             window.topbar.notificationSystem.show(message, type);
         } else {
-            // Enhanced fallback toast
             console.log(`Toast: ${message} (${type})`);
 
             const toast = document.createElement('div');
@@ -922,7 +910,6 @@ class ReviewWritePage {
                 animation: slideInRight 0.3s ease-out;
             `;
 
-            // Add animation styles
             const style = document.createElement('style');
             style.textContent = `
                 @keyframes slideInRight {
@@ -991,7 +978,6 @@ class ReviewWritePage {
     }
 }
 
-// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     try {
         console.log('DOM loaded, initializing review write page...');

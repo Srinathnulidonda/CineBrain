@@ -15,6 +15,7 @@ class DetailsPage {
         this.currentImageSet = [];
         this.currentImageType = 'backdrops';
         this.setupSmoothScrolling();
+        this.setupStorageListener();
         this.init();
     }
 
@@ -24,6 +25,22 @@ class DetailsPage {
             style.textContent = `* { scroll-behavior: smooth !important; }`;
             document.head.appendChild(style);
         }
+    }
+
+    setupStorageListener() {
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'cinebrain_reviews_updated') {
+                try {
+                    const data = JSON.parse(e.newValue);
+                    if (data.contentSlug === this.contentSlug) {
+                        console.log('Reviews updated in another tab, refreshing...');
+                        this.refreshReviews();
+                    }
+                } catch (error) {
+                    console.error('Error parsing storage event:', error);
+                }
+            }
+        });
     }
 
     getContentSlugFromUrl() {
@@ -93,9 +110,38 @@ class DetailsPage {
             this.contentData = await response.json();
             await this.renderContent();
 
+            if (!this.contentData.reviews) {
+                await this.loadReviews();
+            }
+
         } catch (error) {
             console.error('Error loading content:', error);
             throw error;
+        }
+    }
+
+    async loadReviews(page = 1, sortBy = 'newest') {
+        try {
+            const url = `${this.apiBase}/details/${encodeURIComponent(this.contentSlug)}/reviews?page=${page}&limit=20&sort_by=${sortBy}`;
+
+            const response = await fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(this.authToken && { 'Authorization': `Bearer ${this.authToken}` })
+                }
+            });
+
+            if (response.ok) {
+                const reviewData = await response.json();
+                if (reviewData.success) {
+                    this.contentData.reviews = reviewData.reviews;
+                    this.contentData.review_stats = reviewData.stats;
+                    this.renderReviews(this.contentData);
+                    this.updateReviewTabCount(reviewData.stats.total_reviews);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading reviews:', error);
         }
     }
 
@@ -649,77 +695,117 @@ class DetailsPage {
         container.style.display = 'flex';
         if (noReviews) noReviews.style.display = 'none';
 
-        // Sort reviews by creation date (newest first)
         const sortedReviews = [...data.reviews].sort((a, b) =>
             new Date(b.created_at) - new Date(a.created_at)
         );
 
         container.innerHTML = sortedReviews.map(review => `
-        <div class="review-card">
-            <div class="review-header">
-                <div class="reviewer-info">
-                    <img class="reviewer-avatar" 
-                         src="${review.user?.avatar || this.getPlaceholderAvatar()}" 
-                         alt="${this.escapeHtml(review.user?.username || 'Anonymous')}"
-                         loading="lazy">
-                    <div class="reviewer-details">
-                        <div class="reviewer-name">${this.escapeHtml(review.user?.username || 'Anonymous')}</div>
-                        <div class="review-date">${this.formatDate(review.created_at)}</div>
-                        ${review.has_spoilers ? '<div class="spoiler-warning">⚠️ Contains Spoilers</div>' : ''}
+            <div class="review-card" data-review-id="${review.id}">
+                <div class="review-header">
+                    <div class="reviewer-info">
+                        <img class="reviewer-avatar" 
+                             src="${review.user?.avatar_url || this.getPlaceholderAvatar()}" 
+                             alt="${this.escapeHtml(review.user?.username || 'Anonymous')}"
+                             loading="lazy">
+                        <div class="reviewer-details">
+                            <div class="reviewer-name">${this.escapeHtml(review.user?.username || 'Anonymous')}</div>
+                            <div class="review-date">${this.formatDate(review.created_at)}</div>
+                            ${review.has_spoilers ? '<div class="spoiler-warning">⚠️ Contains Spoilers</div>' : ''}
+                            ${review.is_approved ? '' : '<div class="pending-approval">⏳ Pending Approval</div>'}
+                        </div>
+                    </div>
+                    <div class="review-rating">
+                        ${this.renderStars(review.rating || 0)}
+                        <span class="rating-value">${(review.rating || 0).toFixed(1)}</span>
                     </div>
                 </div>
-                <div class="review-rating">
-                    ${this.renderStars(review.rating || 0)}
-                    <span class="rating-value">${(review.rating || 0).toFixed(1)}</span>
+                <div class="review-content">
+                    ${review.title ? `<h4 class="review-title">${this.escapeHtml(review.title)}</h4>` : ''}
+                    <p class="review-text ${review.has_spoilers ? 'spoiler-content' : ''}">${this.escapeHtml(review.review_text || review.content)}</p>
+                    ${review.has_spoilers ? `<button class="show-spoiler-btn">Show Spoilers</button>` : ''}
+                </div>
+                <div class="review-actions">
+                    ${this.isAuthenticated ? `
+                        <button class="review-action-btn helpful-btn ${review.user_vote === true ? 'active' : ''}" 
+                                data-review-id="${review.id}">
+                            <i data-feather="thumbs-up"></i>
+                            Helpful (${review.helpful_count || 0})
+                        </button>
+                    ` : `
+                        <span class="review-stat">
+                            <i data-feather="thumbs-up"></i>
+                            ${review.helpful_count || 0} helpful
+                        </span>
+                    `}
+                    ${this.currentUser?.id === review.user?.id ? `
+                        <button class="review-action-btn edit-review" data-review-id="${review.id}">
+                            <i data-feather="edit"></i>
+                            Edit
+                        </button>
+                        <button class="review-action-btn delete-review" data-review-id="${review.id}">
+                            <i data-feather="trash-2"></i>
+                            Delete
+                        </button>
+                    ` : ''}
                 </div>
             </div>
-            <div class="review-content">
-                ${review.title ? `<h4 class="review-title">${this.escapeHtml(review.title)}</h4>` : ''}
-                <p class="review-text ${review.has_spoilers ? 'spoiler-content' : ''}">${this.escapeHtml(review.review_text || review.content)}</p>
-                ${review.has_spoilers ? '<button class="show-spoiler-btn" onclick="this.previousElementSibling.classList.toggle(\'revealed\'); this.textContent = this.textContent === \'Show Spoilers\' ? \'Hide Spoilers\' : \'Show Spoilers\'">Show Spoilers</button>' : ''}
-            </div>
-            <div class="review-actions">
-                <button class="review-action-btn" data-review-id="${review.id}" onclick="detailsPage.voteReviewHelpful(${review.id}, true)">
-                    <i data-feather="thumbs-up"></i>
-                    Helpful (${review.helpful_count || 0})
-                </button>
-                ${this.currentUser?.id === review.user?.id ? `
-                    <button class="review-action-btn edit-review" data-review-id="${review.id}">
-                        <i data-feather="edit"></i>
-                        Edit
-                    </button>
-                ` : ''}
-            </div>
-        </div>
-    `).join('');
+        `).join('');
+
+        container.querySelectorAll('.show-spoiler-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const reviewText = btn.previousElementSibling;
+                reviewText.classList.toggle('revealed');
+                btn.textContent = reviewText.classList.contains('revealed') ? 'Hide Spoilers' : 'Show Spoilers';
+            });
+        });
+
+        container.querySelectorAll('.helpful-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const reviewId = parseInt(btn.dataset.reviewId);
+                this.voteReviewHelpful(reviewId, true);
+            });
+        });
+
+        container.querySelectorAll('.edit-review').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const reviewId = parseInt(btn.dataset.reviewId);
+                this.editReview(reviewId);
+            });
+        });
+
+        container.querySelectorAll('.delete-review').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const reviewId = parseInt(btn.dataset.reviewId);
+                this.deleteReview(reviewId);
+            });
+        });
 
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
     }
 
-    // Add method to refresh reviews after submission
     async refreshReviews() {
-        try {
-            const response = await fetch(`${this.apiBase}/details/${encodeURIComponent(this.contentSlug)}`, {
-                headers: {
-                    'Accept': 'application/json',
-                    ...(this.authToken && { 'Authorization': `Bearer ${this.authToken}` })
-                }
-            });
+        console.log('Refreshing reviews...');
+        await this.loadReviews();
+    }
 
-            if (response.ok) {
-                const data = await response.json();
-                this.contentData.reviews = data.reviews;
-                this.renderReviews(data);
-                console.log('Reviews refreshed');
+    updateReviewTabCount(count) {
+        const reviewTab = document.querySelector('[data-tab="reviews"]');
+        if (reviewTab && count > 0) {
+            const existingBadge = reviewTab.querySelector('.count-badge');
+            if (existingBadge) {
+                existingBadge.textContent = count;
+            } else {
+                reviewTab.innerHTML += ` <span class="count-badge">${count}</span>`;
             }
-        } catch (error) {
-            console.error('Error refreshing reviews:', error);
         }
     }
 
-    // Add method to vote on review helpfulness
     async voteReviewHelpful(reviewId, isHelpful = true) {
         if (!this.isAuthenticated) {
             this.showToast('Please login to vote on reviews', 'warning');
@@ -737,15 +823,60 @@ class DetailsPage {
             });
 
             if (response.ok) {
+                const result = await response.json();
                 this.showToast('Thank you for your feedback!', 'success');
-                // Refresh reviews to show updated helpful count
-                this.refreshReviews();
+
+                const reviewCard = document.querySelector(`[data-review-id="${reviewId}"]`);
+                if (reviewCard) {
+                    const helpfulBtn = reviewCard.querySelector('.helpful-btn');
+                    if (helpfulBtn) {
+                        helpfulBtn.classList.add('active');
+                        helpfulBtn.innerHTML = `
+                            <i data-feather="thumbs-up"></i>
+                            Helpful (${result.helpful_count || 0})
+                        `;
+                        if (typeof feather !== 'undefined') {
+                            feather.replace();
+                        }
+                    }
+                }
+
+                setTimeout(() => this.refreshReviews(), 1000);
             } else {
                 throw new Error('Failed to vote on review');
             }
         } catch (error) {
             console.error('Error voting on review:', error);
             this.showToast('Failed to submit vote', 'error');
+        }
+    }
+
+    async editReview(reviewId) {
+        window.location.href = `/explore/review-edit.html?review=${reviewId}&content=${this.contentSlug}`;
+    }
+
+    async deleteReview(reviewId) {
+        if (!confirm('Are you sure you want to delete this review?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiBase}/reviews/${reviewId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${this.authToken}`
+                }
+            });
+
+            if (response.ok) {
+                this.showToast('Review deleted successfully', 'success');
+                this.refreshReviews();
+            } else {
+                throw new Error('Failed to delete review');
+            }
+        } catch (error) {
+            console.error('Error deleting review:', error);
+            this.showToast('Failed to delete review', 'error');
         }
     }
 
