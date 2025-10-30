@@ -15,7 +15,7 @@ class CineBrainContentCardManager {
         this.loadingControllers = new Map();
         this.isInitialLoad = true;
         this.backgroundLoader = null;
-        this.loadingFavorites = false; // Add debouncing flag
+        this.loadingFavorites = false;
 
         this.contentRows = [
             {
@@ -314,7 +314,6 @@ class CineBrainContentCardManager {
             return;
         }
 
-        // Debounce multiple calls
         if (this.loadingFavorites) {
             return;
         }
@@ -325,7 +324,7 @@ class CineBrainContentCardManager {
                 headers: {
                     'Authorization': `Bearer ${this.authToken}`
                 },
-                signal: AbortSignal.timeout(8000) // Increased timeout
+                signal: AbortSignal.timeout(8000)
             });
 
             if (response.ok) {
@@ -425,6 +424,15 @@ class CineBrainContentCardManager {
         if (content.slug) {
             card.dataset.contentSlug = content.slug;
         }
+        if (content.title) {
+            card.dataset.contentTitle = content.title;
+        }
+        if (content.original_title) {
+            card.dataset.originalTitle = content.original_title;
+        }
+        if (content.tmdb_id) {
+            card.dataset.tmdbId = content.tmdb_id;
+        }
 
         const posterUrl = this.formatPosterUrl(content.poster_path || content.poster_url);
         const rating = this.formatRating(content.rating);
@@ -491,50 +499,231 @@ class CineBrainContentCardManager {
     setupCardHandlers(card, content) {
         card.addEventListener('click', (e) => {
             if (!e.target.closest('.wishlist-btn')) {
-                let slug = content.slug;
+                card.style.transform = 'scale(0.98)';
+                card.style.transition = 'transform 0.1s ease';
 
-                if (!slug && content.title) {
-                    slug = this.generateSlug(content.title, content.release_date);
-                }
+                setTimeout(() => {
+                    card.style.transform = '';
+                    this.navigateToContent(content);
+                }, 100);
+            }
+        });
 
-                if (slug) {
-                    window.location.href = `/explore/details.html?${encodeURIComponent(slug)}`;
-                } else {
-                    console.error('CineBrain: No slug available for content:', content);
-                    this.showNotification('Unable to view details', 'error');
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                if (!e.target.closest('.wishlist-btn')) {
+                    e.preventDefault();
+                    this.navigateToContent(content);
                 }
             }
         });
 
         const wishlistBtn = card.querySelector('.wishlist-btn');
-        wishlistBtn?.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            await this.handleWishlistClick(content.id, wishlistBtn);
-        });
+        if (wishlistBtn) {
+            wishlistBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await this.handleWishlistClick(content.id, wishlistBtn);
+            });
+
+            wishlistBtn.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    await this.handleWishlistClick(content.id, wishlistBtn);
+                }
+            });
+        }
     }
 
-    generateSlug(title, releaseDate) {
+    navigateToContent(content) {
+        try {
+            this.showLoadingIndicator();
+
+            let slug = content.slug;
+
+            if (!slug && content.title) {
+                slug = this.generateSlug(
+                    content.title,
+                    content.release_date,
+                    content.content_type,
+                    content.tmdb_id || content.id
+                );
+
+                console.log('CineBrain: Generated slug for navigation:', slug);
+            }
+
+            if (slug && slug.length >= 2) {
+                const cleanSlug = slug.replace(/[^a-z0-9\-]/gi, '').toLowerCase();
+                if (cleanSlug.length >= 2) {
+                    const targetUrl = `/explore/details.html?${encodeURIComponent(cleanSlug)}`;
+
+                    if (window.history && window.history.pushState) {
+                        this.prefetchDetailsPage(cleanSlug);
+                    }
+
+                    window.location.href = targetUrl;
+                    return;
+                }
+            }
+
+            if (content.id) {
+                const fallbackSlug = `content-${content.id}`;
+                window.location.href = `/explore/details.html?${encodeURIComponent(fallbackSlug)}`;
+                return;
+            }
+
+            if (content.title) {
+                const titleSlug = this.generateSlug(content.title, content.release_date, content.content_type);
+                if (titleSlug) {
+                    window.location.href = `/explore/details.html?${encodeURIComponent(titleSlug)}`;
+                    return;
+                }
+            }
+
+            console.error('CineBrain: Cannot navigate - no valid identifier for content:', content);
+            this.showNotification('Unable to view content details', 'error');
+
+        } catch (error) {
+            console.error('CineBrain navigation error:', error);
+            this.showNotification('Navigation failed', 'error');
+        } finally {
+            this.hideLoadingIndicator();
+        }
+    }
+
+    generateSlug(title, releaseDate, contentType = 'movie', tmdbId = null) {
         if (!title) return '';
 
-        let slug = title.toLowerCase()
-            .replace(/[^\w\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-+|-+$/g, '')
-            .trim();
+        try {
+            const { cleanTitle, extractedYear } = this.extractYearFromTitle(title);
+            const finalTitle = cleanTitle || title;
 
-        if (releaseDate) {
-            const year = this.extractYear(releaseDate);
-            if (year) {
+            let year = null;
+            if (releaseDate) {
+                year = this.extractYear(releaseDate);
+            } else if (extractedYear) {
+                year = extractedYear;
+            }
+
+            let slug = finalTitle.toLowerCase()
+                .trim()
+                .replace(/[^\w\s\-']/g, '')
+                .replace(/\s+/g, ' ')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            if (!slug || slug.length < 2) {
+                slug = this.manualSlugify(finalTitle);
+            }
+
+            if (contentType === 'anime' && !slug.startsWith('anime-')) {
+                slug = `anime-${slug}`;
+            } else if (contentType === 'tv' && !slug.startsWith('tv-')) {
+                slug = `tv-${slug}`;
+            } else if (contentType === 'movie' && slug.length < 10) {
+                slug = `movie-${slug}`;
+            }
+
+            if (year && (contentType === 'movie' || contentType === 'anime') && year >= 1900 && year <= 2030) {
                 slug += `-${year}`;
             }
-        }
 
-        if (slug.length > 100) {
-            slug = slug.substring(0, 100).replace(/-[^-]*$/, '');
-        }
+            if (tmdbId && slug.length < 15) {
+                slug += `-${tmdbId}`;
+            }
 
-        return slug;
+            if (slug.length > 120) {
+                const parts = slug.substring(0, 117).split('-');
+                if (parts.length > 1) {
+                    parts.pop();
+                    slug = parts.join('-');
+                } else {
+                    slug = slug.substring(0, 117);
+                }
+            }
+
+            return slug || `content-${tmdbId || Date.now()}`;
+
+        } catch (error) {
+            console.error('CineBrain slug generation error:', error);
+            return `content-${tmdbId || Date.now()}`;
+        }
+    }
+
+    extractYearFromTitle(title) {
+        try {
+            const yearPatterns = [
+                /\((\d{4})\)$/,
+                /\s(\d{4})$/,
+                /-(\d{4})$/,
+                /\[(\d{4})\]$/
+            ];
+
+            for (const pattern of yearPatterns) {
+                const match = title.match(pattern);
+                if (match) {
+                    const year = parseInt(match[1]);
+                    if (year >= 1900 && year <= 2030) {
+                        const cleanTitle = title.replace(pattern, '').trim();
+                        return { cleanTitle, extractedYear: year };
+                    }
+                }
+            }
+
+            return { cleanTitle: title, extractedYear: null };
+        } catch (error) {
+            console.error('CineBrain year extraction error:', error);
+            return { cleanTitle: title, extractedYear: null };
+        }
+    }
+
+    manualSlugify(text) {
+        try {
+            if (!text) return '';
+            return text.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/[-\s]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .substring(0, 70);
+        } catch (error) {
+            return '';
+        }
+    }
+
+    prefetchDetailsPage(slug) {
+        try {
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => {
+                    const link = document.createElement('link');
+                    link.rel = 'prefetch';
+                    link.href = `/explore/details.html?${encodeURIComponent(slug)}`;
+                    document.head.appendChild(link);
+
+                    setTimeout(() => {
+                        if (link.parentNode) {
+                            document.head.removeChild(link);
+                        }
+                    }, 5000);
+                });
+            }
+        } catch (error) {
+            console.debug('CineBrain prefetch failed:', error);
+        }
+    }
+
+    showLoadingIndicator() {
+        if (window.showLoadingIndicator) {
+            window.showLoadingIndicator();
+        }
+    }
+
+    hideLoadingIndicator() {
+        if (window.hideLoadingIndicator) {
+            setTimeout(() => {
+                window.hideLoadingIndicator();
+            }, 300);
+        }
     }
 
     setupLazyLoading(card) {
@@ -579,9 +768,8 @@ class CineBrainContentCardManager {
             const ratingBadge = card.querySelector('.rating-badge span')?.textContent;
             const year = card.querySelector('.card-year')?.textContent;
 
-            // Fix: Clean up content type extraction
             const contentTypeBadge = card.querySelector('.content-type-badge')?.textContent?.toLowerCase()?.trim();
-            let contentType = 'movie'; // Default fallback
+            let contentType = 'movie';
 
             if (contentTypeBadge) {
                 const cleanType = contentTypeBadge.replace(/\s+/g, '').toLowerCase();
@@ -590,14 +778,17 @@ class CineBrainContentCardManager {
                 }
             }
 
+            const tmdbId = card.dataset.tmdbId ? parseInt(card.dataset.tmdbId) : null;
+
             return {
                 id: contentId,
                 title: title,
+                original_title: card.dataset.originalTitle || null,
                 poster_path: poster?.replace(this.posterBase, '') || null,
                 rating: ratingBadge && ratingBadge !== 'N/A' ? parseFloat(ratingBadge) : null,
                 release_date: year ? `${year}-01-01` : null,
-                content_type: contentType, // Now properly cleaned
-                tmdb_id: null,
+                content_type: contentType,
+                tmdb_id: tmdbId,
                 overview: ''
             };
         } catch (error) {
@@ -650,7 +841,6 @@ class CineBrainContentCardManager {
                 interactionState: this.interactionStates.get(contentId)
             };
 
-            // Optimistic UI update
             if (isCurrentlyInFavorites) {
                 button.classList.remove('active');
                 this.userFavorites.delete(contentId);
@@ -691,7 +881,6 @@ class CineBrainContentCardManager {
                 );
                 console.log('CineBrain favorites updated successfully:', result);
             } else {
-                // Rollback on error
                 this.rollbackFavoriteState(button, contentId, originalState);
 
                 const errorData = await response.json().catch(() => ({}));
@@ -710,7 +899,6 @@ class CineBrainContentCardManager {
         } catch (error) {
             console.error('CineBrain error updating favorites:', error);
 
-            // Rollback on error
             this.rollbackFavoriteState(button, contentId, {
                 isActive: !isCurrentlyInFavorites,
                 inFavorites: !this.userFavorites.has(contentId)
@@ -834,33 +1022,89 @@ class CineBrainContentCardManager {
         const queryString = new URLSearchParams(params).toString();
         const url = `${this.apiBase}${endpoint}${queryString ? '?' + queryString : ''}`;
 
-        const headers = {};
+        const headers = {
+            'Accept': 'application/json',
+            'Cache-Control': isPreload ? 'no-cache' : 'max-age=300'
+        };
+
         if (this.authToken) {
             headers['Authorization'] = `Bearer ${this.authToken}`;
         }
 
-        const timeout = endpoint.includes('critics-choice') ? 15000 : (isPreload ? 12000 : 8000);
-
-        const requestOptions = {
-            headers,
-            signal: signal || AbortSignal.timeout(timeout)
-        };
+        const timeout = this.getTimeoutForEndpoint(endpoint, isPreload);
+        const requestSignal = signal || AbortSignal.timeout(timeout);
 
         try {
-            const response = await fetch(url, requestOptions);
+            const response = await fetch(url, {
+                headers,
+                signal: requestSignal
+            });
 
             if (!response.ok) {
-                throw new Error(`CineBrain API error! status: ${response.status}`);
+                switch (response.status) {
+                    case 404:
+                        throw new Error(`CineBrain content not found: ${endpoint}`);
+                    case 401:
+                        this.handleAuthFailure();
+                        throw new Error('CineBrain authentication failed');
+                    case 429:
+                        throw new Error('CineBrain rate limit exceeded');
+                    case 503:
+                        throw new Error('CineBrain service temporarily unavailable');
+                    default:
+                        throw new Error(`CineBrain API error: ${response.status} - ${response.statusText}`);
+                }
             }
 
             const data = await response.json();
+            const processedContent = this.processApiResponse(data, endpoint);
 
+            console.log(`CineBrain: Successfully fetched ${processedContent.length} items from ${endpoint}`);
+
+            return processedContent;
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log(`CineBrain: Request timeout for ${endpoint}`);
+                throw error;
+            }
+
+            console.error(`CineBrain fetch error for ${endpoint}:`, {
+                message: error.message,
+                endpoint,
+                params,
+                isPreload
+            });
+
+            throw error;
+        }
+    }
+
+    getTimeoutForEndpoint(endpoint, isPreload) {
+        const timeouts = {
+            '/recommendations/critics-choice': 15000,
+            '/recommendations/new-releases': 12000,
+            '/recommendations/trending': 8000,
+            '/recommendations/anime': 10000
+        };
+
+        const baseTimeout = timeouts[endpoint] || 8000;
+        return isPreload ? baseTimeout + 4000 : baseTimeout;
+    }
+
+    processApiResponse(data, endpoint) {
+        try {
             if (data.success && data.data) {
                 const cineBrainData = data.data;
 
                 if (data.cinebrain_service === 'new_releases' || endpoint.includes('new-releases')) {
-                    console.log('CineBrain: Processing new releases response with', cineBrainData.priority_content?.length || 0, 'priority items');
-                    return cineBrainData.priority_content || [];
+                    console.log('CineBrain: Processing new releases with', cineBrainData.priority_content?.length || 0, 'priority items');
+                    return cineBrainData.priority_content || cineBrainData.all_content || [];
+                }
+
+                if (data.cinebrain_service === 'critics_choice' || endpoint.includes('critics-choice')) {
+                    console.log('CineBrain: Processing critics choice with', cineBrainData.recommendations?.length || 0, 'items');
+                    return cineBrainData.recommendations || [];
                 }
 
                 if (cineBrainData.recommendations && Array.isArray(cineBrainData.recommendations)) {
@@ -868,15 +1112,7 @@ class CineBrainContentCardManager {
                 }
 
                 if (cineBrainData.categories) {
-                    const allContent = [];
-                    Object.values(cineBrainData.categories).forEach(categoryItems => {
-                        if (Array.isArray(categoryItems)) {
-                            allContent.push(...categoryItems);
-                        }
-                    });
-
-                    const uniqueContent = this.deduplicateContent(allContent);
-                    return uniqueContent.slice(0, params.limit || 20);
+                    return this.extractContentFromCategories(cineBrainData.categories);
                 }
 
                 if (Array.isArray(cineBrainData)) {
@@ -889,15 +1125,7 @@ class CineBrainContentCardManager {
             }
 
             if (data.categories) {
-                const allContent = [];
-                Object.values(data.categories).forEach(categoryItems => {
-                    if (Array.isArray(categoryItems)) {
-                        allContent.push(...categoryItems);
-                    }
-                });
-
-                const uniqueContent = this.deduplicateContent(allContent);
-                return uniqueContent.slice(0, params.limit || 20);
+                return this.extractContentFromCategories(data.categories);
             }
 
             if (data.results && Array.isArray(data.results)) {
@@ -908,16 +1136,36 @@ class CineBrainContentCardManager {
                 return data;
             }
 
-            console.warn('CineBrain: No recognizable content structure found in response for', endpoint);
-            console.log('Response data keys:', Object.keys(data));
+            console.warn('CineBrain: Unrecognized response format for', endpoint, 'Keys:', Object.keys(data));
             return [];
 
         } catch (error) {
-            if (error.name === 'AbortError') {
-                throw error;
-            }
-            console.error('CineBrain fetch error:', error);
-            throw error;
+            console.error('CineBrain: Error processing API response:', error);
+            return [];
+        }
+    }
+
+    extractContentFromCategories(categories) {
+        const allContent = [];
+
+        try {
+            Object.entries(categories).forEach(([categoryName, categoryItems]) => {
+                if (Array.isArray(categoryItems)) {
+                    const itemsWithCategory = categoryItems.map(item => ({
+                        ...item,
+                        _category: categoryName
+                    }));
+                    allContent.push(...itemsWithCategory);
+                }
+            });
+
+            const uniqueContent = this.deduplicateContent(allContent);
+            console.log(`CineBrain: Extracted ${uniqueContent.length} unique items from ${Object.keys(categories).length} categories`);
+
+            return uniqueContent;
+        } catch (error) {
+            console.error('CineBrain: Error extracting from categories:', error);
+            return [];
         }
     }
 

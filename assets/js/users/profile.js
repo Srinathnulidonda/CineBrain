@@ -6,26 +6,32 @@ class EnhancedProfileManager {
         this.currentUser = this.getCurrentUser();
         this.isAuthenticated = !!this.authToken;
 
-        // Data caches
+        this.urlParams = new URLSearchParams(window.location.search);
+        this.profileUsername = this.urlParams.get('username') || this.extractUsernameFromPath();
+        this.isOwnProfile = this.isAuthenticated && this.currentUser &&
+            this.currentUser.username === this.profileUsername;
+
         this.profileData = null;
+        this.profileUser = null;
         this.statsData = null;
         this.insightsData = null;
         this.forYouContent = null;
 
-        // Mobile detection
         this.isMobile = window.innerWidth <= 768;
         this.isTouchDevice = 'ontouchstart' in window;
 
-        // Avatar upload state
         this.selectedAvatarFile = null;
         this.avatarModal = null;
 
-        if (!this.isAuthenticated) {
-            window.location.href = '/auth/login.html?redirect=' + encodeURIComponent(window.location.pathname);
-            return;
-        }
-
         this.init();
+    }
+
+    extractUsernameFromPath() {
+        const pathParts = window.location.pathname.split('/').filter(part => part);
+        if (pathParts.length >= 1 && pathParts[1] === 'profile.html') {
+            return pathParts[0];
+        }
+        return null;
     }
 
     getCurrentUser() {
@@ -43,36 +49,47 @@ class EnhancedProfileManager {
 
     async init() {
         try {
-            // Show loading states
             this.showLoadingStates();
-
-            // Initialize responsive features
+            this.updatePageMetadata();
             this.setupResponsiveFeatures();
-
-            // Initialize event listeners
             this.setupEventListeners();
 
-            // Initialize avatar functionality
-            this.initializeAvatarUpload();
+            if (this.isOwnProfile) {
+                this.initializeAvatarUpload();
+            } else {
+                this.hidePersonalActions();
+            }
 
-            // Load data in parallel for better performance
-            const loadingPromises = [
-                this.loadProfile(),
-                this.loadUserStats(),
-                this.loadRecentActivity(),
-                this.loadUserPreferences(),
-                this.loadUserInsights(),
-                this.loadForYouRecommendations()
-            ];
+            await this.loadProfile();
+
+            if (!this.profileUser) {
+                this.showUserNotFound();
+                return;
+            }
+
+            const loadingPromises = [];
+
+            if (this.isOwnProfile) {
+                loadingPromises.push(
+                    this.loadUserStats(),
+                    this.loadRecentActivity(),
+                    this.loadUserPreferences(),
+                    this.loadUserInsights(),
+                    this.loadForYouRecommendations()
+                );
+            } else {
+                loadingPromises.push(
+                    this.loadPublicActivity(),
+                    this.loadPublicStats()
+                );
+            }
 
             await Promise.allSettled(loadingPromises);
 
-            // Initialize features
             if (typeof feather !== 'undefined') {
                 feather.replace();
             }
 
-            // Add animation delays
             this.staggerAnimations();
 
             console.log('Enhanced CineBrain Profile initialized successfully');
@@ -82,8 +99,255 @@ class EnhancedProfileManager {
         }
     }
 
+    updatePageMetadata() {
+        if (this.profileUsername) {
+            document.title = `${this.profileUsername} - CineBrain Profile`;
+
+            const canonical = document.querySelector('link[rel="canonical"]');
+            if (canonical) {
+                canonical.href = `${window.location.origin}/${this.profileUsername}/profile.html`;
+            }
+
+            if (!this.isOwnProfile) {
+                const ogTitle = document.querySelector('meta[property="og:title"]');
+                if (ogTitle) {
+                    ogTitle.content = `${this.profileUsername}'s CineBrain Profile`;
+                }
+            }
+        }
+    }
+
+    hidePersonalActions() {
+        const personalElements = [
+            'completionScore',
+            'completionProgress',
+            'completionInsights',
+            'completionSuggestions',
+            'userInsights',
+            'recommendationEffectiveness',
+            'forYouPreview'
+        ];
+
+        personalElements.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.closest('.fade-in-up')?.style.setProperty('display', 'none');
+            }
+        });
+
+        const avatarOverlay = document.querySelector('.avatar-upload-overlay');
+        if (avatarOverlay) {
+            avatarOverlay.style.display = 'none';
+        }
+
+        this.updateProfileActions();
+    }
+
+    updateProfileActions() {
+        const actionsContainer = document.querySelector('.profile-actions');
+        if (!actionsContainer) return;
+
+        if (this.isOwnProfile) {
+            return;
+        }
+
+        actionsContainer.innerHTML = `
+            <button class="profile-btn" id="followUserBtn">
+                <i data-feather="user-plus"></i>
+                <span class="btn-text">Follow</span>
+            </button>
+            <button class="profile-btn" id="shareProfileBtn">
+                <i data-feather="share-2"></i>
+                <span class="btn-text">Share</span>
+            </button>
+            <button class="profile-btn" id="reportUserBtn">
+                <i data-feather="flag"></i>
+                <span class="btn-text">Report</span>
+            </button>
+        `;
+
+        this.setupOtherProfileActions();
+    }
+
+    setupOtherProfileActions() {
+        const followBtn = document.getElementById('followUserBtn');
+        const shareBtn = document.getElementById('shareProfileBtn');
+        const reportBtn = document.getElementById('reportUserBtn');
+
+        followBtn?.addEventListener('click', () => {
+            this.toggleFollow();
+        });
+
+        shareBtn?.addEventListener('click', () => {
+            this.shareProfile();
+        });
+
+        reportBtn?.addEventListener('click', () => {
+            this.reportUser();
+        });
+    }
+
+    async loadProfile() {
+        try {
+            let response;
+
+            if (this.isOwnProfile && this.isAuthenticated) {
+                response = await fetch(`${this.apiBase}/users/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${this.authToken}`
+                    }
+                });
+            } else {
+                response = await fetch(`${this.apiBase}/users/profile/public/${encodeURIComponent(this.profileUsername)}`);
+            }
+
+            if (response.ok) {
+                const data = await response.json();
+                this.profileData = data;
+                this.profileUser = data.user;
+                this.displayProfile(data);
+            } else if (response.status === 404) {
+                this.profileUser = null;
+                this.showUserNotFound();
+            } else {
+                throw new Error(`Failed to load profile: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            this.showError('Failed to load profile data');
+        }
+    }
+
+    showUserNotFound() {
+        const container = document.querySelector('.profile-container');
+        container.innerHTML = `
+            <div class="error-state">
+                <div class="error-content">
+                    <i data-feather="user-x" style="width: 64px; height: 64px; margin-bottom: 24px;"></i>
+                    <h1>User Not Found</h1>
+                    <p>The user "${this.profileUsername}" doesn't exist or has been deactivated.</p>
+                    <div class="error-actions">
+                        <a href="/" class="profile-btn">
+                            <i data-feather="home"></i>
+                            <span class="btn-text">Go Home</span>
+                        </a>
+                        <button class="profile-btn" onclick="history.back()">
+                            <i data-feather="arrow-left"></i>
+                            <span class="btn-text">Go Back</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+
+    async loadPublicActivity() {
+        try {
+            const response = await fetch(`${this.apiBase}/users/${encodeURIComponent(this.profileUsername)}/activity/public`);
+
+            if (response.ok) {
+                const data = await response.json();
+                this.displayRecentActivity(data.recent_activity || []);
+            } else {
+                this.displayRecentActivity([]);
+            }
+        } catch (error) {
+            console.error('Error loading public activity:', error);
+            this.displayRecentActivity([]);
+        }
+    }
+
+    async loadPublicStats() {
+        try {
+            const response = await fetch(`${this.apiBase}/users/${encodeURIComponent(this.profileUsername)}/stats/public`);
+
+            if (response.ok) {
+                const data = await response.json();
+                this.displayPublicStats(data.stats || {});
+            } else {
+                this.displayPublicStats({});
+            }
+        } catch (error) {
+            console.error('Error loading public stats:', error);
+            this.displayPublicStats({});
+        }
+    }
+
+    displayPublicStats(stats) {
+        this.animateStatValue('totalInteractions', stats.total_interactions || 0);
+        this.animateStatValue('favoriteCount', stats.favorites || 0);
+        this.animateStatValue('ratingsGiven', stats.ratings_given || 0);
+
+        const sensitiveStats = ['averageRating', 'recommendationAccuracy', 'engagementScore', 'discoveryScore'];
+        sensitiveStats.forEach(statId => {
+            const element = document.getElementById(statId);
+            if (element) {
+                element.closest('.stat-card').style.display = 'none';
+            }
+        });
+    }
+
+    async toggleFollow() {
+        if (!this.isAuthenticated) {
+            window.location.href = '/auth/login.html';
+            return;
+        }
+
+        const followBtn = document.getElementById('followUserBtn');
+        const originalText = followBtn.innerHTML;
+
+        followBtn.innerHTML = '<div class="loading-spinner-profile"></div>';
+        followBtn.disabled = true;
+
+        try {
+            const response = await fetch(`${this.apiBase}/users/${encodeURIComponent(this.profileUsername)}/follow`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.authToken}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.following) {
+                    followBtn.innerHTML = `
+                        <i data-feather="user-check"></i>
+                        <span class="btn-text">Following</span>
+                    `;
+                    this.showNotification('Now following user!', 'success');
+                } else {
+                    followBtn.innerHTML = `
+                        <i data-feather="user-plus"></i>
+                        <span class="btn-text">Follow</span>
+                    `;
+                    this.showNotification('Unfollowed user', 'info');
+                }
+            } else {
+                this.showNotification('Failed to update follow status', 'error');
+                followBtn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('Follow error:', error);
+            this.showNotification('Failed to update follow status', 'error');
+            followBtn.innerHTML = originalText;
+        } finally {
+            followBtn.disabled = false;
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        }
+    }
+
+    reportUser() {
+        window.location.href = `/support/report-user.html?username=${encodeURIComponent(this.profileUsername)}`;
+    }
+
     setupResponsiveFeatures() {
-        // Handle window resize
         let resizeTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
@@ -93,7 +357,6 @@ class EnhancedProfileManager {
             }, 250);
         });
 
-        // Handle orientation change on mobile
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 this.isMobile = window.innerWidth <= 768;
@@ -101,15 +364,11 @@ class EnhancedProfileManager {
             }, 100);
         });
 
-        // Initial mobile interface setup
         this.updateMobileInterface();
     }
 
     updateMobileInterface() {
-        // Mobile-specific interface adjustments are handled via CSS
-        // This method can be extended for JavaScript-based mobile optimizations
         if (this.isMobile) {
-            // Enable touch-friendly interactions
             document.body.classList.add('mobile-interface');
         } else {
             document.body.classList.remove('mobile-interface');
@@ -131,13 +390,13 @@ class EnhancedProfileManager {
     }
 
     setupEventListeners() {
-        // Profile avatar click
         const avatar = document.getElementById('profileAvatar');
         avatar?.addEventListener('click', () => {
-            this.openAvatarUploadModal();
+            if (this.isOwnProfile) {
+                this.openAvatarUploadModal();
+            }
         });
 
-        // Refresh buttons
         const refreshStatsBtn = document.getElementById('refreshStatsBtn');
         refreshStatsBtn?.addEventListener('click', () => {
             this.refreshStats();
@@ -148,13 +407,11 @@ class EnhancedProfileManager {
             this.refreshInsights();
         });
 
-        // Share profile button
         const shareBtn = document.getElementById('shareProfileBtn');
         shareBtn?.addEventListener('click', () => {
             this.shareProfile();
         });
 
-        // Keyboard shortcuts (desktop only)
         if (!this.isMobile) {
             document.addEventListener('keydown', (e) => {
                 if (e.ctrlKey || e.metaKey) {
@@ -172,14 +429,12 @@ class EnhancedProfileManager {
             });
         }
 
-        // Touch-friendly interactions for mobile
         if (this.isTouchDevice) {
             this.setupTouchInteractions();
         }
     }
 
     setupTouchInteractions() {
-        // Add touch feedback for interactive elements
         const touchElements = document.querySelectorAll('.profile-btn, .quick-action-btn, .activity-item, .content-mini-card');
 
         touchElements.forEach(element => {
@@ -195,11 +450,9 @@ class EnhancedProfileManager {
         });
     }
 
-    // Avatar Upload Functionality
     initializeAvatarUpload() {
         this.avatarModal = new bootstrap.Modal(document.getElementById('avatarUploadModal'));
 
-        // Avatar file input
         const fileInput = document.getElementById('avatarFileInput');
         const selectImageBtn = document.getElementById('selectImageBtn');
         const uploadBtn = document.getElementById('uploadAvatarBtn');
@@ -221,7 +474,6 @@ class EnhancedProfileManager {
             this.removeAvatar();
         });
 
-        // Drag and drop support
         const avatarPreview = document.getElementById('avatarPreview');
         avatarPreview?.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -243,7 +495,6 @@ class EnhancedProfileManager {
     }
 
     openAvatarUploadModal() {
-        // Load current avatar status
         this.loadCurrentAvatarStatus();
         this.avatarModal?.show();
     }
@@ -275,7 +526,6 @@ class EnhancedProfileManager {
     handleAvatarFileSelect(file) {
         if (!file) return;
 
-        // Validate file
         const validation = this.validateAvatarFile(file);
         if (!validation.valid) {
             this.showNotification(validation.message, 'error');
@@ -284,7 +534,6 @@ class EnhancedProfileManager {
 
         this.selectedAvatarFile = file;
 
-        // Show preview
         const reader = new FileReader();
         reader.onload = (e) => {
             const previewImage = document.getElementById('previewImage');
@@ -294,14 +543,12 @@ class EnhancedProfileManager {
             previewImage.style.display = 'block';
             placeholder.style.display = 'none';
 
-            // Enable upload button
             document.getElementById('uploadAvatarBtn').disabled = false;
         };
         reader.readAsDataURL(file);
     }
 
     validateAvatarFile(file) {
-        // Check file type
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (!allowedTypes.includes(file.type)) {
             return {
@@ -310,8 +557,7 @@ class EnhancedProfileManager {
             };
         }
 
-        // Check file size (5MB limit)
-        const maxSize = 5 * 1024 * 1024; // 5MB
+        const maxSize = 5 * 1024 * 1024;
         if (file.size > maxSize) {
             return {
                 valid: false,
@@ -332,7 +578,6 @@ class EnhancedProfileManager {
         uploadBtn.disabled = true;
 
         try {
-            // Convert file to base64
             const base64 = await this.fileToBase64(this.selectedAvatarFile);
 
             const response = await fetch(`${this.apiBase}/users/avatar/upload`, {
@@ -349,10 +594,8 @@ class EnhancedProfileManager {
             const data = await response.json();
 
             if (response.ok) {
-                // Update profile avatar
                 this.updateProfileAvatar(data.avatar_url);
 
-                // Update localStorage user data
                 if (this.currentUser) {
                     this.currentUser.avatar_url = data.avatar_url;
                     localStorage.setItem('cinebrain-user', JSON.stringify(this.currentUser));
@@ -361,7 +604,6 @@ class EnhancedProfileManager {
                 this.showNotification('Avatar uploaded successfully!', 'success');
                 this.avatarModal?.hide();
 
-                // Reset form
                 this.resetAvatarForm();
             } else {
                 this.showNotification(data.error || 'Failed to upload avatar', 'error');
@@ -393,10 +635,8 @@ class EnhancedProfileManager {
             const data = await response.json();
 
             if (response.ok) {
-                // Update profile avatar to show initials
                 this.updateProfileAvatar(null);
 
-                // Update localStorage user data
                 if (this.currentUser) {
                     this.currentUser.avatar_url = null;
                     localStorage.setItem('cinebrain-user', JSON.stringify(this.currentUser));
@@ -405,7 +645,6 @@ class EnhancedProfileManager {
                 this.showNotification('Avatar removed successfully!', 'success');
                 this.avatarModal?.hide();
 
-                // Reset form
                 this.resetAvatarForm();
             } else {
                 this.showNotification(data.error || 'Failed to remove avatar', 'error');
@@ -439,8 +678,8 @@ class EnhancedProfileManager {
         } else {
             avatarImage.style.display = 'none';
             avatarInitial.style.display = 'block';
-            const initial = this.currentUser?.username ?
-                this.currentUser.username.charAt(0).toUpperCase() : 'U';
+            const initial = this.profileUser?.username ?
+                this.profileUser.username.charAt(0).toUpperCase() : 'U';
             avatarInitial.textContent = initial;
         }
     }
@@ -453,37 +692,13 @@ class EnhancedProfileManager {
         document.getElementById('uploadAvatarBtn').disabled = true;
     }
 
-    async loadProfile() {
-        if (!this.currentUser) return;
-
-        try {
-            const response = await fetch(`${this.apiBase}/users/profile`, {
-                headers: {
-                    'Authorization': `Bearer ${this.authToken}`
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.profileData = data;
-                this.displayProfile(data);
-            } else {
-                this.displayProfile({ user: this.currentUser });
-            }
-        } catch (error) {
-            console.error('Error loading profile:', error);
-            this.displayProfile({ user: this.currentUser });
-        }
-    }
-
     displayProfile(data) {
-        const user = data.user || this.currentUser;
+        const user = data.user || this.profileUser;
         if (!user) return;
 
         document.getElementById('profileName').textContent = user.username || 'User';
         document.getElementById('profileUsername').textContent = `@${user.username || 'user'}`;
 
-        // Handle avatar display
         this.updateProfileAvatar(user.avatar_url);
 
         const memberSince = user.created_at ? new Date(user.created_at).getFullYear() : 'Unknown';
@@ -491,7 +706,7 @@ class EnhancedProfileManager {
 
         this.displayProfileBadges(user, data);
 
-        if (data.profile_completion) {
+        if (data.profile_completion && this.isOwnProfile) {
             this.displayProfileCompletion(data.profile_completion);
         }
     }
@@ -523,7 +738,6 @@ class EnhancedProfileManager {
             `;
         }
 
-        // Add engagement badge
         if (data.stats && data.stats.total_interactions > 50) {
             badgeHTML += `
                 <div class="profile-badge">
@@ -533,7 +747,6 @@ class EnhancedProfileManager {
             `;
         }
 
-        // Add quality badge based on average rating
         if (data.stats && data.stats.average_rating >= 8) {
             badgeHTML += `
                 <div class="profile-badge">
@@ -550,12 +763,10 @@ class EnhancedProfileManager {
         const score = completion.score || 0;
         document.getElementById('completionScore').textContent = `${score}%`;
 
-        // Animate progress bar
         setTimeout(() => {
             document.getElementById('completionProgress').style.width = `${score}%`;
         }, 300);
 
-        // Update status based on score
         const statusElement = document.getElementById('completionStatus');
         if (score >= 90) {
             statusElement.textContent = 'Excellent!';
@@ -624,7 +835,6 @@ class EnhancedProfileManager {
     }
 
     displayStats(stats) {
-        // Enhanced stats with animation
         this.animateStatValue('totalInteractions', stats.total_interactions || 0);
         this.animateStatValue('favoriteCount', stats.favorites || 0);
         this.animateStatValue('watchlistCount', stats.watchlist_items || 0);
@@ -634,13 +844,11 @@ class EnhancedProfileManager {
         document.getElementById('averageRating').textContent = avgRating ?
             `${avgRating}/10` : '--';
 
-        // Add AI accuracy from insights
         const accuracy = stats.recommendation_effectiveness?.accuracy_estimate ||
             stats.engagement_metrics?.engagement_score * 100 || 0;
         document.getElementById('recommendationAccuracy').textContent =
             accuracy ? `${Math.round(accuracy)}%` : '--';
 
-        // New enhanced stats
         const engagementScore = stats.engagement_metrics?.engagement_score * 100 || 0;
         document.getElementById('engagementScore').textContent =
             engagementScore ? `${Math.round(engagementScore)}%` : '--';
@@ -649,27 +857,21 @@ class EnhancedProfileManager {
         document.getElementById('discoveryScore').textContent =
             discoveryScore ? `${Math.round(discoveryScore)}%` : '--';
 
-        // Update quick action counts
         this.updateQuickActionCounts(stats);
-
-        // Show trends if available
         this.displayStatTrends(stats);
     }
 
     updateQuickActionCounts(stats) {
-        // Update watchlist count
         const watchlistCount = document.getElementById('watchlistActionCount');
         if (watchlistCount) {
             watchlistCount.textContent = stats.watchlist_items || 0;
         }
 
-        // Update favorites count
         const favoritesCount = document.getElementById('favoritesActionCount');
         if (favoritesCount) {
             favoritesCount.textContent = stats.favorites || 0;
         }
 
-        // Update ratings count
         const ratingsCount = document.getElementById('ratingsActionCount');
         if (ratingsCount) {
             ratingsCount.textContent = stats.ratings_given || 0;
@@ -681,14 +883,13 @@ class EnhancedProfileManager {
         if (!element) return;
 
         const startValue = parseInt(element.textContent) || 0;
-        const duration = this.isMobile ? 800 : 1000; // Faster animation on mobile
+        const duration = this.isMobile ? 800 : 1000;
         const startTime = performance.now();
 
         const updateValue = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
 
-            // Use easing function for smooth animation
             const easeOutQuart = 1 - Math.pow(1 - progress, 4);
             const currentValue = Math.floor(startValue + (targetValue - startValue) * easeOutQuart);
 
@@ -703,8 +904,6 @@ class EnhancedProfileManager {
     }
 
     displayStatTrends(stats) {
-        // This would compare with previous period data if available
-        // For now, we'll show positive trend for active users
         if (stats.total_interactions > 10) {
             const trendElement = document.getElementById('interactionsTrend');
             if (trendElement) {
@@ -802,7 +1001,6 @@ class EnhancedProfileManager {
 
         container.innerHTML = html;
 
-        // Add click handlers
         container.querySelectorAll('.activity-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 const slug = item.dataset.slug;
@@ -816,7 +1014,7 @@ class EnhancedProfileManager {
     async loadUserPreferences() {
         const container = document.getElementById('userPreferences');
 
-        if (!this.currentUser) {
+        if (!this.profileUser) {
             container.innerHTML = '<div class="empty-state"><p>No preferences data available</p></div>';
             return;
         }
@@ -824,25 +1022,25 @@ class EnhancedProfileManager {
         const preferences = [
             {
                 label: 'Preferred Languages',
-                value: this.currentUser.preferred_languages ?
-                    this.currentUser.preferred_languages.join(', ') : 'Not set',
+                value: this.profileUser.preferred_languages ?
+                    this.profileUser.preferred_languages.join(', ') : 'Not set',
                 icon: 'globe'
             },
             {
                 label: 'Favorite Genres',
-                value: this.currentUser.preferred_genres ?
-                    this.currentUser.preferred_genres.slice(0, 3).join(', ') : 'Not set',
+                value: this.profileUser.preferred_genres ?
+                    this.profileUser.preferred_genres.slice(0, 3).join(', ') : 'Not set',
                 icon: 'film'
             },
             {
                 label: 'Location',
-                value: this.currentUser.location || 'Not set',
+                value: this.profileUser.location || 'Not set',
                 icon: 'map-pin'
             },
             {
                 label: 'Member Since',
-                value: this.currentUser.created_at ?
-                    new Date(this.currentUser.created_at).toLocaleDateString() : 'Unknown',
+                value: this.profileUser.created_at ?
+                    new Date(this.profileUser.created_at).toLocaleDateString() : 'Unknown',
                 icon: 'calendar'
             }
         ];
@@ -904,7 +1102,6 @@ class EnhancedProfileManager {
 
         let html = '';
 
-        // Profile strength insight
         if (insights.profile_strength) {
             const strength = insights.profile_strength;
             html += `
@@ -927,7 +1124,6 @@ class EnhancedProfileManager {
             `;
         }
 
-        // Genre preferences
         if (insights.preferences && insights.preferences.top_genres) {
             html += `
                 <div class="insight-card">
@@ -939,7 +1135,6 @@ class EnhancedProfileManager {
             `;
         }
 
-        // Viewing behavior
         if (insights.behavior) {
             const behavior = insights.behavior;
             html += `
@@ -954,7 +1149,6 @@ class EnhancedProfileManager {
             `;
         }
 
-        // Recommendation quality
         if (insights.recommendations_quality) {
             const quality = insights.recommendations_quality;
             html += `
@@ -984,7 +1178,6 @@ class EnhancedProfileManager {
             </div>
         `;
 
-        // Display recommendation effectiveness
         this.displayRecommendationEffectiveness(insights);
     }
 
@@ -1067,7 +1260,6 @@ class EnhancedProfileManager {
         }
     }
 
-    // For You Recommendations Loading
     async loadForYouRecommendations() {
         try {
             const response = await fetch(`${this.apiBase}/personalized/for-you?limit=8`, {
@@ -1128,15 +1320,17 @@ class EnhancedProfileManager {
     }
 
     shareProfile() {
+        const profileUrl = `${window.location.origin}/${this.profileUsername}/profile.html`;
+        const shareData = {
+            title: `${this.profileUsername}'s CineBrain Profile`,
+            text: `Check out ${this.profileUsername}'s profile on CineBrain!`,
+            url: profileUrl
+        };
+
         if (navigator.share && this.isMobile) {
-            navigator.share({
-                title: `${this.currentUser.username}'s CineBrain Profile`,
-                text: 'Check out my CineBrain profile and see what I\'m watching!',
-                url: window.location.href
-            }).catch(err => console.log('Error sharing:', err));
+            navigator.share(shareData).catch(err => console.log('Error sharing:', err));
         } else {
-            // Fallback to clipboard
-            navigator.clipboard.writeText(window.location.href).then(() => {
+            navigator.clipboard.writeText(profileUrl).then(() => {
                 this.showNotification('Profile link copied to clipboard!', 'success');
             }).catch(() => {
                 this.showNotification('Unable to copy link', 'error');
@@ -1144,7 +1338,6 @@ class EnhancedProfileManager {
         }
     }
 
-    // Utility methods
     formatPosterUrl(posterPath) {
         if (!posterPath) return this.getPlaceholderImage();
         if (posterPath.startsWith('http')) return posterPath;
@@ -1210,7 +1403,6 @@ class EnhancedProfileManager {
     }
 }
 
-// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     new EnhancedProfileManager();
 });

@@ -1077,7 +1077,7 @@ class TopbarComponent {
             let menuItems = `
                 <li><h6 class="dropdown-header">Hello, ${displayName}!</h6></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item dropdown-item-cinebrain" href="/user/profile.html">
+                <li><a class="dropdown-item dropdown-item-cinebrain" href="/${this.currentUser.username}/profile.html">
                     <i data-feather="user"></i><span>Profile</span>
                 </a></li>
                 <li><a class="dropdown-item dropdown-item-cinebrain" href="/user/watchlist.html">
