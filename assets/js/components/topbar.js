@@ -1059,14 +1059,55 @@ class TopbarComponent {
         return null;
     }
 
+    updateTopbarAvatar(avatarUrl) {
+        const avatarMenu = document.getElementById('avatarMenu');
+        if (!avatarMenu || !this.currentUser) return;
+
+        try {
+            if (avatarUrl) {
+                avatarMenu.innerHTML = `
+                    <img src="${avatarUrl}" 
+                         alt="${this.currentUser.username}'s avatar" 
+                         style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span style="display: none;">${this.currentUser.username.charAt(0).toUpperCase()}</span>
+                `;
+            } else {
+                const initial = this.currentUser.username ?
+                    this.currentUser.username.charAt(0).toUpperCase() : 'U';
+                avatarMenu.innerHTML = `<span>${initial}</span>`;
+            }
+
+            avatarMenu.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                avatarMenu.style.transform = 'scale(1)';
+            }, 200);
+
+            console.log('CineBrain: Topbar avatar updated successfully');
+        } catch (error) {
+            console.error('CineBrain: Error updating topbar avatar:', error);
+        }
+    }
+
     initUserMenu() {
         const dropdown = document.getElementById('userDropdown');
         if (!dropdown) return;
 
         if (this.currentUser) {
             const avatarMenu = document.getElementById('avatarMenu');
-            const initial = this.currentUser.username ? this.currentUser.username.charAt(0).toUpperCase() : 'U';
-            avatarMenu.innerHTML = `<span>${initial}</span>`;
+
+            if (this.currentUser.avatar_url) {
+                avatarMenu.innerHTML = `
+                    <img src="${this.currentUser.avatar_url}" 
+                         alt="${this.currentUser.username}'s avatar" 
+                         style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span style="display: none;">${this.currentUser.username.charAt(0).toUpperCase()}</span>
+                `;
+            } else {
+                const initial = this.currentUser.username ? this.currentUser.username.charAt(0).toUpperCase() : 'U';
+                avatarMenu.innerHTML = `<span>${initial}</span>`;
+            }
 
             const width = window.innerWidth;
             const username = this.currentUser.username || 'User';
@@ -1440,6 +1481,12 @@ class TopbarComponent {
         window.addEventListener('userLoggedOut', () => {
             this.currentUser = null;
             this.initUserMenu();
+        });
+
+        window.addEventListener('avatarUpdated', (e) => {
+            console.log('CineBrain: Avatar updated event received', e.detail);
+            this.currentUser = this.getCurrentUser();
+            this.updateTopbarAvatar(e.detail.avatar_url);
         });
     }
 

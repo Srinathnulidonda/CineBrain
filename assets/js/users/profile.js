@@ -206,6 +206,7 @@ class EnhancedProfileManager {
                 this.profileData = data;
                 this.profileUser = data.user;
                 this.displayProfile(data);
+                this.updatePageTitles(data);
             } else if (response.status === 404) {
                 this.profileUser = null;
                 this.showUserNotFound();
@@ -215,6 +216,25 @@ class EnhancedProfileManager {
         } catch (error) {
             console.error('Error loading profile:', error);
             this.showError('Failed to load profile data');
+        }
+    }
+
+    updatePageTitles(data) {
+        if (data.personalization) {
+            const analyticsTitle = document.querySelector('.stats-title .title-text');
+            if (analyticsTitle) {
+                analyticsTitle.textContent = data.personalization.analytics_title || `${this.profileUsername}'s CineBrain Analytics`;
+            }
+
+            const activityTitle = document.querySelector('#recentActivity').closest('.section-card').querySelector('.section-title .title-text');
+            if (activityTitle) {
+                activityTitle.textContent = data.personalization.activity_title || `${this.profileUsername}'s Activity`;
+            }
+
+            const statsTitle = document.querySelector('.stats-header .stats-title .title-text');
+            if (statsTitle) {
+                statsTitle.textContent = data.personalization.stats_title || `${this.profileUsername}'s Stats`;
+            }
         }
     }
 
@@ -289,6 +309,11 @@ class EnhancedProfileManager {
                 element.closest('.stat-card').style.display = 'none';
             }
         });
+
+        const watchlistCard = document.getElementById('watchlistCount');
+        if (watchlistCard) {
+            watchlistCard.closest('.stat-card').style.display = 'none';
+        }
     }
 
     async toggleFollow() {
@@ -601,9 +626,15 @@ class EnhancedProfileManager {
                     localStorage.setItem('cinebrain-user', JSON.stringify(this.currentUser));
                 }
 
+                window.dispatchEvent(new CustomEvent('avatarUpdated', {
+                    detail: {
+                        avatar_url: data.avatar_url,
+                        user: this.currentUser
+                    }
+                }));
+
                 this.showNotification('Avatar uploaded successfully!', 'success');
                 this.avatarModal?.hide();
-
                 this.resetAvatarForm();
             } else {
                 this.showNotification(data.error || 'Failed to upload avatar', 'error');
@@ -642,9 +673,15 @@ class EnhancedProfileManager {
                     localStorage.setItem('cinebrain-user', JSON.stringify(this.currentUser));
                 }
 
+                window.dispatchEvent(new CustomEvent('avatarUpdated', {
+                    detail: {
+                        avatar_url: null,
+                        user: this.currentUser
+                    }
+                }));
+
                 this.showNotification('Avatar removed successfully!', 'success');
                 this.avatarModal?.hide();
-
                 this.resetAvatarForm();
             } else {
                 this.showNotification(data.error || 'Failed to remove avatar', 'error');
@@ -754,6 +791,17 @@ class EnhancedProfileManager {
                     <span>Quality Critic</span>
                 </div>
             `;
+        }
+
+        if (data.badges) {
+            data.badges.forEach(badge => {
+                badgeHTML += `
+                    <div class="profile-badge ${badge.color}">
+                        <i data-feather="${badge.icon}"></i>
+                        <span>${badge.label}</span>
+                    </div>
+                `;
+            });
         }
 
         badges.innerHTML = badgeHTML;
@@ -959,15 +1007,23 @@ class EnhancedProfileManager {
         const container = document.getElementById('recentActivity');
 
         if (!activities || activities.length === 0) {
+            const emptyMessage = this.isOwnProfile ?
+                'Start exploring CineBrain to see your activity here!' :
+                `${this.profileUsername} hasn't shared any public activity yet.`;
+
+            const ctaButton = this.isOwnProfile ? `
+                <a href="/" class="profile-btn">
+                    <i data-feather="home"></i>
+                    <span class="btn-text">Discover Content</span>
+                </a>
+            ` : '';
+
             container.innerHTML = `
                 <div class="empty-state">
                     <i data-feather="clock"></i>
                     <h3>No Recent Activity</h3>
-                    <p>Start exploring CineBrain to see your activity here!</p>
-                    <a href="/" class="profile-btn">
-                        <i data-feather="home"></i>
-                        <span class="btn-text">Discover Content</span>
-                    </a>
+                    <p>${emptyMessage}</p>
+                    ${ctaButton}
                 </div>
             `;
             return;
