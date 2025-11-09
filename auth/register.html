@@ -14,6 +14,7 @@
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <link rel="stylesheet" href="/assets/css/auth/auth.css">
+    <link rel="stylesheet" href="/assets/css/auth/loading.css">
 </head>
 
 <body>
@@ -97,11 +98,11 @@
                 </div>
             </div>
 
-            <button type="submit" class="register-button" id="registerButton">
-                <div class="register-button-content">
+            <button type="submit" class="register-button auth-button" id="registerButton">
+                <div class="register-button-content auth-button-content">
                     <span class="button-text">Create CineBrain Account</span>
-                    <div class="spinner"></div>
                 </div>
+                <div class="loading-spinner"></div>
             </button>
         </form>
 
@@ -112,6 +113,7 @@
             </p>
         </div>
     </div>
+
     <script src="/assets/js/config.js"></script>
     <script>
         const API_BASE = window.CineBrainConfig.apiBase;
@@ -121,6 +123,56 @@
             if (DEBUG_MODE) {
                 console.log(`[CineBrain Register] ${message}`, data || '');
             }
+        }
+
+        // Enhanced button state management with loading animation
+        function setButtonLoading() {
+            const registerButton = document.getElementById('registerButton');
+            registerButton.classList.add('loading', 'clicked');
+            registerButton.classList.remove('success', 'error');
+            registerButton.disabled = true;
+
+            // Remove ripple effect after animation
+            setTimeout(() => {
+                registerButton.classList.remove('clicked');
+            }, 600);
+        }
+
+        function setButtonSuccess() {
+            const registerButton = document.getElementById('registerButton');
+            registerButton.classList.remove('loading');
+            registerButton.classList.add('success');
+            registerButton.disabled = true;
+        }
+
+        function setButtonError() {
+            const registerButton = document.getElementById('registerButton');
+            registerButton.classList.remove('loading');
+            registerButton.classList.add('error');
+
+            // Reset error state after animation
+            setTimeout(() => {
+                registerButton.classList.remove('error');
+                registerButton.disabled = false;
+            }, 1000);
+        }
+
+        function resetButton() {
+            const registerButton = document.getElementById('registerButton');
+            registerButton.classList.remove('loading', 'success', 'error', 'clicked');
+            registerButton.disabled = false;
+        }
+
+        // Add ripple effect on click
+        function addRippleEffect(button) {
+            button.addEventListener('click', function (e) {
+                if (!this.disabled) {
+                    this.classList.add('clicked');
+                    setTimeout(() => {
+                        this.classList.remove('clicked');
+                    }, 600);
+                }
+            });
         }
 
         function detectAndApplyTheme() {
@@ -167,6 +219,10 @@
             setupFormValidation();
             setupRegisterForm();
             checkAuthStatus();
+
+            // Add ripple effect to register button
+            const registerButton = document.getElementById('registerButton');
+            addRippleEffect(registerButton);
         });
 
         function setupPasswordToggles() {
@@ -227,6 +283,7 @@
                 input.addEventListener('input', () => {
                     hideAlert();
                     clearFieldError(input.id);
+                    resetButton();
                 });
             });
         }
@@ -364,6 +421,7 @@
                 const isPasswordMatchValid = validatePasswordMatch(password, confirmPassword);
 
                 if (!isUsernameValid || !isEmailValid || !isPasswordValid || !isPasswordMatchValid) {
+                    setButtonError();
                     return;
                 }
 
@@ -372,11 +430,8 @@
         }
 
         async function registerUser(username, email, password, preferredLanguages) {
-            const registerButton = document.getElementById('registerButton');
-
             try {
-                registerButton.classList.add('loading');
-                registerButton.disabled = true;
+                setButtonLoading();
                 hideAlert();
 
                 debugLog('Attempting CineBrain registration', {
@@ -423,31 +478,33 @@
 
                     localStorage.setItem('cinebrain-login-time', new Date().toISOString());
 
-                    debugLog('CineBrain registration successful, user data stored', {
+                    debugLog('CineBrain registration successful', {
                         userId: data.user.id,
                         username: data.user.username,
                         isAdmin: data.user.is_admin,
                         hasStats: !!data.user.stats
                     });
 
+                    setButtonSuccess();
                     showAlert('Welcome to CineBrain! Your account has been created successfully!', 'success');
 
                     setTimeout(() => {
                         window.location.href = '/index.html';
-                    }, 1500);
+                    }, 1800);
                 } else {
                     let errorMessage = data.error || 'Registration failed';
 
-                    if (data.error === 'Username already exists') {
+                    if (data.error === 'CineBrain username already exists' || data.error === 'Username already exists') {
                         errorMessage = 'This username is already taken. Please choose another.';
-                    } else if (data.error === 'Email already exists') {
+                    } else if (data.error === 'CineBrain email already exists' || data.error === 'Email already exists') {
                         errorMessage = 'A CineBrain account with this email already exists. Please login instead.';
-                    } else if (data.error === 'Missing required fields') {
+                    } else if (data.error === 'Missing required fields for CineBrain account' || data.error === 'Missing required fields') {
                         errorMessage = 'Please fill in all required fields.';
                     }
 
                     debugLog('CineBrain registration failed', { error: data.error, status: response.status });
                     showAlert(errorMessage, 'error');
+                    setButtonError();
                 }
             } catch (error) {
                 debugLog('CineBrain registration error', error);
@@ -460,9 +517,7 @@
                 }
 
                 showAlert(errorMessage, 'error');
-            } finally {
-                registerButton.classList.remove('loading');
-                registerButton.disabled = false;
+                setButtonError();
             }
         }
 

@@ -6,8 +6,7 @@ class EnhancedProfileManager {
         this.currentUser = this.getCurrentUser();
         this.isAuthenticated = !!this.authToken;
 
-        this.urlParams = new URLSearchParams(window.location.search);
-        this.profileUsername = this.urlParams.get('username') || this.extractUsernameFromPath();
+        this.profileUsername = this.getProfileUsername();
         this.isOwnProfile = this.isAuthenticated && this.currentUser &&
             this.currentUser.username === this.profileUsername;
 
@@ -23,15 +22,70 @@ class EnhancedProfileManager {
         this.selectedAvatarFile = null;
         this.avatarModal = null;
 
+        this.normalizeURL();
         this.init();
     }
 
+    getProfileUsername() {
+        // For local development, prioritize URL parameters
+        if (window.CineBrainUtils && window.CineBrainUtils.isLocalDevelopment()) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const usernameFromParam = urlParams.get('username');
+            if (usernameFromParam) {
+                return usernameFromParam;
+            }
+
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                return hash;
+            }
+
+            return this.currentUser?.username || null;
+        }
+
+        // For production, try path first, then URL parameter
+        const usernameFromPath = this.extractUsernameFromPath();
+        if (usernameFromPath) {
+            return usernameFromPath;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const usernameFromParam = urlParams.get('username');
+        if (usernameFromParam) {
+            return usernameFromParam;
+        }
+
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            return hash;
+        }
+
+        return this.currentUser?.username || null;
+    }
     extractUsernameFromPath() {
         const pathParts = window.location.pathname.split('/').filter(part => part);
-        if (pathParts.length >= 1 && pathParts[1] === 'profile.html') {
+
+        if (pathParts.length >= 2 && pathParts[1] === 'profile.html') {
             return pathParts[0];
         }
+
         return null;
+    }
+
+    normalizeURL() {
+        if (this.profileUsername) {
+            document.title = `${this.profileUsername} - CineBrain Profile`;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const usernameFromParam = urlParams.get('username');
+
+            if (usernameFromParam && window.CineBrainUtils.isLocalDevelopment()) {
+                const canonical = document.querySelector('link[rel="canonical"]');
+                if (canonical) {
+                    canonical.href = `${window.location.origin}/${this.profileUsername}/profile.html`;
+                }
+            }
+        }
     }
 
     getCurrentUser() {
@@ -1376,17 +1430,18 @@ class EnhancedProfileManager {
     }
 
     shareProfile() {
-        const profileUrl = `${window.location.origin}/${this.profileUsername}/profile.html`;
+        const profileUrl = window.CineBrainUtils.getProfileURL(this.profileUsername);
+        const fullUrl = `${window.location.origin}${profileUrl}`;
         const shareData = {
             title: `${this.profileUsername}'s CineBrain Profile`,
             text: `Check out ${this.profileUsername}'s profile on CineBrain!`,
-            url: profileUrl
+            url: fullUrl
         };
 
         if (navigator.share && this.isMobile) {
             navigator.share(shareData).catch(err => console.log('Error sharing:', err));
         } else {
-            navigator.clipboard.writeText(profileUrl).then(() => {
+            navigator.clipboard.writeText(fullUrl).then(() => {
                 this.showNotification('Profile link copied to clipboard!', 'success');
             }).catch(() => {
                 this.showNotification('Unable to copy link', 'error');
