@@ -1,25 +1,39 @@
-// assets/js/analytics.js
+// /assets/js/analytics.js
 (function () {
-    const GA_ID = 'G-0E63MLYS28';
+    const GA_ID = "G-0E63MLYS28";
 
-    // --- Load Google Analytics (gtag.js) dynamically ---
-    const gaScript = document.createElement('script');
-    gaScript.async = true;
-    gaScript.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-    document.head.appendChild(gaScript);
+    // Step 1: Load the GA4 script dynamically
+    const gtagScript = document.createElement("script");
+    gtagScript.async = true;
+    gtagScript.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+    document.head.appendChild(gtagScript);
 
-    // --- Initialize Google Analytics ---
+    // Step 2: Setup the global gtag function
     window.dataLayer = window.dataLayer || [];
-    function gtag() {
-        dataLayer.push(arguments);
-    }
+    function gtag() { dataLayer.push(arguments); }
     window.gtag = gtag;
 
-    gtag('js', new Date());
-    gtag('config', GA_ID, {
-        transport_type: 'beacon',
-        anonymize_ip: true, // privacy-friendly
-    });
+    // Step 3: Initialize GA
+    gtag("js", new Date());
 
-    console.log('🎬 CineBrain Analytics initialized ✅');
+    // Step 4: Send an initial page_view event after load (with UTM tracking)
+    window.addEventListener("load", () => {
+        const params = new URLSearchParams(window.location.search);
+        const utm_source = params.get("utm_source") || "(direct)";
+        const utm_medium = params.get("utm_medium") || "(none)";
+        const utm_campaign = params.get("utm_campaign") || "(unspecified)";
+        const utm_content = params.get("utm_content") || "(none)";
+
+        gtag("config", GA_ID, {
+            page_path: window.location.pathname,
+            page_location: window.location.href,
+            send_page_view: true,
+            campaign_source: utm_source,
+            campaign_medium: utm_medium,
+            campaign_name: utm_campaign,
+            campaign_content: utm_content
+        });
+
+        console.log(`🎬 CineBrain Analytics sent → source=${utm_source}, medium=${utm_medium}`);
+    });
 })();
