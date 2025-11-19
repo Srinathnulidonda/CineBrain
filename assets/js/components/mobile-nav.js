@@ -198,9 +198,8 @@ class MobileNavigation {
             `;
             this.elements.nav.appendChild(indicator);
 
-            if (typeof feather !== 'undefined') {
-                feather.replace();
-            }
+            // Initialize icons for the new indicator
+            this.initIcons();
         }
     }
 
@@ -542,6 +541,9 @@ class MobileNavigation {
             this.state.currentPage = activeItem.dataset.nav;
         }
 
+        // Initialize Feather icons after HTML is created
+        this.initIcons();
+
         // Update badges after rendering
         if (isAdmin) {
             this.updateAdminBadges();
@@ -648,6 +650,7 @@ class MobileNavigation {
             this.elements.userSectionTitle.textContent = 'Quick Access';
         }
 
+        // Initialize Feather icons after menu content is loaded
         this.initIcons();
     }
 
@@ -850,11 +853,24 @@ class MobileNavigation {
     }
 
     initIcons() {
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
-    }
+        // Try multiple times to ensure icons are loaded
+        let attempts = 0;
+        const maxAttempts = 10;
 
+        const tryInitialize = () => {
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+                console.log('Feather icons initialized');
+            } else if (attempts < maxAttempts) {
+                attempts++;
+                setTimeout(tryInitialize, 100);
+            } else {
+                console.error('Feather icons failed to load');
+            }
+        };
+
+        tryInitialize();
+    }
     detectCurrentPage() {
         let currentPath = window.location.pathname;
 
@@ -932,7 +948,8 @@ class MobileNavigation {
             'details': 'discover',
             'content': 'content',
             'support': 'support',
-            'analytics': 'analytics'
+            'analytics': 'analytics',
+            'recommendations': 'dashboard'  // Add recommendations to dashboard mapping
         };
 
         for (const [pathKeyword, navId] of Object.entries(pathMapping)) {
@@ -1249,9 +1266,8 @@ class MobileNavigation {
             document.head.appendChild(style);
         }
 
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
+        // Initialize feather icons for the dialog
+        this.initIcons();
 
         this.hapticFeedback('medium');
 
