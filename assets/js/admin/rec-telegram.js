@@ -1,3 +1,469 @@
+class TemplateManager {
+    constructor(recTelegram) {
+        this.recTelegram = recTelegram;
+        this.availableTemplates = {};
+        this.templatePrompts = {};
+        this.selectedTemplate = null;
+        this.templateFields = {};
+        this.templateData = {};
+        this.listItems = [];
+    }
+
+    async loadTemplateData() {
+        try {
+            const templatesResponse = await this.recTelegram.manager.makeAuthenticatedRequest('/admin/telegram/templates');
+            if (templatesResponse.ok) {
+                const templatesData = await templatesResponse.json();
+                this.availableTemplates = templatesData.templates || {};
+            }
+
+            const promptsResponse = await this.recTelegram.manager.makeAuthenticatedRequest('/admin/telegram/templates/prompts');
+            if (promptsResponse.ok) {
+                const promptsData = await promptsResponse.json();
+                this.templatePrompts = promptsData.prompts || {};
+                this.templateFields = promptsData.available_templates || {};
+            }
+        } catch (error) {
+            console.error('Error loading template data:', error);
+        }
+    }
+
+    renderTemplateSelection(container) {
+        const templateCards = Object.entries(this.availableTemplates).map(([key, name]) => {
+            const promptInfo = this.templatePrompts[key] || {};
+            const fieldInfo = this.templateFields[key] || {};
+
+            const features = [];
+            if (fieldInfo.poster_support !== false) features.push('Poster');
+
+            const templateIcons = {
+                'standard_movie': '🎬',
+                'standard_tv': '📺',
+                'standard_anime': '🎌',
+                'mind_bending': '🔥',
+                'hidden_gem': '💎',
+                'anime_gem': '🎐',
+                'top_list': '🧠',
+                'scene_clip': '🎥'
+            };
+
+            return `
+                <div class="template-card" data-template="${key}" onclick="templateManager.selectTemplate('${key}')">
+                    <div class="template-card-header">
+                        <div class="template-card-icon">${templateIcons[key] || '📝'}</div>
+                        <h6 class="template-card-title">${name}</h6>
+                    </div>
+                    <p class="template-card-description">${promptInfo.purpose || 'Standard template'}</p>
+                    <div class="template-card-features">
+                        ${features.map(feature => `<span class="template-feature">${feature}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = templateCards;
+        this.recTelegram.refreshFeatherIcons();
+    }
+
+    selectTemplate(templateKey) {
+        document.querySelectorAll('.template-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+
+        const selectedCard = document.querySelector(`[data-template="${templateKey}"]`);
+        if (selectedCard) {
+            selectedCard.classList.add('selected');
+        }
+
+        this.selectedTemplate = templateKey;
+        this.showTemplateGuidance();
+        this.renderTemplateFields();
+    }
+
+    showTemplateGuidance() {
+        const guidanceContainer = document.getElementById('templateGuidance');
+        const guidanceContent = document.getElementById('guidanceContent');
+
+        if (!guidanceContainer || !guidanceContent || !this.selectedTemplate) return;
+
+        const promptInfo = this.templatePrompts[this.selectedTemplate] || {};
+
+        guidanceContent.innerHTML = `
+            <p><strong>Purpose:</strong> ${promptInfo.purpose || 'General recommendation'}</p>
+            <p><strong>Best for:</strong> ${promptInfo.use_when || 'Various content types'}</p>
+        `;
+
+        guidanceContainer.style.display = 'block';
+    }
+
+    renderTemplateFields() {
+        const fieldsContainer = document.getElementById('templateFieldsContainer');
+        if (!fieldsContainer) return;
+
+        fieldsContainer.innerHTML = '';
+        this.templateData = {};
+
+        if (!this.selectedTemplate) {
+            fieldsContainer.style.display = 'none';
+            return;
+        }
+
+        const templateFieldConfig = this.getTemplateFieldConfig(this.selectedTemplate);
+        if (!templateFieldConfig || templateFieldConfig.length === 0) {
+            fieldsContainer.style.display = 'none';
+            return;
+        }
+
+        fieldsContainer.style.display = 'block';
+
+        const fieldsHTML = templateFieldConfig.map(field => {
+            return this.createFieldHTML(field);
+        }).join('');
+
+        fieldsContainer.innerHTML = `
+            <div class="template-fields-container">
+                <h6 class="template-section-title">
+                    <i data-feather="edit-3"></i>
+                    Template Fields
+                </h6>
+                ${fieldsHTML}
+            </div>
+        `;
+
+        this.setupFieldEventListeners();
+        this.recTelegram.refreshFeatherIcons();
+    }
+
+    getTemplateFieldConfig(templateType) {
+        const fieldConfigs = {
+            'mind_bending': [
+                {
+                    key: 'overview',
+                    label: 'Custom Overview',
+                    type: 'textarea',
+                    required: false,
+                    placeholder: 'Write a mysterious 2-3 sentence overview that raises questions...',
+                    description: '2-3 sentences, mysterious, never spoil twists',
+                    maxLength: 250
+                },
+                {
+                    key: 'if_you_like',
+                    label: 'If You Like',
+                    type: 'text',
+                    required: false,
+                    placeholder: 'Inception, Dark, Predestination, The Matrix',
+                    description: '2-4 similar brain-breaking movies (comma separated)',
+                    maxLength: 150
+                }
+            ],
+            'hidden_gem': [
+                {
+                    key: 'hook',
+                    label: 'Hook Text',
+                    type: 'textarea',
+                    required: true,
+                    placeholder: 'Why nobody talks about this masterpiece...',
+                    description: '1-2 lines with "why nobody talks about this" feel',
+                    maxLength: 120
+                },
+                {
+                    key: 'if_you_like',
+                    label: 'If You Like',
+                    type: 'text',
+                    required: false,
+                    placeholder: 'Similar hidden gems or mainstream movies...',
+                    description: '2-3 movies with similar tone (comma separated)',
+                    maxLength: 100
+                }
+            ],
+            'anime_gem': [
+                {
+                    key: 'overview',
+                    label: 'Emotional Core',
+                    type: 'textarea',
+                    required: false,
+                    placeholder: 'Focus on emotional and philosophical themes...',
+                    description: '2-3 lines about emotional/philosophical core, themes not plot',
+                    maxLength: 200
+                },
+                {
+                    key: 'emotion_hook',
+                    label: 'Emotion Hook',
+                    type: 'text',
+                    required: true,
+                    placeholder: 'A time-loop tragedy that hits harder the more you think about it',
+                    description: '1 strong emotional line that captures the impact',
+                    maxLength: 80
+                }
+            ],
+            'scene_clip': [
+                {
+                    key: 'caption',
+                    label: 'Scene Caption',
+                    type: 'text',
+                    required: true,
+                    placeholder: 'This scene will hook you instantly',
+                    description: 'Punchy line creating curiosity about the clip',
+                    maxLength: 60
+                }
+            ],
+            'top_list': [
+                {
+                    key: 'list_title',
+                    label: 'List Title',
+                    type: 'text',
+                    required: true,
+                    placeholder: 'Top 5 Mind-Bending Sci-Fi Gems',
+                    description: 'Catchy and niche-based list title',
+                    maxLength: 80
+                },
+                {
+                    key: 'items',
+                    label: 'List Items',
+                    type: 'list',
+                    required: true,
+                    description: '5-10 items MAX with title, year, and hook',
+                    maxItems: 10
+                }
+            ]
+        };
+
+        return fieldConfigs[templateType] || [];
+    }
+
+    createFieldHTML(field) {
+        const isRequired = field.required ? 'required' : '';
+        const requiredLabel = field.required ? '<span class="template-field-required">*</span>' : '';
+
+        if (field.type === 'list') {
+            return this.createListFieldHTML(field);
+        }
+
+        if (field.type === 'textarea') {
+            return `
+                <div class="template-field-group">
+                    <label class="template-field-label" for="template_${field.key}">
+                        ${field.label} ${requiredLabel}
+                    </label>
+                    <div class="template-field-description">${field.description}</div>
+                    <textarea 
+                        class="template-field-input template-field-textarea" 
+                        id="template_${field.key}"
+                        name="${field.key}"
+                        placeholder="${field.placeholder || ''}"
+                        maxlength="${field.maxLength || 500}"
+                        rows="3"
+                        ${isRequired}></textarea>
+                    <div class="template-field-character-count">
+                        <span></span>
+                        <span id="count_${field.key}">0/${field.maxLength || 500}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="template-field-group">
+                <label class="template-field-label" for="template_${field.key}">
+                    ${field.label} ${requiredLabel}
+                </label>
+                <div class="template-field-description">${field.description}</div>
+                <input 
+                    type="text"
+                    class="template-field-input" 
+                    id="template_${field.key}"
+                    name="${field.key}"
+                    placeholder="${field.placeholder || ''}"
+                    maxlength="${field.maxLength || 200}"
+                    ${isRequired}>
+                <div class="template-field-character-count">
+                    <span></span>
+                    <span id="count_${field.key}">0/${field.maxLength || 200}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    createListFieldHTML(field) {
+        return `
+            <div class="template-field-group">
+                <label class="template-field-label">
+                    ${field.label} <span class="template-field-required">*</span>
+                </label>
+                <div class="template-field-description">${field.description}</div>
+                <div class="list-items-container" id="listItemsContainer">
+                    <div class="list-item">
+                        <div class="list-item-number">1.</div>
+                        <div class="list-item-inputs">
+                            <input type="text" class="list-item-input" placeholder="Movie Title" maxlength="50">
+                            <input type="text" class="list-item-input" placeholder="Year" maxlength="4">
+                            <input type="text" class="list-item-input" placeholder="Hook (short, punchy)" maxlength="80">
+                        </div>
+                        <div class="list-item-actions">
+                            <button type="button" class="add-list-item-btn" onclick="templateManager.addListItem()">
+                                <i data-feather="plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    setupFieldEventListeners() {
+        document.querySelectorAll('.template-field-input').forEach(input => {
+            const fieldKey = input.name;
+            const countElement = document.getElementById(`count_${fieldKey}`);
+
+            if (countElement) {
+                const maxLength = input.maxLength || 200;
+
+                input.addEventListener('input', () => {
+                    const currentLength = input.value.length;
+                    countElement.textContent = `${currentLength}/${maxLength}`;
+
+                    this.templateData[fieldKey] = input.value;
+
+                    if (currentLength > maxLength * 0.9) {
+                        countElement.style.color = '#ef4444';
+                    } else {
+                        countElement.style.color = '';
+                    }
+                });
+            }
+        });
+    }
+
+    addListItem() {
+        const container = document.getElementById('listItemsContainer');
+        if (!container) return;
+
+        const currentItems = container.children.length;
+        const maxItems = 10;
+
+        if (currentItems >= maxItems) {
+            this.recTelegram.manager.showError(`Maximum ${maxItems} items allowed`);
+            return;
+        }
+
+        const newItem = document.createElement('div');
+        newItem.className = 'list-item';
+        newItem.innerHTML = `
+            <div class="list-item-number">${currentItems + 1}.</div>
+            <div class="list-item-inputs">
+                <input type="text" class="list-item-input" placeholder="Movie Title" maxlength="50">
+                <input type="text" class="list-item-input" placeholder="Year" maxlength="4">
+                <input type="text" class="list-item-input" placeholder="Hook (short, punchy)" maxlength="80">
+            </div>
+            <div class="list-item-actions">
+                <button type="button" class="remove-list-item-btn" onclick="templateManager.removeListItem(this)">
+                    <i data-feather="minus"></i>
+                </button>
+                ${currentItems === 0 ? '<button type="button" class="add-list-item-btn" onclick="templateManager.addListItem()"><i data-feather="plus"></i></button>' : ''}
+            </div>
+        `;
+
+        container.appendChild(newItem);
+
+        this.updateListItemNumbers();
+        this.recTelegram.refreshFeatherIcons();
+    }
+
+    removeListItem(button) {
+        const container = document.getElementById('listItemsContainer');
+        const item = button.closest('.list-item');
+
+        if (container && item && container.children.length > 1) {
+            item.remove();
+            this.updateListItemNumbers();
+
+            const lastItem = container.lastElementChild;
+            const addBtn = lastItem.querySelector('.add-list-item-btn');
+            if (!addBtn) {
+                const actionsDiv = lastItem.querySelector('.list-item-actions');
+                actionsDiv.innerHTML += '<button type="button" class="add-list-item-btn" onclick="templateManager.addListItem()"><i data-feather="plus"></i></button>';
+                this.recTelegram.refreshFeatherIcons();
+            }
+        }
+    }
+
+    updateListItemNumbers() {
+        const container = document.getElementById('listItemsContainer');
+        if (!container) return;
+
+        Array.from(container.children).forEach((item, index) => {
+            const numberDiv = item.querySelector('.list-item-number');
+            if (numberDiv) {
+                numberDiv.textContent = `${index + 1}.`;
+            }
+        });
+    }
+
+    validateTemplateSelection() {
+        if (!this.selectedTemplate) {
+            return { valid: false, error: 'Please select a template' };
+        }
+
+        const fieldConfig = this.getTemplateFieldConfig(this.selectedTemplate);
+
+        for (const field of fieldConfig) {
+            if (field.required) {
+                if (field.type === 'list') {
+                    const items = this.getListItems();
+                    if (items.length === 0) {
+                        return { valid: false, error: `${field.label} is required` };
+                    }
+                } else {
+                    const input = document.getElementById(`template_${field.key}`);
+                    if (!input || !input.value.trim()) {
+                        return { valid: false, error: `${field.label} is required` };
+                    }
+                }
+            }
+        }
+
+        return { valid: true };
+    }
+
+    getTemplateParams() {
+        const params = {};
+
+        document.querySelectorAll('.template-field-input').forEach(input => {
+            if (input.name && input.value.trim()) {
+                params[input.name] = input.value.trim();
+            }
+        });
+
+        if (this.selectedTemplate === 'top_list') {
+            params.items = this.getListItems();
+        }
+
+        return params;
+    }
+
+    getListItems() {
+        const container = document.getElementById('listItemsContainer');
+        if (!container) return [];
+
+        const items = [];
+
+        Array.from(container.children).forEach(item => {
+            const inputs = item.querySelectorAll('.list-item-input');
+            if (inputs.length >= 3) {
+                const title = inputs[0].value.trim();
+                const year = inputs[1].value.trim();
+                const hook = inputs[2].value.trim();
+
+                if (title && year && hook) {
+                    items.push([title, year, hook]);
+                }
+            }
+        });
+
+        return items;
+    }
+}
+
 class RecTelegram {
     constructor(recommendationsManager) {
         this.manager = recommendationsManager;
@@ -77,7 +543,7 @@ class RecTelegram {
         );
 
         this.elements.createRecommendationBtn?.addEventListener('click', () => {
-            this.showCreateRecommendationModal();
+            this.showEnhancedCreateRecommendationModal();
         });
 
         this.elements.refreshRecommendations?.addEventListener('click', () => {
@@ -93,7 +559,6 @@ class RecTelegram {
             this.clearSearch();
         });
 
-        // Content-specific keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
                 switch (e.key) {
@@ -106,7 +571,7 @@ class RecTelegram {
                     case 'n':
                         if (this.manager.state.currentTab === 'recommendations') {
                             e.preventDefault();
-                            this.showCreateRecommendationModal();
+                            this.showEnhancedCreateRecommendationModal();
                         }
                         break;
                 }
@@ -235,7 +700,7 @@ class RecTelegram {
             }
 
             this.manager.state.selectedContent = content;
-            this.showCreateRecommendationModal(content);
+            this.showEnhancedCreateRecommendationModal(content);
 
         } catch (error) {
             console.error('Recommend error:', error);
@@ -243,12 +708,202 @@ class RecTelegram {
         }
     }
 
-    async publishRecommendation(recommendationId) {
+    async showPublishWithTemplateModal(recommendationId) {
+        try {
+            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch recommendation details');
+            }
+
+            const recommendation = await response.json();
+            const content = recommendation.content;
+
+            if (!window.templateManager) {
+                window.templateManager = new TemplateManager(this);
+                await window.templateManager.loadTemplateData();
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'publishWithTemplateModal';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i data-feather="send"></i>
+                                Publish Recommendation to Telegram
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="content-preview mb-4">
+                                <div class="row">
+                                    <div class="col-3">
+                                        <img src="${this.getPosterUrl(content)}" 
+                                             alt="${content.title}" 
+                                             class="img-fluid rounded">
+                                    </div>
+                                    <div class="col-9">
+                                        <h6>${content.title || content.name}</h6>
+                                        <p class="text-muted mb-2">${content.content_type || 'movie'} • ${this.extractYear(content.release_date || content.first_air_date)}</p>
+                                        <p class="small mb-2">${recommendation.recommendation_type} - ${recommendation.description}</p>
+                                        <span class="badge bg-${recommendation.is_active ? 'success' : 'warning'}">${recommendation.is_active ? 'Active' : 'Draft'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="template-selection-container">
+                                <h6 class="template-section-title">
+                                    <i data-feather="layout"></i>
+                                    Choose Publishing Template
+                                </h6>
+                                <div class="template-grid" id="publishTemplateGrid">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="confirmPublishBtn" disabled>
+                                <i data-feather="send"></i>
+                                Publish to Telegram
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const templateGrid = document.getElementById('publishTemplateGrid');
+            if (templateGrid) {
+                this.renderQuickTemplateSelection(templateGrid, content, recommendation);
+            }
+
+            const confirmPublishBtn = document.getElementById('confirmPublishBtn');
+            confirmPublishBtn.addEventListener('click', async () => {
+                const selectedTemplate = document.querySelector('.publish-template-card.selected');
+                if (!selectedTemplate) {
+                    this.manager.showError('Please select a template');
+                    return;
+                }
+
+                const templateType = selectedTemplate.dataset.template;
+                await this.publishWithTemplate(recommendationId, templateType);
+
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) {
+                    bsModal.hide();
+                }
+            });
+
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+
+            modal.addEventListener('hidden.bs.modal', () => {
+                modal.remove();
+            });
+
+            this.refreshFeatherIcons();
+
+        } catch (error) {
+            console.error('Show publish modal error:', error);
+            this.manager.showError('Failed to open publish options: ' + error.message);
+        }
+    }
+
+    renderQuickTemplateSelection(container, content, recommendation) {
+        const quickTemplates = {
+            'auto': {
+                name: '🤖 Auto-Select',
+                description: 'Let CineBrain choose the best template'
+            },
+            'standard_movie': {
+                name: '🎬 Standard Movie',
+                description: 'Classic movie recommendation format'
+            },
+            'standard_tv': {
+                name: '📺 Standard TV Show',
+                description: 'TV series recommendation format'
+            },
+            'standard_anime': {
+                name: '🎌 Standard Anime',
+                description: 'Anime recommendation format'
+            },
+            'mind_bending': {
+                name: '🔥 Mind-Bending',
+                description: 'For psychological or sci-fi content'
+            },
+            'hidden_gem': {
+                name: '💎 Hidden Gem',
+                description: 'For underrated content'
+            }
+        };
+
+        let availableTemplates = {};
+        if (content.content_type === 'anime') {
+            availableTemplates = {
+                'auto': quickTemplates.auto,
+                'standard_anime': quickTemplates.standard_anime,
+                'anime_gem': {
+                    name: '🎐 Anime Gem',
+                    description: 'For emotional or philosophical anime'
+                }
+            };
+        } else if (content.content_type === 'tv' || content.content_type === 'series') {
+            availableTemplates = {
+                'auto': quickTemplates.auto,
+                'standard_tv': quickTemplates.standard_tv,
+                'hidden_gem': quickTemplates.hidden_gem
+            };
+        } else {
+            availableTemplates = {
+                'auto': quickTemplates.auto,
+                'standard_movie': quickTemplates.standard_movie,
+                'mind_bending': quickTemplates.mind_bending,
+                'hidden_gem': quickTemplates.hidden_gem
+            };
+        }
+
+        const cards = Object.entries(availableTemplates).map(([key, template]) => `
+            <div class="publish-template-card" data-template="${key}" onclick="window.recTelegram.selectPublishTemplate('${key}')">
+                <div class="template-card-header">
+                    <h6 class="template-card-title">${template.name}</h6>
+                </div>
+                <p class="template-card-description">${template.description}</p>
+            </div>
+        `).join('');
+
+        container.innerHTML = cards;
+        this.refreshFeatherIcons();
+    }
+
+    selectPublishTemplate(templateKey) {
+        document.querySelectorAll('.publish-template-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+
+        const selectedCard = document.querySelector(`[data-template="${templateKey}"]`);
+        if (selectedCard) {
+            selectedCard.classList.add('selected');
+        }
+
+        const confirmBtn = document.getElementById('confirmPublishBtn');
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+        }
+    }
+
+    async publishWithTemplate(recommendationId, templateType) {
         try {
             this.manager.showToast('Publishing recommendation...', 'info');
 
             const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}/publish`, {
-                method: 'POST'
+                method: 'POST',
+                body: JSON.stringify({
+                    template_type: templateType,
+                    template_params: {}
+                })
             });
 
             if (response.ok) {
@@ -268,9 +923,13 @@ class RecTelegram {
                 throw new Error(error.error || 'Publish failed');
             }
         } catch (error) {
-            console.error('Publish recommendation error:', error);
+            console.error('Publish with template error:', error);
             this.manager.showError('Failed to publish recommendation: ' + error.message);
         }
+    }
+
+    async publishRecommendation(recommendationId) {
+        await this.showPublishWithTemplateModal(recommendationId);
     }
 
     async editRecommendation(recommendationId) {
@@ -316,12 +975,10 @@ class RecTelegram {
                     this.manager.showToast('Recommendation saved as upcoming!', 'success');
                 }
 
-                // Immediate real-time refresh
                 this.manager.loadRecommendations(true);
                 this.manager.loadUpcomingRecommendations(true);
                 this.manager.loadQuickStats();
                 this.closeQuickSaveRecommendationModal();
-                this.closeCreateRecommendationModal();
 
                 this.updateContentCardState(contentData.id || contentData.tmdb_id || contentData.mal_id, 'saved');
 
@@ -332,6 +989,49 @@ class RecTelegram {
         } catch (error) {
             console.error('Create recommendation error:', error);
             this.manager.showError('Failed to save recommendation: ' + error.message);
+        }
+    }
+
+    async createTemplateRecommendation(contentData, templateType, publishNow, templateParams = {}) {
+        try {
+            this.manager.showToast('Creating recommendation with template...', 'info');
+
+            const response = await this.manager.makeAuthenticatedRequest('/admin/recommendations/create-with-template', {
+                method: 'POST',
+                body: JSON.stringify({
+                    content_data: contentData,
+                    template_type: templateType,
+                    template_params: templateParams,
+                    status: publishNow ? 'active' : 'draft',
+                    publish_to_telegram: publishNow
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+
+                if (publishNow) {
+                    this.manager.showToast('Recommendation published with template!', 'success');
+                } else {
+                    this.manager.showToast('Recommendation saved as draft!', 'success');
+                }
+
+                const modal = document.getElementById('enhancedCreateRecommendationModal');
+                if (modal) {
+                    bootstrap.Modal.getInstance(modal)?.hide();
+                }
+
+                this.manager.loadRecommendations(true);
+                this.manager.loadUpcomingRecommendations(true);
+                this.manager.loadQuickStats();
+
+            } else {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create recommendation');
+            }
+        } catch (error) {
+            console.error('Template recommendation error:', error);
+            this.manager.showError('Failed to create recommendation: ' + error.message);
         }
     }
 
@@ -622,7 +1322,7 @@ class RecTelegram {
                             <i data-feather="eye"></i>
                         </button>
                         <button class="content-card-action" onclick="window.recTelegram.publishRecommendation(${recommendation.id})" 
-                                title="Publish Now">
+                                title="Publish with Template">
                             <i data-feather="send"></i>
                         </button>
                         <button class="content-card-action" onclick="window.recTelegram.editRecommendation(${recommendation.id})" 
@@ -680,7 +1380,114 @@ class RecTelegram {
         `;
     }
 
-    // Modal functions
+    async showEnhancedCreateRecommendationModal(content = null) {
+        const targetContent = content || this.manager.state.selectedContent;
+        if (!targetContent) {
+            this.manager.showError('No content selected');
+            return;
+        }
+
+        if (!window.templateManager) {
+            window.templateManager = new TemplateManager(this);
+            await window.templateManager.loadTemplateData();
+        }
+
+        const modal = document.getElementById('enhancedCreateRecommendationModal');
+        if (!modal) {
+            this.manager.showError('Enhanced template modal not found. Please refresh the page.');
+            return;
+        }
+
+        const contentPreview = document.getElementById('modalContentPreview');
+        if (contentPreview) {
+            contentPreview.innerHTML = `
+                <div class="row">
+                    <div class="col-3">
+                        <img src="${this.getPosterUrl(targetContent)}" 
+                             alt="${targetContent.title}" 
+                             class="img-fluid rounded">
+                    </div>
+                    <div class="col-9">
+                        <h6>${targetContent.title || targetContent.name}</h6>
+                        <p class="text-muted mb-2">${targetContent.content_type || 'movie'} • ${this.extractYear(targetContent.release_date || targetContent.first_air_date)}</p>
+                        <p class="small">${(targetContent.overview || '').substring(0, 150)}...</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        const templateGrid = document.getElementById('templateGrid');
+        if (templateGrid) {
+            window.templateManager.renderTemplateSelection(templateGrid);
+        }
+
+        this.setupEnhancedModalEventListeners(targetContent);
+
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+
+        modal.addEventListener('hidden.bs.modal', () => {
+            window.templateManager.selectedTemplate = null;
+            document.getElementById('templateGuidance').style.display = 'none';
+            const fieldsContainer = document.getElementById('templateFieldsContainer');
+            if (fieldsContainer) {
+                fieldsContainer.style.display = 'none';
+            }
+        });
+
+        this.refreshFeatherIcons();
+    }
+
+    setupEnhancedModalEventListeners(content) {
+        const saveDraftBtn = document.getElementById('saveTemplateDraftBtn');
+        const publishBtn = document.getElementById('publishTemplateBtn');
+
+        const newSaveDraftBtn = saveDraftBtn?.cloneNode(true);
+        const newPublishBtn = publishBtn?.cloneNode(true);
+
+        if (newSaveDraftBtn && saveDraftBtn) {
+            saveDraftBtn.parentNode.replaceChild(newSaveDraftBtn, saveDraftBtn);
+            newSaveDraftBtn.addEventListener('click', async () => {
+                const validation = window.templateManager.validateTemplateSelection();
+                if (!validation.valid) {
+                    this.manager.showError(validation.error);
+                    return;
+                }
+
+                const contentData = this.extractContentData(content);
+                const templateParams = window.templateManager.getTemplateParams();
+
+                await this.createTemplateRecommendation(
+                    contentData,
+                    window.templateManager.selectedTemplate,
+                    false,
+                    templateParams
+                );
+            });
+        }
+
+        if (newPublishBtn && publishBtn) {
+            publishBtn.parentNode.replaceChild(newPublishBtn, publishBtn);
+            newPublishBtn.addEventListener('click', async () => {
+                const validation = window.templateManager.validateTemplateSelection();
+                if (!validation.valid) {
+                    this.manager.showError(validation.error);
+                    return;
+                }
+
+                const contentData = this.extractContentData(content);
+                const templateParams = window.templateManager.getTemplateParams();
+
+                await this.createTemplateRecommendation(
+                    contentData,
+                    window.templateManager.selectedTemplate,
+                    true,
+                    templateParams
+                );
+            });
+        }
+    }
+
     showQuickSaveRecommendationModal(content) {
         const modal = document.createElement('div');
         modal.className = 'modal fade';
@@ -777,118 +1584,6 @@ class RecTelegram {
 
         saveAsDraftBtn.addEventListener('click', () => handleSave(false));
         saveAndPublishBtn.addEventListener('click', () => handleSave(true));
-
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-
-        modal.addEventListener('hidden.bs.modal', () => {
-            modal.remove();
-        });
-
-        this.refreshFeatherIcons();
-    }
-
-    showCreateRecommendationModal(content = null) {
-        const targetContent = content || this.manager.state.selectedContent;
-        if (!targetContent) {
-            this.manager.showError('No content selected');
-            return;
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal fade';
-        modal.id = 'createRecommendationModal';
-        modal.innerHTML = `
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i data-feather="star"></i>
-                            Create Recommendation
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="content-preview mb-4">
-                            <div class="row">
-                                <div class="col-3">
-                                    <img src="${this.getPosterUrl(targetContent)}" 
-                                         alt="${targetContent.title}" 
-                                         class="img-fluid rounded">
-                                </div>
-                                <div class="col-9">
-                                    <h6>${targetContent.title || targetContent.name}</h6>
-                                    <p class="text-muted mb-2">${targetContent.content_type || 'movie'} • ${this.extractYear(targetContent.release_date || targetContent.first_air_date)}</p>
-                                    <p class="small">${(targetContent.overview || '').substring(0, 150)}...</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <form id="recommendationForm">
-                            <div class="mb-3">
-                                <label for="recommendationType" class="form-label">Recommendation Type</label>
-                                <select class="form-select" id="recommendationType" required>
-                                    <option value="">Select type</option>
-                                    <option value="featured">Featured Pick</option>
-                                    <option value="trending">Trending Now</option>
-                                    <option value="hidden_gem">Hidden Gem</option>
-                                    <option value="classic">Classic Must-Watch</option>
-                                    <option value="new_release">New Release</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="recommendationDescription" class="form-label">Description</label>
-                                <textarea class="form-control" id="recommendationDescription" 
-                                         rows="4" placeholder="Why do you recommend this content? What makes it special?"
-                                         maxlength="500" required></textarea>
-                                <div class="form-text">
-                                    <span id="descriptionCount">0</span>/500 characters
-                                </div>
-                            </div>
-                            
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="sendToTelegramNow">
-                                <label class="form-check-label" for="sendToTelegramNow">
-                                    Send to Telegram channel immediately
-                                </label>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="createRecommendationSubmit">
-                            <i data-feather="plus-circle"></i>
-                            Create Recommendation
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        const form = document.getElementById('recommendationForm');
-        const descriptionTextarea = document.getElementById('recommendationDescription');
-        const descriptionCount = document.getElementById('descriptionCount');
-        const submitBtn = document.getElementById('createRecommendationSubmit');
-
-        descriptionTextarea.addEventListener('input', () => {
-            descriptionCount.textContent = descriptionTextarea.value.length;
-        });
-
-        submitBtn.addEventListener('click', async () => {
-            if (form.checkValidity()) {
-                const recommendationType = document.getElementById('recommendationType').value;
-                const description = descriptionTextarea.value;
-                const publishNow = document.getElementById('sendToTelegramNow').checked;
-
-                const contentData = this.extractContentData(targetContent);
-                await this.createDraftRecommendation(contentData, recommendationType, description, publishNow);
-            } else {
-                form.reportValidity();
-            }
-        });
 
         const bsModal = new bootstrap.Modal(modal);
         bsModal.show();
@@ -1028,16 +1723,6 @@ class RecTelegram {
         }
     }
 
-    closeCreateRecommendationModal() {
-        const modal = document.getElementById('createRecommendationModal');
-        if (modal) {
-            const bsModal = bootstrap.Modal.getInstance(modal);
-            if (bsModal) {
-                bsModal.hide();
-            }
-        }
-    }
-
     closeEditRecommendationModal() {
         const modal = document.getElementById('editRecommendationModal');
         if (modal) {
@@ -1048,7 +1733,6 @@ class RecTelegram {
         }
     }
 
-    // Utility methods
     extractContentData(content) {
         return {
             id: content.id || content.tmdb_id || content.mal_id,
@@ -1202,7 +1886,6 @@ class RecTelegram {
     }
 
     hideSearchLoading() {
-        // Loading is hidden when results are rendered
     }
 
     clearSearch() {
@@ -1296,7 +1979,6 @@ class RecTelegram {
         }
     }
 
-    // Helper function to refresh Feather icons
     refreshFeatherIcons() {
         setTimeout(() => {
             if (typeof feather !== 'undefined') {
@@ -1306,22 +1988,20 @@ class RecTelegram {
     }
 }
 
-// Initialize when DOM is ready
+window.templateManager = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     recommendationsManager = new AdminRecommendations();
 
-    // Initialize RecTelegram after core manager is ready
     setTimeout(() => {
         window.recTelegram = new RecTelegram(recommendationsManager);
     }, 100);
 });
 
-// Global cleanup
 window.addEventListener('beforeunload', () => {
     if (recommendationsManager) {
         recommendationsManager.destroy();
     }
 });
 
-// Expose for global access
 window.recommendationsManager = recommendationsManager;
