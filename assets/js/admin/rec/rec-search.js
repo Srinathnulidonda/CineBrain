@@ -16,7 +16,9 @@ class RecSearch {
             searchResultsContainer: document.getElementById('searchResultsContainer'),
             searchPagination: document.getElementById('searchPagination'),
             resultsCount: document.getElementById('resultsCount'),
-            searchClear: document.getElementById('contentSearchClear')
+            searchClear: document.getElementById('contentSearchClear'),
+            resultsSource: document.getElementById('resultsSource'),
+            resultsSortBy: document.getElementById('resultsSortBy')
         };
     }
 
@@ -72,6 +74,12 @@ class RecSearch {
         this.elements.searchType?.addEventListener('change', () => {
             if (this.manager.state.searchQuery) {
                 this.performContentSearch();
+            }
+        });
+
+        this.elements.resultsSortBy?.addEventListener('change', () => {
+            if (this.manager.state.searchResults.length > 0) {
+                this.sortSearchResults();
             }
         });
 
@@ -371,6 +379,37 @@ class RecSearch {
         await this.performContentSearch();
     }
 
+    sortSearchResults() {
+        const sortBy = this.elements.resultsSortBy?.value || 'popularity';
+
+        switch (sortBy) {
+            case 'popularity':
+                this.manager.state.searchResults.sort((a, b) =>
+                    (b.popularity || 0) - (a.popularity || 0)
+                );
+                break;
+            case 'rating':
+                this.manager.state.searchResults.sort((a, b) =>
+                    (b.vote_average || b.rating || 0) - (a.vote_average || a.rating || 0)
+                );
+                break;
+            case 'release_date':
+                this.manager.state.searchResults.sort((a, b) => {
+                    const dateA = new Date(a.release_date || a.first_air_date || '1900-01-01');
+                    const dateB = new Date(b.release_date || b.first_air_date || '1900-01-01');
+                    return dateB - dateA;
+                });
+                break;
+            case 'title':
+                this.manager.state.searchResults.sort((a, b) =>
+                    (a.title || a.name || '').localeCompare(b.title || b.name || '')
+                );
+                break;
+        }
+
+        this.renderSearchResults();
+    }
+
     renderSearchResults() {
         if (!this.elements.searchResultsGrid) return;
 
@@ -503,10 +542,9 @@ class RecSearch {
             this.elements.resultsCount.textContent = `${this.manager.formatNumber(count)} results`;
         }
 
-        const resultsSource = document.getElementById('resultsSource');
-        if (resultsSource) {
+        if (this.elements.resultsSource) {
             const source = this.elements.searchSource?.value || 'TMDB';
-            resultsSource.textContent = source.toUpperCase();
+            this.elements.resultsSource.textContent = source.toUpperCase();
         }
     }
 

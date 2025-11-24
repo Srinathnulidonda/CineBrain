@@ -26,7 +26,7 @@ class RecTelegram {
         this.saveRecommendation = (id) => window.recSearch.saveRecommendation(id);
         this.recommendContent = (id) => window.recSearch.recommendContent(id);
         this.editRecommendation = (id) => window.recRecommendations.editRecommendation(id);
-        this.publishRecommendation = (id) => window.recUpcoming.publishRecommendation(id);
+        this.publishRecommendation = (id) => window.recUpcoming.publishDraftRecommendation(id);
         this.sendToTelegram = (id) => window.recRecommendations.sendToTelegram(id);
         this.showEnhancedCreateRecommendationModal = (content) => window.recUpcoming.showEnhancedCreateRecommendationModal(content);
         this.selectPublishTemplate = (template) => window.recUpcoming.selectPublishTemplate(template);
@@ -52,6 +52,28 @@ class RecTelegram {
                         break;
                 }
             }
+        });
+
+        // Setup filter event listeners
+        this.setupFilterListeners();
+    }
+
+    setupFilterListeners() {
+        // Listen for filter changes and re-render accordingly
+        const recommendationsFilter = document.getElementById('recommendationsFilter');
+        const recommendationsSort = document.getElementById('recommendationsSort');
+        const savedContentFilter = document.getElementById('savedContentFilter');
+
+        recommendationsFilter?.addEventListener('change', () => {
+            this.renderRecommendations();
+        });
+
+        recommendationsSort?.addEventListener('change', () => {
+            this.renderRecommendations();
+        });
+
+        savedContentFilter?.addEventListener('change', () => {
+            this.renderUpcomingRecommendations();
         });
     }
 

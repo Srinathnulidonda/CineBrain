@@ -19,6 +19,10 @@ class AdminRecommendations {
             filters: {
                 recommendations: 'all',
                 upcoming: 'all'
+            },
+            sorting: {
+                recommendations: 'created_at',
+                upcoming: 'created_at'
             }
         };
 
@@ -170,7 +174,12 @@ class AdminRecommendations {
             analyticsMetrics: document.getElementById('analyticsMetrics'),
             syncExternalAPIs: document.getElementById('syncExternalAPIs'),
             recommendationPerformanceChart: document.getElementById('recommendationPerformanceChart'),
-            contentDistributionChart: document.getElementById('contentDistributionChart')
+            contentDistributionChart: document.getElementById('contentDistributionChart'),
+            // NEW: Add filter elements
+            recommendationsFilter: document.getElementById('recommendationsFilter'),
+            recommendationsSort: document.getElementById('recommendationsSort'),
+            savedContentFilter: document.getElementById('savedContentFilter'),
+            savedContentSearch: document.getElementById('savedContentSearch')
         };
     }
 
@@ -189,6 +198,9 @@ class AdminRecommendations {
         this.elements.syncExternalAPIs?.addEventListener('click', () => {
             this.syncExternalAPIs();
         });
+
+        // NEW: Setup filter event listeners
+        this.setupFilterEventListeners();
 
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
@@ -263,6 +275,32 @@ class AdminRecommendations {
         });
 
         this.setupTouchGestures();
+    }
+
+    // NEW: Setup filter event listeners
+    setupFilterEventListeners() {
+        // Recommendations filters
+        this.elements.recommendationsFilter?.addEventListener('change', () => {
+            this.state.filters.recommendations = this.elements.recommendationsFilter.value;
+            this.loadRecommendations();
+        });
+
+        this.elements.recommendationsSort?.addEventListener('change', () => {
+            this.state.sorting.recommendations = this.elements.recommendationsSort.value;
+            this.loadRecommendations();
+        });
+
+        // Saved content filters
+        this.elements.savedContentFilter?.addEventListener('change', () => {
+            this.state.filters.upcoming = this.elements.savedContentFilter.value;
+            this.loadUpcomingRecommendations();
+        });
+
+        this.elements.savedContentSearch?.addEventListener('input',
+            this.debounce(() => {
+                this.loadUpcomingRecommendations();
+            }, 300)
+        );
     }
 
     setupTouchGestures() {
@@ -593,7 +631,7 @@ class AdminRecommendations {
     }
 
     async loadRecommendations(forceRefresh = false) {
-        const cacheKey = `recommendations_${this.state.filters.recommendations}`;
+        const cacheKey = `recommendations_${this.state.filters.recommendations}_${this.state.sorting.recommendations}`;
         const lastUpdate = this.cache.lastUpdated.recommendations;
 
         if (!forceRefresh && Date.now() - lastUpdate < 10000) {
@@ -602,11 +640,15 @@ class AdminRecommendations {
         }
 
         try {
+            // Get sort option
+            const sortBy = this.state.sorting.recommendations || 'created_at';
+
             const params = new URLSearchParams({
                 filter: this.state.filters.recommendations || 'all',
                 status: 'active',
                 page: 1,
-                per_page: 50
+                per_page: 50,
+                sort_by: sortBy  // Add sort parameter
             });
 
             console.log(`🌐 Loading recommendations: ${params}`);
@@ -677,9 +719,16 @@ class AdminRecommendations {
                 per_page: 100
             });
 
-            const upcomingSearch = document.getElementById('savedContentSearch');
+            // Add search parameter if there's search text
+            const upcomingSearch = this.elements.savedContentSearch;
             if (upcomingSearch?.value) {
                 params.append('search', upcomingSearch.value);
+            }
+
+            // Add type filter if not 'all'
+            if (this.state.filters.upcoming && this.state.filters.upcoming !== 'all') {
+                params.set('recommendation_type', this.state.filters.upcoming);
+                params.delete('filter'); // Use recommendation_type instead of filter
             }
 
             console.log(`🌐 Loading upcoming recommendations: ${params}`);

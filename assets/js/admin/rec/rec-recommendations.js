@@ -10,6 +10,7 @@ class RecRecommendations {
         this.elements = {
             recommendationsListContainer: document.getElementById('recommendationsListContainer'),
             recommendationsFilter: document.getElementById('recommendationsFilter'),
+            recommendationsSort: document.getElementById('recommendationsSort'),
             refreshRecommendations: document.getElementById('refreshRecommendations'),
             bulkActionsBtn: document.getElementById('bulkActionsBtn'),
             analyticsMetrics: document.getElementById('analyticsMetrics')
@@ -19,6 +20,12 @@ class RecRecommendations {
     setupEventListeners() {
         this.elements.recommendationsFilter?.addEventListener('change', () => {
             this.manager.state.filters.recommendations = this.elements.recommendationsFilter.value;
+            this.manager.loadRecommendations();
+        });
+
+        // Add sort listener
+        this.elements.recommendationsSort?.addEventListener('change', () => {
+            this.manager.state.sorting.recommendations = this.elements.recommendationsSort.value;
             this.manager.loadRecommendations();
         });
 
@@ -567,7 +574,10 @@ class RecRecommendations {
             'mind_bending': '#6366f1',
             'anime_gem': '#ff6b35',
             'scene_clip': '#ec4899',
-            'top_list': '#84cc16'
+            'top_list': '#84cc16',
+            'standard_movie': '#e50914',
+            'standard_tv': '#113CCF',
+            'standard_anime': '#ff6b35'
         };
         return colors[status] || '#6b7280';
     }

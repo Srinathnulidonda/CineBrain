@@ -137,7 +137,14 @@ class RecUtils {
             'trending': 'Trending',
             'hidden_gem': 'Hidden Gem',
             'classic': 'Classic',
-            'new_release': 'New Release'
+            'new_release': 'New Release',
+            'mind_bending': 'Mind-Bending',
+            'anime_gem': 'Anime Gem',
+            'scene_clip': 'Scene Clip',
+            'top_list': 'Top List',
+            'standard_movie': 'Standard Movie',
+            'standard_tv': 'Standard TV',
+            'standard_anime': 'Standard Anime'
         };
 
         // Return mapped value or format the string safely
@@ -183,6 +190,70 @@ class RecUtils {
                 </div>
             `;
         }
+    }
+
+    formatNumber(num) {
+        if (!num || num === 0) return '0';
+        if (num >= 1000000) {
+            return `${(num / 1000000).toFixed(1)}M`;
+        } else if (num >= 1000) {
+            return `${(num / 1000).toFixed(1)}K`;
+        }
+        return num.toString();
+    }
+
+    formatDate(dateString) {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch {
+            return '';
+        }
+    }
+
+    truncateText(text, maxLength = 150) {
+        if (!text || typeof text !== 'string') return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength).trim() + '...';
+    }
+
+    slugify(text) {
+        if (!text || typeof text !== 'string') return '';
+        return text
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/[\s_-]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
+    getContentTypeColor(type) {
+        const colors = {
+            'movie': '#e50914',
+            'tv': '#113CCF',
+            'anime': '#ff6b35'
+        };
+        return colors[type] || '#6b7280';
+    }
+
+    getStatusColor(status) {
+        const colors = {
+            'active': '#10b981',
+            'inactive': '#6b7280',
+            'draft': '#f59e0b',
+            'published': '#3b82f6'
+        };
+        return colors[status] || '#6b7280';
+    }
+
+    capitalizeFirst(str) {
+        if (!str || typeof str !== 'string') return '';
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
     }
 
     refreshFeatherIcons() {
