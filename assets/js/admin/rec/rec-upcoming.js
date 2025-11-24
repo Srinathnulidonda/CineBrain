@@ -1,4 +1,3 @@
-// TemplateManager class (moved here as it's primarily used for upcoming content)
 class TemplateManager {
     constructor(recUpcoming) {
         this.recUpcoming = recUpcoming;
@@ -14,14 +13,14 @@ class TemplateManager {
     async loadTemplateData() {
         try {
             console.log('🌐 Loading template data...');
-            const templatesResponse = await this.manager.makeAuthenticatedRequest('/admin/telegram/templates');
+            const templatesResponse = await this.manager.makeAuthenticatedRequest('/api/admin/telegram/templates');
             if (templatesResponse.ok) {
                 const templatesData = await templatesResponse.json();
                 this.availableTemplates = templatesData.templates || {};
                 console.log('✅ Templates loaded:', this.availableTemplates);
             }
 
-            const promptsResponse = await this.manager.makeAuthenticatedRequest('/admin/telegram/templates/prompts');
+            const promptsResponse = await this.manager.makeAuthenticatedRequest('/api/admin/telegram/templates/prompts');
             if (promptsResponse.ok) {
                 const promptsData = await promptsResponse.json();
                 this.templatePrompts = promptsData.prompts || {};
@@ -47,7 +46,7 @@ class TemplateManager {
             'scene_clip': '🎥'
         };
 
-        const popularTemplates = ['mind_bending'];
+        const popularTemplates = ['mind_bending', 'hidden_gem'];
 
         const templateCards = Object.entries(this.availableTemplates).map(([key, name]) => {
             const isPopular = popularTemplates.includes(key);
@@ -435,15 +434,20 @@ class TemplateManager {
     getTemplateParams() {
         const params = {};
 
+        // Collect all template field inputs
         document.querySelectorAll('.template-field-input').forEach(input => {
             if (input.name && input.value.trim()) {
                 params[input.name] = input.value.trim();
             }
         });
 
+        // Handle special cases for specific templates
         if (this.selectedTemplate === 'top_list') {
             params.items = this.getListItems();
         }
+
+        // Log what we're collecting for debugging
+        console.log('🎯 Collecting template params:', params);
 
         return params;
     }
@@ -468,6 +472,105 @@ class TemplateManager {
         });
 
         return items;
+    }
+
+    // Enhanced preload method
+    preloadTemplateFields(templateFields) {
+        console.log('🔄 Preloading template fields:', templateFields);
+
+        setTimeout(() => {
+            Object.entries(templateFields).forEach(([fieldKey, fieldValue]) => {
+                const field = document.getElementById(`template_${fieldKey}`);
+                if (field && fieldValue) {
+                    field.value = fieldValue;
+
+                    // Update character count if exists
+                    const countElement = document.getElementById(`count_${fieldKey}`);
+                    if (countElement) {
+                        const maxLength = field.maxLength || 200;
+                        countElement.textContent = `${fieldValue.length}/${maxLength}`;
+                    }
+
+                    // Trigger input event to update internal state
+                    field.dispatchEvent(new Event('input', { bubbles: true }));
+
+                    console.log(`✅ Preloaded field ${fieldKey}:`, fieldValue);
+                } else if (!field) {
+                    console.warn(`❌ Field not found: template_${fieldKey}`);
+                }
+            });
+
+            // Handle list items if present
+            if (templateFields.items && Array.isArray(templateFields.items) && templateFields.items.length > 0) {
+                this.preloadListItems(templateFields.items);
+            }
+
+            // Store the loaded data in templateData
+            this.templateData = { ...templateFields };
+
+            window.recUtils.refreshFeatherIcons();
+            console.log('✅ All template fields preloaded successfully');
+        }, 200);
+    }
+
+    // NEW: Preload list items method
+    preloadListItems(items) {
+        const container = document.getElementById('listItemsContainer');
+        if (!container) return;
+
+        console.log('🔄 Preloading list items:', items);
+
+        // Clear existing items
+        container.innerHTML = '';
+
+        // Add saved items
+        items.forEach((item, index) => {
+            if (index === 0) {
+                // Create first item
+                const firstItem = document.createElement('div');
+                firstItem.className = 'list-item';
+                firstItem.innerHTML = `
+                    <div class="list-item-number">1.</div>
+                    <div class="list-item-inputs">
+                        <input type="text" class="list-item-input" placeholder="Movie Title" maxlength="50" value="${this.escapeHtml(item[0] || '')}">
+                        <input type="text" class="list-item-input" placeholder="Year" maxlength="4" value="${this.escapeHtml(item[1] || '')}">
+                        <input type="text" class="list-item-input" placeholder="Hook (short, punchy)" maxlength="80" value="${this.escapeHtml(item[2] || '')}">
+                    </div>
+                    <div class="list-item-actions">
+                        <button type="button" class="add-list-item-btn" onclick="window.templateManager.addListItem()">
+                            <i data-feather="plus"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(firstItem);
+            } else {
+                // Add additional items
+                this.addListItem();
+                const newItem = container.lastElementChild;
+                const inputs = newItem.querySelectorAll('.list-item-input');
+                if (inputs.length >= 3) {
+                    inputs[0].value = this.escapeHtml(item[0] || '');
+                    inputs[1].value = this.escapeHtml(item[1] || '');
+                    inputs[2].value = this.escapeHtml(item[2] || '');
+                }
+            }
+        });
+
+        window.recUtils.refreshFeatherIcons();
+        console.log(`✅ Preloaded ${items.length} list items`);
+    }
+
+    // NEW: HTML escape utility
+    escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, m => map[m]);
     }
 }
 
@@ -582,6 +685,36 @@ class RecUpcoming {
                 recommendation.recommendation_type || 'general'
             );
 
+            // Enhanced template indicator with field count
+            const hasTemplateData = recommendation.template_data?.template_fields ||
+                recommendation.hook_text ||
+                recommendation.if_you_like ||
+                recommendation.custom_overview ||
+                recommendation.emotion_hook ||
+                recommendation.scene_caption ||
+                recommendation.list_title ||
+                recommendation.list_items;
+
+            let templateFieldCount = 0;
+            if (recommendation.template_data?.template_fields) {
+                templateFieldCount = Object.keys(recommendation.template_data.template_fields).length;
+            }
+            // Add individual field count as backup
+            templateFieldCount += [
+                recommendation.hook_text,
+                recommendation.if_you_like,
+                recommendation.custom_overview,
+                recommendation.emotion_hook,
+                recommendation.scene_caption,
+                recommendation.list_title,
+                recommendation.list_items
+            ].filter(Boolean).length;
+
+            const templateIndicator = hasTemplateData ?
+                `<span class="template-indicator" title="Template: ${recommendation.template_type || 'Custom'} (${templateFieldCount} fields saved)">
+                    📝 ${templateFieldCount}
+                 </span>` : '';
+
             return `
                 <div class="content-card" data-content-id="${contentId}" data-recommendation-id="${recommendation.id || ''}" tabindex="0">
                     <div class="card-poster-container">
@@ -593,6 +726,7 @@ class RecUpcoming {
                         
                         <div class="recommendation-type-badge">
                             ${recommendationType}
+                            ${templateIndicator}
                         </div>
 
                         <div class="card-overlays">
@@ -785,6 +919,9 @@ class RecUpcoming {
                 throw new Error('Invalid content data');
             }
 
+            // Enhanced template params logging
+            console.log('🎯 Template params being saved:', templateParams);
+
             const requestData = {
                 content_data: contentData,
                 template_type: templateType || 'auto',
@@ -792,18 +929,20 @@ class RecUpcoming {
                 status: publishNow ? 'active' : 'draft',
                 publish_to_telegram: publishNow,
                 recommendation_type: templateType || 'general',
-                description: `Recommended with ${templateType} template`,
-                // NEW: Save template data with the draft
+                description: this.generateDescriptionFromTemplate(templateType, templateParams),
+
+                // Enhanced template data structure
                 template_data: {
                     selected_template: templateType,
                     template_fields: templateParams,
-                    template_timestamp: Date.now()
+                    template_timestamp: Date.now(),
+                    field_count: Object.keys(templateParams).length
                 }
             };
 
-            console.log('🌐 Creating template recommendation:', requestData);
+            console.log('🌐 Creating template recommendation with enhanced data:', requestData);
 
-            const response = await this.manager.makeAuthenticatedRequest('/admin/recommendations/create-with-template', {
+            const response = await this.manager.makeAuthenticatedRequest('/api/admin/recommendations/create-with-template', {
                 method: 'POST',
                 body: JSON.stringify(requestData)
             });
@@ -812,11 +951,12 @@ class RecUpcoming {
                 const result = await response.json();
 
                 if (publishNow) {
-                    this.manager.showToast('Recommendation published with template!', 'success');
+                    this.manager.showToast(`Recommendation published with ${templateType} template!`, 'success');
                 } else {
-                    this.manager.showToast('Recommendation saved as draft with template!', 'success');
+                    this.manager.showToast(`Draft saved with ${templateType} template! (${Object.keys(templateParams).length} fields saved)`, 'success');
                 }
 
+                // Close modal and refresh data
                 const modal = document.getElementById('enhancedCreateRecommendationModal');
                 if (modal) {
                     bootstrap.Modal.getInstance(modal)?.hide();
@@ -826,7 +966,7 @@ class RecUpcoming {
                 this.manager.loadUpcomingRecommendations(true);
                 this.manager.loadQuickStats();
 
-                console.log('✅ Template recommendation created successfully:', result);
+                console.log('✅ Template recommendation created successfully with saved fields:', result);
 
             } else {
                 const error = await response.json();
@@ -838,6 +978,19 @@ class RecUpcoming {
         }
     }
 
+    // NEW: Generate description from template
+    generateDescriptionFromTemplate(templateType, templateParams) {
+        const descriptions = {
+            'mind_bending': `Mind-bending recommendation${templateParams.overview ? ' with custom overview' : ''}`,
+            'hidden_gem': `Hidden gem recommendation${templateParams.hook ? ': ' + templateParams.hook.substring(0, 50) + '...' : ''}`,
+            'anime_gem': `Anime gem recommendation${templateParams.emotion_hook ? ' - ' + templateParams.emotion_hook.substring(0, 30) + '...' : ''}`,
+            'scene_clip': `Scene clip recommendation${templateParams.caption ? ': ' + templateParams.caption : ''}`,
+            'top_list': `Top list: ${templateParams.list_title || 'Custom List'}`
+        };
+
+        return descriptions[templateType] || `Recommended with ${templateType} template`;
+    }
+
     async editRecommendation(recommendationId) {
         try {
             if (!recommendationId || recommendationId === 0) {
@@ -845,7 +998,8 @@ class RecUpcoming {
                 return;
             }
 
-            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`);
+            // FIX: Add /api prefix
+            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch recommendation details');
             }
@@ -861,7 +1015,7 @@ class RecUpcoming {
         }
     }
 
-    // NEW: Enhanced edit modal using the same design as create recommendation
+    // Enhanced edit modal using the same design as create recommendation
     showEnhancedEditModal(recommendation) {
         if (!window.templateManager) {
             window.templateManager = new TemplateManager(this);
@@ -907,7 +1061,7 @@ class RecUpcoming {
                         <div class="mt-2">
                             <small class="text-muted">
                                 <strong>Current Type:</strong> ${window.recUtils.formatRecommendationType(recommendation.recommendation_type)}<br>
-                                <strong>Status:</strong> ${recommendation.is_active ? 'Active' : 'Draft'}
+                                <strong>Status:</strong> ${recommendation.is_active ? 'Active' : 'Draft'}${recommendation.template_data?.field_count ? `<br><strong>Template Fields:</strong> ${recommendation.template_data.field_count} saved` : ''}
                             </small>
                         </div>
                     </div>
@@ -920,15 +1074,55 @@ class RecUpcoming {
         if (templateGrid) {
             window.templateManager.renderTemplateSelection(templateGrid);
 
-            // Pre-select template if saved with recommendation
-            const savedTemplate = recommendation.template_data?.selected_template || recommendation.recommendation_type || 'standard_movie';
+            // Enhanced template preselection
             setTimeout(() => {
-                window.templateManager.selectTemplate(savedTemplate);
+                let templateToSelect = 'standard_movie'; // Default
 
-                // Pre-fill template fields if saved
-                if (recommendation.template_data?.template_fields) {
-                    this.preloadTemplateFields(recommendation.template_data.template_fields);
+                // Try to get template from multiple sources
+                if (recommendation.template_data?.selected_template) {
+                    templateToSelect = recommendation.template_data.selected_template;
+                    console.log('✅ Found template in template_data:', templateToSelect);
+                } else if (recommendation.template_type) {
+                    templateToSelect = recommendation.template_type;
+                    console.log('✅ Found template in template_type:', templateToSelect);
+                } else if (recommendation.recommendation_type) {
+                    templateToSelect = recommendation.recommendation_type;
+                    console.log('✅ Using recommendation_type as template:', templateToSelect);
                 }
+
+                // Select the template
+                window.templateManager.selectTemplate(templateToSelect);
+
+                // Enhanced field preloading
+                let fieldsToPreload = {};
+
+                // Get fields from template_fields first (priority)
+                if (recommendation.template_data?.template_fields) {
+                    fieldsToPreload = { ...recommendation.template_data.template_fields };
+                    console.log('✅ Found template_fields in template_data:', fieldsToPreload);
+                }
+
+                // Also check individual database columns as backup
+                const individualFields = {};
+                if (recommendation.hook_text) individualFields.hook = recommendation.hook_text;
+                if (recommendation.if_you_like) individualFields.if_you_like = recommendation.if_you_like;
+                if (recommendation.custom_overview) individualFields.overview = recommendation.custom_overview;
+                if (recommendation.emotion_hook) individualFields.emotion_hook = recommendation.emotion_hook;
+                if (recommendation.scene_caption) individualFields.caption = recommendation.scene_caption;
+                if (recommendation.list_title) individualFields.list_title = recommendation.list_title;
+                if (recommendation.list_items) individualFields.items = recommendation.list_items;
+
+                // Merge fields (template_fields takes priority)
+                fieldsToPreload = { ...individualFields, ...fieldsToPreload };
+
+                console.log('🔄 Final fields to preload:', fieldsToPreload);
+
+                if (Object.keys(fieldsToPreload).length > 0) {
+                    window.templateManager.preloadTemplateFields(fieldsToPreload);
+                } else {
+                    console.log('ℹ️ No template fields found to preload');
+                }
+
             }, 100);
         }
 
@@ -991,7 +1185,7 @@ class RecUpcoming {
         }
     }
 
-    // NEW: Enhanced publish modal using the same design as create recommendation
+    // Enhanced publish modal using the same design as create recommendation
     showEnhancedPublishModal(recommendation) {
         if (!window.templateManager) {
             window.templateManager = new TemplateManager(this);
@@ -1022,6 +1216,9 @@ class RecUpcoming {
         // Update content preview
         const contentPreview = document.getElementById('modalContentPreview');
         if (contentPreview) {
+            const templateFieldCount = recommendation.template_data?.field_count ||
+                Object.keys(recommendation.template_data?.template_fields || {}).length;
+
             contentPreview.innerHTML = `
                 <div class="row">
                     <div class="col-3">
@@ -1033,6 +1230,15 @@ class RecUpcoming {
                         <h6>${recommendation.content?.title || recommendation.content?.name}</h6>
                         <p class="text-muted mb-2">${recommendation.content?.content_type || 'movie'} • ${window.recUtils.extractYear(recommendation.content?.release_date || recommendation.content?.first_air_date)}</p>
                         <p class="small">${(recommendation.content?.overview || '').substring(0, 150)}...</p>
+                        
+                        ${templateFieldCount > 0 ? `
+                        <div class="mt-2">
+                            <span class="badge bg-primary">
+                                <i class="bi bi-file-text"></i>
+                                ${templateFieldCount} template fields saved
+                            </span>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -1050,7 +1256,7 @@ class RecUpcoming {
 
                     // Pre-fill template fields if saved
                     if (recommendation.template_data?.template_fields) {
-                        this.preloadTemplateFields(recommendation.template_data.template_fields);
+                        window.templateManager.preloadTemplateFields(recommendation.template_data.template_fields);
                     }
                 }, 100);
             }
@@ -1089,7 +1295,7 @@ class RecUpcoming {
         window.recUtils.refreshFeatherIcons();
     }
 
-    // NEW: Setup event listeners for enhanced publish modal
+    // Setup event listeners for enhanced publish modal
     setupEnhancedPublishEventListeners(recommendation) {
         const updateDraftBtn = document.getElementById('updateDraftBtn');
         const publishNowBtn = document.getElementById('publishNowBtn');
@@ -1127,7 +1333,7 @@ class RecUpcoming {
         });
     }
 
-    // NEW: Setup event listeners for enhanced edit modal
+    // Setup event listeners for enhanced edit modal
     setupEnhancedEditEventListeners(recommendation) {
         const deleteBtn = document.getElementById('deleteRecommendationBtn');
         const saveChangesBtn = document.getElementById('saveChangesBtn');
@@ -1172,22 +1378,25 @@ class RecUpcoming {
         });
     }
 
-    // NEW: Update recommendation with template data
+    // Update recommendation with template data
     async updateRecommendationWithTemplate(recommendationId, templateType, publishNow, templateParams = {}) {
         try {
             this.manager.showToast(publishNow ? 'Publishing recommendation...' : 'Updating recommendation...', 'info');
+
+            console.log('🎯 Updating with template params:', templateParams);
 
             const updateData = {
                 recommendation_type: templateType,
                 template_data: {
                     selected_template: templateType,
                     template_fields: templateParams,
-                    template_timestamp: Date.now()
+                    template_timestamp: Date.now(),
+                    field_count: Object.keys(templateParams).length
                 },
                 is_active: publishNow
             };
 
-            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`, {
+            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}`, {
                 method: 'PUT',
                 body: JSON.stringify(updateData)
             });
@@ -1195,7 +1404,7 @@ class RecUpcoming {
             if (response.ok) {
                 if (publishNow) {
                     // Also publish to Telegram
-                    const publishResponse = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}/publish`, {
+                    const publishResponse = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}/publish`, {
                         method: 'POST',
                         body: JSON.stringify({
                             template_type: templateType,
@@ -1206,15 +1415,15 @@ class RecUpcoming {
                     if (publishResponse.ok) {
                         const result = await publishResponse.json();
                         if (result.telegram_sent) {
-                            this.manager.showToast('Recommendation updated and published to Telegram!', 'success');
+                            this.manager.showToast(`Recommendation updated and published to Telegram! (${Object.keys(templateParams).length} fields saved)`, 'success');
                         } else {
-                            this.manager.showToast('Recommendation updated (Telegram not configured)', 'warning');
+                            this.manager.showToast(`Recommendation updated (Telegram not configured) - ${Object.keys(templateParams).length} fields saved`, 'warning');
                         }
                     } else {
-                        this.manager.showToast('Recommendation updated but failed to publish to Telegram', 'warning');
+                        this.manager.showToast(`Recommendation updated but failed to publish to Telegram - ${Object.keys(templateParams).length} fields saved`, 'warning');
                     }
                 } else {
-                    this.manager.showToast('Recommendation updated successfully!', 'success');
+                    this.manager.showToast(`Recommendation updated successfully! (${Object.keys(templateParams).length} fields saved)`, 'success');
                 }
 
                 const modal = document.getElementById('enhancedCreateRecommendationModal');
@@ -1226,6 +1435,8 @@ class RecUpcoming {
                 this.manager.loadUpcomingRecommendations(true);
                 this.manager.loadQuickStats();
 
+                console.log('✅ Recommendation updated with template fields:', templateParams);
+
             } else {
                 const error = await response.json();
                 throw new Error(error.error || 'Update failed');
@@ -1236,75 +1447,12 @@ class RecUpcoming {
         }
     }
 
-    // NEW: Preload template fields with saved data
-    preloadTemplateFields(templateFields) {
-        setTimeout(() => {
-            Object.entries(templateFields).forEach(([fieldKey, fieldValue]) => {
-                const field = document.getElementById(`template_${fieldKey}`);
-                if (field) {
-                    field.value = fieldValue;
-
-                    // Update character count if exists
-                    const countElement = document.getElementById(`count_${fieldKey}`);
-                    if (countElement) {
-                        const maxLength = field.maxLength || 200;
-                        countElement.textContent = `${fieldValue.length}/${maxLength}`;
-                    }
-                }
-            });
-
-            // Handle list items if present
-            if (templateFields.items && Array.isArray(templateFields.items)) {
-                const container = document.getElementById('listItemsContainer');
-                if (container) {
-                    // Clear existing items
-                    container.innerHTML = '';
-
-                    // Add saved items
-                    templateFields.items.forEach((item, index) => {
-                        if (index === 0) {
-                            // Create first item
-                            const firstItem = document.createElement('div');
-                            firstItem.className = 'list-item';
-                            firstItem.innerHTML = `
-                                <div class="list-item-number">1.</div>
-                                <div class="list-item-inputs">
-                                    <input type="text" class="list-item-input" placeholder="Movie Title" maxlength="50" value="${item[0] || ''}">
-                                    <input type="text" class="list-item-input" placeholder="Year" maxlength="4" value="${item[1] || ''}">
-                                    <input type="text" class="list-item-input" placeholder="Hook (short, punchy)" maxlength="80" value="${item[2] || ''}">
-                                </div>
-                                <div class="list-item-actions">
-                                    <button type="button" class="add-list-item-btn" onclick="window.templateManager.addListItem()">
-                                        <i data-feather="plus"></i>
-                                    </button>
-                                </div>
-                            `;
-                            container.appendChild(firstItem);
-                        } else {
-                            // Add additional items
-                            window.templateManager.addListItem();
-                            const newItem = container.lastElementChild;
-                            const inputs = newItem.querySelectorAll('.list-item-input');
-                            if (inputs.length >= 3) {
-                                inputs[0].value = item[0] || '';
-                                inputs[1].value = item[1] || '';
-                                inputs[2].value = item[2] || '';
-                            }
-                        }
-                    });
-
-                    window.recUtils.refreshFeatherIcons();
-                }
-            }
-        }, 200);
-    }
-
-    // NEW: Delete recommendation method
+    // Delete recommendation method
     async deleteRecommendation(recommendationId) {
         try {
             this.manager.showToast('Deleting recommendation...', 'info');
 
-            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`, {
+            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}`, {
                 method: 'DELETE'
             });
 
@@ -1409,7 +1557,7 @@ class RecUpcoming {
             this.manager.showToast('Moving all to active...', 'info');
 
             const promises = this.manager.state.upcomingRecommendations.map(rec =>
-                this.manager.makeAuthenticatedRequest(`/admin/recommendations/${rec.id}`, {
+                this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${rec.id}`, {
                     method: 'PUT',
                     body: JSON.stringify({ is_active: true })
                 })
@@ -1435,7 +1583,7 @@ class RecUpcoming {
             this.manager.showToast('Publishing all to Telegram...', 'info');
 
             const promises = this.manager.state.upcomingRecommendations.map(rec =>
-                this.manager.makeAuthenticatedRequest(`/admin/recommendations/${rec.id}/publish`, {
+                this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${rec.id}/publish`, {
                     method: 'POST',
                     body: JSON.stringify({
                         template_type: 'auto',
@@ -1484,7 +1632,7 @@ class RecUpcoming {
             this.manager.showToast('Deleting all upcoming...', 'info');
 
             const promises = this.manager.state.upcomingRecommendations.map(rec =>
-                this.manager.makeAuthenticatedRequest(`/admin/recommendations/${rec.id}`, {
+                this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${rec.id}`, {
                     method: 'DELETE'
                 })
             );
@@ -1501,14 +1649,15 @@ class RecUpcoming {
     }
 
     generateCSV(recommendations) {
-        const headers = ['Title', 'Type', 'Content Type', 'Description', 'Status', 'Created Date'];
+        const headers = ['Title', 'Type', 'Content Type', 'Description', 'Status', 'Created Date', 'Template Fields'];
         const rows = recommendations.map(rec => [
             rec.content?.title || 'Unknown',
             rec.recommendation_type || 'general',
             rec.content?.content_type || 'movie',
             (rec.description || '').replace(/"/g, '""'),
             rec.is_active ? 'Active' : 'Draft',
-            new Date(rec.created_at).toLocaleDateString()
+            new Date(rec.created_at).toLocaleDateString(),
+            rec.template_data?.field_count || Object.keys(rec.template_data?.template_fields || {}).length || 0
         ]);
 
         const csvContent = [
