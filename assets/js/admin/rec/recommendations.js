@@ -544,32 +544,22 @@ class AdminRecommendations {
 
     async loadQuickStats() {
         try {
-            const response = await this.makeAuthenticatedRequest('/admin/dashboard');
+            const response = await this.makeAuthenticatedRequest('/admin/dashboard/stats');
             if (response.ok) {
                 const data = await response.json();
 
-                const generalStats = data.general_stats || {};
-                const supportStats = data.support_overview || {};
-                const recentActivity = data.recent_activity || {};
-
-                const upcomingResponse = await this.makeAuthenticatedRequest('/admin/recommendations?status=draft');
-                let upcomingCount = 0;
-                if (upcomingResponse.ok) {
-                    const upcomingData = await upcomingResponse.json();
-                    upcomingCount = upcomingData.recommendations?.length || 0;
-                }
-
                 this.quickStats = {
-                    totalRecommendations: generalStats.total_recommendations || recentActivity.recent_recommendations?.length || 0,
-                    activeRecommendations: generalStats.active_recommendations || 0,
-                    upcomingRecommendations: upcomingCount,
-                    telegramSent: supportStats.today_resolved || 0,
-                    totalUsers: generalStats.total_users || 0,
-                    systemStatus: data.status || 'unknown'
+                    totalRecommendations: data.active_recommendations || 0,
+                    activeRecommendations: data.active_recommendations || 0,
+                    upcomingRecommendations: 0, // Will be updated by loadUpcomingRecommendations
+                    telegramSent: 0,
+                    totalUsers: data.total_users || 0,
+                    systemStatus: 'healthy'
                 };
 
                 this.renderQuickStats();
                 this.cache.lastUpdated.dashboard = Date.now();
+                console.log('✅ Quick stats loaded successfully');
             }
         } catch (error) {
             console.error('Error loading quick stats:', error);
@@ -613,29 +603,61 @@ class AdminRecommendations {
 
         try {
             const params = new URLSearchParams({
-                filter: this.state.filters.recommendations,
+                filter: this.state.filters.recommendations || 'all',
                 status: 'active',
                 page: 1,
                 per_page: 50
             });
 
+            console.log(`🌐 Loading recommendations: ${params}`);
             const response = await this.makeAuthenticatedRequest(`/admin/recommendations?${params}`);
 
             if (response.ok) {
                 const data = await response.json();
-                this.state.recommendations = data.recommendations || [];
-                if (window.recTelegram) window.recTelegram.renderRecommendations();
+
+                // FIX: Validate and clean the data
+                let recommendations = data.recommendations || [];
+
+                // Filter out invalid recommendations and add defaults
+                recommendations = recommendations.filter(rec => {
+                    if (!rec || !rec.id) {
+                        console.warn('Invalid recommendation found:', rec);
+                        return false;
+                    }
+                    return true;
+                }).map(rec => ({
+                    ...rec,
+                    recommendation_type: rec.recommendation_type || 'general',
+                    description: rec.description || '',
+                    is_active: rec.is_active !== false, // Default to true for active recommendations
+                    content: rec.content || {}
+                }));
+
+                this.state.recommendations = recommendations;
+
+                if (window.recTelegram) {
+                    window.recTelegram.renderRecommendations();
+                }
 
                 if (this.elements.recommendationsCount) {
-                    this.elements.recommendationsCount.textContent = this.state.recommendations.length;
+                    this.elements.recommendationsCount.textContent = recommendations.length;
                 }
 
                 this.cache.lastUpdated.recommendations = Date.now();
+
+                console.log(`✅ Loaded ${recommendations.length} active recommendations`);
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
         } catch (error) {
             console.error('Error loading recommendations:', error);
             this.state.recommendations = [];
-            if (window.recTelegram) window.recTelegram.renderRecommendations();
+
+            if (window.recTelegram) {
+                window.recTelegram.renderRecommendations();
+            }
+
+            this.showError('Failed to load recommendations. Please try again.');
         }
     }
 
@@ -650,7 +672,7 @@ class AdminRecommendations {
         try {
             const params = new URLSearchParams({
                 status: 'draft',
-                filter: this.state.filters.upcoming,
+                filter: this.state.filters.upcoming || 'all',
                 page: 1,
                 per_page: 100
             });
@@ -660,23 +682,61 @@ class AdminRecommendations {
                 params.append('search', upcomingSearch.value);
             }
 
+            console.log(`🌐 Loading upcoming recommendations: ${params}`);
             const response = await this.makeAuthenticatedRequest(`/admin/recommendations?${params}`);
 
             if (response.ok) {
                 const data = await response.json();
-                this.state.upcomingRecommendations = data.recommendations || [];
-                if (window.recTelegram) window.recTelegram.renderUpcomingRecommendations();
 
-                if (this.elements.savedContentCount) {
-                    this.elements.savedContentCount.textContent = this.state.upcomingRecommendations.length;
+                // FIX: Validate and clean the data
+                let recommendations = data.recommendations || [];
+
+                // Filter out invalid recommendations and add defaults
+                recommendations = recommendations.filter(rec => {
+                    if (!rec || !rec.id) {
+                        console.warn('Invalid upcoming recommendation found:', rec);
+                        return false;
+                    }
+                    return true;
+                }).map(rec => ({
+                    ...rec,
+                    // Add default values for missing fields
+                    recommendation_type: rec.recommendation_type || 'general',
+                    description: rec.description || '',
+                    is_active: rec.is_active || false,
+                    content: rec.content || {}
+                }));
+
+                this.state.upcomingRecommendations = recommendations;
+
+                if (window.recTelegram) {
+                    window.recTelegram.renderUpcomingRecommendations();
                 }
 
+                if (this.elements.savedContentCount) {
+                    this.elements.savedContentCount.textContent = recommendations.length;
+                }
+
+                // Update quick stats with upcoming count
+                this.quickStats.upcomingRecommendations = recommendations.length;
+                this.renderQuickStats();
+
                 this.cache.lastUpdated.upcoming = Date.now();
+
+                console.log(`✅ Loaded ${recommendations.length} upcoming recommendations`);
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
         } catch (error) {
             console.error('Error loading upcoming recommendations:', error);
             this.state.upcomingRecommendations = [];
-            if (window.recTelegram) window.recTelegram.renderUpcomingRecommendations();
+
+            if (window.recTelegram) {
+                window.recTelegram.renderUpcomingRecommendations();
+            }
+
+            // Show user-friendly error
+            this.showError('Failed to load upcoming recommendations. Please try again.');
         }
     }
 
@@ -969,6 +1029,8 @@ class AdminRecommendations {
         };
 
         try {
+            console.log(`🌐 API Request: ${endpoint}`, options.method || 'GET');
+
             const response = await fetch(`${this.apiBase}${endpoint}`, mergedOptions);
 
             if (response.status === 401) {
@@ -978,13 +1040,27 @@ class AdminRecommendations {
                 throw new Error('Authentication failed');
             }
 
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
+                throw new Error(errorMessage);
+            }
+
+            console.log(`✅ API Response: ${endpoint} - Success`);
             return response;
+
         } catch (error) {
             if (error.message === 'Authentication failed') {
                 throw error;
             }
-            console.error('API request failed:', error);
-            throw new Error('Network error. Please check your connection.');
+
+            console.error(`❌ API Request failed: ${endpoint}`, error);
+
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('Network error. Please check your connection.');
+            }
+
+            throw error;
         }
     }
 
