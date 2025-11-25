@@ -13,14 +13,14 @@ class TemplateManager {
     async loadTemplateData() {
         try {
             console.log('🌐 Loading template data...');
-            const templatesResponse = await this.manager.makeAuthenticatedRequest('/api/admin/telegram/templates');
+            const templatesResponse = await this.manager.makeAuthenticatedRequest('/admin/telegram/templates');
             if (templatesResponse.ok) {
                 const templatesData = await templatesResponse.json();
                 this.availableTemplates = templatesData.templates || {};
                 console.log('✅ Templates loaded:', this.availableTemplates);
             }
 
-            const promptsResponse = await this.manager.makeAuthenticatedRequest('/api/admin/telegram/templates/prompts');
+            const promptsResponse = await this.manager.makeAuthenticatedRequest('/admin/telegram/templates/prompts');
             if (promptsResponse.ok) {
                 const promptsData = await promptsResponse.json();
                 this.templatePrompts = promptsData.prompts || {};
@@ -942,7 +942,7 @@ class RecUpcoming {
 
             console.log('🌐 Creating template recommendation with enhanced data:', requestData);
 
-            const response = await this.manager.makeAuthenticatedRequest('/api/admin/recommendations/create-with-template', {
+            const response = await this.manager.makeAuthenticatedRequest('/admin/recommendations/create-with-template', {
                 method: 'POST',
                 body: JSON.stringify(requestData)
             });
@@ -998,8 +998,7 @@ class RecUpcoming {
                 return;
             }
 
-            // FIX: Add /api prefix
-            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}`);
+            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch recommendation details');
             }
@@ -1396,7 +1395,7 @@ class RecUpcoming {
                 is_active: publishNow
             };
 
-            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}`, {
+            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`, {
                 method: 'PUT',
                 body: JSON.stringify(updateData)
             });
@@ -1404,7 +1403,7 @@ class RecUpcoming {
             if (response.ok) {
                 if (publishNow) {
                     // Also publish to Telegram
-                    const publishResponse = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}/publish`, {
+                    const publishResponse = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}/publish`, {
                         method: 'POST',
                         body: JSON.stringify({
                             template_type: templateType,
@@ -1452,7 +1451,7 @@ class RecUpcoming {
         try {
             this.manager.showToast('Deleting recommendation...', 'info');
 
-            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}`, {
+            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`, {
                 method: 'DELETE'
             });
 
@@ -1557,7 +1556,7 @@ class RecUpcoming {
             this.manager.showToast('Moving all to active...', 'info');
 
             const promises = this.manager.state.upcomingRecommendations.map(rec =>
-                this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${rec.id}`, {
+                this.manager.makeAuthenticatedRequest(`/admin/recommendations/${rec.id}`, {
                     method: 'PUT',
                     body: JSON.stringify({ is_active: true })
                 })
@@ -1583,7 +1582,7 @@ class RecUpcoming {
             this.manager.showToast('Publishing all to Telegram...', 'info');
 
             const promises = this.manager.state.upcomingRecommendations.map(rec =>
-                this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${rec.id}/publish`, {
+                this.manager.makeAuthenticatedRequest(`/admin/recommendations/${rec.id}/publish`, {
                     method: 'POST',
                     body: JSON.stringify({
                         template_type: 'auto',
@@ -1632,7 +1631,7 @@ class RecUpcoming {
             this.manager.showToast('Deleting all upcoming...', 'info');
 
             const promises = this.manager.state.upcomingRecommendations.map(rec =>
-                this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${rec.id}`, {
+                this.manager.makeAuthenticatedRequest(`/admin/recommendations/${rec.id}`, {
                     method: 'DELETE'
                 })
             );

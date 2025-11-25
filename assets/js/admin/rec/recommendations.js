@@ -495,7 +495,7 @@ class AdminRecommendations {
                 return false;
             }
 
-            const response = await this.makeAuthenticatedRequest('/api/admin/dashboard');
+            const response = await this.makeAuthenticatedRequest('/admin/dashboard');
             if (!response.ok) {
                 return false;
             }
@@ -900,7 +900,7 @@ class AdminRecommendations {
 
     async loadQuickStats() {
         try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/dashboard/stats');
+            const response = await this.makeAuthenticatedRequest('/admin/dashboard/stats');
             if (response.ok) {
                 const data = await response.json();
 
@@ -925,7 +925,7 @@ class AdminRecommendations {
 
     async loadSystemStatus() {
         try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/system-health');
+            const response = await this.makeAuthenticatedRequest('/admin/system-health');
             if (response.ok) {
                 const data = await response.json();
                 this.updateSystemStatus(data);
@@ -980,7 +980,7 @@ class AdminRecommendations {
             }
 
             console.log(`🌐 Loading recommendations: ${params}`);
-            const response = await this.makeAuthenticatedRequest(`/api/admin/recommendations?${params}`);
+            const response = await this.makeAuthenticatedRequest(`/admin/recommendations?${params}`);
 
             if (response.ok) {
                 const data = await response.json();
@@ -1066,7 +1066,7 @@ class AdminRecommendations {
             }
 
             console.log(`🌐 Loading upcoming recommendations: ${params}`);
-            const response = await this.makeAuthenticatedRequest(`/api/admin/recommendations?${params}`);
+            const response = await this.makeAuthenticatedRequest(`/admin/recommendations?${params}`);
 
             if (response.ok) {
                 const data = await response.json();
@@ -1149,7 +1149,7 @@ class AdminRecommendations {
 
     async loadAnalytics() {
         try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/analytics');
+            const response = await this.makeAuthenticatedRequest('/admin/analytics');
             if (response.ok) {
                 const data = await response.json();
                 this.renderAnalytics(data);
@@ -1310,7 +1310,7 @@ class AdminRecommendations {
         try {
             this.showToast('Syncing external APIs...', 'info');
 
-            const response = await this.makeAuthenticatedRequest('/api/admin/cache/clear', {
+            const response = await this.makeAuthenticatedRequest('/admin/cache/clear', {
                 method: 'POST'
             });
 

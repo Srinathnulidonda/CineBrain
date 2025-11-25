@@ -23,6 +23,7 @@ class RecRecommendations {
             this.manager.loadRecommendations();
         });
 
+        // Add sort listener
         this.elements.recommendationsSort?.addEventListener('change', () => {
             this.manager.state.sorting.recommendations = this.elements.recommendationsSort.value;
             this.manager.loadRecommendations();
@@ -68,6 +69,7 @@ class RecRecommendations {
         const date = this.manager.formatTimeAgo(recommendation.created_at);
         const isActive = recommendation.is_active !== false;
 
+        // NEW: Check if recommendation has template data
         const hasTemplateData = recommendation.template_data && recommendation.template_data.selected_template;
         const templateIndicator = hasTemplateData ?
             `<span class="template-indicator" title="Created with ${recommendation.template_data.selected_template} template">📝</span>` : '';
@@ -110,16 +112,18 @@ class RecRecommendations {
 
     async editRecommendation(recommendationId) {
         try {
-            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}`);
+            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch recommendation details');
             }
 
             const recommendation = await response.json();
 
+            // Use enhanced template modal for editing (same as upcoming)
             if (window.recUpcoming) {
                 window.recUpcoming.showEnhancedEditModal(recommendation);
             } else {
+                // Fallback to simple modal if recUpcoming not available
                 this.showEditRecommendationModal(recommendation);
             }
 
@@ -129,6 +133,7 @@ class RecRecommendations {
         }
     }
 
+    // Keep the old modal as fallback but update it to be more consistent
     showEditRecommendationModal(recommendation) {
         const modal = document.createElement('div');
         modal.className = 'modal fade';
@@ -198,6 +203,7 @@ class RecRecommendations {
                                 </select>
                             </div>
 
+                            <!-- Show template data if available -->
                             ${recommendation.template_data ? `
                             <div class="mb-3">
                                 <div class="alert alert-warning">
@@ -261,12 +267,15 @@ class RecRecommendations {
             await this.deleteRecommendation(recommendation.id);
         });
 
+        // NEW: Switch to enhanced edit button
         switchToEnhancedBtn.addEventListener('click', () => {
+            // Close current modal
             const bsModal = bootstrap.Modal.getInstance(modal);
             if (bsModal) {
                 bsModal.hide();
             }
 
+            // Open enhanced modal
             setTimeout(() => {
                 if (window.recUpcoming) {
                     window.recUpcoming.showEnhancedEditModal(recommendation);
@@ -288,7 +297,7 @@ class RecRecommendations {
         try {
             this.manager.showToast('Updating recommendation...', 'info');
 
-            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}`, {
+            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`, {
                 method: 'PUT',
                 body: JSON.stringify(data)
             });
@@ -316,7 +325,7 @@ class RecRecommendations {
 
             this.manager.showToast('Deleting recommendation...', 'info');
 
-            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}`, {
+            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`, {
                 method: 'DELETE'
             });
 
@@ -340,10 +349,12 @@ class RecRecommendations {
         try {
             this.manager.showToast('Sending to Telegram...', 'info');
 
+            // Get recommendation to check for template data
             const recommendation = this.manager.state.recommendations.find(rec => rec.id === recommendationId);
 
             let publishData = { template_type: 'auto' };
 
+            // If recommendation has template data, use it
             if (recommendation?.template_data) {
                 publishData = {
                     template_type: recommendation.template_data.selected_template || 'auto',
@@ -351,7 +362,7 @@ class RecRecommendations {
                 };
             }
 
-            const response = await this.manager.makeAuthenticatedRequest(`/api/admin/recommendations/${recommendationId}/send`, {
+            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}/send`, {
                 method: 'POST',
                 body: JSON.stringify(publishData)
             });
@@ -586,6 +597,7 @@ class RecRecommendations {
         }
     }
 
+    // Add method to show enhanced edit if recUpcoming is not available
     showEnhancedEdit(recommendation) {
         if (window.recUpcoming) {
             window.recUpcoming.showEnhancedEditModal(recommendation);
@@ -599,4 +611,5 @@ class RecRecommendations {
     }
 }
 
+// Initialize and expose globally
 window.recRecommendations = null;
