@@ -1,1873 +1,2148 @@
-memorize my frontent files
+1. dashboard.js 
+/**
+ * CineBrain Admin Dashboard - Main Controller
+ * Mobile-First Responsive Dashboard Management
+ */
 
-5. rec-upcoming.js
-// TemplateManager class (moved here as it's primarily used for upcoming content)
-class TemplateManager {
-    constructor(recUpcoming) {
-        this.recUpcoming = recUpcoming;
-        this.manager = recUpcoming.manager;
-        this.availableTemplates = {};
-        this.templatePrompts = {};
-        this.selectedTemplate = null;
-        this.templateFields = {};
-        this.templateData = {};
-        this.listItems = [];
+class AdminDashboard {
+    constructor() {
+        this.apiBase = window.CineBrainConfig.apiBase;
+        this.refreshInterval = 8000;
+        this.refreshTimer = null;
+        this.isRefreshing = false;
+        this.currentUser = null;
+        this.isMobile = window.innerWidth <= 768;
+        this.touchDevice = 'ontouchstart' in window;
+
+        // Dashboard data
+        this.dashboardData = {
+            overview: null,
+            analytics: null,
+            supportDashboard: null
+        };
+
+        this.boostTimeout = null;
+
+        // Initialize component classes
+        this.systemMonitor = null;
+        this.statisticsManager = null;
+
+        this.init();
+        this.handleResize();
     }
 
-    async loadTemplateData() {
+    async init() {
         try {
-            console.log('🌐 Loading template data...');
-            const templatesResponse = await this.manager.makeAuthenticatedRequest('/admin/telegram/templates');
-            if (templatesResponse.ok) {
-                const templatesData = await templatesResponse.json();
-                this.availableTemplates = templatesData.templates || {};
-                console.log('✅ Templates loaded:', this.availableTemplates);
+            // Check admin authentication
+            if (!await this.checkAdminAuth()) {
+                window.location.href = '/auth/login.html';
+                return;
             }
 
-            const promptsResponse = await this.manager.makeAuthenticatedRequest('/admin/telegram/templates/prompts');
-            if (promptsResponse.ok) {
-                const promptsData = await promptsResponse.json();
-                this.templatePrompts = promptsData.prompts || {};
-                this.templateFields = promptsData.available_templates || {};
-                console.log('✅ Template prompts loaded:', this.templatePrompts);
-            }
+            // Initialize components
+            this.initializeElements();
+            this.setupEventListeners();
+
+            // Initialize system monitoring
+            this.systemMonitor = new SystemMonitor(this);
+            await this.systemMonitor.init();
+
+            // Initialize statistics manager
+            this.statisticsManager = new StatisticsManager(this);
+            await this.statisticsManager.init();
+
+            // Load initial data
+            await this.loadAllData();
+
+            // Start real-time updates
+            this.startRealTimeUpdates();
+
+            // Setup smart polling
+            this.setupSmartPolling();
+
+            console.log('✅ CineBrain Admin Dashboard Real-time System initialized');
+
         } catch (error) {
-            console.error('Error loading template data:', error);
+            console.error('❌ Dashboard initialization error:', error);
+            this.showError('Failed to initialize admin dashboard');
         }
     }
 
-    renderTemplateSelection(container) {
-        if (!container) return;
+    handleResize() {
+        window.addEventListener('resize', () => {
+            const wasMobile = this.isMobile;
+            this.isMobile = window.innerWidth <= 768;
 
-        const templateIcons = {
-            'standard_movie': '🎬',
-            'standard_tv': '📺',
-            'standard_anime': '🎌',
-            'mind_bending': '🧠',
-            'hidden_gem': '💎',
-            'anime_gem': '🎌',
-            'top_list': '📝',
-            'scene_clip': '🎥'
-        };
+            if (wasMobile !== this.isMobile) {
+                this.reinitializeForDevice();
+            }
 
-        const popularTemplates = ['mind_bending'];
-
-        const templateCards = Object.entries(this.availableTemplates).map(([key, name]) => {
-            const isPopular = popularTemplates.includes(key);
-
-            return `
-            <div class="template-card" data-template="${key}" onclick="window.templateManager.selectTemplate('${key}')">
-                <span class="template-card-icon">${templateIcons[key] || '📝'}</span>
-                <p class="template-card-title">${name.replace('Standard ', '').replace('Template', '')}</p>
-                ${isPopular ? '<span class="template-feature">Popular</span>' : ''}
-            </div>
-        `;
-        }).join('');
-
-        container.innerHTML = templateCards;
-        window.recUtils.refreshFeatherIcons();
-    }
-
-    selectTemplate(templateKey) {
-        document.querySelectorAll('.template-card').forEach(card => {
-            card.classList.remove('selected');
+            if (this.statisticsManager) {
+                this.statisticsManager.resizeCharts();
+            }
         });
 
-        const selectedCard = document.querySelector(`[data-template="${templateKey}"]`);
-        if (selectedCard) {
-            selectedCard.classList.add('selected');
-        }
-
-        this.selectedTemplate = templateKey;
-        this.showTemplateGuidance();
-        this.renderTemplateFields();
-    }
-
-    showTemplateGuidance() {
-        const guidanceContainer = document.getElementById('templateGuidance');
-        const guidanceContent = document.getElementById('guidanceContent');
-        const guidanceCard = guidanceContainer?.querySelector('.guidance-card');
-
-        if (!guidanceContainer || !guidanceContent || !this.selectedTemplate) return;
-
-        const promptInfo = this.templatePrompts[this.selectedTemplate] || {};
-        const templateName = this.availableTemplates[this.selectedTemplate] || 'Template';
-
-        const displayName = templateName.replace('Standard ', '').replace(' Template', '');
-
-        if (guidanceCard) {
-            guidanceCard.classList.add('fade-out');
-
+        window.addEventListener('orientationchange', () => {
             setTimeout(() => {
-                guidanceContent.innerHTML = `
-                <strong>${displayName}:</strong> ${promptInfo.purpose || 'General recommendation template for content curation.'}
-            `;
-
-                guidanceCard.classList.remove('fade-out');
-                guidanceCard.classList.add('fade-in');
-                guidanceContainer.style.display = 'block';
-
-                setTimeout(() => {
-                    guidanceCard.classList.remove('fade-in');
-                }, 300);
+                this.reinitializeForDevice();
+                if (this.statisticsManager) {
+                    this.statisticsManager.resizeCharts();
+                }
             }, 100);
-        }
-    }
-
-    renderTemplateFields() {
-        const fieldsContainer = document.getElementById('templateFieldsContainer');
-        if (!fieldsContainer) return;
-
-        fieldsContainer.innerHTML = '';
-        this.templateData = {};
-
-        if (!this.selectedTemplate) {
-            fieldsContainer.style.display = 'none';
-            return;
-        }
-
-        const templateFieldConfig = this.getTemplateFieldConfig(this.selectedTemplate);
-        if (!templateFieldConfig || templateFieldConfig.length === 0) {
-            fieldsContainer.style.display = 'none';
-            return;
-        }
-
-        fieldsContainer.style.display = 'block';
-
-        const fieldsHTML = templateFieldConfig.map(field => {
-            return this.createFieldHTML(field);
-        }).join('');
-
-        fieldsContainer.innerHTML = fieldsHTML;
-
-        this.setupFieldEventListeners();
-        window.recUtils.refreshFeatherIcons();
-    }
-
-    getTemplateFieldConfig(templateType) {
-        const fieldConfigs = {
-            'mind_bending': [
-                {
-                    key: 'overview',
-                    label: 'Custom Overview',
-                    type: 'textarea',
-                    required: false,
-                    placeholder: 'Write a mysterious 2-3 sentence overview that raises questions...',
-                    description: '2-3 sentences, mysterious, never spoil twists',
-                    maxLength: 250
-                },
-                {
-                    key: 'if_you_like',
-                    label: 'If You Like',
-                    type: 'text',
-                    required: false,
-                    placeholder: 'Inception, Dark, Predestination, The Matrix',
-                    description: '2-4 similar brain-breaking movies (comma separated)',
-                    maxLength: 150
-                }
-            ],
-            'hidden_gem': [
-                {
-                    key: 'hook',
-                    label: 'Hook Text',
-                    type: 'textarea',
-                    required: true,
-                    placeholder: 'Why nobody talks about this masterpiece...',
-                    description: '1-2 lines with "why nobody talks about this" feel',
-                    maxLength: 120
-                },
-                {
-                    key: 'if_you_like',
-                    label: 'If You Like',
-                    type: 'text',
-                    required: false,
-                    placeholder: 'Similar hidden gems or mainstream movies...',
-                    description: '2-3 movies with similar tone (comma separated)',
-                    maxLength: 100
-                }
-            ],
-            'anime_gem': [
-                {
-                    key: 'overview',
-                    label: 'Emotional Core',
-                    type: 'textarea',
-                    required: false,
-                    placeholder: 'Focus on emotional and philosophical themes...',
-                    description: '2-3 lines about emotional/philosophical core, themes not plot',
-                    maxLength: 200
-                },
-                {
-                    key: 'emotion_hook',
-                    label: 'Emotion Hook',
-                    type: 'text',
-                    required: true,
-                    placeholder: 'A time-loop tragedy that hits harder the more you think about it',
-                    description: '1 strong emotional line that captures the impact',
-                    maxLength: 80
-                }
-            ],
-            'scene_clip': [
-                {
-                    key: 'caption',
-                    label: 'Scene Caption',
-                    type: 'text',
-                    required: true,
-                    placeholder: 'This scene will hook you instantly',
-                    description: 'Punchy line creating curiosity about the clip',
-                    maxLength: 60
-                }
-            ],
-            'top_list': [
-                {
-                    key: 'list_title',
-                    label: 'List Title',
-                    type: 'text',
-                    required: true,
-                    placeholder: 'Top 5 Mind-Bending Sci-Fi Gems',
-                    description: 'Catchy and niche-based list title',
-                    maxLength: 80
-                },
-                {
-                    key: 'items',
-                    label: 'List Items',
-                    type: 'list',
-                    required: true,
-                    description: '5-10 items MAX with title, year, and hook',
-                    maxItems: 10
-                }
-            ]
-        };
-
-        return fieldConfigs[templateType] || [];
-    }
-
-    createFieldHTML(field) {
-        const isRequired = field.required ? 'required' : '';
-        const requiredLabel = field.required ? '<span class="template-field-required">*</span>' : '';
-
-        if (field.type === 'list') {
-            return this.createListFieldHTML(field);
-        }
-
-        if (field.type === 'textarea') {
-            return `
-                <div class="template-field-group">
-                    <label class="template-field-label" for="template_${field.key}">
-                        ${field.label} ${requiredLabel}
-                    </label>
-                    <div class="template-field-description">${field.description}</div>
-                    <textarea 
-                        class="template-field-input template-field-textarea" 
-                        id="template_${field.key}"
-                        name="${field.key}"
-                        placeholder="${field.placeholder || ''}"
-                        maxlength="${field.maxLength || 500}"
-                        rows="3"
-                        ${isRequired}></textarea>
-                    <div class="template-field-character-count">
-                        <span></span>
-                        <span id="count_${field.key}">0/${field.maxLength || 500}</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        return `
-            <div class="template-field-group">
-                <label class="template-field-label" for="template_${field.key}">
-                    ${field.label} ${requiredLabel}
-                </label>
-                <div class="template-field-description">${field.description}</div>
-                <input 
-                    type="text"
-                    class="template-field-input" 
-                    id="template_${field.key}"
-                    name="${field.key}"
-                    placeholder="${field.placeholder || ''}"
-                    maxlength="${field.maxLength || 200}"
-                    ${isRequired}>
-                <div class="template-field-character-count">
-                    <span></span>
-                    <span id="count_${field.key}">0/${field.maxLength || 200}</span>
-                </div>
-            </div>
-        `;
-    }
-
-    createListFieldHTML(field) {
-        return `
-            <div class="template-field-group">
-                <label class="template-field-label">
-                    ${field.label} <span class="template-field-required">*</span>
-                </label>
-                <div class="template-field-description">${field.description}</div>
-                <div class="list-items-container" id="listItemsContainer">
-                    <div class="list-item">
-                        <div class="list-item-number">1.</div>
-                        <div class="list-item-inputs">
-                            <input type="text" class="list-item-input" placeholder="Movie Title" maxlength="50">
-                            <input type="text" class="list-item-input" placeholder="Year" maxlength="4">
-                            <input type="text" class="list-item-input" placeholder="Hook (short, punchy)" maxlength="80">
-                        </div>
-                        <div class="list-item-actions">
-                            <button type="button" class="add-list-item-btn" onclick="window.templateManager.addListItem()">
-                                <i data-feather="plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    setupFieldEventListeners() {
-        document.querySelectorAll('.template-field-input').forEach(input => {
-            const fieldKey = input.name;
-            const countElement = document.getElementById(`count_${fieldKey}`);
-
-            if (countElement) {
-                const maxLength = input.maxLength || 200;
-
-                input.addEventListener('input', () => {
-                    const currentLength = input.value.length;
-                    countElement.textContent = `${currentLength}/${maxLength}`;
-
-                    this.templateData[fieldKey] = input.value;
-
-                    if (currentLength > maxLength * 0.9) {
-                        countElement.style.color = '#ef4444';
-                    } else {
-                        countElement.style.color = '';
-                    }
-                });
-            }
         });
     }
 
-    addListItem() {
-        const container = document.getElementById('listItemsContainer');
-        if (!container) return;
-
-        const currentItems = container.children.length;
-        const maxItems = 10;
-
-        if (currentItems >= maxItems) {
-            this.manager.showError(`Maximum ${maxItems} items allowed`);
-            return;
+    reinitializeForDevice() {
+        if (this.dashboardData.overview) {
+            this.renderOverviewCards(this.dashboardData.overview);
+            this.renderQuickActions();
         }
 
-        const newItem = document.createElement('div');
-        newItem.className = 'list-item';
-        newItem.innerHTML = `
-            <div class="list-item-number">${currentItems + 1}.</div>
-            <div class="list-item-inputs">
-                <input type="text" class="list-item-input" placeholder="Movie Title" maxlength="50">
-                <input type="text" class="list-item-input" placeholder="Year" maxlength="4">
-                <input type="text" class="list-item-input" placeholder="Hook (short, punchy)" maxlength="80">
-            </div>
-            <div class="list-item-actions">
-                <button type="button" class="remove-list-item-btn" onclick="window.templateManager.removeListItem(this)">
-                    <i data-feather="minus"></i>
-                </button>
-                ${currentItems === 0 ? '<button type="button" class="add-list-item-btn" onclick="window.templateManager.addListItem()"><i data-feather="plus"></i></button>' : ''}
-            </div>
-        `;
-
-        container.appendChild(newItem);
-
-        this.updateListItemNumbers();
-        window.recUtils.refreshFeatherIcons();
-    }
-
-    removeListItem(button) {
-        const container = document.getElementById('listItemsContainer');
-        const item = button.closest('.list-item');
-
-        if (container && item && container.children.length > 1) {
-            item.remove();
-            this.updateListItemNumbers();
-
-            const lastItem = container.lastElementChild;
-            const addBtn = lastItem.querySelector('.add-list-item-btn');
-            if (!addBtn) {
-                const actionsDiv = lastItem.querySelector('.list-item-actions');
-                actionsDiv.innerHTML += '<button type="button" class="add-list-item-btn" onclick="window.templateManager.addListItem()"><i data-feather="plus"></i></button>';
-                window.recUtils.refreshFeatherIcons();
-            }
+        if (this.dashboardData.analytics && this.statisticsManager) {
+            this.statisticsManager.updateCharts(this.dashboardData.analytics);
         }
     }
 
-    updateListItemNumbers() {
-        const container = document.getElementById('listItemsContainer');
-        if (!container) return;
+    async checkAdminAuth() {
+        try {
+            const token = localStorage.getItem('cinebrain-token');
+            const userStr = localStorage.getItem('cinebrain-user');
 
-        Array.from(container.children).forEach((item, index) => {
-            const numberDiv = item.querySelector('.list-item-number');
-            if (numberDiv) {
-                numberDiv.textContent = `${index + 1}.`;
+            if (!token || !userStr) {
+                return false;
             }
-        });
-    }
 
-    validateTemplateSelection() {
-        if (!this.selectedTemplate) {
-            return { valid: false, error: 'Please select a template' };
+            const user = JSON.parse(userStr);
+            if (!user.is_admin) {
+                return false;
+            }
+
+            this.currentUser = user;
+            return true;
+
+        } catch (error) {
+            console.error('Auth check error:', error);
+            return false;
         }
-
-        const fieldConfig = this.getTemplateFieldConfig(this.selectedTemplate);
-
-        for (const field of fieldConfig) {
-            if (field.required) {
-                if (field.type === 'list') {
-                    const items = this.getListItems();
-                    if (items.length === 0) {
-                        return { valid: false, error: `${field.label} is required` };
-                    }
-                } else {
-                    const input = document.getElementById(`template_${field.key}`);
-                    if (!input || !input.value.trim()) {
-                        return { valid: false, error: `${field.label} is required` };
-                    }
-                }
-            }
-        }
-
-        return { valid: true };
-    }
-
-    getTemplateParams() {
-        const params = {};
-
-        document.querySelectorAll('.template-field-input').forEach(input => {
-            if (input.name && input.value.trim()) {
-                params[input.name] = input.value.trim();
-            }
-        });
-
-        if (this.selectedTemplate === 'top_list') {
-            params.items = this.getListItems();
-        }
-
-        return params;
-    }
-
-    getListItems() {
-        const container = document.getElementById('listItemsContainer');
-        if (!container) return [];
-
-        const items = [];
-
-        Array.from(container.children).forEach(item => {
-            const inputs = item.querySelectorAll('.list-item-input');
-            if (inputs.length >= 3) {
-                const title = inputs[0].value.trim();
-                const year = inputs[1].value.trim();
-                const hook = inputs[2].value.trim();
-
-                if (title && year && hook) {
-                    items.push([title, year, hook]);
-                }
-            }
-        });
-
-        return items;
-    }
-}
-
-class RecUpcoming {
-    constructor(manager) {
-        this.manager = manager;
-        this.initializeElements();
-        this.setupEventListeners();
-        console.log('✅ RecUpcoming module initialized');
     }
 
     initializeElements() {
         this.elements = {
-            upcomingGrid: document.getElementById('savedContentGrid'),
-            upcomingFilter: document.getElementById('savedContentFilter'),
-            upcomingSearch: document.getElementById('savedContentSearch'),
-            refreshUpcoming: document.getElementById('refreshSavedContent'),
-            bulkContentActions: document.getElementById('bulkContentActions'),
-            createRecommendationBtn: document.getElementById('createRecommendationBtn')
+            // Status elements
+            lastUpdate: document.getElementById('lastUpdate'),
+            autoRefreshStatus: document.getElementById('autoRefreshStatus'),
+            liveConnectionStatus: document.getElementById('liveConnectionStatus'),
+
+            // Containers
+            overviewCards: document.getElementById('overviewCards'),
+            mobileOverviewCards: document.getElementById('mobileOverviewCards'),
+            mobileStatsGrid: document.getElementById('mobileStatsGrid'),
+            recentActivity: document.getElementById('recentActivity'),
+            supportStats: document.getElementById('supportStats'),
+            recentTickets: document.getElementById('recentTickets'),
+
+            // Buttons
+            refreshDashboard: document.getElementById('refreshDashboard'),
+            viewAllActivity: document.getElementById('viewAllActivity'),
+            viewSupportDashboard: document.getElementById('viewSupportDashboard'),
+
+            // Period selector
+            activityPeriod: document.getElementById('activityPeriod')
         };
     }
 
     setupEventListeners() {
-        this.elements.upcomingFilter?.addEventListener('change', () => {
-            this.manager.state.filters.upcoming = this.elements.upcomingFilter.value;
-            this.manager.loadUpcomingRecommendations();
+        // Refresh button
+        this.elements.refreshDashboard?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.refreshAllData();
+            this.hapticFeedback('light');
         });
 
-        this.elements.upcomingSearch?.addEventListener('input',
-            this.manager.debounce(() => {
-                this.manager.loadUpcomingRecommendations();
-            }, 300)
-        );
-
-        this.elements.createRecommendationBtn?.addEventListener('click', () => {
-            this.showEnhancedCreateRecommendationModal();
+        // Navigation buttons
+        this.elements.viewAllActivity?.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/admin/analytics.html';
         });
 
-        this.elements.refreshUpcoming?.addEventListener('click', () => {
-            this.manager.loadUpcomingRecommendations(true);
+        this.elements.viewSupportDashboard?.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/admin/Support-Dashboard.html';
         });
 
-        this.elements.bulkContentActions?.addEventListener('click', () => {
-            this.bulkEditUpcoming();
+        // Period selector
+        this.elements.activityPeriod?.addEventListener('change', () => {
+            this.updateChartsForPeriod();
         });
-    }
 
-    renderUpcomingRecommendations() {
-        if (!this.elements.upcomingGrid) return;
-
-        try {
-            if (!this.manager.state.upcomingRecommendations || this.manager.state.upcomingRecommendations.length === 0) {
-                this.elements.upcomingGrid.classList.remove('active');
-                this.elements.upcomingGrid.innerHTML = window.recUtils.getEmptyState(
-                    'clock',
-                    'No upcoming recommendations',
-                    'Create recommendations and save as draft',
-                    false
-                );
-                this.updateTabContainerHeight();
-                window.recUtils.refreshFeatherIcons();
-                return;
-            }
-
-            // Filter out any null/undefined recommendations
-            const validRecommendations = this.manager.state.upcomingRecommendations.filter(rec => rec && rec.id);
-
-            this.elements.upcomingGrid.innerHTML = validRecommendations.map(rec => {
-                try {
-                    return this.createUpcomingContentCard(rec);
-                } catch (error) {
-                    console.error('Error rendering recommendation card:', error, rec);
-                    return '';
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        this.refreshAllData();
+                        break;
                 }
-            }).filter(card => card).join('');
+            }
+        });
 
-            this.elements.upcomingGrid.classList.add('active');
-            this.setupLazyLoadingForCards(this.elements.upcomingGrid);
-            this.updateTabContainerHeight();
-            window.recUtils.refreshFeatherIcons();
-        } catch (error) {
-            console.error('Error rendering upcoming recommendations:', error);
-            this.elements.upcomingGrid.innerHTML = window.recUtils.getEmptyState(
-                'alert-circle',
-                'Error loading recommendations',
-                'Please refresh the page',
-                false
-            );
-            window.recUtils.refreshFeatherIcons();
+        // Window focus/blur for refresh
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                this.refreshAllData();
+                if (this.systemMonitor) {
+                    this.systemMonitor.checkMissedNotifications();
+                }
+            }
+        });
+
+        // Listen for notification events
+        window.addEventListener('cinebrain-admin-event', (e) => {
+            if (e.detail.type === 'refresh') {
+                this.refreshAllData();
+            }
+        });
+
+        // Mobile touch gestures
+        if (this.touchDevice) {
+            this.setupTouchGestures();
         }
     }
 
-    createUpcomingContentCard(recommendation) {
-        try {
-            // Add comprehensive null checking
-            if (!recommendation) {
-                console.warn('createUpcomingContentCard: recommendation is null/undefined');
-                return '';
+    setupTouchGestures() {
+        let startY = 0;
+        let currentY = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            if (window.scrollY === 0) {
+                startY = e.touches[0].pageY;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (window.scrollY === 0 && startY) {
+                currentY = e.touches[0].pageY;
+                const pullDistance = currentY - startY;
+
+                if (pullDistance > 100 && !this.isRefreshing) {
+                    this.showPullToRefreshIndicator();
+                }
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', () => {
+            if (window.scrollY === 0 && startY && currentY) {
+                const pullDistance = currentY - startY;
+
+                if (pullDistance > 100 && !this.isRefreshing) {
+                    this.refreshAllData();
+                    this.hapticFeedback('medium');
+                }
             }
 
-            const content = recommendation.content || {};
-            const posterUrl = window.recUtils.getPosterUrl(content);
-            const rating = window.recUtils.formatRating(content.rating || content.vote_average);
-            const year = window.recUtils.extractYear(content.release_date || content.first_air_date);
-            const contentType = content.content_type || content.media_type || 'movie';
-            const contentId = content.id || content.tmdb_id || content.mal_id || recommendation.id || Date.now();
-            const runtime = window.recUtils.formatRuntime(content.runtime);
-            const genres = window.recUtils.getGenres(content);
+            startY = 0;
+            currentY = 0;
+            this.hidePullToRefreshIndicator();
+        }, { passive: true });
+    }
 
-            // FIX: Safe handling of recommendation type
-            const recommendationType = window.recUtils.formatRecommendationType(
-                recommendation.recommendation_type || 'general'
-            );
+    showPullToRefreshIndicator() {
+        if (!document.getElementById('pullToRefreshIndicator')) {
+            const indicator = document.createElement('div');
+            indicator.id = 'pullToRefreshIndicator';
+            indicator.innerHTML = '<i data-feather="refresh-cw"></i> Release to refresh';
+            indicator.style.cssText = `
+                position: fixed;
+                top: calc(var(--topbar-height) + 10px);
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--admin-primary);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 14px;
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            `;
+            document.body.appendChild(indicator);
 
-            return `
-                <div class="content-card" data-content-id="${contentId}" data-recommendation-id="${recommendation.id || ''}" tabindex="0">
-                    <div class="card-poster-container">
-                        <img class="card-poster" data-src="${posterUrl}" alt="${this.manager.escapeHtml(content.title || content.name || 'Content')}" loading="lazy">
-                        
-                        <div class="content-type-badge ${contentType}">
-                            ${contentType.toUpperCase()}
-                        </div>
-                        
-                        <div class="recommendation-type-badge">
-                            ${recommendationType}
-                        </div>
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        }
+    }
 
-                        <div class="card-overlays">
-                            <div class="card-top-overlay"></div>
-                            <div class="card-bottom-overlay">
-                                <div class="rating-badge">
-                                    <svg viewBox="0 0 24 24">
-                                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                                    </svg>
-                                    <span>${rating}</span>
-                                </div>
-                                <div class="card-actions">
-                                    <button class="action-btn publish-btn" onclick="window.recUpcoming.publishDraftRecommendation(${recommendation.id || 0})" 
-                                            title="Publish to Telegram" aria-label="Publish to Telegram">
-                                        <i data-feather="send"></i>
-                                    </button>
-                                    <button class="action-btn edit-btn" onclick="window.recUpcoming.editRecommendation(${recommendation.id || 0})" 
-                                            title="Edit Draft" aria-label="Edit Draft">
-                                        <i data-feather="edit"></i>
-                                    </button>
-                                </div>
+    hidePullToRefreshIndicator() {
+        const indicator = document.getElementById('pullToRefreshIndicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    hapticFeedback(type = 'light') {
+        if ('vibrate' in navigator) {
+            const patterns = {
+                light: 10,
+                medium: 20,
+                heavy: 50
+            };
+            navigator.vibrate(patterns[type] || patterns.light);
+        }
+    }
+
+    async loadAllData() {
+        this.showLoading(true);
+
+        try {
+            const promises = [
+                this.loadDashboardOverview(),
+                this.loadAnalytics(),
+                this.loadSupportDashboard()
+            ];
+
+            await Promise.allSettled(promises);
+            this.updateLastRefreshTime();
+            this.validateDataIntegrity();
+
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+            this.showError('Failed to load some dashboard data');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    validateDataIntegrity() {
+        if (!this.dashboardData.overview || !this.dashboardData.overview.general_stats) {
+            console.error('Invalid overview data, reloading...');
+            this.loadDashboardOverview();
+        }
+
+        if (!this.dashboardData.analytics || !this.dashboardData.analytics.user_analytics) {
+            console.error('Invalid analytics data, reloading...');
+            this.loadAnalytics();
+        }
+
+        if (!this.dashboardData.supportDashboard || !this.dashboardData.supportDashboard.ticket_stats) {
+            console.error('Invalid support data, reloading...');
+            this.loadSupportDashboard();
+        }
+    }
+
+    async loadDashboardOverview() {
+        try {
+            const response = await this.makeAuthenticatedRequest('/admin/dashboard');
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data && data.general_stats) {
+                    this.dashboardData.overview = data;
+                    this.renderOverviewCards(data);
+                    this.renderRecentActivity(data.recent_activity);
+                    this.renderQuickActions();
+
+                    // Pass alerts to system monitor
+                    if (data.alerts && data.alerts.length > 0 && this.systemMonitor) {
+                        data.alerts.forEach(alert => this.systemMonitor.handleNewAlert(alert));
+                    }
+                } else {
+                    throw new Error('Invalid dashboard data structure');
+                }
+            } else {
+                throw new Error(`Dashboard request failed: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading dashboard overview:', error);
+            this.showError('Failed to load dashboard overview');
+        }
+    }
+
+    async loadAnalytics() {
+        try {
+            const response = await this.makeAuthenticatedRequest('/admin/analytics');
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data && (data.user_analytics || data.content_analytics)) {
+                    this.dashboardData.analytics = data;
+                    if (this.statisticsManager) {
+                        this.statisticsManager.updateCharts(data);
+                    }
+                } else {
+                    throw new Error('Invalid analytics data structure');
+                }
+            } else {
+                throw new Error(`Analytics request failed: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+            this.showError('Failed to load analytics');
+        }
+    }
+
+    async loadSupportDashboard() {
+        try {
+            const response = await this.makeAuthenticatedRequest('/admin/support/dashboard');
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data && data.ticket_stats) {
+                    this.dashboardData.supportDashboard = data;
+                    this.renderSupportStats(data);
+                    this.renderRecentTickets(data.recent_tickets || []);
+
+                    // Create alert for urgent tickets
+                    if (data.ticket_stats.urgent > 3 && this.systemMonitor) {
+                        this.systemMonitor.handleNewAlert({
+                            level: 'warning',
+                            component: 'Support System',
+                            message: `${data.ticket_stats.urgent} urgent tickets need attention`
+                        });
+                    }
+                } else {
+                    throw new Error('Invalid support data structure');
+                }
+            } else {
+                throw new Error(`Support dashboard request failed: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading support dashboard:', error);
+            this.showError('Failed to load support dashboard');
+        }
+    }
+
+    renderQuickActions() {
+        let quickActionsContainer = document.getElementById('quickActionsContainer');
+
+        if (!quickActionsContainer) {
+            const overviewCardsRow = document.getElementById('overviewCards')?.closest('.row');
+
+            if (overviewCardsRow) {
+                const quickActionsRow = document.createElement('div');
+                quickActionsRow.className = 'row mb-4';
+                quickActionsRow.innerHTML = `
+                <div class="col-12">
+                    <h2 class="section-title">
+                        <i data-feather="zap"></i>
+                        Quick Actions
+                    </h2>
+                </div>
+                <div class="col-12">
+                    <div id="quickActionsContainer" class="quick-actions"></div>
+                </div>
+            `;
+                overviewCardsRow.parentNode.insertBefore(quickActionsRow, overviewCardsRow.nextSibling);
+                quickActionsContainer = document.getElementById('quickActionsContainer');
+            }
+        }
+
+        if (quickActionsContainer) {
+            const actions = [
+                { href: '/admin/content.html', icon: 'film', label: 'Content' },
+                { href: '/admin/users.html', icon: 'users', label: 'Users' },
+                { href: '/admin/Support-Dashboard.html', icon: 'message-circle', label: 'Support' },
+                { href: '/admin/analytics.html', icon: 'bar-chart-2', label: 'Analytics' },
+                { href: '/admin/recommendations.html', icon: 'star', label: 'Recommendations' },
+                { href: '/admin/settings.html', icon: 'settings', label: 'Settings' }
+            ];
+
+            quickActionsContainer.innerHTML = actions.map(action => `
+            <a href="${action.href}" class="action-btn">
+                <i data-feather="${action.icon}"></i>
+                <span>${action.label}</span>
+            </a>
+        `).join('');
+
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        }
+    }
+
+    renderOverviewCards(data) {
+        const stats = data.general_stats || {};
+        const supportOverview = data.support_overview || {};
+
+        const cards = [
+            {
+                title: 'Total Users',
+                value: this.formatNumber(stats.total_users || 0),
+                change: this.calculateChange(stats.new_users_month, stats.total_users),
+                icon: 'users',
+                color: '#113CCF'
+            },
+            {
+                title: 'Total Content',
+                value: this.formatNumber(stats.total_content || 0),
+                change: '+' + this.formatNumber(stats.content_added_week || 0),
+                icon: 'film',
+                color: '#e50914'
+            },
+            {
+                title: 'Active Users',
+                value: this.formatNumber(stats.active_users_week || 0),
+                change: this.calculateChange(stats.active_users_change || 0, stats.active_users_week),
+                icon: 'activity',
+                color: '#10b981'
+            },
+            {
+                title: 'Support Tickets',
+                value: this.formatNumber(supportOverview.open_tickets || 0),
+                change: supportOverview.urgent_tickets > 0 ? `${supportOverview.urgent_tickets} urgent` : 'All handled',
+                icon: 'headphones',
+                color: supportOverview.urgent_tickets > 0 ? '#f59e0b' : '#10b981'
+            },
+            {
+                title: 'Interactions',
+                value: this.formatNumber(stats.total_interactions || 0),
+                change: '+' + this.formatNumber(stats.interactions_today || 0) + ' today',
+                icon: 'mouse-pointer',
+                color: '#8b5cf6'
+            },
+            {
+                title: 'Recommendations',
+                value: this.formatNumber(stats.total_recommendations || 0),
+                change: 'Active',
+                icon: 'star',
+                color: '#f59e0b'
+            }
+        ];
+
+        // Render mobile cards
+        if (this.elements.mobileOverviewCards && this.isMobile) {
+            this.elements.mobileOverviewCards.innerHTML = cards.map(card => `
+                <div class="mobile-overview-card" style="--card-color: ${card.color}">
+                    <div class="mobile-card-value">${card.value}</div>
+                    <div class="mobile-card-label">${card.title}</div>
+                </div>
+            `).join('');
+        }
+
+        // Render mobile stats grid
+        if (this.elements.mobileStatsGrid && this.isMobile) {
+            this.elements.mobileStatsGrid.innerHTML = cards.slice(0, 4).map(card => `
+                <div class="mobile-stat-item" style="--stat-color: ${card.color}">
+                    <div class="mobile-stat-value">${card.value}</div>
+                    <div class="mobile-stat-label">${card.title.split(' ')[0]}</div>
+                </div>
+            `).join('');
+        }
+
+        // Render desktop cards
+        if (this.elements.overviewCards && !this.isMobile) {
+            this.elements.overviewCards.innerHTML = cards.map(card => `
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="overview-card fade-in" style="--card-color: ${card.color}">
+                        <div class="overview-card-header">
+                            <div class="overview-card-title">
+                                <i data-feather="${card.icon}" class="overview-card-icon"></i>
+                                ${card.title}
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="card-info">
-                        <div class="card-title">${this.manager.escapeHtml(content.title || content.name || 'Unknown Title')}</div>
-                        <div class="card-meta">
-                            ${year ? `<span class="card-year">${year}</span>` : ''}
-                            ${runtime ? `<span class="card-runtime">• ${runtime}</span>` : ''}
-                        </div>
-                        <div class="card-genres">
-                            ${genres.map(genre => `<span class="genre-chip">${this.manager.escapeHtml(genre)}</span>`).join('')}
+                        <div class="overview-card-value">${card.value}</div>
+                        <div class="overview-card-change ${this.getChangeClass(card.change)}">
+                            <i data-feather="${this.getChangeIcon(card.change)}" class="change-icon"></i>
+                            ${card.change}
                         </div>
                     </div>
                 </div>
-            `;
-        } catch (error) {
-            console.error('Error creating upcoming content card:', error, recommendation);
-            return `
-                <div class="content-card error-card">
-                    <div class="card-info">
-                        <div class="card-title">Error loading content</div>
-                        <div class="card-meta">Please refresh the page</div>
-                    </div>
-                </div>
-            `;
+            `).join('');
+        }
+
+        if (typeof feather !== 'undefined') {
+            feather.replace();
         }
     }
 
-    async showEnhancedCreateRecommendationModal(content = null) {
-        const targetContent = content || this.manager.state.selectedContent;
-        if (!targetContent) {
-            this.manager.showError('No content selected');
-            return;
-        }
+    renderRecentActivity(activities) {
+        if (!this.elements.recentActivity || !activities) return;
 
-        if (!window.templateManager) {
-            window.templateManager = new TemplateManager(this);
-            await window.templateManager.loadTemplateData();
-        }
+        this.showTableLoading(this.elements.recentActivity);
 
-        const modal = document.getElementById('enhancedCreateRecommendationModal');
-        if (!modal) {
-            this.manager.showError('Enhanced template modal not found. Please refresh the page.');
-            return;
-        }
+        const allActivities = [
+            ...(activities.recent_content || []).map(item => ({
+                type: 'content_added',
+                title: `New ${item.type}: ${item.title}`,
+                subtitle: `Rating: ${item.rating || 'N/A'}/10`,
+                user: 'System',
+                time: this.formatTimeAgo(item.created_at),
+                timestamp: new Date(item.created_at),
+                status: 'success'
+            })),
+            ...(activities.recent_users || []).map(item => ({
+                type: 'user_registered',
+                title: 'New user registered',
+                subtitle: item.username,
+                user: item.email,
+                time: this.formatTimeAgo(item.created_at),
+                timestamp: new Date(item.created_at),
+                status: 'info'
+            })),
+            ...(activities.recent_recommendations || []).map(item => ({
+                type: 'recommendation_created',
+                title: 'Content recommended',
+                subtitle: item.content_title,
+                user: item.admin_name,
+                time: this.formatTimeAgo(item.created_at),
+                timestamp: new Date(item.created_at),
+                status: 'warning'
+            }))
+        ].sort((a, b) => b.timestamp - a.timestamp).slice(0, this.isMobile ? 5 : 8);
 
-        // Reset modal title for creating
-        const modalTitle = modal.querySelector('.modal-title');
-        if (modalTitle) {
-            modalTitle.innerHTML = `
-                <i data-feather="star"></i>
-                Create Recommendation with Template
-            `;
-        }
-
-        const contentPreview = document.getElementById('modalContentPreview');
-        if (contentPreview) {
-            contentPreview.innerHTML = `
-                <div class="row">
-                    <div class="col-3">
-                        <img src="${window.recUtils.getPosterUrl(targetContent)}" 
-                             alt="${targetContent.title}" 
-                             class="img-fluid rounded">
-                    </div>
-                    <div class="col-9">
-                        <h6>${targetContent.title || targetContent.name}</h6>
-                        <p class="text-muted mb-2">${targetContent.content_type || 'movie'} • ${window.recUtils.extractYear(targetContent.release_date || targetContent.first_air_date)}</p>
-                        <p class="small">${(targetContent.overview || '').substring(0, 150)}...</p>
-                    </div>
+        if (allActivities.length === 0) {
+            this.elements.recentActivity.innerHTML = `
+                <div class="table-empty-state">
+                    <i data-feather="clock"></i>
+                    <p>No recent activity</p>
                 </div>
             `;
-        }
-
-        const templateGrid = document.getElementById('templateGrid');
-        if (templateGrid) {
-            window.templateManager.renderTemplateSelection(templateGrid);
-        }
-
-        // Reset modal buttons for creating
-        const modalFooter = modal.querySelector('.modal-footer');
-        if (modalFooter) {
-            modalFooter.innerHTML = `
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="saveTemplateDraftBtn">
-                    <i data-feather="bookmark"></i>
-                    Save as Draft
-                </button>
-                <button type="button" class="btn btn-primary" id="publishTemplateBtn">
-                    <i data-feather="send"></i>
-                    Publish to Telegram
-                </button>
-            `;
-        }
-
-        this.setupEnhancedModalEventListeners(targetContent);
-
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-
-        modal.addEventListener('hidden.bs.modal', () => {
-            window.templateManager.selectedTemplate = null;
-            document.getElementById('templateGuidance').style.display = 'none';
-            const fieldsContainer = document.getElementById('templateFieldsContainer');
-            if (fieldsContainer) {
-                fieldsContainer.style.display = 'none';
+            if (typeof feather !== 'undefined') {
+                feather.replace();
             }
+            return;
+        }
+
+        let tableHtml = `
+            <div class="table-responsive-mobile">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Activity</th>
+                            <th class="d-none d-md-table-cell">User</th>
+                            <th>Time</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        allActivities.forEach(activity => {
+            tableHtml += `
+                <tr class="slide-up activity-new">
+                    <td>
+                        <div class="activity-info">
+                            <span class="activity-title">${this.truncateText(activity.title, this.isMobile ? 30 : 50)}</span>
+                            <span class="activity-subtitle">${this.truncateText(activity.subtitle, this.isMobile ? 25 : 40)}</span>
+                        </div>
+                    </td>
+                    <td class="d-none d-md-table-cell">
+                        <span style="color: var(--text-secondary); font-size: var(--font-xs);">
+                            ${this.truncateText(activity.user, 20)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="time-info">${activity.time}</span>
+                    </td>
+                    <td>
+                        <span class="table-badge table-badge-${activity.status}">
+                            ${activity.status}
+                        </span>
+                    </td>
+                </tr>
+            `;
         });
 
-        window.recUtils.refreshFeatherIcons();
-    }
+        tableHtml += '</tbody></table></div>';
+        this.elements.recentActivity.innerHTML = tableHtml;
 
-    setupEnhancedModalEventListeners(content) {
-        const saveDraftBtn = document.getElementById('saveTemplateDraftBtn');
-        const publishBtn = document.getElementById('publishTemplateBtn');
-
-        const newSaveDraftBtn = saveDraftBtn?.cloneNode(true);
-        const newPublishBtn = publishBtn?.cloneNode(true);
-
-        if (newSaveDraftBtn && saveDraftBtn) {
-            saveDraftBtn.parentNode.replaceChild(newSaveDraftBtn, saveDraftBtn);
-            newSaveDraftBtn.addEventListener('click', async () => {
-                const validation = window.templateManager.validateTemplateSelection();
-                if (!validation.valid) {
-                    this.manager.showError(validation.error);
-                    return;
-                }
-
-                const contentData = this.extractContentData(content);
-                const templateParams = window.templateManager.getTemplateParams();
-
-                await this.createTemplateRecommendation(
-                    contentData,
-                    window.templateManager.selectedTemplate,
-                    false,
-                    templateParams
-                );
-            });
-        }
-
-        if (newPublishBtn && publishBtn) {
-            publishBtn.parentNode.replaceChild(newPublishBtn, publishBtn);
-            newPublishBtn.addEventListener('click', async () => {
-                const validation = window.templateManager.validateTemplateSelection();
-                if (!validation.valid) {
-                    this.manager.showError(validation.error);
-                    return;
-                }
-
-                const contentData = this.extractContentData(content);
-                const templateParams = window.templateManager.getTemplateParams();
-
-                await this.createTemplateRecommendation(
-                    contentData,
-                    window.templateManager.selectedTemplate,
-                    true,
-                    templateParams
-                );
-            });
+        if (typeof feather !== 'undefined') {
+            feather.replace();
         }
     }
 
-    async createTemplateRecommendation(contentData, templateType, publishNow, templateParams = {}) {
-        try {
-            this.manager.showToast('Creating recommendation with template...', 'info');
+    renderRecentTickets(tickets) {
+        if (!this.elements.recentTickets || !tickets) return;
 
-            // FIX: Validate contentData before sending
-            if (!contentData || !contentData.id) {
-                throw new Error('Invalid content data');
-            }
+        this.showTableLoading(this.elements.recentTickets);
 
-            const requestData = {
-                content_data: contentData,
-                template_type: templateType || 'auto',
-                template_params: templateParams || {},
-                status: publishNow ? 'active' : 'draft',
-                publish_to_telegram: publishNow,
-                recommendation_type: templateType || 'general',
-                description: `Recommended with ${templateType} template`,
-                // NEW: Save template data with the draft
-                template_data: {
-                    selected_template: templateType,
-                    template_fields: templateParams,
-                    template_timestamp: Date.now()
-                }
-            };
-
-            console.log('🌐 Creating template recommendation:', requestData);
-
-            const response = await this.manager.makeAuthenticatedRequest('/admin/recommendations/create-with-template', {
-                method: 'POST',
-                body: JSON.stringify(requestData)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-
-                if (publishNow) {
-                    this.manager.showToast('Recommendation published with template!', 'success');
-                } else {
-                    this.manager.showToast('Recommendation saved as draft with template!', 'success');
-                }
-
-                const modal = document.getElementById('enhancedCreateRecommendationModal');
-                if (modal) {
-                    bootstrap.Modal.getInstance(modal)?.hide();
-                }
-
-                this.manager.loadRecommendations(true);
-                this.manager.loadUpcomingRecommendations(true);
-                this.manager.loadQuickStats();
-
-                console.log('✅ Template recommendation created successfully:', result);
-
-            } else {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to create recommendation');
-            }
-        } catch (error) {
-            console.error('Template recommendation error:', error);
-            this.manager.showError('Failed to create recommendation: ' + error.message);
-        }
-    }
-
-    async editRecommendation(recommendationId) {
-        try {
-            if (!recommendationId || recommendationId === 0) {
-                this.manager.showError('Invalid recommendation ID');
-                return;
-            }
-
-            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch recommendation details');
-            }
-
-            const recommendation = await response.json();
-
-            // Use enhanced template modal for editing
-            this.showEnhancedEditModal(recommendation);
-
-        } catch (error) {
-            console.error('Edit recommendation error:', error);
-            this.manager.showError('Failed to open edit form: ' + error.message);
-        }
-    }
-
-    // NEW: Enhanced edit modal using the same design as create recommendation
-    showEnhancedEditModal(recommendation) {
-        if (!window.templateManager) {
-            window.templateManager = new TemplateManager(this);
-            window.templateManager.loadTemplateData().then(() => {
-                this.renderEnhancedEditModal(recommendation);
-            });
-        } else {
-            this.renderEnhancedEditModal(recommendation);
-        }
-    }
-
-    renderEnhancedEditModal(recommendation) {
-        const modal = document.getElementById('enhancedCreateRecommendationModal');
-        if (!modal) {
-            this.manager.showError('Enhanced template modal not found. Please refresh the page.');
-            return;
-        }
-
-        // Update modal title for editing
-        const modalTitle = modal.querySelector('.modal-title');
-        if (modalTitle) {
-            modalTitle.innerHTML = `
-                <i data-feather="edit"></i>
-                Edit Recommendation
-            `;
-        }
-
-        // Update content preview
-        const contentPreview = document.getElementById('modalContentPreview');
-        if (contentPreview) {
-            contentPreview.innerHTML = `
-                <div class="row">
-                    <div class="col-3">
-                        <img src="${window.recUtils.getPosterUrl(recommendation.content)}" 
-                             alt="${recommendation.content?.title}" 
-                             class="img-fluid rounded">
-                    </div>
-                    <div class="col-9">
-                        <h6>${recommendation.content?.title || recommendation.content?.name}</h6>
-                        <p class="text-muted mb-2">${recommendation.content?.content_type || 'movie'} • ${window.recUtils.extractYear(recommendation.content?.release_date || recommendation.content?.first_air_date)}</p>
-                        <p class="small">${(recommendation.content?.overview || '').substring(0, 150)}...</p>
-                        
-                        <div class="mt-2">
-                            <small class="text-muted">
-                                <strong>Current Type:</strong> ${window.recUtils.formatRecommendationType(recommendation.recommendation_type)}<br>
-                                <strong>Status:</strong> ${recommendation.is_active ? 'Active' : 'Draft'}
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Render template selection
-        const templateGrid = document.getElementById('templateGrid');
-        if (templateGrid) {
-            window.templateManager.renderTemplateSelection(templateGrid);
-
-            // Pre-select template if saved with recommendation
-            const savedTemplate = recommendation.template_data?.selected_template || recommendation.recommendation_type || 'standard_movie';
-            setTimeout(() => {
-                window.templateManager.selectTemplate(savedTemplate);
-
-                // Pre-fill template fields if saved
-                if (recommendation.template_data?.template_fields) {
-                    this.preloadTemplateFields(recommendation.template_data.template_fields);
-                }
-            }, 100);
-        }
-
-        // Update modal buttons for editing
-        const modalFooter = modal.querySelector('.modal-footer');
-        if (modalFooter) {
-            modalFooter.innerHTML = `
-                <button type="button" class="btn btn-danger me-auto" id="deleteRecommendationBtn">
-                    <i data-feather="trash"></i>
-                    Delete
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="saveChangesBtn">
+        if (tickets.length === 0) {
+            this.elements.recentTickets.innerHTML = `
+                <div class="table-empty-state">
                     <i data-feather="check-circle"></i>
-                    Save Changes
-                </button>
-                <button type="button" class="btn btn-primary" id="saveAndPublishBtn">
-                    <i data-feather="send"></i>
-                    Save & Publish
-                </button>
+                    <p>No recent tickets</p>
+                </div>
             `;
-        }
-
-        this.setupEnhancedEditEventListeners(recommendation);
-
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-
-        modal.addEventListener('hidden.bs.modal', () => {
-            window.templateManager.selectedTemplate = null;
-            document.getElementById('templateGuidance').style.display = 'none';
-            const fieldsContainer = document.getElementById('templateFieldsContainer');
-            if (fieldsContainer) {
-                fieldsContainer.style.display = 'none';
+            if (typeof feather !== 'undefined') {
+                feather.replace();
             }
-        });
-
-        window.recUtils.refreshFeatherIcons();
-    }
-
-    async publishDraftRecommendation(recommendationId) {
-        try {
-            if (!recommendationId || recommendationId === 0) {
-                this.manager.showError('Invalid recommendation ID');
-                return;
-            }
-
-            const recommendation = this.manager.state.upcomingRecommendations.find(rec => rec.id === recommendationId);
-            if (!recommendation) {
-                this.manager.showError('Recommendation not found');
-                return;
-            }
-
-            // Use enhanced template modal for publishing
-            this.showEnhancedPublishModal(recommendation);
-
-        } catch (error) {
-            console.error('Publish draft error:', error);
-            this.manager.showError('Failed to publish recommendation: ' + error.message);
-        }
-    }
-
-    // NEW: Enhanced publish modal using the same design as create recommendation
-    showEnhancedPublishModal(recommendation) {
-        if (!window.templateManager) {
-            window.templateManager = new TemplateManager(this);
-            window.templateManager.loadTemplateData().then(() => {
-                this.renderEnhancedPublishModal(recommendation);
-            });
-        } else {
-            this.renderEnhancedPublishModal(recommendation);
-        }
-    }
-
-    renderEnhancedPublishModal(recommendation) {
-        const modal = document.getElementById('enhancedCreateRecommendationModal');
-        if (!modal) {
-            this.manager.showError('Enhanced template modal not found. Please refresh the page.');
             return;
         }
 
-        // Update modal title for publishing
-        const modalTitle = modal.querySelector('.modal-title');
-        if (modalTitle) {
-            modalTitle.innerHTML = `
-                <i data-feather="send"></i>
-                Publish Recommendation to Telegram
-            `;
-        }
+        const displayTickets = tickets.slice(0, this.isMobile ? 3 : 6);
 
-        // Update content preview
-        const contentPreview = document.getElementById('modalContentPreview');
-        if (contentPreview) {
-            contentPreview.innerHTML = `
-                <div class="row">
-                    <div class="col-3">
-                        <img src="${window.recUtils.getPosterUrl(recommendation.content)}" 
-                             alt="${recommendation.content?.title}" 
-                             class="img-fluid rounded">
-                    </div>
-                    <div class="col-9">
-                        <h6>${recommendation.content?.title || recommendation.content?.name}</h6>
-                        <p class="text-muted mb-2">${recommendation.content?.content_type || 'movie'} • ${window.recUtils.extractYear(recommendation.content?.release_date || recommendation.content?.first_air_date)}</p>
-                        <p class="small">${(recommendation.content?.overview || '').substring(0, 150)}...</p>
-                    </div>
-                </div>
-            `;
-        }
+        let tableHtml = `
+            <div class="table-responsive-mobile">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Ticket</th>
+                            <th class="d-none d-md-table-cell">User</th>
+                            <th>Priority</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
 
-        // Render template selection
-        const templateGrid = document.getElementById('templateGrid');
-        if (templateGrid) {
-            window.templateManager.renderTemplateSelection(templateGrid);
+        displayTickets.forEach(ticket => {
+            const priorityBadge = {
+                'urgent': 'danger',
+                'high': 'warning',
+                'normal': 'info',
+                'low': 'success'
+            }[ticket.priority] || 'info';
 
-            // Pre-select template if saved with recommendation
-            if (recommendation.template_data?.selected_template) {
-                setTimeout(() => {
-                    window.templateManager.selectTemplate(recommendation.template_data.selected_template);
-
-                    // Pre-fill template fields if saved
-                    if (recommendation.template_data?.template_fields) {
-                        this.preloadTemplateFields(recommendation.template_data.template_fields);
-                    }
-                }, 100);
-            }
-        }
-
-        // Update modal buttons for publishing
-        const modalFooter = modal.querySelector('.modal-footer');
-        if (modalFooter) {
-            modalFooter.innerHTML = `
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="updateDraftBtn">
-                    <i data-feather="bookmark"></i>
-                    Update Draft
-                </button>
-                <button type="button" class="btn btn-primary" id="publishNowBtn">
-                    <i data-feather="send"></i>
-                    Publish to Telegram
-                </button>
-            `;
-        }
-
-        this.setupEnhancedPublishEventListeners(recommendation);
-
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-
-        modal.addEventListener('hidden.bs.modal', () => {
-            window.templateManager.selectedTemplate = null;
-            document.getElementById('templateGuidance').style.display = 'none';
-            const fieldsContainer = document.getElementById('templateFieldsContainer');
-            if (fieldsContainer) {
-                fieldsContainer.style.display = 'none';
-            }
-        });
-
-        window.recUtils.refreshFeatherIcons();
-    }
-
-    // NEW: Setup event listeners for enhanced publish modal
-    setupEnhancedPublishEventListeners(recommendation) {
-        const updateDraftBtn = document.getElementById('updateDraftBtn');
-        const publishNowBtn = document.getElementById('publishNowBtn');
-
-        updateDraftBtn?.addEventListener('click', async () => {
-            const validation = window.templateManager.validateTemplateSelection();
-            if (!validation.valid) {
-                this.manager.showError(validation.error);
-                return;
-            }
-
-            const templateParams = window.templateManager.getTemplateParams();
-            await this.updateRecommendationWithTemplate(
-                recommendation.id,
-                window.templateManager.selectedTemplate,
-                false,
-                templateParams
-            );
-        });
-
-        publishNowBtn?.addEventListener('click', async () => {
-            const validation = window.templateManager.validateTemplateSelection();
-            if (!validation.valid) {
-                this.manager.showError(validation.error);
-                return;
-            }
-
-            const templateParams = window.templateManager.getTemplateParams();
-            await this.updateRecommendationWithTemplate(
-                recommendation.id,
-                window.templateManager.selectedTemplate,
-                true,
-                templateParams
-            );
-        });
-    }
-
-    // NEW: Setup event listeners for enhanced edit modal
-    setupEnhancedEditEventListeners(recommendation) {
-        const deleteBtn = document.getElementById('deleteRecommendationBtn');
-        const saveChangesBtn = document.getElementById('saveChangesBtn');
-        const saveAndPublishBtn = document.getElementById('saveAndPublishBtn');
-
-        deleteBtn?.addEventListener('click', async () => {
-            if (confirm('Are you sure you want to delete this recommendation? This action cannot be undone.')) {
-                await this.deleteRecommendation(recommendation.id);
-            }
-        });
-
-        saveChangesBtn?.addEventListener('click', async () => {
-            const validation = window.templateManager.validateTemplateSelection();
-            if (!validation.valid) {
-                this.manager.showError(validation.error);
-                return;
-            }
-
-            const templateParams = window.templateManager.getTemplateParams();
-            await this.updateRecommendationWithTemplate(
-                recommendation.id,
-                window.templateManager.selectedTemplate,
-                false,
-                templateParams
-            );
-        });
-
-        saveAndPublishBtn?.addEventListener('click', async () => {
-            const validation = window.templateManager.validateTemplateSelection();
-            if (!validation.valid) {
-                this.manager.showError(validation.error);
-                return;
-            }
-
-            const templateParams = window.templateManager.getTemplateParams();
-            await this.updateRecommendationWithTemplate(
-                recommendation.id,
-                window.templateManager.selectedTemplate,
-                true,
-                templateParams
-            );
-        });
-    }
-
-    // NEW: Update recommendation with template data
-    async updateRecommendationWithTemplate(recommendationId, templateType, publishNow, templateParams = {}) {
-        try {
-            this.manager.showToast(publishNow ? 'Publishing recommendation...' : 'Updating recommendation...', 'info');
-
-            const updateData = {
-                recommendation_type: templateType,
-                template_data: {
-                    selected_template: templateType,
-                    template_fields: templateParams,
-                    template_timestamp: Date.now()
-                },
-                is_active: publishNow
-            };
-
-            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`, {
-                method: 'PUT',
-                body: JSON.stringify(updateData)
-            });
-
-            if (response.ok) {
-                if (publishNow) {
-                    // Also publish to Telegram
-                    const publishResponse = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}/publish`, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            template_type: templateType,
-                            template_params: templateParams
-                        })
-                    });
-
-                    if (publishResponse.ok) {
-                        const result = await publishResponse.json();
-                        if (result.telegram_sent) {
-                            this.manager.showToast('Recommendation updated and published to Telegram!', 'success');
-                        } else {
-                            this.manager.showToast('Recommendation updated (Telegram not configured)', 'warning');
-                        }
-                    } else {
-                        this.manager.showToast('Recommendation updated but failed to publish to Telegram', 'warning');
-                    }
-                } else {
-                    this.manager.showToast('Recommendation updated successfully!', 'success');
-                }
-
-                const modal = document.getElementById('enhancedCreateRecommendationModal');
-                if (modal) {
-                    bootstrap.Modal.getInstance(modal)?.hide();
-                }
-
-                this.manager.loadRecommendations(true);
-                this.manager.loadUpcomingRecommendations(true);
-                this.manager.loadQuickStats();
-
-            } else {
-                const error = await response.json();
-                throw new Error(error.error || 'Update failed');
-            }
-        } catch (error) {
-            console.error('Update recommendation error:', error);
-            this.manager.showError('Failed to update recommendation: ' + error.message);
-        }
-    }
-
-    // NEW: Preload template fields with saved data
-    preloadTemplateFields(templateFields) {
-        setTimeout(() => {
-            Object.entries(templateFields).forEach(([fieldKey, fieldValue]) => {
-                const field = document.getElementById(`template_${fieldKey}`);
-                if (field) {
-                    field.value = fieldValue;
-
-                    // Update character count if exists
-                    const countElement = document.getElementById(`count_${fieldKey}`);
-                    if (countElement) {
-                        const maxLength = field.maxLength || 200;
-                        countElement.textContent = `${fieldValue.length}/${maxLength}`;
-                    }
-                }
-            });
-
-            // Handle list items if present
-            if (templateFields.items && Array.isArray(templateFields.items)) {
-                const container = document.getElementById('listItemsContainer');
-                if (container) {
-                    // Clear existing items
-                    container.innerHTML = '';
-
-                    // Add saved items
-                    templateFields.items.forEach((item, index) => {
-                        if (index === 0) {
-                            // Create first item
-                            const firstItem = document.createElement('div');
-                            firstItem.className = 'list-item';
-                            firstItem.innerHTML = `
-                                <div class="list-item-number">1.</div>
-                                <div class="list-item-inputs">
-                                    <input type="text" class="list-item-input" placeholder="Movie Title" maxlength="50" value="${item[0] || ''}">
-                                    <input type="text" class="list-item-input" placeholder="Year" maxlength="4" value="${item[1] || ''}">
-                                    <input type="text" class="list-item-input" placeholder="Hook (short, punchy)" maxlength="80" value="${item[2] || ''}">
-                                </div>
-                                <div class="list-item-actions">
-                                    <button type="button" class="add-list-item-btn" onclick="window.templateManager.addListItem()">
-                                        <i data-feather="plus"></i>
-                                    </button>
-                                </div>
-                            `;
-                            container.appendChild(firstItem);
-                        } else {
-                            // Add additional items
-                            window.templateManager.addListItem();
-                            const newItem = container.lastElementChild;
-                            const inputs = newItem.querySelectorAll('.list-item-input');
-                            if (inputs.length >= 3) {
-                                inputs[0].value = item[0] || '';
-                                inputs[1].value = item[1] || '';
-                                inputs[2].value = item[2] || '';
-                            }
-                        }
-                    });
-
-                    window.recUtils.refreshFeatherIcons();
-                }
-            }
-        }, 200);
-    }
-
-    // NEW: Delete recommendation method
-    async deleteRecommendation(recommendationId) {
-        try {
-            this.manager.showToast('Deleting recommendation...', 'info');
-
-            const response = await this.manager.makeAuthenticatedRequest(`/admin/recommendations/${recommendationId}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                this.manager.showToast('Recommendation deleted successfully!', 'success');
-
-                const modal = document.getElementById('enhancedCreateRecommendationModal');
-                if (modal) {
-                    bootstrap.Modal.getInstance(modal)?.hide();
-                }
-
-                this.manager.loadRecommendations(true);
-                this.manager.loadUpcomingRecommendations(true);
-                this.manager.loadQuickStats();
-
-            } else {
-                const error = await response.json();
-                throw new Error(error.error || 'Delete failed');
-            }
-        } catch (error) {
-            console.error('Delete recommendation error:', error);
-            this.manager.showError('Failed to delete recommendation: ' + error.message);
-        }
-    }
-
-    async bulkEditUpcoming() {
-        const modal = document.createElement('div');
-        modal.className = 'modal fade';
-        modal.id = 'bulkEditUpcomingModal';
-        modal.innerHTML = `
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i data-feather="edit"></i>
-                            Bulk Edit Upcoming
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Select an action to perform on all upcoming recommendations:</p>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-outline-primary" id="bulkMoveToActive">
-                                <i data-feather="arrow-right"></i>
-                                Move All to Active
-                            </button>
-                            <button class="btn btn-outline-success" id="bulkPublishAll">
-                                <i data-feather="send"></i>
-                                Publish All to Telegram
-                            </button>
-                            <button class="btn btn-outline-secondary" id="bulkExportUpcoming">
-                                <i data-feather="download"></i>
-                                Export as CSV
-                            </button>
-                            <button class="btn btn-outline-danger" id="bulkDeleteUpcoming">
-                                <i data-feather="trash"></i>
-                                Delete All Drafts
-                            </button>
+            tableHtml += `
+                <tr class="slide-up ${ticket.is_sla_breached ? 'sla-breached' : ''}">
+                    <td>
+                        <div class="ticket-info">
+                            <a href="/admin/support/ticket/${ticket.id || ticket.ticket_number}" class="ticket-number">
+                                #${ticket.ticket_number}
+                            </a>
+                            <span class="ticket-subject">
+                                ${this.truncateText(ticket.subject, this.isMobile ? 30 : 45)}
+                                ${ticket.is_sla_breached ? '<span class="table-badge table-badge-danger" style="font-size: 10px; margin-left: 4px;">SLA</span>' : ''}
+                            </span>
                         </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    </div>
+                    </td>
+                    <td class="d-none d-md-table-cell">
+                        <span style="color: var(--text-secondary); font-size: var(--font-xs);">
+                            ${this.truncateText(ticket.user_name, 15)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="table-badge table-badge-${priorityBadge}">
+                            ${ticket.priority}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="time-info">${this.formatTimeAgo(ticket.created_at)}</span>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tableHtml += '</tbody></table></div>';
+        this.elements.recentTickets.innerHTML = tableHtml;
+
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+
+    renderSupportStats(data) {
+        if (!this.elements.supportStats || !data.ticket_stats) return;
+
+        const stats = data.ticket_stats;
+
+        const statItems = [
+            { label: 'Total', value: stats.total || 0, color: '#113CCF' },
+            { label: 'Open', value: stats.open || 0, color: '#f59e0b' },
+            { label: 'Urgent', value: stats.urgent || 0, color: '#ef4444' },
+            { label: 'Today', value: stats.today_created || 0, color: '#10b981' }
+        ];
+
+        this.elements.supportStats.innerHTML = statItems.map(stat => `
+            <div class="support-stat">
+                <div class="support-stat-value" style="--stat-color: ${stat.color}">${stat.value}</div>
+                <div class="support-stat-label">${stat.label}</div>
+            </div>
+        `).join('');
+
+        // Update urgent tickets badge
+        const urgentBadge = document.getElementById('urgentTicketsBadge');
+        if (urgentBadge) {
+            if (stats.urgent > 0) {
+                urgentBadge.textContent = stats.urgent;
+                urgentBadge.style.display = 'inline-block';
+            } else {
+                urgentBadge.style.display = 'none';
+            }
+        }
+    }
+
+    // Real-time Updates
+    startRealTimeUpdates() {
+        this.refreshInterval = 8000;
+
+        this.refreshTimer = setInterval(() => {
+            if (!this.isRefreshing && !document.hidden) {
+                this.refreshAllData();
+            }
+        }, this.refreshInterval);
+
+        console.log(`✅ HTTP polling started (${this.refreshInterval / 1000}s interval)`);
+    }
+
+    setupSmartPolling() {
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                this.refreshAllData();
+                if (this.systemMonitor) {
+                    this.systemMonitor.loadAllSystemData();
+                }
+                this.boostPollingFrequency();
+            }
+        });
+    }
+
+    boostPollingFrequency() {
+        if (this.boostTimeout) {
+            clearTimeout(this.boostTimeout);
+        }
+
+        const originalRefreshInterval = this.refreshInterval;
+        this.refreshInterval = 3000;
+
+        this.boostTimeout = setTimeout(() => {
+            this.refreshInterval = originalRefreshInterval;
+            console.log('✅ Polling frequency normalized');
+        }, 30000);
+
+        console.log('⚡ Polling frequency boosted for 30s');
+    }
+
+    stopRealTimeUpdates() {
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+            this.refreshTimer = null;
+            console.log('⏹ Real-time updates stopped');
+        }
+    }
+
+    async refreshAllData() {
+        if (this.isRefreshing) return;
+
+        this.isRefreshing = true;
+
+        try {
+            await this.loadAllData();
+            if (this.systemMonitor) {
+                await this.systemMonitor.loadAllSystemData();
+            }
+            this.showSuccess('Dashboard updated');
+        } catch (error) {
+            console.error('Refresh error:', error);
+            this.showError('Failed to refresh dashboard');
+        } finally {
+            this.isRefreshing = false;
+        }
+    }
+
+    updateChartsForPeriod() {
+        this.loadAnalytics();
+    }
+
+    // Loading state for tables
+    showTableLoading(element) {
+        if (!element) return;
+
+        element.innerHTML = `
+            <div class="table-loading">
+                <div class="table-skeleton-row">
+                    <div class="table-skeleton-cell wide"></div>
+                    <div class="table-skeleton-cell medium"></div>
+                    <div class="table-skeleton-cell small"></div>
+                </div>
+                <div class="table-skeleton-row">
+                    <div class="table-skeleton-cell wide"></div>
+                    <div class="table-skeleton-cell medium"></div>
+                    <div class="table-skeleton-cell small"></div>
+                </div>
+                <div class="table-skeleton-row">
+                    <div class="table-skeleton-cell wide"></div>
+                    <div class="table-skeleton-cell medium"></div>
+                    <div class="table-skeleton-cell small"></div>
                 </div>
             </div>
         `;
-
-        document.body.appendChild(modal);
-
-        document.getElementById('bulkMoveToActive').addEventListener('click', async () => {
-            await this.bulkMoveToActive();
-        });
-
-        document.getElementById('bulkPublishAll').addEventListener('click', async () => {
-            await this.bulkPublishUpcoming();
-        });
-
-        document.getElementById('bulkExportUpcoming').addEventListener('click', async () => {
-            await this.exportUpcomingRecommendations();
-        });
-
-        document.getElementById('bulkDeleteUpcoming').addEventListener('click', async () => {
-            await this.bulkDeleteUpcoming();
-        });
-
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-
-        modal.addEventListener('hidden.bs.modal', () => {
-            modal.remove();
-        });
-
-        window.recUtils.refreshFeatherIcons();
     }
 
-    async bulkMoveToActive() {
-        try {
-            if (!confirm('Are you sure you want to move all upcoming recommendations to active?')) {
-                return;
+    // Utility Methods
+    async makeAuthenticatedRequest(endpoint, options = {}) {
+        const token = localStorage.getItem('cinebrain-token');
+
+        const defaultOptions = {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             }
-
-            this.manager.showToast('Moving all to active...', 'info');
-
-            const promises = this.manager.state.upcomingRecommendations.map(rec =>
-                this.manager.makeAuthenticatedRequest(`/admin/recommendations/${rec.id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ is_active: true })
-                })
-            );
-
-            await Promise.allSettled(promises);
-            this.manager.showToast('Bulk move completed!', 'success');
-            this.manager.loadRecommendations(true);
-            this.manager.loadUpcomingRecommendations(true);
-
-        } catch (error) {
-            console.error('Bulk move error:', error);
-            this.manager.showError('Failed to move all recommendations');
-        }
-    }
-
-    async bulkPublishUpcoming() {
-        try {
-            if (!confirm('Are you sure you want to publish all upcoming recommendations to Telegram?')) {
-                return;
-            }
-
-            this.manager.showToast('Publishing all to Telegram...', 'info');
-
-            const promises = this.manager.state.upcomingRecommendations.map(rec =>
-                this.manager.makeAuthenticatedRequest(`/admin/recommendations/${rec.id}/publish`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        template_type: 'auto',
-                        template_params: {}
-                    })
-                })
-            );
-
-            await Promise.allSettled(promises);
-            this.manager.showToast('Bulk publish completed!', 'success');
-            this.manager.loadRecommendations(true);
-            this.manager.loadUpcomingRecommendations(true);
-
-        } catch (error) {
-            console.error('Bulk publish error:', error);
-            this.manager.showError('Failed to publish all recommendations');
-        }
-    }
-
-    async exportUpcomingRecommendations() {
-        try {
-            const csvContent = this.generateCSV(this.manager.state.upcomingRecommendations);
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `upcoming_recommendations_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-
-            window.URL.revokeObjectURL(url);
-            this.manager.showToast('Upcoming recommendations exported!', 'success');
-
-        } catch (error) {
-            console.error('Export error:', error);
-            this.manager.showError('Failed to export upcoming recommendations');
-        }
-    }
-
-    async bulkDeleteUpcoming() {
-        try {
-            if (!confirm('Are you sure you want to delete ALL upcoming recommendations? This action cannot be undone.')) {
-                return;
-            }
-
-            this.manager.showToast('Deleting all upcoming...', 'info');
-
-            const promises = this.manager.state.upcomingRecommendations.map(rec =>
-                this.manager.makeAuthenticatedRequest(`/admin/recommendations/${rec.id}`, {
-                    method: 'DELETE'
-                })
-            );
-
-            await Promise.allSettled(promises);
-            this.manager.showToast('All upcoming recommendations deleted!', 'success');
-            this.manager.loadUpcomingRecommendations(true);
-            this.manager.loadQuickStats();
-
-        } catch (error) {
-            console.error('Bulk delete error:', error);
-            this.manager.showError('Failed to delete upcoming recommendations');
-        }
-    }
-
-    generateCSV(recommendations) {
-        const headers = ['Title', 'Type', 'Content Type', 'Description', 'Status', 'Created Date'];
-        const rows = recommendations.map(rec => [
-            rec.content?.title || 'Unknown',
-            rec.recommendation_type || 'general',
-            rec.content?.content_type || 'movie',
-            (rec.description || '').replace(/"/g, '""'),
-            rec.is_active ? 'Active' : 'Draft',
-            new Date(rec.created_at).toLocaleDateString()
-        ]);
-
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(row => row.map(field => `"${field}"`).join(','))
-        ].join('\n');
-
-        return csvContent;
-    }
-
-    extractContentData(content) {
-        // FIX: Better data extraction with validation
-        if (!content) {
-            throw new Error('Content data is required');
-        }
-
-        return {
-            id: content.id || content.tmdb_id || content.mal_id,
-            title: content.title || content.name || 'Unknown Title',
-            original_title: content.original_title || content.original_name || content.title || content.name,
-            content_type: content.content_type || content.media_type || 'movie',
-            genres: content.genre_ids || content.genres || [],
-            languages: content.original_language ? [content.original_language] : ['en'],
-            release_date: content.release_date || content.first_air_date,
-            runtime: content.runtime,
-            rating: content.vote_average || content.rating || 0,
-            vote_count: content.vote_count || 0,
-            popularity: content.popularity || 0,
-            overview: content.overview || '',
-            poster_path: content.poster_path,
-            backdrop_path: content.backdrop_path,
-            source: content.source || this.elements.searchSource?.value || 'tmdb'
-        };
-    }
-
-    setupLazyLoadingForCards(container = null) {
-        const cards = container?.querySelectorAll('.content-card img[data-src]');
-        if (!cards || cards.length === 0) return;
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    const imgSrc = img.dataset.src;
-
-                    if (imgSrc) {
-                        const tempImg = new Image();
-                        tempImg.onload = () => {
-                            img.src = imgSrc;
-                            img.classList.add('loaded');
-                        };
-                        tempImg.onerror = () => {
-                            img.src = this.manager.placeholderImage;
-                            img.classList.add('loaded');
-                        };
-                        tempImg.src = imgSrc;
-                    }
-                    observer.unobserve(img);
-                }
-            });
-        }, {
-            rootMargin: this.manager.isMobile ? '50px' : '100px',
-            threshold: 0.01
-        });
-
-        cards.forEach(img => observer.observe(img));
-    }
-
-    updateTabContainerHeight() {
-        const contentTabs = document.querySelector('.content-tabs');
-        const activeTabPane = document.querySelector('.tab-pane.active');
-
-        if (contentTabs && activeTabPane) {
-            const hasExpandedContent = activeTabPane.querySelector('.active');
-
-            if (hasExpandedContent) {
-                contentTabs.classList.add('has-expanded-content');
-            } else {
-                contentTabs.classList.remove('has-expanded-content');
-            }
-        }
-    }
-}
-
-// Initialize and expose globally
-window.recUpcoming = null;
-window.templateManager = null;
-
-
-6. rec-utils.js 
-// rec-utils.js - Fixed version with proper null handling
-
-class RecUtils {
-    constructor() {
-        this.placeholderImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgZmlsbD0iIzFhMWYzYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSIjNjY3IiBmb250LXNpemU9IjE4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2luZUJyYWluPC90ZXh0Pjwvc3ZnPg==';
-    }
-
-    createContentCard(content, context = 'search') {
-        // Add null safety
-        if (!content) {
-            console.warn('createContentCard: content is null/undefined');
-            return '';
-        }
-
-        const posterUrl = this.getPosterUrl(content);
-        const rating = this.formatRating(content.rating || content.vote_average);
-        const year = this.extractYear(content.release_date || content.first_air_date);
-        const contentType = content.content_type || content.media_type || 'movie';
-        const contentId = content.id || content.tmdb_id || content.mal_id || Date.now();
-        const runtime = this.formatRuntime(content.runtime);
-        const genres = this.getGenres(content);
-
-        if (context === 'search') {
-            return `
-                <div class="content-card" data-content-id="${contentId}" data-source="${content.source || 'tmdb'}" tabindex="0">
-                    <div class="card-poster-container">
-                        <img class="card-poster" data-src="${posterUrl}" alt="${this.escapeHtml(content.title || content.name || 'Content')}" loading="lazy">
-                        
-                        <div class="content-type-badge ${contentType}">
-                            ${contentType.toUpperCase()}
-                        </div>
-
-                        <div class="card-overlays">
-                            <div class="card-top-overlay"></div>
-                            <div class="card-bottom-overlay">
-                                <div class="rating-badge">
-                                    <svg viewBox="0 0 24 24">
-                                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                                    </svg>
-                                    <span>${rating}</span>
-                                </div>
-                                <div class="card-actions">
-                                    <button class="action-btn recommend-btn" onclick="window.recSearch.recommendContent('${contentId}')" 
-                                            title="Create Recommendation" aria-label="Create Recommendation">
-                                        <i data-feather="star"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card-info">
-                        <div class="card-title">${this.escapeHtml(content.title || content.name || 'Unknown Title')}</div>
-                        <div class="card-meta">
-                            ${year ? `<span class="card-year">${year}</span>` : ''}
-                            ${runtime ? `<span class="card-runtime">• ${runtime}</span>` : ''}
-                        </div>
-                        <div class="card-genres">
-                            ${genres.map(genre => `<span class="genre-chip">${genre}</span>`).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        return '';
-    }
-
-    getPosterUrl(content) {
-        if (!content) return this.placeholderImage;
-
-        if (content.poster_path) {
-            if (content.poster_path.startsWith('http')) {
-                return content.poster_path;
-            } else {
-                return `https://image.tmdb.org/t/p/w500${content.poster_path}`;
-            }
-        }
-
-        return this.placeholderImage;
-    }
-
-    formatRating(rating) {
-        if (!rating || rating === 0 || isNaN(rating)) return 'N/A';
-        return Number(rating).toFixed(1);
-    }
-
-    formatRuntime(runtime) {
-        if (!runtime || runtime === 0 || isNaN(runtime)) return '';
-        const hours = Math.floor(runtime / 60);
-        const minutes = runtime % 60;
-        if (hours > 0) {
-            return `${hours}h ${minutes > 0 ? minutes + 'm' : ''}`;
-        }
-        return `${minutes}m`;
-    }
-
-    getGenres(content) {
-        if (!content) return [];
-
-        if (!content.genres && !content.genre_ids) return [];
-
-        if (content.genres && Array.isArray(content.genres)) {
-            return content.genres.map(g => {
-                if (typeof g === 'string') return g;
-                if (g && g.name) return g.name;
-                return 'Unknown';
-            }).slice(0, 3);
-        }
-
-        const genreMap = {
-            28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy',
-            80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family',
-            14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music',
-            9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi', 10770: 'TV Movie',
-            53: 'Thriller', 10752: 'War', 37: 'Western'
         };
 
-        if (content.genre_ids && Array.isArray(content.genre_ids)) {
-            return content.genre_ids
-                .map(id => genreMap[id] || 'Unknown')
-                .slice(0, 3);
-        }
-
-        return [];
-    }
-
-    formatRecommendationType(type) {
-        // FIX: Add null/undefined check
-        if (!type || typeof type !== 'string') {
-            console.warn('formatRecommendationType: invalid type:', type);
-            return 'General';
-        }
-
-        const typeMap = {
-            'featured': 'Featured',
-            'trending': 'Trending',
-            'hidden_gem': 'Hidden Gem',
-            'classic': 'Classic',
-            'new_release': 'New Release',
-            'mind_bending': 'Mind-Bending',
-            'anime_gem': 'Anime Gem',
-            'scene_clip': 'Scene Clip',
-            'top_list': 'Top List',
-            'standard_movie': 'Standard Movie',
-            'standard_tv': 'Standard TV',
-            'standard_anime': 'Standard Anime'
+        const mergedOptions = {
+            ...defaultOptions,
+            ...options,
+            headers: {
+                ...defaultOptions.headers,
+                ...(options.headers || {})
+            }
         };
 
-        // Return mapped value or format the string safely
-        return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
+        const response = await fetch(`${this.apiBase}${endpoint}`, mergedOptions);
 
-    extractYear(dateString) {
-        if (!dateString) return '';
-        try {
-            const year = new Date(dateString).getFullYear();
-            return isNaN(year) ? '' : year;
-        } catch {
-            return '';
+        if (response.status === 401) {
+            localStorage.removeItem('cinebrain-token');
+            localStorage.removeItem('cinebrain-user');
+            window.location.href = '/auth/login.html';
+            throw new Error('Authentication failed');
         }
-    }
 
-    escapeHtml(text) {
-        if (!text || typeof text !== 'string') return '';
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, m => map[m]);
-    }
-
-    getEmptyState(icon, title, message, collapsed = true) {
-        if (collapsed) {
-            return `
-                <div class="empty-state">
-                    <i data-feather="${icon}"></i>
-                    <div class="empty-state-title">${title}</div>
-                </div>
-            `;
-        } else {
-            return `
-                <div class="empty-state">
-                    <i data-feather="${icon}"></i>
-                    <div class="empty-state-title">${title}</div>
-                    <div class="empty-state-message">${message}</div>
-                </div>
-            `;
-        }
+        return response;
     }
 
     formatNumber(num) {
-        if (!num || num === 0) return '0';
         if (num >= 1000000) {
             return `${(num / 1000000).toFixed(1)}M`;
         } else if (num >= 1000) {
-            return `${(num / 1000).toFixed(1)}K`;
+            return `${(num / 1000).toFixed(this.isMobile ? 0 : 1)}K`;
         }
         return num.toString();
     }
 
-    formatDate(dateString) {
-        if (!dateString) return '';
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        } catch {
-            return '';
-        }
+    formatTimeAgo(dateString) {
+        const now = new Date();
+        const date = new Date(dateString);
+        const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+
+        if (diffInMinutes < 1) return 'Now';
+        if (diffInMinutes < 60) return `${diffInMinutes}m`;
+        if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
+        return `${Math.floor(diffInMinutes / 1440)}d`;
     }
 
-    truncateText(text, maxLength = 150) {
-        if (!text || typeof text !== 'string') return '';
-        if (text.length <= maxLength) return text;
-        return text.substring(0, maxLength).trim() + '...';
+    calculateChange(newValue, totalValue) {
+        if (!newValue || !totalValue) return '0%';
+        const percentage = ((newValue / totalValue) * 100).toFixed(1);
+        return `+${percentage}%`;
     }
 
-    slugify(text) {
-        if (!text || typeof text !== 'string') return '';
-        return text
-            .toLowerCase()
-            .trim()
-            .replace(/[^\w\s-]/g, '')
-            .replace(/[\s_-]+/g, '-')
-            .replace(/^-+|-+$/g, '');
+    getChangeClass(change) {
+        if (change.includes('+')) return 'change-positive';
+        if (change.includes('-')) return 'change-negative';
+        return 'change-neutral';
     }
 
-    getContentTypeColor(type) {
-        const colors = {
-            'movie': '#e50914',
-            'tv': '#113CCF',
-            'anime': '#ff6b35'
-        };
-        return colors[type] || '#6b7280';
+    getChangeIcon(change) {
+        if (change.includes('+')) return 'trending-up';
+        if (change.includes('-')) return 'trending-down';
+        return 'minus';
     }
 
-    getStatusColor(status) {
-        const colors = {
-            'active': '#10b981',
-            'inactive': '#6b7280',
-            'draft': '#f59e0b',
-            'published': '#3b82f6'
-        };
-        return colors[status] || '#6b7280';
+    truncateText(text, maxLength) {
+        if (!text || text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
     }
 
     capitalizeFirst(str) {
-        if (!str || typeof str !== 'string') return '';
-        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
-    refreshFeatherIcons() {
+    updateLastRefreshTime() {
+        if (this.elements.lastUpdate) {
+            const now = new Date();
+            const timeString = this.isMobile ?
+                now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) :
+                now.toLocaleTimeString();
+            this.elements.lastUpdate.textContent = timeString;
+        }
+    }
+
+    showLoading(show) {
+        const indicator = document.getElementById('page-loading-indicator');
+        if (indicator) {
+            indicator.style.transform = show ? 'scaleX(1)' : 'scaleX(0)';
+        }
+    }
+
+    showSuccess(message) {
+        this.showToast(message, 'success');
+    }
+
+    showError(message) {
+        this.showToast(message, 'error');
+    }
+
+    showToast(message, type = 'info') {
+        if (window.topbar && window.topbar.notificationSystem) {
+            window.topbar.notificationSystem.show(message, type);
+        } else {
+            this.showMobileToast(message, type);
+        }
+    }
+
+    showMobileToast(message, type) {
+        const toast = document.createElement('div');
+        const colors = {
+            success: '#10b981',
+            error: '#ef4444',
+            warning: '#f59e0b',
+            info: '#3b82f6'
+        };
+
+        toast.style.cssText = `
+            position: fixed;
+            bottom: calc(var(--mobile-nav-height, 60px) + env(safe-area-inset-bottom, 0) + 20px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: ${colors[type] || colors.info};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 10002;
+            animation: fadeInUp 0.3s ease;
+            max-width: calc(100vw - 40px);
+            text-align: center;
+        `;
+
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
         setTimeout(() => {
-            if (typeof feather !== 'undefined') {
-                feather.replace();
-            }
-        }, 100);
+            toast.style.animation = 'fadeOutDown 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+
+        if (!document.getElementById('mobile-toast-animations')) {
+            const style = document.createElement('style');
+            style.id = 'mobile-toast-animations';
+            style.textContent = `
+                @keyframes fadeInUp {
+                    from { transform: translate(-50%, 100%); opacity: 0; }
+                    to { transform: translate(-50%, 0); opacity: 1; }
+                }
+                @keyframes fadeOutDown {
+                    from { transform: translate(-50%, 0); opacity: 1; }
+                    to { transform: translate(-50%, 100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    // Cleanup
+    destroy() {
+        this.stopRealTimeUpdates();
+
+        if (this.systemMonitor) {
+            this.systemMonitor.destroy();
+        }
+
+        if (this.statisticsManager) {
+            this.statisticsManager.destroy();
+        }
+
+        window.removeEventListener('resize', this.handleResize);
+        window.removeEventListener('orientationchange', this.handleResize);
+
+        console.log('🗑 Admin dashboard destroyed');
     }
 }
 
-// Initialize and expose globally
-window.recUtils = new RecUtils();
+// Initialize dashboard
+let adminDashboard;
+
+document.addEventListener('DOMContentLoaded', () => {
+    adminDashboard = new AdminDashboard();
+});
+
+window.addEventListener('beforeunload', () => {
+    if (adminDashboard) {
+        adminDashboard.destroy();
+    }
+});
+
+window.AdminDashboard = AdminDashboard;
+window.adminDashboard = adminDashboard;
+
+
+
+2. statistics.js 
+/**
+ * CineBrain Admin Dashboard - Statistics & Charts Manager
+ * Handles all chart rendering and statistics visualization
+ */
+
+class StatisticsManager {
+    constructor(dashboard) {
+        this.dashboard = dashboard;
+        this.charts = {};
+
+        this.elements = this.initializeElements();
+    }
+
+    async init() {
+        this.initializeCharts();
+        console.log('✅ Statistics Manager initialized');
+    }
+
+    initializeElements() {
+        return {
+            userGrowthChart: document.getElementById('userGrowthChart'),
+            contentDistributionChart: document.getElementById('contentDistributionChart'),
+            systemPerformanceChart: document.getElementById('systemPerformanceChart'),
+            performanceIndicator: document.getElementById('performanceIndicator')
+        };
+    }
+
+    initializeCharts() {
+        const baseChartOptions = this.getBaseChartOptions();
+
+        // User Growth Chart
+        this.initializeUserGrowthChart(baseChartOptions);
+
+        // Content Distribution Chart
+        this.initializeContentDistributionChart();
+
+        // System Performance Chart
+        this.initializeSystemPerformanceChart(baseChartOptions);
+    }
+
+    getBaseChartOptions() {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 750
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim(),
+                        usePointStyle: true,
+                        font: {
+                            size: this.dashboard.isMobile ? 11 : 12
+                        },
+                        padding: this.dashboard.isMobile ? 10 : 15
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim(),
+                        font: {
+                            size: this.dashboard.isMobile ? 10 : 11
+                        }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                },
+                y: {
+                    ticks: {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim(),
+                        font: {
+                            size: this.dashboard.isMobile ? 10 : 11
+                        }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            elements: {
+                point: {
+                    radius: this.dashboard.isMobile ? 3 : 4,
+                    hoverRadius: this.dashboard.isMobile ? 5 : 6
+                }
+            }
+        };
+    }
+
+    initializeUserGrowthChart(chartOptions) {
+        const userGrowthCtx = this.elements.userGrowthChart?.getContext('2d');
+        if (userGrowthCtx) {
+            this.charts.userGrowth = new Chart(userGrowthCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'New Users',
+                        data: [],
+                        borderColor: '#113CCF',
+                        backgroundColor: 'rgba(17, 60, 207, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: this.dashboard.isMobile ? 2 : 3
+                    }, {
+                        label: 'Active Users',
+                        data: [],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: this.dashboard.isMobile ? 2 : 3
+                    }]
+                },
+                options: chartOptions
+            });
+        }
+    }
+
+    initializeContentDistributionChart() {
+        const contentDistCtx = this.elements.contentDistributionChart?.getContext('2d');
+        if (contentDistCtx) {
+            this.charts.contentDistribution = new Chart(contentDistCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#113CCF',
+                            '#e50914',
+                            '#10b981',
+                            '#f59e0b',
+                            '#8b5cf6',
+                            '#ef4444'
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: this.dashboard.isMobile ? 4 : 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: this.dashboard.isMobile ? '60%' : '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim(),
+                                usePointStyle: true,
+                                padding: this.dashboard.isMobile ? 10 : 15,
+                                font: {
+                                    size: this.dashboard.isMobile ? 10 : 11
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    initializeSystemPerformanceChart(baseOptions) {
+        const ctx = this.elements.systemPerformanceChart?.getContext('2d');
+        if (ctx) {
+            this.charts.systemPerformance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'CPU Usage',
+                        data: [],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: this.dashboard.isMobile ? 2 : 3
+                    }, {
+                        label: 'Memory Usage',
+                        data: [],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: this.dashboard.isMobile ? 2 : 3
+                    }, {
+                        label: 'Disk Usage',
+                        data: [],
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: this.dashboard.isMobile ? 2 : 3
+                    }]
+                },
+                options: {
+                    ...baseOptions,
+                    animation: {
+                        duration: 500
+                    },
+                    scales: {
+                        ...baseOptions.scales,
+                        y: {
+                            ...baseOptions.scales.y,
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                ...baseOptions.scales.y.ticks,
+                                callback: function (value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    updateCharts(data) {
+        // Update User Growth Chart
+        this.updateUserGrowthChart(data);
+
+        // Update Content Distribution Chart
+        this.updateContentDistributionChart(data);
+    }
+
+    updateUserGrowthChart(data) {
+        if (this.charts.userGrowth && data.user_analytics) {
+            const userGrowthData = data.user_analytics.user_growth || [];
+            const activeUsersData = data.user_analytics.active_users_trend || [];
+
+            const maxLabels = this.dashboard.isMobile ? 7 : 14;
+            const recentGrowthData = userGrowthData.slice(-maxLabels);
+            const recentActiveData = activeUsersData.slice(-maxLabels);
+
+            this.charts.userGrowth.data.labels = recentGrowthData.map(item =>
+                new Date(item.date).toLocaleDateString('en-US', {
+                    month: this.dashboard.isMobile ? 'numeric' : 'short',
+                    day: 'numeric'
+                })
+            );
+            this.charts.userGrowth.data.datasets[0].data = recentGrowthData.map(item => item.count);
+            this.charts.userGrowth.data.datasets[1].data = recentActiveData.map(item => item.count);
+            this.charts.userGrowth.update();
+        }
+    }
+
+    updateContentDistributionChart(data) {
+        if (this.charts.contentDistribution && data.content_analytics) {
+            const contentDist = data.content_analytics.content_distribution || [];
+
+            this.charts.contentDistribution.data.labels = contentDist.map(item =>
+                this.dashboard.isMobile ? this.dashboard.capitalizeFirst(item.type) :
+                    item.type.charAt(0).toUpperCase() + item.type.slice(1)
+            );
+            this.charts.contentDistribution.data.datasets[0].data = contentDist.map(item => item.count);
+            this.charts.contentDistribution.update();
+        }
+    }
+
+    updatePerformanceChart(data) {
+        if (!this.charts.systemPerformance || !data.resources) return;
+
+        const chart = this.charts.systemPerformance;
+        const now = new Date();
+
+        // Add new data point
+        chart.data.labels.push(now.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: this.dashboard.isMobile ? undefined : '2-digit'
+        }));
+
+        // Add performance data
+        chart.data.datasets[0].data.push(data.resources.cpu_usage || 0);
+        chart.data.datasets[1].data.push(data.resources.memory_usage || 0);
+        chart.data.datasets[2].data.push(data.resources.disk_usage || 0);
+
+        // Keep only last 20 data points
+        const maxPoints = this.dashboard.isMobile ? 10 : 20;
+        if (chart.data.labels.length > maxPoints) {
+            chart.data.labels.shift();
+            chart.data.datasets.forEach(dataset => dataset.data.shift());
+        }
+
+        chart.update();
+    }
+
+    updatePerformanceIndicator(data) {
+        const performanceIndicator = this.elements.performanceIndicator;
+        const performanceDot = performanceIndicator?.querySelector('.performance-dot');
+        const performanceText = performanceIndicator?.querySelector('.performance-text');
+
+        if (!data.resources) return;
+
+        const maxUsage = Math.max(
+            data.resources.cpu_usage || 0,
+            data.resources.memory_usage || 0,
+            data.resources.disk_usage || 0
+        );
+
+        let status, text;
+        if (maxUsage > 90) {
+            status = 'danger';
+            text = 'Critical';
+        } else if (maxUsage > 70) {
+            status = 'warning';
+            text = 'Warning';
+        } else {
+            status = '';
+            text = 'Optimal';
+        }
+
+        if (performanceDot) {
+            performanceDot.className = `performance-dot ${status}`;
+        }
+        if (performanceText) {
+            performanceText.textContent = text;
+        }
+    }
+
+    resizeCharts() {
+        Object.values(this.charts).forEach(chart => {
+            if (chart && typeof chart.resize === 'function') {
+                chart.resize();
+            }
+        });
+    }
+
+    // Theme update method for when theme changes
+    updateChartsTheme() {
+        const textPrimary = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim();
+        const textMuted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+
+        Object.values(this.charts).forEach(chart => {
+            if (chart && chart.options) {
+                // Update legend colors
+                if (chart.options.plugins?.legend?.labels) {
+                    chart.options.plugins.legend.labels.color = textPrimary;
+                }
+
+                // Update scales colors
+                if (chart.options.scales) {
+                    Object.keys(chart.options.scales).forEach(scaleKey => {
+                        if (chart.options.scales[scaleKey].ticks) {
+                            chart.options.scales[scaleKey].ticks.color = textMuted;
+                        }
+                    });
+                }
+
+                chart.update();
+            }
+        });
+    }
+
+    // Export chart data for analytics
+    exportChartData(chartType) {
+        const chart = this.charts[chartType];
+        if (!chart) return null;
+
+        return {
+            labels: chart.data.labels,
+            datasets: chart.data.datasets.map(dataset => ({
+                label: dataset.label,
+                data: dataset.data
+            }))
+        };
+    }
+
+    // Get chart statistics
+    getChartStats(chartType) {
+        const chart = this.charts[chartType];
+        if (!chart || !chart.data.datasets) return null;
+
+        const stats = {};
+        chart.data.datasets.forEach(dataset => {
+            const data = dataset.data;
+            if (data.length > 0) {
+                stats[dataset.label] = {
+                    total: data.reduce((sum, value) => sum + value, 0),
+                    average: data.reduce((sum, value) => sum + value, 0) / data.length,
+                    max: Math.max(...data),
+                    min: Math.min(...data),
+                    latest: data[data.length - 1]
+                };
+            }
+        });
+
+        return stats;
+    }
+
+    destroy() {
+        Object.values(this.charts).forEach(chart => {
+            if (chart && typeof chart.destroy === 'function') {
+                chart.destroy();
+            }
+        });
+        console.log('🗑 Statistics manager destroyed');
+    }
+}
+
+// Export for global access
+window.StatisticsManager = StatisticsManager;
+
+
+
+3. system.js
+/**
+ * CineBrain Admin Dashboard - System Monitoring
+ * Real-time system health and alert management
+ */
+
+class SystemMonitor {
+    constructor(dashboard) {
+        this.dashboard = dashboard;
+        this.apiBase = dashboard.apiBase;
+
+        // System monitoring properties
+        this.monitoring = {
+            refreshRate: 5000,
+            healthTimer: null,
+            alertsTimer: null,
+            performanceTimer: null,
+            notificationTimer: null
+        };
+
+        this.systemData = {
+            health: null,
+            alerts: [],
+            performance: null,
+            services: null,
+            lastAlertCheck: null
+        };
+
+        this.processedAlerts = new Set();
+        this.notificationQueue = [];
+
+        this.elements = this.initializeElements();
+    }
+
+    async init() {
+        this.setupEventListeners();
+        this.setupNotificationSystem();
+        this.systemData.lastAlertCheck = new Date();
+        this.startSystemMonitoring();
+        await this.loadAllSystemData();
+    }
+
+    initializeElements() {
+        return {
+            mainStatusDot: document.getElementById('mainStatusDot'),
+            mainStatusText: document.getElementById('mainStatusText'),
+            dbStatus: document.getElementById('dbStatus'),
+            cacheStatus: document.getElementById('cacheStatus'),
+            apiStatus: document.getElementById('apiStatus'),
+            alertsSection: document.getElementById('alertsSection'),
+            realTimeAlerts: document.getElementById('realTimeAlerts'),
+            activeAlertsCount: document.getElementById('activeAlertsCount'),
+            servicesStatusGrid: document.getElementById('servicesStatusGrid'),
+            adminActivityMetrics: document.getElementById('adminActivityMetrics'),
+            systemNotificationsList: document.getElementById('systemNotificationsList')
+        };
+    }
+
+    setupEventListeners() {
+        // Quick health check
+        const quickHealthCheck = document.getElementById('quickHealthCheck');
+        quickHealthCheck?.addEventListener('click', () => {
+            this.performQuickHealthCheck();
+            this.dashboard.hapticFeedback('medium');
+        });
+
+        // Monitoring refresh rate
+        const monitoringRefreshRate = document.getElementById('monitoringRefreshRate');
+        monitoringRefreshRate?.addEventListener('change', (e) => {
+            this.updateMonitoringRefreshRate(parseInt(e.target.value));
+        });
+
+        // Dismiss all alerts
+        const dismissAllAlerts = document.getElementById('dismissAllAlerts');
+        dismissAllAlerts?.addEventListener('click', () => {
+            this.dismissAllAlerts();
+        });
+
+        // Mark all notifications read
+        const markAllNotificationsRead = document.getElementById('markAllNotificationsRead');
+        markAllNotificationsRead?.addEventListener('click', () => {
+            this.markAllNotificationsAsRead();
+        });
+    }
+
+    setupNotificationSystem() {
+        setInterval(() => {
+            this.processNotificationQueue();
+        }, 1000);
+    }
+
+    startSystemMonitoring() {
+        // Staggered polling to reduce server load
+        this.monitoring.alertsTimer = setInterval(() => {
+            this.loadSystemAlerts();
+        }, 5000);
+
+        setTimeout(() => {
+            this.monitoring.notificationTimer = setInterval(() => {
+                this.loadSystemNotifications();
+            }, 8000);
+        }, 2000);
+
+        setTimeout(() => {
+            this.monitoring.healthTimer = setInterval(() => {
+                this.loadSystemHealth();
+            }, 8000);
+        }, 4000);
+
+        setTimeout(() => {
+            this.monitoring.performanceTimer = setInterval(() => {
+                this.loadSystemPerformance();
+                this.loadServicesStatus();
+                this.loadAdminActivity();
+            }, 15000);
+        }, 6000);
+
+        console.log('✅ Optimized HTTP polling monitoring started');
+        console.log('   - Alerts: 5s | Health/Notifications: 8s | Performance: 15s');
+    }
+
+    async loadAllSystemData() {
+        try {
+            await Promise.allSettled([
+                this.loadSystemHealth(),
+                this.loadSystemAlerts(),
+                this.loadSystemPerformance(),
+                this.loadServicesStatus(),
+                this.loadAdminActivity(),
+                this.loadSystemNotifications()
+            ]);
+
+            this.updateSystemStatusBar();
+        } catch (error) {
+            console.error('Error loading system data:', error);
+        }
+    }
+
+    async loadSystemHealth() {
+        try {
+            const response = await this.dashboard.makeAuthenticatedRequest('/health/detailed');
+            if (response.ok) {
+                const data = await response.json();
+                this.systemData.health = data;
+                this.updateSystemHealthCards(data);
+                this.updateSystemStatusBar(data);
+            }
+        } catch (error) {
+            console.error('Error loading system health:', error);
+            this.updateSystemStatusBar({ status: 'error' });
+        }
+    }
+
+    async loadSystemAlerts() {
+        try {
+            const response = await this.dashboard.makeAuthenticatedRequest('/system/monitoring/alerts');
+            if (response.ok) {
+                const data = await response.json();
+                const alerts = data.alerts || [];
+
+                alerts.forEach(alert => {
+                    const alertId = alert.id || `${alert.component}-${alert.message}`;
+                    if (!this.processedAlerts.has(alertId)) {
+                        this.processedAlerts.add(alertId);
+                        this.handleNewAlert(alert);
+                    }
+                });
+
+                this.systemData.alerts = alerts;
+                this.updateSystemAlerts(alerts);
+            }
+        } catch (error) {
+            console.error('Error loading system alerts:', error);
+        }
+    }
+
+    async loadSystemPerformance() {
+        try {
+            const response = await this.dashboard.makeAuthenticatedRequest('/performance');
+            if (response.ok) {
+                const data = await response.json();
+                this.systemData.performance = data;
+
+                // Update statistics manager with performance data
+                if (this.dashboard.statisticsManager) {
+                    this.dashboard.statisticsManager.updatePerformanceChart(data);
+                    this.dashboard.statisticsManager.updatePerformanceIndicator(data);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading system performance:', error);
+        }
+    }
+
+    async loadServicesStatus() {
+        try {
+            const response = await this.dashboard.makeAuthenticatedRequest('/system/services');
+            if (response.ok) {
+                const data = await response.json();
+                this.systemData.services = data;
+                this.updateServicesGrid(data);
+            }
+        } catch (error) {
+            console.error('Error loading services status:', error);
+        }
+    }
+
+    async loadAdminActivity() {
+        try {
+            const response = await this.dashboard.makeAuthenticatedRequest('/admin/monitoring/activity');
+            if (response.ok) {
+                const data = await response.json();
+                this.updateAdminActivityMetrics(data);
+            }
+        } catch (error) {
+            console.error('Error loading admin activity:', error);
+        }
+    }
+
+    async loadSystemNotifications() {
+        try {
+            const response = await this.dashboard.makeAuthenticatedRequest('/admin/monitoring/notifications');
+            if (response.ok) {
+                const data = await response.json();
+                this.updateSystemNotifications(data);
+
+                const notifications = data.recent_notifications || [];
+                const unreadCount = notifications.filter(n => !n.is_read).length;
+
+                const notificationBadge = document.getElementById('notificationBadge');
+                if (notificationBadge) {
+                    if (unreadCount > 0) {
+                        notificationBadge.textContent = unreadCount;
+                        notificationBadge.style.display = 'block';
+                    } else {
+                        notificationBadge.style.display = 'none';
+                    }
+                }
+
+                localStorage.setItem('cinebrain-admin-notifications', JSON.stringify(notifications));
+
+                window.dispatchEvent(new CustomEvent('cinebrain-notifications-updated', {
+                    detail: { notifications, unreadCount }
+                }));
+            }
+        } catch (error) {
+            console.error('Error loading system notifications:', error);
+        }
+    }
+
+    handleNewAlert(alert) {
+        this.notificationQueue.push({
+            type: 'alert',
+            title: `System Alert: ${alert.component || 'System'}`,
+            message: alert.message,
+            level: alert.level,
+            timestamp: alert.timestamp || new Date().toISOString(),
+            data: alert
+        });
+    }
+
+    handleNewNotification(notification) {
+        this.notificationQueue.push({
+            type: 'notification',
+            title: notification.title,
+            message: notification.message,
+            level: notification.is_urgent ? 'warning' : 'info',
+            timestamp: notification.created_at || new Date().toISOString(),
+            data: notification
+        });
+    }
+
+    handleStatsUpdate(stats) {
+        if (stats.overview) {
+            this.dashboard.dashboardData.overview = { ...this.dashboard.dashboardData.overview, ...stats.overview };
+            this.dashboard.renderOverviewCards(this.dashboard.dashboardData.overview);
+        }
+    }
+
+    handleSupportUpdate(support) {
+        if (support.ticket_stats) {
+            if (this.dashboard.dashboardData.supportDashboard) {
+                this.dashboard.dashboardData.supportDashboard.ticket_stats = support.ticket_stats;
+                this.dashboard.renderSupportStats(this.dashboard.dashboardData.supportDashboard);
+            }
+        }
+    }
+
+    processNotificationQueue() {
+        while (this.notificationQueue.length > 0) {
+            const notification = this.notificationQueue.shift();
+            this.sendNotificationToTopbar(notification);
+        }
+    }
+
+    sendNotificationToTopbar(notification) {
+        const notificationBadge = document.getElementById('notificationBadge');
+        if (notificationBadge) {
+            const currentCount = parseInt(notificationBadge.textContent || '0');
+            notificationBadge.textContent = currentCount + 1;
+            notificationBadge.style.display = 'block';
+        }
+
+        const notifications = JSON.parse(localStorage.getItem('cinebrain-admin-notifications') || '[]');
+        notifications.unshift({
+            id: Date.now(),
+            ...notification,
+            isRead: false,
+            createdAt: new Date().toISOString()
+        });
+
+        if (notifications.length > 50) {
+            notifications.splice(50);
+        }
+
+        localStorage.setItem('cinebrain-admin-notifications', JSON.stringify(notifications));
+
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('cinebrain-notification', {
+                detail: notification,
+                bubbles: true
+            }));
+        }, 100);
+
+        if (notification.level === 'critical' || notification.level === 'error' || notification.level === 'urgent') {
+            this.dashboard.showToast(notification.message, notification.level === 'critical' ? 'error' : 'warning');
+        }
+    }
+
+    updateSystemHealthCards(data) {
+        this.updateHealthCard('database', data.components?.database || {});
+        this.updateHealthCard('cache', data.components?.cache || {});
+        this.updateHealthCard('services', data.components?.external_apis || {});
+        this.updateHealthCard('performance', data.resources || {});
+    }
+
+    updateHealthCard(type, data) {
+        const healthStatus = document.getElementById(`${type}HealthStatus`);
+        const healthDot = healthStatus?.querySelector('.health-dot');
+
+        if (!healthDot) return;
+
+        let status = 'healthy';
+        if (type === 'database') {
+            status = data.status === 'healthy' ? 'healthy' : 'danger';
+            this.updateElement(`dbConnectionStatus`, data.connection || data.status || 'Unknown');
+            this.updateElement(`dbResponseTime`, data.response_time_ms ? `${data.response_time_ms}ms` : '--');
+            this.updateElement(`dbConnections`, data.active_connections || '--');
+        } else if (type === 'cache') {
+            status = data.functional ? 'healthy' : (data.configured ? 'warning' : 'danger');
+            this.updateElement(`cacheType`, data.type || 'Not configured');
+            this.updateElement(`cacheHitRate`, data.hit_rate || '--');
+            this.updateElement(`cacheMemory`, data.memory_usage || '--');
+        } else if (type === 'services') {
+            const servicesHealthy = data.tmdb?.configured && data.youtube?.configured && data.cloudinary?.configured;
+            status = servicesHealthy ? 'healthy' : 'warning';
+            this.updateElement(`tmdbStatus`, data.tmdb?.configured ? '✓' : '✗');
+            this.updateElement(`youtubeStatus`, data.youtube?.configured ? '✓' : '✗');
+            this.updateElement(`cloudinaryStatus`, data.cloudinary?.configured ? '✓' : '✗');
+        } else if (type === 'performance') {
+            const maxUsage = Math.max(data.memory_usage || 0, data.cpu_usage || 0, data.disk_usage || 0);
+            status = maxUsage > 90 ? 'danger' : (maxUsage > 70 ? 'warning' : 'healthy');
+            this.updateElement(`cpuUsage`, data.cpu_usage ? `${data.cpu_usage}%` : '--%');
+            this.updateElement(`memoryUsage`, data.memory_usage ? `${data.memory_usage}%` : '--%');
+            this.updateElement(`diskUsage`, data.disk_usage ? `${data.disk_usage}%` : '--%');
+        }
+
+        healthDot.className = `health-dot ${status === 'healthy' ? '' : status}`;
+    }
+
+    updateSystemStatusBar(data) {
+        const mainStatusDot = this.elements.mainStatusDot;
+        const mainStatusText = this.elements.mainStatusText;
+
+        if (data) {
+            const status = data.status || 'unknown';
+            if (mainStatusDot) {
+                mainStatusDot.className = `status-dot ${status === 'healthy' ? 'pulse-green' :
+                    status === 'degraded' ? 'pulse-yellow' : 'pulse-red'
+                    }`;
+            }
+            if (mainStatusText) {
+                mainStatusText.textContent = status === 'healthy' ? 'System Online' :
+                    status === 'degraded' ? 'System Degraded' : 'System Issues';
+            }
+        }
+
+        this.updateElement('dbStatus', data?.database === 'connected' ? 'Connected' : 'Error');
+        this.updateElement('cacheStatus', data?.cache === 'connected' ? 'Active' : 'Inactive');
+        this.updateElement('apiStatus', data?.api_keys?.tmdb ? 'Online' : 'Offline');
+        this.updateElement('liveConnectionStatus', 'LIVE');
+    }
+
+    updateSystemAlerts(alerts) {
+        const alertsSection = this.elements.alertsSection;
+        const realTimeAlerts = this.elements.realTimeAlerts;
+        const activeAlertsCount = this.elements.activeAlertsCount;
+
+        if (!alerts || alerts.length === 0) {
+            if (alertsSection) alertsSection.style.display = 'none';
+            if (activeAlertsCount) activeAlertsCount.textContent = '0';
+            return;
+        }
+
+        if (alertsSection) alertsSection.style.display = 'block';
+        if (activeAlertsCount) activeAlertsCount.textContent = alerts.length;
+
+        alerts.forEach(alert => {
+            if (alert.level === 'critical' || alert.level === 'error') {
+                this.sendNotificationToTopbar({
+                    type: 'alert',
+                    title: `System Alert: ${alert.component || 'System'}`,
+                    message: alert.message,
+                    level: alert.level,
+                    timestamp: alert.timestamp || new Date().toISOString()
+                });
+            }
+        });
+
+        if (realTimeAlerts) {
+            realTimeAlerts.innerHTML = alerts.map(alert => `
+                <div class="alert-item ${alert.level || 'info'}" data-alert-id="${alert.id || Date.now()}">
+                    <div class="alert-icon">
+                        <i data-feather="${this.getAlertIcon(alert.level)}"></i>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-title">${alert.component || 'System'}</div>
+                        <div class="alert-message">${alert.message}</div>
+                    </div>
+                    <div class="alert-time">${this.dashboard.formatTimeAgo(alert.timestamp || new Date().toISOString())}</div>
+                    <div class="alert-actions">
+                        <button class="alert-dismiss" onclick="adminDashboard.systemMonitor.dismissAlert('${alert.id || Date.now()}')">
+                            <i data-feather="x"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        }
+    }
+
+    updateServicesGrid(data) {
+        const servicesGrid = this.elements.servicesStatusGrid;
+        if (!servicesGrid || !data.application_services) return;
+
+        const services = [
+            { name: 'Auth', status: data.application_services.auth_service },
+            { name: 'Admin', status: data.application_services.admin_service },
+            { name: 'Support', status: data.application_services.support_service },
+            { name: 'Content', status: data.application_services.content_service },
+            { name: 'Analytics', status: data.application_services.analytics_service || true },
+            { name: 'Cache', status: data.core_services.cache }
+        ];
+
+        servicesGrid.innerHTML = services.map(service => `
+            <div class="service-item">
+                <div class="service-status ${service.status ? '' : 'danger'}"></div>
+                <div class="service-name">${service.name}</div>
+                <div class="service-info">${service.status ? 'Online' : 'Offline'}</div>
+            </div>
+        `).join('');
+    }
+
+    updateAdminActivityMetrics(data) {
+        const adminActivityMetrics = this.elements.adminActivityMetrics;
+        if (!adminActivityMetrics || !data.admin_users) return;
+
+        const metrics = [
+            {
+                label: 'Active Admins',
+                value: data.admin_users.active_24h || 0,
+                change: `${data.admin_users.activity_rate_24h || 0}%`
+            },
+            {
+                label: 'Total Admins',
+                value: data.admin_users.total_admins || 0,
+                change: 'All time'
+            },
+            {
+                label: 'Recommendations',
+                value: data.admin_recommendations?.recent_7d || 0,
+                change: 'This week'
+            },
+            {
+                label: 'Active Rate',
+                value: `${data.admin_users.activity_rate_24h || 0}%`,
+                change: '24h rate'
+            }
+        ];
+
+        adminActivityMetrics.innerHTML = metrics.map(metric => `
+            <div class="activity-metric">
+                <div class="activity-metric-value">${metric.value}</div>
+                <div class="activity-metric-label">${metric.label}</div>
+                <div class="activity-metric-change">${metric.change}</div>
+            </div>
+        `).join('');
+    }
+
+    updateSystemNotifications(data) {
+        const notificationsList = this.elements.systemNotificationsList;
+        if (!notificationsList) return;
+
+        const notifications = data.recent_notifications || [];
+
+        if (notifications.length === 0) {
+            notificationsList.innerHTML = `
+                <div class="table-empty-state">
+                    <i data-feather="bell"></i>
+                    <p>No system notifications</p>
+                </div>
+            `;
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+            return;
+        }
+
+        notificationsList.innerHTML = notifications.slice(0, 5).map(notification => `
+            <div class="notification-item ${notification.is_read ? '' : 'unread'} ${notification.is_urgent ? 'urgent' : ''}">
+                <div class="notification-icon">
+                    <i data-feather="${this.getNotificationIcon(notification.type)}"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">${notification.title}</div>
+                    <div class="notification-message">${this.dashboard.truncateText(notification.message, 60)}</div>
+                    <div class="notification-time">${this.dashboard.formatTimeAgo(notification.created_at)}</div>
+                </div>
+            </div>
+        `).join('');
+
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+
+    // Action Methods
+    async performQuickHealthCheck() {
+        this.dashboard.showToast('Running quick health check...', 'info');
+
+        try {
+            await Promise.all([
+                this.loadSystemHealth(),
+                this.loadServicesStatus(),
+                this.loadSystemPerformance()
+            ]);
+            this.dashboard.showToast('Health check completed', 'success');
+        } catch (error) {
+            this.dashboard.showToast('Health check failed', 'error');
+        }
+    }
+
+    updateMonitoringRefreshRate(newRate) {
+        this.monitoring.refreshRate = newRate;
+
+        this.stopSystemMonitoring();
+        this.startSystemMonitoring();
+
+        this.dashboard.showToast(`Monitoring refresh rate updated to ${newRate / 1000}s`, 'success');
+    }
+
+    checkMissedNotifications() {
+        this.loadSystemNotifications();
+        this.loadSystemAlerts();
+    }
+
+    dismissAlert(alertId) {
+        const alertElement = document.querySelector(`[data-alert-id="${alertId}"]`);
+        if (alertElement) {
+            alertElement.remove();
+        }
+
+        this.systemData.alerts = this.systemData.alerts.filter(alert =>
+            (alert.id || Date.now().toString()) !== alertId
+        );
+    }
+
+    dismissAllAlerts() {
+        const alertsContainer = this.elements.realTimeAlerts;
+        const alertsSection = this.elements.alertsSection;
+
+        if (alertsContainer) {
+            alertsContainer.innerHTML = '';
+        }
+        if (alertsSection) {
+            alertsSection.style.display = 'none';
+        }
+
+        this.systemData.alerts = [];
+        this.processedAlerts.clear();
+
+        this.dashboard.showToast('All alerts dismissed', 'success');
+    }
+
+    async markAllNotificationsAsRead() {
+        try {
+            const response = await this.dashboard.makeAuthenticatedRequest('/admin/notifications/mark-all-read', {
+                method: 'PUT'
+            });
+
+            if (response.ok) {
+                this.dashboard.showToast('All notifications marked as read', 'success');
+                this.loadSystemNotifications();
+
+                const notificationBadge = document.getElementById('notificationBadge');
+                if (notificationBadge) {
+                    notificationBadge.style.display = 'none';
+                    notificationBadge.textContent = '0';
+                }
+            }
+        } catch (error) {
+            this.dashboard.showToast('Failed to mark notifications as read', 'error');
+        }
+    }
+
+    stopSystemMonitoring() {
+        if (this.monitoring.healthTimer) {
+            clearInterval(this.monitoring.healthTimer);
+        }
+        if (this.monitoring.alertsTimer) {
+            clearInterval(this.monitoring.alertsTimer);
+        }
+        if (this.monitoring.performanceTimer) {
+            clearInterval(this.monitoring.performanceTimer);
+        }
+        if (this.monitoring.notificationTimer) {
+            clearInterval(this.monitoring.notificationTimer);
+        }
+    }
+
+    // Utility Methods
+    getAlertIcon(level) {
+        const icons = {
+            'critical': 'alert-circle',
+            'error': 'x-circle',
+            'warning': 'alert-triangle',
+            'info': 'info',
+            'success': 'check-circle'
+        };
+        return icons[level] || 'alert-circle';
+    }
+
+    getNotificationIcon(type) {
+        const icons = {
+            'new_ticket': 'message-circle',
+            'urgent_ticket': 'alert-circle',
+            'sla_breach': 'clock',
+            'feedback_received': 'message-square',
+            'system_alert': 'alert-triangle',
+            'user_activity': 'users',
+            'content_added': 'plus-circle'
+        };
+        return icons[type] || 'bell';
+    }
+
+    updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
+    }
+
+    destroy() {
+        this.stopSystemMonitoring();
+        console.log('🗑 System monitor destroyed');
+    }
+}
+
+// Export for global access
+window.SystemMonitor = SystemMonitor;
