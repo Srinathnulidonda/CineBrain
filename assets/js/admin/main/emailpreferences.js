@@ -1,4 +1,7 @@
-// admin/emailpreferences.js
+/**
+ * CineBrain Admin Dashboard - Email Preferences Manager
+ * Integrated with AdminDashboard and matching the CSS design system
+ */
 
 class EmailPreferences {
     constructor() {
@@ -6,11 +9,13 @@ class EmailPreferences {
         this.preferences = null;
         this.isLoading = false;
         this.isMobile = window.innerWidth <= 768;
-
-        this.init();
+        this.initialized = false;
+        this.lastUpdated = null;
     }
 
     async init() {
+        if (this.initialized) return;
+
         try {
             // Check if admin is authenticated
             if (!await this.checkAdminAuth()) {
@@ -18,9 +23,12 @@ class EmailPreferences {
                 return;
             }
 
-            this.setupEventListeners();
             await this.loadPreferences();
             this.renderPreferences();
+            this.setupEventListeners();
+            this.initialized = true;
+
+            console.log('✅ Email Preferences initialized');
 
         } catch (error) {
             console.error('Error initializing email preferences:', error);
@@ -44,52 +52,12 @@ class EmailPreferences {
     }
 
     setupEventListeners() {
-        // Toggle email preferences section
-        const toggleBtn = document.getElementById('toggleEmailPreferences');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => {
-                this.togglePreferencesSection();
-            });
-        }
-
-        // Save preferences button
-        const saveBtn = document.getElementById('saveEmailPreferences');
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
-                this.savePreferences();
-            });
-        }
-
-        // Reset to defaults button
-        const resetBtn = document.getElementById('resetEmailPreferences');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                this.resetToDefaults();
-            });
-        }
-
-        // Quick toggle buttons
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('quick-toggle-btn')) {
-                const category = e.target.dataset.category;
-                const enabled = e.target.dataset.enabled === 'true';
-                this.quickToggleCategory(category, !enabled);
-            }
-        });
-
-        // Individual preference toggles
-        document.addEventListener('change', (e) => {
-            if (e.target.classList.contains('preference-toggle')) {
-                this.handlePreferenceToggle(e.target);
-            }
-        });
-
         // Window resize handling
         window.addEventListener('resize', () => {
             const wasMobile = this.isMobile;
             this.isMobile = window.innerWidth <= 768;
 
-            if (wasMobile !== this.isMobile) {
+            if (wasMobile !== this.isMobile && this.initialized) {
                 this.renderPreferences();
             }
         });
@@ -109,14 +77,14 @@ class EmailPreferences {
 
                 console.log('✅ Email preferences loaded');
             } else {
-                throw new Error(`Failed to load preferences: ${response.status}`);
+                console.warn(`Failed to load preferences: ${response.status}, using defaults`);
+                // Set default preferences
+                this.preferences = this.getDefaultPreferences();
             }
 
         } catch (error) {
             console.error('Error loading email preferences:', error);
-            this.showError('Failed to load email preferences');
-
-            // Set default preferences
+            // Set default preferences on error
             this.preferences = this.getDefaultPreferences();
 
         } finally {
@@ -153,7 +121,15 @@ class EmailPreferences {
 
     renderPreferences() {
         const container = document.getElementById('emailPreferencesContent');
-        if (!container || !this.preferences) return;
+        if (!container) {
+            console.error('Email preferences container not found');
+            return;
+        }
+
+        if (!this.preferences) {
+            container.innerHTML = '<p class="text-center">Loading email preferences...</p>';
+            return;
+        }
 
         const categories = this.getPreferenceCategories();
 
@@ -195,7 +171,7 @@ class EmailPreferences {
             </div>
         `;
 
-        // Re-attach event listeners for new elements
+        // Attach event listeners for new elements
         this.attachCategoryEventListeners();
 
         if (typeof feather !== 'undefined') {
@@ -326,7 +302,7 @@ class EmailPreferences {
                 <div class="category-header">
                     <div class="category-info">
                         <div class="category-title">
-                            <i data-feather="${category.icon}" style="color: ${category.color}"></i>
+                            <i data-feather="${category.icon}" style="color: ${category.color};"></i>
                             <span>${category.title}</span>
                             ${category.recommended ? '<span class="category-badge recommended">Recommended</span>' : ''}
                         </div>
@@ -362,13 +338,13 @@ class EmailPreferences {
                     <div class="preference-label">
                         <label for="${switchId}" class="form-label">
                             ${item.label}
-                            ${item.recommended ? '<span class="item-badge recommended">Recommended</span>' : ''}
                         </label>
+                        ${item.recommended ? '<span class="item-badge recommended">Recommended</span>' : ''}
                     </div>
                     <p class="preference-description">${item.description}</p>
                 </div>
                 <div class="preference-control">
-                    <div class="form-check form-switch">
+                    <div class="form-switch">
                         <input class="form-check-input preference-toggle" 
                                type="checkbox" 
                                id="${switchId}"
@@ -385,7 +361,7 @@ class EmailPreferences {
     }
 
     attachCategoryEventListeners() {
-        // Re-attach save button listener
+        // Save button listener
         const saveBtn = document.getElementById('saveEmailPreferences');
         if (saveBtn) {
             saveBtn.addEventListener('click', () => {
@@ -393,42 +369,29 @@ class EmailPreferences {
             });
         }
 
-        // Re-attach reset button listener
+        // Reset button listener
         const resetBtn = document.getElementById('resetEmailPreferences');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
                 this.resetToDefaults();
             });
         }
-    }
 
-    togglePreferencesSection() {
-        const section = document.getElementById('emailPreferencesSection');
-        const toggleBtn = document.getElementById('toggleEmailPreferences');
-        const icon = toggleBtn?.querySelector('i');
+        // Quick toggle buttons
+        document.querySelectorAll('.quick-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const category = e.currentTarget.dataset.category;
+                const enabled = e.currentTarget.dataset.enabled === 'true';
+                this.quickToggleCategory(category, !enabled);
+            });
+        });
 
-        if (section) {
-            const isHidden = section.style.display === 'none';
-
-            if (isHidden) {
-                section.style.display = 'block';
-                if (icon) icon.setAttribute('data-feather', 'chevron-up');
-
-                // Load preferences if not already loaded
-                if (!this.preferences) {
-                    this.loadPreferences().then(() => {
-                        this.renderPreferences();
-                    });
-                }
-            } else {
-                section.style.display = 'none';
-                if (icon) icon.setAttribute('data-feather', 'chevron-down');
-            }
-
-            if (typeof feather !== 'undefined') {
-                feather.replace();
-            }
-        }
+        // Individual preference toggles
+        document.querySelectorAll('.preference-toggle').forEach(toggle => {
+            toggle.addEventListener('change', (e) => {
+                this.handlePreferenceToggle(e.target);
+            });
+        });
     }
 
     handlePreferenceToggle(toggle) {
@@ -539,7 +502,7 @@ class EmailPreferences {
 
             if (response.ok) {
                 const data = await response.json();
-                this.lastUpdated = data.updated_at;
+                this.lastUpdated = data.updated_at || new Date().toISOString();
 
                 this.showSuccess('Email preferences saved successfully');
                 this.showUnsavedChanges(false);
@@ -549,6 +512,12 @@ class EmailPreferences {
                 if (infoElement) {
                     infoElement.textContent = `Last updated: ${new Date(this.lastUpdated).toLocaleString()}`;
                 }
+
+                // Add saved animation to preference items
+                document.querySelectorAll('.preference-item').forEach(item => {
+                    item.classList.add('saved');
+                    setTimeout(() => item.classList.remove('saved'), 600);
+                });
 
             } else {
                 throw new Error(`Failed to save preferences: ${response.status}`);
@@ -582,6 +551,12 @@ class EmailPreferences {
             } else {
                 statusElement.innerHTML = '<i data-feather="check-circle"></i> <span>Saved</span>';
                 statusElement.className = 'preferences-status saved';
+
+                // Hide success message after 3 seconds
+                setTimeout(() => {
+                    statusElement.innerHTML = '';
+                    statusElement.className = 'preferences-status';
+                }, 3000);
             }
 
             if (typeof feather !== 'undefined') {
@@ -610,9 +585,11 @@ class EmailPreferences {
 
         if (show) {
             saveBtn.disabled = true;
+            saveBtn.classList.add('loading');
             saveBtn.innerHTML = '<i data-feather="loader" class="spinning"></i> <span class="d-none d-sm-inline">Saving...</span>';
         } else {
             saveBtn.disabled = false;
+            saveBtn.classList.remove('loading');
             saveBtn.innerHTML = '<i data-feather="save"></i> <span class="d-none d-sm-inline">Save Changes</span>';
         }
 
@@ -661,26 +638,40 @@ class EmailPreferences {
     }
 
     showToast(message, type = 'info') {
-        // Use existing notification system from dashboard or create fallback
+        // Use existing notification system from dashboard
         if (window.adminDashboard && window.adminDashboard.showToast) {
             window.adminDashboard.showToast(message, type);
+        } else if (window.topbar && window.topbar.notificationSystem) {
+            window.topbar.notificationSystem.show(message, type);
         } else {
             // Fallback toast
             console.log(`${type.toUpperCase()}: ${message}`);
         }
     }
+
+    destroy() {
+        this.initialized = false;
+        this.preferences = null;
+        console.log('🗑 Email preferences destroyed');
+    }
 }
 
-// Initialize email preferences
-let emailPreferences;
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize after a short delay to ensure dashboard is ready
-    setTimeout(() => {
-        emailPreferences = new EmailPreferences();
-    }, 1000);
-});
-
-// Export for global access
+// Global instance for dashboard integration
 window.EmailPreferences = EmailPreferences;
-window.emailPreferences = emailPreferences;
+
+// Initialize after DOM is ready and dashboard is available
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait for dashboard to be ready
+    const initializeEmailPrefs = () => {
+        if (window.adminDashboard) {
+            window.emailPreferencesInstance = new EmailPreferences();
+            console.log('✅ Email Preferences instance created');
+        } else {
+            // Retry after a short delay
+            setTimeout(initializeEmailPrefs, 500);
+        }
+    };
+
+    // Start initialization
+    setTimeout(initializeEmailPrefs, 1000);
+});

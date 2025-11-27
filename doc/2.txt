@@ -1,6 +1,6 @@
-1. dashboard.js 
+1. dashboard.js
 /**
- * CineBrain Admin Dashboard - Main Controller
+ * CineBrain Admin Dashboard - Main Controller (Updated for Backend v3.0)
  * Mobile-First Responsive Dashboard Management
  */
 
@@ -14,11 +14,15 @@ class AdminDashboard {
         this.isMobile = window.innerWidth <= 768;
         this.touchDevice = 'ontouchstart' in window;
 
-        // Dashboard data
+        // Updated dashboard data structure to match backend v3.0
         this.dashboardData = {
-            overview: null,
-            analytics: null,
-            supportDashboard: null
+            systemMonitoring: null,    // NEW: /system-monitoring
+            overview: null,            // NEW: /overview  
+            serviceStatus: null,       // NEW: /service-status
+            adminActivity: null,       // NEW: /admin-activity
+            analytics: null,           // /admin/analytics
+            supportData: null,         // /admin/support/real-time
+            systemHealth: null         // /admin/system-health
         };
 
         this.boostTimeout = null;
@@ -26,6 +30,7 @@ class AdminDashboard {
         // Initialize component classes
         this.systemMonitor = null;
         this.statisticsManager = null;
+        this.emailPreferences = null;
 
         this.init();
         this.handleResize();
@@ -51,16 +56,20 @@ class AdminDashboard {
             this.statisticsManager = new StatisticsManager(this);
             await this.statisticsManager.init();
 
-            // Load initial data
-            await this.loadAllData();
+            // Initialize email preferences manager
+            this.emailPreferences = new EmailPreferencesManager(this);
+            await this.emailPreferences.init();
 
-            // Start real-time updates
-            this.startRealTimeUpdates();
+            // Load initial data using NEW endpoints
+            await this.loadAllDataNew();
+
+            // Start real-time updates with NEW endpoints
+            this.startRealTimeUpdatesNew();
 
             // Setup smart polling
             this.setupSmartPolling();
 
-            console.log('✅ CineBrain Admin Dashboard Real-time System initialized');
+            console.log('✅ CineBrain Admin Dashboard v3.0 initialized');
 
         } catch (error) {
             console.error('❌ Dashboard initialization error:', error);
@@ -92,9 +101,12 @@ class AdminDashboard {
         });
     }
 
+    // FIXED: Update reinitializeForDevice method to handle Quick Actions
     reinitializeForDevice() {
         if (this.dashboardData.overview) {
-            this.renderOverviewCards(this.dashboardData.overview);
+            this.renderOverviewCardsNew(this.dashboardData.overview);
+
+            // FIXED: Always render Quick Actions after overview cards
             this.renderQuickActions();
         }
 
@@ -133,6 +145,27 @@ class AdminDashboard {
             autoRefreshStatus: document.getElementById('autoRefreshStatus'),
             liveConnectionStatus: document.getElementById('liveConnectionStatus'),
 
+            // Main status elements
+            mainStatusDot: document.getElementById('mainStatusDot'),
+            mainStatusText: document.getElementById('mainStatusText'),
+            dbStatus: document.getElementById('dbStatus'),
+            cacheStatus: document.getElementById('cacheStatus'),
+            apiStatus: document.getElementById('apiStatus'),
+
+            // System health elements
+            dbConnectionStatus: document.getElementById('dbConnectionStatus'),
+            dbResponseTime: document.getElementById('dbResponseTime'),
+            dbConnections: document.getElementById('dbConnections'),
+            cacheType: document.getElementById('cacheType'),
+            cacheHitRate: document.getElementById('cacheHitRate'),
+            cacheMemory: document.getElementById('cacheMemory'),
+            tmdbStatus: document.getElementById('tmdbStatus'),
+            youtubeStatus: document.getElementById('youtubeStatus'),
+            cloudinaryStatus: document.getElementById('cloudinaryStatus'),
+            cpuUsage: document.getElementById('cpuUsage'),
+            memoryUsage: document.getElementById('memoryUsage'),
+            diskUsage: document.getElementById('diskUsage'),
+
             // Containers
             overviewCards: document.getElementById('overviewCards'),
             mobileOverviewCards: document.getElementById('mobileOverviewCards'),
@@ -140,11 +173,14 @@ class AdminDashboard {
             recentActivity: document.getElementById('recentActivity'),
             supportStats: document.getElementById('supportStats'),
             recentTickets: document.getElementById('recentTickets'),
+            adminActivityMetrics: document.getElementById('adminActivityMetrics'),
+            systemNotificationsList: document.getElementById('systemNotificationsList'),
 
             // Buttons
             refreshDashboard: document.getElementById('refreshDashboard'),
             viewAllActivity: document.getElementById('viewAllActivity'),
             viewSupportDashboard: document.getElementById('viewSupportDashboard'),
+            toggleEmailPreferences: document.getElementById('toggleEmailPreferences'),
 
             // Period selector
             activityPeriod: document.getElementById('activityPeriod')
@@ -155,7 +191,7 @@ class AdminDashboard {
         // Refresh button
         this.elements.refreshDashboard?.addEventListener('click', (e) => {
             e.preventDefault();
-            this.refreshAllData();
+            this.refreshAllDataNew();
             this.hapticFeedback('light');
         });
 
@@ -170,6 +206,11 @@ class AdminDashboard {
             window.location.href = '/admin/Support-Dashboard.html';
         });
 
+        // NEW: Email preferences toggle
+        this.elements.toggleEmailPreferences?.addEventListener('click', () => {
+            this.toggleEmailPreferences();
+        });
+
         // Period selector
         this.elements.activityPeriod?.addEventListener('change', () => {
             this.updateChartsForPeriod();
@@ -181,7 +222,11 @@ class AdminDashboard {
                 switch (e.key) {
                     case 'r':
                         e.preventDefault();
-                        this.refreshAllData();
+                        this.refreshAllDataNew();
+                        break;
+                    case 'h':
+                        e.preventDefault();
+                        this.loadSystemHealth();
                         break;
                 }
             }
@@ -190,7 +235,7 @@ class AdminDashboard {
         // Window focus/blur for refresh
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
-                this.refreshAllData();
+                this.refreshAllDataNew();
                 if (this.systemMonitor) {
                     this.systemMonitor.checkMissedNotifications();
                 }
@@ -200,7 +245,7 @@ class AdminDashboard {
         // Listen for notification events
         window.addEventListener('cinebrain-admin-event', (e) => {
             if (e.detail.type === 'refresh') {
-                this.refreshAllData();
+                this.refreshAllDataNew();
             }
         });
 
@@ -236,7 +281,7 @@ class AdminDashboard {
                 const pullDistance = currentY - startY;
 
                 if (pullDistance > 100 && !this.isRefreshing) {
-                    this.refreshAllData();
+                    this.refreshAllDataNew();
                     this.hapticFeedback('medium');
                 }
             }
@@ -293,19 +338,36 @@ class AdminDashboard {
         }
     }
 
-    async loadAllData() {
+    // FIXED: Update loadAllDataNew method to ensure Quick Actions are rendered
+    async loadAllDataNew() {
         this.showLoading(true);
 
         try {
             const promises = [
-                this.loadDashboardOverview(),
+                this.loadSystemMonitoring(),
+                this.loadOverviewStats(),
+                this.loadServiceStatus(),
+                this.loadAdminActivity(),
                 this.loadAnalytics(),
-                this.loadSupportDashboard()
+                this.loadSupportRealTime(),
+                this.loadSystemHealth()
             ];
 
-            await Promise.allSettled(promises);
+            const results = await Promise.allSettled(promises);
+
+            results.forEach((result, index) => {
+                if (result.status === 'rejected') {
+                    console.error(`Data loading failed for promise ${index}:`, result.reason);
+                }
+            });
+
+            await this.loadRecentActivity();
+
+            // FIXED: Ensure Quick Actions are rendered after data loads
+            this.renderQuickActions();
+
             this.updateLastRefreshTime();
-            this.validateDataIntegrity();
+            this.validateDataIntegrityNew();
 
         } catch (error) {
             console.error('Error loading dashboard data:', error);
@@ -315,57 +377,98 @@ class AdminDashboard {
         }
     }
 
-    validateDataIntegrity() {
-        if (!this.dashboardData.overview || !this.dashboardData.overview.general_stats) {
-            console.error('Invalid overview data, reloading...');
-            this.loadDashboardOverview();
-        }
-
-        if (!this.dashboardData.analytics || !this.dashboardData.analytics.user_analytics) {
-            console.error('Invalid analytics data, reloading...');
-            this.loadAnalytics();
-        }
-
-        if (!this.dashboardData.supportDashboard || !this.dashboardData.supportDashboard.ticket_stats) {
-            console.error('Invalid support data, reloading...');
-            this.loadSupportDashboard();
-        }
-    }
-
-    async loadDashboardOverview() {
+    // NEW: System Monitoring endpoint
+    async loadSystemMonitoring() {
         try {
-            const response = await this.makeAuthenticatedRequest('/admin/dashboard');
+            const response = await this.makeAuthenticatedRequest('/system-monitoring');
             if (response.ok) {
                 const data = await response.json();
-
-                if (data && data.general_stats) {
-                    this.dashboardData.overview = data;
-                    this.renderOverviewCards(data);
-                    this.renderRecentActivity(data.recent_activity);
-                    this.renderQuickActions();
-
-                    // Pass alerts to system monitor
-                    if (data.alerts && data.alerts.length > 0 && this.systemMonitor) {
-                        data.alerts.forEach(alert => this.systemMonitor.handleNewAlert(alert));
-                    }
+                if (data.success && data.data) {
+                    this.dashboardData.systemMonitoring = data.data;
+                    this.updateSystemMonitoringDisplay(data.data);
                 } else {
-                    throw new Error('Invalid dashboard data structure');
+                    throw new Error('Invalid system monitoring data structure');
                 }
             } else {
-                throw new Error(`Dashboard request failed: ${response.status}`);
+                throw new Error(`System monitoring request failed: ${response.status}`);
             }
         } catch (error) {
-            console.error('Error loading dashboard overview:', error);
-            this.showError('Failed to load dashboard overview');
+            console.error('Error loading system monitoring:', error);
+            this.showError('Failed to load system monitoring');
         }
     }
 
+    // NEW: Overview Stats endpoint  
+    async loadOverviewStats() {
+        try {
+            const response = await this.makeAuthenticatedRequest('/overview');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data) {
+                    this.dashboardData.overview = data.data;
+                    this.renderOverviewCardsNew(data.data);
+                } else {
+                    throw new Error('Invalid overview data structure');
+                }
+            } else {
+                throw new Error(`Overview request failed: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading overview stats:', error);
+            this.showError('Failed to load overview statistics');
+        }
+    }
+
+    // NEW: Service Status endpoint
+    async loadServiceStatus() {
+        try {
+            const response = await this.makeAuthenticatedRequest('/service-status');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data) {
+                    this.dashboardData.serviceStatus = data.data;
+                    if (this.systemMonitor) {
+                        this.systemMonitor.updateServicesDisplay(data.data);
+                    }
+                } else {
+                    throw new Error('Invalid service status data structure');
+                }
+            } else {
+                throw new Error(`Service status request failed: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading service status:', error);
+            this.showError('Failed to load service status');
+        }
+    }
+
+    // NEW: Admin Activity endpoint
+    async loadAdminActivity() {
+        try {
+            const response = await this.makeAuthenticatedRequest('/admin-activity');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data) {
+                    this.dashboardData.adminActivity = data.data;
+                    this.renderAdminActivityDisplay(data.data);
+                } else {
+                    throw new Error('Invalid admin activity data structure');
+                }
+            } else {
+                throw new Error(`Admin activity request failed: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading admin activity:', error);
+            this.showError('Failed to load admin activity');
+        }
+    }
+
+    // UPDATED: Analytics endpoint
     async loadAnalytics() {
         try {
             const response = await this.makeAuthenticatedRequest('/admin/analytics');
             if (response.ok) {
                 const data = await response.json();
-
                 if (data && (data.user_analytics || data.content_analytics)) {
                     this.dashboardData.analytics = data;
                     if (this.statisticsManager) {
@@ -383,58 +486,463 @@ class AdminDashboard {
         }
     }
 
-    async loadSupportDashboard() {
+    // NEW: Support Real-time endpoint
+    async loadSupportRealTime() {
         try {
-            const response = await this.makeAuthenticatedRequest('/admin/support/dashboard');
+            const response = await this.makeAuthenticatedRequest('/admin/support/real-time?include_stats=true');
             if (response.ok) {
                 const data = await response.json();
+                if (data.success && data.data) {
+                    this.dashboardData.supportData = data.data;
+                    this.renderSupportDataNew(data.data);
 
-                if (data && data.ticket_stats) {
-                    this.dashboardData.supportDashboard = data;
-                    this.renderSupportStats(data);
-                    this.renderRecentTickets(data.recent_tickets || []);
-
-                    // Create alert for urgent tickets
-                    if (data.ticket_stats.urgent > 3 && this.systemMonitor) {
-                        this.systemMonitor.handleNewAlert({
-                            level: 'warning',
-                            component: 'Support System',
-                            message: `${data.ticket_stats.urgent} urgent tickets need attention`
-                        });
+                    // Handle urgent alerts
+                    if (data.data.urgent_alerts && data.data.urgent_alerts.length > 0 && this.systemMonitor) {
+                        data.data.urgent_alerts.forEach(alert =>
+                            this.systemMonitor.handleNewAlert(alert)
+                        );
                     }
                 } else {
                     throw new Error('Invalid support data structure');
                 }
             } else {
-                throw new Error(`Support dashboard request failed: ${response.status}`);
+                throw new Error(`Support real-time request failed: ${response.status}`);
             }
         } catch (error) {
-            console.error('Error loading support dashboard:', error);
-            this.showError('Failed to load support dashboard');
+            console.error('Error loading support real-time data:', error);
+            this.showError('Failed to load support data');
         }
     }
 
+    // NEW: System Health endpoint
+    async loadSystemHealth() {
+        try {
+            const response = await this.makeAuthenticatedRequest('/admin/system-health');
+            if (response.ok) {
+                const data = await response.json();
+                this.dashboardData.systemHealth = data;
+                if (this.systemMonitor) {
+                    this.systemMonitor.updateSystemHealth(data);
+                }
+            } else {
+                throw new Error(`System health request failed: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading system health:', error);
+            this.showError('Failed to load system health');
+        }
+    }
+
+    // FIXED: Recent Activity using existing endpoints
+    async loadRecentActivity() {
+        try {
+            // Check if we already have the data from overview
+            if (this.dashboardData.overview) {
+                const activities = this.gatherAllActivities();
+                this.renderRecentActivity(activities);
+            } else {
+                // If not, load the overview data first
+                await this.loadOverviewStats();
+                const activities = this.gatherAllActivities();
+                this.renderRecentActivity(activities);
+            }
+        } catch (error) {
+            console.error('Error loading recent activity:', error);
+            this.showError('Failed to load recent activity');
+        }
+    }
+
+    // NEW: Gather all activities from existing data sources
+    gatherAllActivities() {
+        const allActivities = [];
+        const now = new Date();
+
+        // From overview data
+        if (this.dashboardData.overview) {
+            const overview = this.dashboardData.overview;
+
+            // Add recent content
+            if (overview.recent_content && Array.isArray(overview.recent_content)) {
+                overview.recent_content.forEach(content => {
+                    const activityTime = new Date(content.created_at);
+                    allActivities.push({
+                        type: 'content_added',
+                        category: 'content',
+                        title: `New ${this.capitalizeFirst(content.type || content.content_type || 'content')} Added`,
+                        subtitle: content.title || 'Untitled',
+                        details: `Rating: ${content.rating || 'N/A'}/10`,
+                        user: 'System',
+                        time: this.formatTimeAgo(activityTime),
+                        exact_time: this.formatExactDateTime(activityTime),
+                        timestamp: activityTime,
+                        status: 'success',
+                        icon: 'film',
+                        url: `/admin/content/${content.id}`,
+                        typeLabel: 'Content',
+                        isNew: (now - activityTime) < 3600000 // Less than 1 hour
+                    });
+                });
+            }
+
+            // Add recent users
+            if (overview.recent_users && Array.isArray(overview.recent_users)) {
+                overview.recent_users.forEach(user => {
+                    const activityTime = new Date(user.created_at);
+                    allActivities.push({
+                        type: 'user_registered',
+                        category: 'user',
+                        title: 'New User Registered',
+                        subtitle: `@${user.username}`,
+                        details: user.email,
+                        user: 'System',
+                        time: this.formatTimeAgo(activityTime),
+                        exact_time: this.formatExactDateTime(activityTime),
+                        timestamp: activityTime,
+                        status: 'info',
+                        icon: 'user-plus',
+                        url: `/admin/users/${user.id}`,
+                        typeLabel: 'User',
+                        isNew: (now - activityTime) < 3600000
+                    });
+                });
+            }
+
+            // Add recent recommendations
+            if (overview.recent_recommendations && Array.isArray(overview.recent_recommendations)) {
+                overview.recent_recommendations.forEach(rec => {
+                    const activityTime = new Date(rec.created_at);
+                    allActivities.push({
+                        type: 'recommendation_created',
+                        category: 'recommendation',
+                        title: 'Recommendation Created',
+                        subtitle: rec.content_title || 'Unknown Content',
+                        details: `Type: ${rec.recommendation_type || 'general'} | By: ${rec.admin_name}`,
+                        user: rec.admin_name || 'Admin',
+                        time: this.formatTimeAgo(activityTime),
+                        exact_time: this.formatExactDateTime(activityTime),
+                        timestamp: activityTime,
+                        status: rec.is_active ? 'warning' : 'info',
+                        icon: 'star',
+                        url: `/admin/recommendations/${rec.id}`,
+                        typeLabel: rec.is_active ? 'Active' : 'Draft',
+                        isNew: (now - activityTime) < 3600000
+                    });
+                });
+            }
+        }
+
+        // From support data
+        if (this.dashboardData.supportData) {
+            const supportData = this.dashboardData.supportData;
+
+            // Add recent tickets
+            if (supportData.recent_tickets && Array.isArray(supportData.recent_tickets)) {
+                supportData.recent_tickets.slice(0, 5).forEach(ticket => {
+                    const activityTime = new Date(ticket.created_at);
+                    allActivities.push({
+                        type: 'support_ticket',
+                        category: 'support',
+                        title: 'Support Ticket Created',
+                        subtitle: `#${ticket.ticket_number}: ${ticket.subject}`,
+                        details: `Priority: ${ticket.priority} | User: ${ticket.user_name}`,
+                        user: ticket.user_name || 'Unknown',
+                        time: this.formatTimeAgo(activityTime),
+                        exact_time: this.formatExactDateTime(activityTime),
+                        timestamp: activityTime,
+                        status: ticket.priority === 'urgent' ? 'danger' : 'info',
+                        icon: 'message-circle',
+                        url: `/admin/support/tickets/${ticket.id}`,
+                        typeLabel: 'Ticket',
+                        priority: ticket.priority,
+                        isNew: ticket.is_new || (now - activityTime) < 3600000
+                    });
+                });
+            }
+
+            // Add recent contacts
+            if (supportData.recent_contacts && Array.isArray(supportData.recent_contacts)) {
+                supportData.recent_contacts.slice(0, 3).forEach(contact => {
+                    const activityTime = new Date(contact.created_at);
+                    allActivities.push({
+                        type: 'contact_message',
+                        category: 'support',
+                        title: 'Contact Message',
+                        subtitle: contact.subject || 'No subject',
+                        details: `From: ${contact.name}${contact.company ? ` (${contact.company})` : ''}`,
+                        user: contact.name || 'Unknown',
+                        time: this.formatTimeAgo(activityTime),
+                        exact_time: this.formatExactDateTime(activityTime),
+                        timestamp: activityTime,
+                        status: contact.is_business_inquiry ? 'warning' : 'info',
+                        icon: 'mail',
+                        url: `/admin/support/contacts/${contact.id}`,
+                        typeLabel: 'Contact',
+                        isNew: contact.is_new || (now - activityTime) < 1800000 // 30 minutes for contacts
+                    });
+                });
+            }
+
+            // Add recent issues
+            if (supportData.recent_issues && Array.isArray(supportData.recent_issues)) {
+                supportData.recent_issues.slice(0, 3).forEach(issue => {
+                    const activityTime = new Date(issue.created_at);
+                    allActivities.push({
+                        type: 'issue_report',
+                        category: 'support',
+                        title: 'Issue Reported',
+                        subtitle: issue.issue_title || 'No title',
+                        details: `Severity: ${issue.severity} | ID: ${issue.issue_id}`,
+                        user: issue.name || 'Unknown',
+                        time: this.formatTimeAgo(activityTime),
+                        exact_time: this.formatExactDateTime(activityTime),
+                        timestamp: activityTime,
+                        status: issue.severity === 'critical' ? 'danger' : 'warning',
+                        icon: 'alert-triangle',
+                        url: `/admin/support/issues/${issue.id}`,
+                        typeLabel: issue.severity,
+                        priority: issue.severity,
+                        isNew: issue.is_new || (now - activityTime) < 1800000
+                    });
+                });
+            }
+        }
+
+        // From admin activity data
+        if (this.dashboardData.adminActivity) {
+            const adminData = this.dashboardData.adminActivity;
+
+            // Add admin activity info
+            if (adminData.active > 0) {
+                allActivities.push({
+                    type: 'admin_activity',
+                    category: 'admin',
+                    title: 'Admin Activity Update',
+                    subtitle: `${adminData.active} admins currently active`,
+                    details: `Activity rate: ${adminData.activity_rate || '0%'}`,
+                    user: 'System',
+                    time: 'Just now',
+                    exact_time: this.formatExactDateTime(now),
+                    timestamp: now,
+                    status: 'primary',
+                    icon: 'users',
+                    url: '/admin/analytics',
+                    typeLabel: 'Admin',
+                    isNew: true
+                });
+            }
+        }
+
+        return allActivities;
+    }
+
+    // SIMPLIFIED: Render Recent Activity
+    renderRecentActivity(activities) {
+        if (!this.elements.recentActivity) return;
+
+        if (!activities || activities.length === 0) {
+            this.elements.recentActivity.innerHTML = `
+                <div class="table-empty-state">
+                    <i data-feather="clock"></i>
+                    <p>No recent activity</p>
+                </div>
+            `;
+            if (typeof feather !== 'undefined') feather.replace();
+            return;
+        }
+
+        // Sort by timestamp (newest first)
+        activities.sort((a, b) => b.timestamp - a.timestamp);
+        const displayActivities = activities.slice(0, this.isMobile ? 8 : 12);
+
+        let tableHtml = `
+            <div class="table-responsive-mobile">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Activity</th>
+                            <th class="d-none d-md-table-cell">User/Admin</th>
+                            <th>Time</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        displayActivities.forEach(activity => {
+            const isNewClass = activity.isNew ? 'activity-new' : '';
+
+            tableHtml += `
+                <tr class="slide-up ${isNewClass}">
+                    <td>
+                        <div class="activity-info">
+                            <a href="${activity.url || '#'}" class="activity-title">
+                                <i data-feather="${activity.icon}" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i>
+                                ${this.truncateText(activity.title, this.isMobile ? 30 : 50)}
+                            </a>
+                            <span class="activity-subtitle">${this.truncateText(activity.subtitle, this.isMobile ? 25 : 40)}</span>
+                            ${activity.details ? `<span class="activity-details">${this.truncateText(activity.details, this.isMobile ? 20 : 35)}</span>` : ''}
+                        </div>
+                    </td>
+                    <td class="d-none d-md-table-cell">
+                        <span style="color: var(--text-secondary); font-size: var(--font-xs);">
+                            ${this.truncateText(activity.user, 20)}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="time-info-detailed">
+                            <span class="time-ago">${activity.time}</span>
+                            <span class="exact-time">${this.formatShortDateTime(activity.timestamp)}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="table-badge table-badge-${activity.status}">
+                            ${activity.typeLabel}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tableHtml += '</tbody></table></div>';
+        this.elements.recentActivity.innerHTML = tableHtml;
+
+        if (typeof feather !== 'undefined') feather.replace();
+
+        // Update new activity badge
+        const newActivityBadge = document.getElementById('newActivityBadge');
+        if (newActivityBadge) {
+            const newCount = displayActivities.filter(a => a.isNew).length;
+            if (newCount > 0) {
+                newActivityBadge.textContent = newCount;
+                newActivityBadge.style.display = 'inline-block';
+            } else {
+                newActivityBadge.style.display = 'none';
+            }
+        }
+    }
+
+    // Helper: Format short date time
+    formatShortDateTime(date) {
+        const d = new Date(date);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (d.toDateString() === today.toDateString()) {
+            return `Today ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        } else if (d.toDateString() === yesterday.toDateString()) {
+            return `Yesterday ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        } else {
+            return d.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+    }
+
+    // NEW: Updated rendering methods for new data structures
+    updateSystemMonitoringDisplay(data) {
+        // Update database status
+        if (data.database) {
+            this.updateElement('dbConnectionStatus', data.database.status);
+            this.updateElement('dbResponseTime', data.database.response);
+            this.updateElement('dbConnections', data.database.connections);
+        }
+
+        // Update cache status  
+        if (data.cache) {
+            this.updateElement('cacheType', data.cache.type);
+            this.updateElement('cacheHitRate', data.cache.hit_rate);
+            this.updateElement('cacheMemory', data.cache.memory);
+        }
+
+        // Update external APIs
+        if (data.external_apis) {
+            this.updateElement('tmdbStatus', data.external_apis.tmdb ? '✓' : '✗');
+            this.updateElement('youtubeStatus', data.external_apis.youtube ? '✓' : '✗');
+            this.updateElement('cloudinaryStatus', data.external_apis.cloudinary ? '✓' : '✗');
+        }
+
+        // Update performance metrics
+        if (data.performance) {
+            this.updateElement('cpuUsage', data.performance.cpu);
+            this.updateElement('memoryUsage', data.performance.memory);
+            this.updateElement('diskUsage', data.performance.disk);
+
+            // Update performance indicator
+            const performanceIndicator = document.getElementById('performanceIndicator');
+            if (performanceIndicator) {
+                const cpuNum = parseInt(data.performance.cpu.replace('%', ''));
+                const memNum = parseInt(data.performance.memory.replace('%', ''));
+                const diskNum = parseInt(data.performance.disk.replace('%', ''));
+                const maxUsage = Math.max(cpuNum, memNum, diskNum);
+
+                const performanceDot = performanceIndicator.querySelector('.performance-dot');
+                const performanceText = performanceIndicator.querySelector('.performance-text');
+
+                if (performanceDot && performanceText) {
+                    if (maxUsage > 90) {
+                        performanceDot.className = 'performance-dot danger';
+                        performanceText.textContent = 'Critical';
+                    } else if (maxUsage > 70) {
+                        performanceDot.className = 'performance-dot warning';
+                        performanceText.textContent = 'Warning';
+                    } else {
+                        performanceDot.className = 'performance-dot';
+                        performanceText.textContent = 'Optimal';
+                    }
+                }
+            }
+        }
+    }
+
+    // FIXED: Quick Actions rendering for mobile view
     renderQuickActions() {
         let quickActionsContainer = document.getElementById('quickActionsContainer');
 
         if (!quickActionsContainer) {
-            const overviewCardsRow = document.getElementById('overviewCards')?.closest('.row');
+            // FIXED: Find the correct insertion point for both mobile and desktop
+            let insertionPoint = null;
 
-            if (overviewCardsRow) {
+            if (this.isMobile) {
+                // For mobile, insert after mobile overview cards
+                const mobileOverviewRow = document.querySelector('.mobile-overview-scroll')?.closest('.row');
+                insertionPoint = mobileOverviewRow;
+            } else {
+                // For desktop, insert after desktop overview cards
+                const overviewCardsRow = document.getElementById('overviewCards')?.closest('.row');
+                insertionPoint = overviewCardsRow;
+            }
+
+            // Fallback: if we can't find either, insert after system health cards
+            if (!insertionPoint) {
+                const systemHealthRow = document.querySelector('.system-health-card')?.closest('.row');
+                insertionPoint = systemHealthRow;
+            }
+
+            // Final fallback: insert after admin container's first child
+            if (!insertionPoint) {
+                const adminContainer = document.querySelector('.admin-container');
+                if (adminContainer && adminContainer.children.length > 0) {
+                    insertionPoint = adminContainer.children[0];
+                }
+            }
+
+            if (insertionPoint) {
                 const quickActionsRow = document.createElement('div');
                 quickActionsRow.className = 'row mb-4';
+                quickActionsRow.id = 'quickActionsRow'; // Add ID for easier targeting
                 quickActionsRow.innerHTML = `
-                <div class="col-12">
-                    <h2 class="section-title">
-                        <i data-feather="zap"></i>
-                        Quick Actions
-                    </h2>
-                </div>
-                <div class="col-12">
-                    <div id="quickActionsContainer" class="quick-actions"></div>
-                </div>
-            `;
-                overviewCardsRow.parentNode.insertBefore(quickActionsRow, overviewCardsRow.nextSibling);
+                    <div class="col-12">
+                        <h2 class="section-title">
+                            <i data-feather="zap"></i>
+                            Quick Actions
+                        </h2>
+                    </div>
+                    <div class="col-12">
+                        <div id="quickActionsContainer" class="quick-actions"></div>
+                    </div>
+                `;
+
+                // Insert after the found element
+                insertionPoint.parentNode.insertBefore(quickActionsRow, insertionPoint.nextSibling);
                 quickActionsContainer = document.getElementById('quickActionsContainer');
             }
         }
@@ -450,61 +958,66 @@ class AdminDashboard {
             ];
 
             quickActionsContainer.innerHTML = actions.map(action => `
-            <a href="${action.href}" class="action-btn">
-                <i data-feather="${action.icon}"></i>
-                <span>${action.label}</span>
-            </a>
-        `).join('');
+                <a href="${action.href}" class="action-btn">
+                    <i data-feather="${action.icon}"></i>
+                    <span>${action.label}</span>
+                </a>
+            `).join('');
 
             if (typeof feather !== 'undefined') {
                 feather.replace();
             }
+
+            // FIXED: Ensure Quick Actions are visible on mobile
+            const quickActionsRow = document.getElementById('quickActionsRow');
+            if (quickActionsRow) {
+                quickActionsRow.style.display = 'block';
+                quickActionsRow.classList.remove('d-none');
+            }
         }
     }
 
-    renderOverviewCards(data) {
-        const stats = data.general_stats || {};
-        const supportOverview = data.support_overview || {};
-
+    // FIXED: Update renderOverviewCardsNew to trigger Quick Actions rendering
+    renderOverviewCardsNew(data) {
         const cards = [
             {
                 title: 'Total Users',
-                value: this.formatNumber(stats.total_users || 0),
-                change: this.calculateChange(stats.new_users_month, stats.total_users),
+                value: this.formatNumber(data.total_users || 0),
+                change: `+${this.formatNumber(data.active_users || 0)} active`,
                 icon: 'users',
                 color: '#113CCF'
             },
             {
                 title: 'Total Content',
-                value: this.formatNumber(stats.total_content || 0),
-                change: '+' + this.formatNumber(stats.content_added_week || 0),
+                value: this.formatNumber(data.total_content || 0),
+                change: 'All platforms',
                 icon: 'film',
                 color: '#e50914'
             },
             {
                 title: 'Active Users',
-                value: this.formatNumber(stats.active_users_week || 0),
-                change: this.calculateChange(stats.active_users_change || 0, stats.active_users_week),
+                value: this.formatNumber(data.active_users || 0),
+                change: 'Last 24h',
                 icon: 'activity',
                 color: '#10b981'
             },
             {
                 title: 'Support Tickets',
-                value: this.formatNumber(supportOverview.open_tickets || 0),
-                change: supportOverview.urgent_tickets > 0 ? `${supportOverview.urgent_tickets} urgent` : 'All handled',
+                value: this.formatNumber(data.support_tickets || 0),
+                change: `${data.tickets_handled || 0} handled`,
                 icon: 'headphones',
-                color: supportOverview.urgent_tickets > 0 ? '#f59e0b' : '#10b981'
+                color: data.support_tickets > data.tickets_handled ? '#f59e0b' : '#10b981'
             },
             {
                 title: 'Interactions',
-                value: this.formatNumber(stats.total_interactions || 0),
-                change: '+' + this.formatNumber(stats.interactions_today || 0) + ' today',
+                value: this.formatNumber(data.interactions || 0),
+                change: 'Total system',
                 icon: 'mouse-pointer',
                 color: '#8b5cf6'
             },
             {
                 title: 'Recommendations',
-                value: this.formatNumber(stats.total_recommendations || 0),
+                value: this.formatNumber(data.recommendations || 0),
                 change: 'Active',
                 icon: 'star',
                 color: '#f59e0b'
@@ -543,8 +1056,8 @@ class AdminDashboard {
                             </div>
                         </div>
                         <div class="overview-card-value">${card.value}</div>
-                        <div class="overview-card-change ${this.getChangeClass(card.change)}">
-                            <i data-feather="${this.getChangeIcon(card.change)}" class="change-icon"></i>
+                        <div class="overview-card-change change-neutral">
+                            <i data-feather="info" class="change-icon"></i>
                             ${card.change}
                         </div>
                     </div>
@@ -555,171 +1068,209 @@ class AdminDashboard {
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
+
+        // FIXED: Trigger Quick Actions rendering after overview cards are rendered
+        setTimeout(() => {
+            this.renderQuickActions();
+        }, 100);
     }
 
-    renderRecentActivity(activities) {
-        if (!this.elements.recentActivity || !activities) return;
+    // UPDATED: Enhanced Support Data Rendering with All Support Types
+    renderSupportDataNew(data) {
+        // Update support stats with new structure
+        if (this.elements.supportStats && data.summary_stats) {
+            const stats = data.summary_stats;
+            const statItems = [
+                { label: 'Tickets', value: stats.total_tickets || 0, color: '#113CCF' },
+                { label: 'Contacts', value: stats.unread_contacts || 0, color: '#10b981' },
+                { label: 'Issues', value: stats.critical_issues || 0, color: '#ef4444' },
+                { label: 'Urgent', value: stats.urgent_tickets || 0, color: '#f59e0b' }
+            ];
 
-        this.showTableLoading(this.elements.recentActivity);
-
-        const allActivities = [
-            ...(activities.recent_content || []).map(item => ({
-                type: 'content_added',
-                title: `New ${item.type}: ${item.title}`,
-                subtitle: `Rating: ${item.rating || 'N/A'}/10`,
-                user: 'System',
-                time: this.formatTimeAgo(item.created_at),
-                timestamp: new Date(item.created_at),
-                status: 'success'
-            })),
-            ...(activities.recent_users || []).map(item => ({
-                type: 'user_registered',
-                title: 'New user registered',
-                subtitle: item.username,
-                user: item.email,
-                time: this.formatTimeAgo(item.created_at),
-                timestamp: new Date(item.created_at),
-                status: 'info'
-            })),
-            ...(activities.recent_recommendations || []).map(item => ({
-                type: 'recommendation_created',
-                title: 'Content recommended',
-                subtitle: item.content_title,
-                user: item.admin_name,
-                time: this.formatTimeAgo(item.created_at),
-                timestamp: new Date(item.created_at),
-                status: 'warning'
-            }))
-        ].sort((a, b) => b.timestamp - a.timestamp).slice(0, this.isMobile ? 5 : 8);
-
-        if (allActivities.length === 0) {
-            this.elements.recentActivity.innerHTML = `
-                <div class="table-empty-state">
-                    <i data-feather="clock"></i>
-                    <p>No recent activity</p>
+            this.elements.supportStats.innerHTML = statItems.map(stat => `
+                <div class="support-stat">
+                    <div class="support-stat-value" style="--stat-color: ${stat.color}">${stat.value}</div>
+                    <div class="support-stat-label">${stat.label}</div>
                 </div>
-            `;
-            if (typeof feather !== 'undefined') {
-                feather.replace();
+            `).join('');
+
+            // Update urgent tickets badge
+            const urgentBadge = document.getElementById('urgentTicketsBadge');
+            if (urgentBadge) {
+                const totalUrgent = (stats.urgent_tickets || 0) + (stats.critical_issues || 0);
+                if (totalUrgent > 0) {
+                    urgentBadge.textContent = totalUrgent;
+                    urgentBadge.style.display = 'inline-block';
+                } else {
+                    urgentBadge.style.display = 'none';
+                }
             }
-            return;
         }
 
-        let tableHtml = `
-            <div class="table-responsive-mobile">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Activity</th>
-                            <th class="d-none d-md-table-cell">User</th>
-                            <th>Time</th>
-                            <th>Type</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-
-        allActivities.forEach(activity => {
-            tableHtml += `
-                <tr class="slide-up activity-new">
-                    <td>
-                        <div class="activity-info">
-                            <span class="activity-title">${this.truncateText(activity.title, this.isMobile ? 30 : 50)}</span>
-                            <span class="activity-subtitle">${this.truncateText(activity.subtitle, this.isMobile ? 25 : 40)}</span>
-                        </div>
-                    </td>
-                    <td class="d-none d-md-table-cell">
-                        <span style="color: var(--text-secondary); font-size: var(--font-xs);">
-                            ${this.truncateText(activity.user, 20)}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="time-info">${activity.time}</span>
-                    </td>
-                    <td>
-                        <span class="table-badge table-badge-${activity.status}">
-                            ${activity.status}
-                        </span>
-                    </td>
-                </tr>
-            `;
-        });
-
-        tableHtml += '</tbody></table></div>';
-        this.elements.recentActivity.innerHTML = tableHtml;
-
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
+        // Render all support types with exact timestamps
+        this.renderAllSupportTypes(data);
     }
 
-    renderRecentTickets(tickets) {
-        if (!this.elements.recentTickets || !tickets) return;
+    // NEW: Render All Support Types (Tickets, Contacts, Issues, Rise-Issues)
+    renderAllSupportTypes(data) {
+        if (!this.elements.recentTickets) return;
 
         this.showTableLoading(this.elements.recentTickets);
 
-        if (tickets.length === 0) {
+        // Combine all support types with exact timestamps
+        const allSupportItems = [];
+
+        // Add Tickets
+        if (data.recent_tickets) {
+            data.recent_tickets.forEach(ticket => {
+                allSupportItems.push({
+                    type: 'ticket',
+                    id: ticket.id,
+                    number: ticket.ticket_number,
+                    title: ticket.subject,
+                    user: ticket.user_name,
+                    email: ticket.user_email,
+                    priority: ticket.priority,
+                    status: ticket.status,
+                    created_at: ticket.created_at,
+                    exact_time: this.formatExactDateTime(ticket.created_at),
+                    sla_breached: ticket.sla_breached,
+                    url: `/admin/support/ticket/${ticket.id}`,
+                    icon: 'message-circle',
+                    badge_color: this.getPriorityBadgeColor(ticket.priority)
+                });
+            });
+        }
+
+        // Add Contacts
+        if (data.recent_contacts) {
+            data.recent_contacts.forEach(contact => {
+                allSupportItems.push({
+                    type: 'contact',
+                    id: contact.id,
+                    number: `CON-${contact.id}`,
+                    title: contact.subject,
+                    user: contact.name,
+                    email: contact.email,
+                    priority: contact.is_business_inquiry ? 'high' : 'normal',
+                    status: contact.is_read ? 'read' : 'unread',
+                    created_at: contact.created_at,
+                    exact_time: this.formatExactDateTime(contact.created_at),
+                    company: contact.company,
+                    url: `/admin/support/contact/${contact.id}`,
+                    icon: 'mail',
+                    badge_color: contact.is_business_inquiry ? 'warning' : 'info'
+                });
+            });
+        }
+
+        // Add Issues
+        if (data.recent_issues) {
+            data.recent_issues.forEach(issue => {
+                allSupportItems.push({
+                    type: 'issue',
+                    id: issue.id,
+                    number: issue.issue_id,
+                    title: issue.issue_title,
+                    user: issue.name,
+                    email: issue.email,
+                    priority: issue.severity,
+                    status: issue.is_resolved ? 'resolved' : 'open',
+                    created_at: issue.created_at,
+                    exact_time: this.formatExactDateTime(issue.created_at),
+                    ticket_number: issue.ticket_number,
+                    url: `/admin/support/issue/${issue.id}`,
+                    icon: 'alert-triangle',
+                    badge_color: this.getSeverityBadgeColor(issue.severity)
+                });
+            });
+        }
+
+        // Add Rise-Issues (if available)
+        if (data.rise_issues) {
+            data.rise_issues.forEach(riseIssue => {
+                allSupportItems.push({
+                    type: 'rise-issue',
+                    id: riseIssue.id,
+                    number: `RISE-${riseIssue.id}`,
+                    title: riseIssue.title,
+                    user: riseIssue.reported_by,
+                    email: riseIssue.reporter_email,
+                    priority: riseIssue.priority || 'medium',
+                    status: riseIssue.status,
+                    created_at: riseIssue.created_at,
+                    exact_time: this.formatExactDateTime(riseIssue.created_at),
+                    url: `/admin/support/rise-issue/${riseIssue.id}`,
+                    icon: 'trending-up',
+                    badge_color: 'info'
+                });
+            });
+        }
+
+        // Sort by creation date (newest first)
+        allSupportItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const displayItems = allSupportItems.slice(0, this.isMobile ? 5 : 8);
+
+        if (displayItems.length === 0) {
             this.elements.recentTickets.innerHTML = `
                 <div class="table-empty-state">
                     <i data-feather="check-circle"></i>
-                    <p>No recent tickets</p>
+                    <p>No recent support items</p>
                 </div>
             `;
-            if (typeof feather !== 'undefined') {
-                feather.replace();
-            }
+            if (typeof feather !== 'undefined') feather.replace();
             return;
         }
-
-        const displayTickets = tickets.slice(0, this.isMobile ? 3 : 6);
 
         let tableHtml = `
             <div class="table-responsive-mobile">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Ticket</th>
+                            <th>Support Item</th>
                             <th class="d-none d-md-table-cell">User</th>
-                            <th>Priority</th>
-                            <th>Time</th>
+                            <th>Type</th>
+                            <th>Reported</th>
                         </tr>
                     </thead>
                     <tbody>
         `;
 
-        displayTickets.forEach(ticket => {
-            const priorityBadge = {
-                'urgent': 'danger',
-                'high': 'warning',
-                'normal': 'info',
-                'low': 'success'
-            }[ticket.priority] || 'info';
+        displayItems.forEach(item => {
+            const typeIcon = this.getSupportTypeIcon(item.type);
+            const typeLabel = this.getSupportTypeLabel(item.type);
 
             tableHtml += `
-                <tr class="slide-up ${ticket.is_sla_breached ? 'sla-breached' : ''}">
+                <tr class="slide-up ${item.sla_breached ? 'sla-breached' : ''} ${item.status === 'unread' ? 'unread-item' : ''}">
                     <td>
-                        <div class="ticket-info">
-                            <a href="/admin/support/ticket/${ticket.id || ticket.ticket_number}" class="ticket-number">
-                                #${ticket.ticket_number}
+                        <div class="support-item-info">
+                            <a href="${item.url}" class="support-number">
+                                <i data-feather="${typeIcon}" style="width: 14px; height: 14px; margin-right: 4px;"></i>
+                                ${item.number}
                             </a>
-                            <span class="ticket-subject">
-                                ${this.truncateText(ticket.subject, this.isMobile ? 30 : 45)}
-                                ${ticket.is_sla_breached ? '<span class="table-badge table-badge-danger" style="font-size: 10px; margin-left: 4px;">SLA</span>' : ''}
+                            <span class="support-title">
+                                ${this.truncateText(item.title, this.isMobile ? 30 : 45)}
+                                ${item.sla_breached ? '<span class="table-badge table-badge-danger" style="font-size: 10px; margin-left: 4px;">SLA</span>' : ''}
+                                ${item.company ? `<span class="company-badge">${item.company}</span>` : ''}
                             </span>
                         </div>
                     </td>
                     <td class="d-none d-md-table-cell">
-                        <span style="color: var(--text-secondary); font-size: var(--font-xs);">
-                            ${this.truncateText(ticket.user_name, 15)}
+                        <div class="user-info">
+                            <span class="user-name">${this.truncateText(item.user, 15)}</span>
+                            <span class="user-email">${this.truncateText(item.email, 20)}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="table-badge table-badge-${item.badge_color}">
+                            ${typeLabel}
                         </span>
                     </td>
                     <td>
-                        <span class="table-badge table-badge-${priorityBadge}">
-                            ${ticket.priority}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="time-info">${this.formatTimeAgo(ticket.created_at)}</span>
+                        <div class="time-info-detailed">
+                            <span class="time-ago">${this.formatTimeAgo(item.created_at)}</span>
+                            <span class="exact-time">${item.exact_time}</span>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -728,61 +1279,175 @@ class AdminDashboard {
         tableHtml += '</tbody></table></div>';
         this.elements.recentTickets.innerHTML = tableHtml;
 
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
+        if (typeof feather !== 'undefined') feather.replace();
     }
 
-    renderSupportStats(data) {
-        if (!this.elements.supportStats || !data.ticket_stats) return;
+    // NEW: Format exact date and time
+    formatExactDateTime(dateString) {
+        const date = new Date(dateString);
+        const options = {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+            timeZoneName: 'short'
+        };
+        return date.toLocaleString('en-US', options);
+    }
 
-        const stats = data.ticket_stats;
+    renderAdminActivityDisplay(data) {
+        if (!this.elements.adminActivityMetrics) return;
 
-        const statItems = [
-            { label: 'Total', value: stats.total || 0, color: '#113CCF' },
-            { label: 'Open', value: stats.open || 0, color: '#f59e0b' },
-            { label: 'Urgent', value: stats.urgent || 0, color: '#ef4444' },
-            { label: 'Today', value: stats.today_created || 0, color: '#10b981' }
+        const metrics = [
+            {
+                label: 'Currently Active',
+                value: data.active || 0,
+                change: 'Right now'
+            },
+            {
+                label: 'Active Admins',
+                value: data.active_admins || 0,
+                change: 'Last hour'
+            },
+            {
+                label: 'Total Admins',
+                value: data.total_admins || 0,
+                change: 'System wide'
+            },
+            {
+                label: 'Activity Rate',
+                value: data.activity_rate || '0%',
+                change: 'Current period'
+            }
         ];
 
-        this.elements.supportStats.innerHTML = statItems.map(stat => `
-            <div class="support-stat">
-                <div class="support-stat-value" style="--stat-color: ${stat.color}">${stat.value}</div>
-                <div class="support-stat-label">${stat.label}</div>
+        this.elements.adminActivityMetrics.innerHTML = metrics.map(metric => `
+            <div class="activity-metric">
+                <div class="activity-metric-value">${metric.value}</div>
+                <div class="activity-metric-label">${metric.label}</div>
+                <div class="activity-metric-change">${metric.change}</div>
             </div>
         `).join('');
 
-        // Update urgent tickets badge
-        const urgentBadge = document.getElementById('urgentTicketsBadge');
-        if (urgentBadge) {
-            if (stats.urgent > 0) {
-                urgentBadge.textContent = stats.urgent;
-                urgentBadge.style.display = 'inline-block';
-            } else {
-                urgentBadge.style.display = 'none';
+        // Update activity status indicator
+        const activityStatus = document.getElementById('adminActivityStatus');
+        if (activityStatus) {
+            const activityDot = activityStatus.querySelector('.activity-dot');
+            const activityText = activityStatus.querySelector('.activity-text');
+
+            if (activityDot && activityText) {
+                if (data.active > 0) {
+                    activityDot.className = 'activity-dot pulse-green';
+                    activityText.textContent = 'Active';
+                } else {
+                    activityDot.className = 'activity-dot pulse-yellow';
+                    activityText.textContent = 'Idle';
+                }
             }
         }
     }
 
-    // Real-time Updates
-    startRealTimeUpdates() {
-        this.refreshInterval = 8000;
+    // NEW: Email Preferences Management
+    async toggleEmailPreferences() {
+        const section = document.getElementById('emailPreferencesSection');
+        const toggleBtn = document.getElementById('toggleEmailPreferences');
+        const icon = toggleBtn?.querySelector('i');
+
+        if (section.style.display === 'none' || !section.style.display) {
+            // Show and load preferences
+            section.style.display = 'block';
+            if (icon) {
+                icon.setAttribute('data-feather', 'chevron-up');
+                feather.replace();
+            }
+
+            if (this.emailPreferences) {
+                await this.emailPreferences.loadAndRender();
+            }
+        } else {
+            // Hide
+            section.style.display = 'none';
+            if (icon) {
+                icon.setAttribute('data-feather', 'chevron-down');
+                feather.replace();
+            }
+        }
+    }
+
+    // NEW: Helper methods for support types
+    getSupportTypeIcon(type) {
+        const icons = {
+            'ticket': 'message-circle',
+            'contact': 'mail',
+            'issue': 'alert-triangle',
+            'rise-issue': 'trending-up'
+        };
+        return icons[type] || 'help-circle';
+    }
+
+    getSupportTypeLabel(type) {
+        const labels = {
+            'ticket': 'Ticket',
+            'contact': 'Contact',
+            'issue': 'Issue',
+            'rise-issue': 'Rise Issue'
+        };
+        return labels[type] || 'Support';
+    }
+
+    getActivityTypeLabel(type) {
+        const labels = {
+            'content_added': 'Content',
+            'user_registered': 'User',
+            'recommendation_created': 'Recommendation',
+            'support_ticket': 'Ticket',
+            'contact_message': 'Contact'
+        };
+        return labels[type] || 'Activity';
+    }
+
+    getPriorityBadgeColor(priority) {
+        const colors = {
+            'urgent': 'danger',
+            'high': 'warning',
+            'normal': 'info',
+            'low': 'success'
+        };
+        return colors[priority] || 'info';
+    }
+
+    getSeverityBadgeColor(severity) {
+        const colors = {
+            'critical': 'danger',
+            'high': 'warning',
+            'medium': 'info',
+            'low': 'success'
+        };
+        return colors[severity] || 'info';
+    }
+
+    // Real-time Updates using NEW endpoints
+    startRealTimeUpdatesNew() {
+        this.refreshInterval = 8000; // 8 second base interval
 
         this.refreshTimer = setInterval(() => {
             if (!this.isRefreshing && !document.hidden) {
-                this.refreshAllData();
+                this.refreshAllDataNew();
             }
         }, this.refreshInterval);
 
-        console.log(`✅ HTTP polling started (${this.refreshInterval / 1000}s interval)`);
+        console.log(`✅ Real-time updates started with NEW endpoints (${this.refreshInterval / 1000}s interval)`);
     }
 
     setupSmartPolling() {
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
-                this.refreshAllData();
+                this.refreshAllDataNew();
                 if (this.systemMonitor) {
-                    this.systemMonitor.loadAllSystemData();
+                    this.systemMonitor.loadAllSystemDataNew();
                 }
                 this.boostPollingFrequency();
             }
@@ -813,17 +1478,17 @@ class AdminDashboard {
         }
     }
 
-    async refreshAllData() {
+    async refreshAllDataNew() {
         if (this.isRefreshing) return;
 
         this.isRefreshing = true;
 
         try {
-            await this.loadAllData();
+            await this.loadAllDataNew();
             if (this.systemMonitor) {
-                await this.systemMonitor.loadAllSystemData();
+                await this.systemMonitor.loadAllSystemDataNew();
             }
-            this.showSuccess('Dashboard updated');
+            // this.showSuccess('Dashboard updated');
         } catch (error) {
             console.error('Refresh error:', error);
             this.showError('Failed to refresh dashboard');
@@ -834,6 +1499,29 @@ class AdminDashboard {
 
     updateChartsForPeriod() {
         this.loadAnalytics();
+    }
+
+    // NEW: Data integrity validation for new structure
+    validateDataIntegrityNew() {
+        if (!this.dashboardData.systemMonitoring) {
+            console.error('Invalid system monitoring data, reloading...');
+            this.loadSystemMonitoring();
+        }
+
+        if (!this.dashboardData.overview) {
+            console.error('Invalid overview data, reloading...');
+            this.loadOverviewStats();
+        }
+
+        if (!this.dashboardData.analytics || !this.dashboardData.analytics.user_analytics) {
+            console.error('Invalid analytics data, reloading...');
+            this.loadAnalytics();
+        }
+
+        if (!this.dashboardData.supportData) {
+            console.error('Invalid support data, reloading...');
+            this.loadSupportRealTime();
+        }
     }
 
     // Loading state for tables
@@ -891,6 +1579,13 @@ class AdminDashboard {
         }
 
         return response;
+    }
+
+    updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
     }
 
     formatNumber(num) {
@@ -1037,10 +1732,215 @@ class AdminDashboard {
             this.statisticsManager.destroy();
         }
 
+        if (this.emailPreferences) {
+            this.emailPreferences.destroy();
+        }
+
         window.removeEventListener('resize', this.handleResize);
         window.removeEventListener('orientationchange', this.handleResize);
 
-        console.log('🗑 Admin dashboard destroyed');
+        console.log('🗑 Admin dashboard v3.0 destroyed');
+    }
+}
+
+// NEW: Email Preferences Manager Class
+class EmailPreferencesManager {
+    constructor(dashboard) {
+        this.dashboard = dashboard;
+        this.preferences = null;
+    }
+
+    async init() {
+        console.log('✅ Email Preferences Manager initialized');
+    }
+
+    async loadAndRender() {
+        try {
+            const response = await this.dashboard.makeAuthenticatedRequest('/admin/email-preferences');
+            if (response.ok) {
+                const data = await response.json();
+                this.preferences = data.preferences;
+                this.renderPreferences(data.preferences);
+            } else {
+                throw new Error('Failed to load email preferences');
+            }
+        } catch (error) {
+            console.error('Error loading email preferences:', error);
+            this.dashboard.showError('Failed to load email preferences');
+        }
+    }
+
+    renderPreferences(preferences) {
+        const container = document.getElementById('emailPreferencesContent');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="email-preferences-grid">
+                <div class="preference-category">
+                    <h5 class="preference-category-title">
+                        <i data-feather="alert-triangle"></i>
+                        Critical Alerts
+                    </h5>
+                    <div class="preference-items">
+                        ${this.renderPreferenceToggle('urgent_tickets', 'Urgent Support Tickets', preferences.critical_alerts.urgent_tickets)}
+                        ${this.renderPreferenceToggle('sla_breaches', 'SLA Breaches', preferences.critical_alerts.sla_breaches)}
+                        ${this.renderPreferenceToggle('system_alerts', 'System Alerts', preferences.critical_alerts.system_alerts)}
+                    </div>
+                </div>
+
+                <div class="preference-category">
+                    <h5 class="preference-category-title">
+                        <i data-feather="film"></i>
+                        Content Management
+                    </h5>
+                    <div class="preference-items">
+                        ${this.renderPreferenceToggle('content_added', 'Content Added', preferences.content_management.content_added)}
+                        ${this.renderPreferenceToggle('recommendation_created', 'Recommendations Created', preferences.content_management.recommendation_created)}
+                        ${this.renderPreferenceToggle('recommendation_published', 'Recommendations Published', preferences.content_management.recommendation_published)}
+                    </div>
+                </div>
+
+                <div class="preference-category">
+                    <h5 class="preference-category-title">
+                        <i data-feather="users"></i>
+                        User Activity
+                    </h5>
+                    <div class="preference-items">
+                        ${this.renderPreferenceToggle('user_feedback', 'User Feedback', preferences.user_activity.user_feedback)}
+                        ${this.renderPreferenceToggle('regular_tickets', 'Regular Tickets', preferences.user_activity.regular_tickets)}
+                    </div>
+                </div>
+
+                <div class="preference-category">
+                    <h5 class="preference-category-title">
+                        <i data-feather="settings"></i>
+                        System Operations
+                    </h5>
+                    <div class="preference-items">
+                        ${this.renderPreferenceToggle('cache_operations', 'Cache Operations', preferences.system_operations.cache_operations)}
+                        ${this.renderPreferenceToggle('bulk_operations', 'Bulk Operations', preferences.system_operations.bulk_operations)}
+                        ${this.renderPreferenceToggle('slug_updates', 'Slug Updates', preferences.system_operations.slug_updates)}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="preference-actions">
+                <button class="btn btn-primary" id="saveEmailPreferences">
+                    <i data-feather="save"></i>
+                    Save Preferences
+                </button>
+                <button class="btn btn-outline-secondary" id="resetEmailPreferences">
+                    <i data-feather="rotate-ccw"></i>
+                    Reset to Defaults
+                </button>
+            </div>
+        `;
+
+        this.setupPreferenceEventListeners();
+
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+
+    renderPreferenceToggle(id, label, checked) {
+        return `
+            <div class="preference-item">
+                <div class="preference-toggle">
+                    <input type="checkbox" id="pref_${id}" ${checked ? 'checked' : ''}>
+                    <label for="pref_${id}" class="toggle-slider"></label>
+                </div>
+                <div class="preference-label">
+                    <span class="preference-name">${label}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    setupPreferenceEventListeners() {
+        // Save preferences
+        const saveBtn = document.getElementById('saveEmailPreferences');
+        saveBtn?.addEventListener('click', () => {
+            this.savePreferences();
+        });
+
+        // Reset preferences
+        const resetBtn = document.getElementById('resetEmailPreferences');
+        resetBtn?.addEventListener('click', () => {
+            this.resetPreferences();
+        });
+    }
+
+    async savePreferences() {
+        try {
+            const updatedPreferences = {
+                critical_alerts: {
+                    urgent_tickets: document.getElementById('pref_urgent_tickets')?.checked || false,
+                    sla_breaches: document.getElementById('pref_sla_breaches')?.checked || false,
+                    system_alerts: document.getElementById('pref_system_alerts')?.checked || false
+                },
+                content_management: {
+                    content_added: document.getElementById('pref_content_added')?.checked || false,
+                    recommendation_created: document.getElementById('pref_recommendation_created')?.checked || false,
+                    recommendation_published: document.getElementById('pref_recommendation_published')?.checked || false
+                },
+                user_activity: {
+                    user_feedback: document.getElementById('pref_user_feedback')?.checked || false,
+                    regular_tickets: document.getElementById('pref_regular_tickets')?.checked || false
+                },
+                system_operations: {
+                    cache_operations: document.getElementById('pref_cache_operations')?.checked || false,
+                    bulk_operations: document.getElementById('pref_bulk_operations')?.checked || false,
+                    slug_updates: document.getElementById('pref_slug_updates')?.checked || false
+                }
+            };
+
+            const response = await this.dashboard.makeAuthenticatedRequest('/admin/email-preferences', {
+                method: 'PUT',
+                body: JSON.stringify({ preferences: updatedPreferences })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.dashboard.showSuccess('Email preferences saved successfully');
+                this.preferences = updatedPreferences;
+            } else {
+                throw new Error('Failed to save email preferences');
+            }
+        } catch (error) {
+            console.error('Error saving email preferences:', error);
+            this.dashboard.showError('Failed to save email preferences');
+        }
+    }
+
+    resetPreferences() {
+        // Reset to default values
+        const defaultChecked = {
+            'pref_urgent_tickets': true,
+            'pref_sla_breaches': true,
+            'pref_system_alerts': true,
+            'pref_content_added': true,
+            'pref_recommendation_created': true,
+            'pref_recommendation_published': true,
+            'pref_user_feedback': true,
+            'pref_regular_tickets': false,
+            'pref_cache_operations': false,
+            'pref_bulk_operations': false,
+            'pref_slug_updates': false
+        };
+
+        Object.entries(defaultChecked).forEach(([id, checked]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.checked = checked;
+            }
+        });
+
+        this.dashboard.showSuccess('Preferences reset to defaults');
+    }
+
+    destroy() {
+        console.log('🗑 Email preferences manager destroyed');
     }
 }
 
@@ -1058,27 +1958,43 @@ window.addEventListener('beforeunload', () => {
 });
 
 window.AdminDashboard = AdminDashboard;
+window.EmailPreferencesManager = EmailPreferencesManager;
 window.adminDashboard = adminDashboard;
 
 
-
 2. statistics.js 
+
 /**
- * CineBrain Admin Dashboard - Statistics & Charts Manager
- * Handles all chart rendering and statistics visualization
+ * CineBrain Admin Dashboard - Statistics & Charts Manager (Updated for Backend v3.0)
+ * FIXED: Dark theme text visibility issues
  */
 
 class StatisticsManager {
     constructor(dashboard) {
         this.dashboard = dashboard;
         this.charts = {};
-
+        this.chartData = {
+            userGrowth: [],
+            activeUsers: [],
+            performance: [],
+            contentDistribution: [],
+            interactionTypes: []
+        };
+        this.performanceHistory = {
+            labels: [],
+            cpu: [],
+            memory: [],
+            disk: []
+        };
+        this.maxDataPoints = 20;
         this.elements = this.initializeElements();
     }
 
     async init() {
         this.initializeCharts();
-        console.log('✅ Statistics Manager initialized');
+        this.setupEventListeners();
+        this.startPerformanceTracking();
+        console.log('✅ Statistics Manager v3.0 initialized');
     }
 
     initializeElements() {
@@ -1086,60 +2002,197 @@ class StatisticsManager {
             userGrowthChart: document.getElementById('userGrowthChart'),
             contentDistributionChart: document.getElementById('contentDistributionChart'),
             systemPerformanceChart: document.getElementById('systemPerformanceChart'),
-            performanceIndicator: document.getElementById('performanceIndicator')
+            activityPeriod: document.getElementById('activityPeriod'),
+            performanceIndicator: document.getElementById('performanceIndicator'),
+            userGrowthContainer: document.querySelector('#userGrowthChart')?.parentElement,
+            contentDistributionContainer: document.querySelector('#contentDistributionChart')?.parentElement,
+            systemPerformanceContainer: document.querySelector('#systemPerformanceChart')?.parentElement
         };
     }
 
-    initializeCharts() {
-        const baseChartOptions = this.getBaseChartOptions();
+    setupEventListeners() {
+        this.elements.activityPeriod?.addEventListener('change', (e) => {
+            this.updateChartsForPeriod(e.target.value);
+        });
 
-        // User Growth Chart
-        this.initializeUserGrowthChart(baseChartOptions);
+        window.addEventListener('theme-changed', () => {
+            this.updateChartsTheme();
+        });
 
-        // Content Distribution Chart
-        this.initializeContentDistributionChart();
+        window.addEventListener('performance-data-updated', (e) => {
+            if (e.detail) {
+                this.updatePerformanceChartNew(e.detail);
+            }
+        });
 
-        // System Performance Chart
-        this.initializeSystemPerformanceChart(baseChartOptions);
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                this.resizeCharts();
+            }, 250);
+        });
+    }
+
+    startPerformanceTracking() {
+        const now = new Date();
+        for (let i = 0; i < 10; i++) {
+            const time = new Date(now.getTime() - (i * 5000));
+            this.performanceHistory.labels.unshift(this.formatTimeLabel(time));
+            this.performanceHistory.cpu.unshift(0);
+            this.performanceHistory.memory.unshift(0);
+            this.performanceHistory.disk.unshift(0);
+        }
+    }
+
+    // FIXED: Helper methods for direct color access
+    getTextColor() {
+        const theme = document.documentElement.getAttribute('data-theme') ||
+            document.documentElement.getAttribute('data-bs-theme') || 'dark';
+        return theme === 'light' ? '#1a1a1a' : '#ffffff';
+    }
+
+    getSecondaryTextColor() {
+        const theme = document.documentElement.getAttribute('data-theme') ||
+            document.documentElement.getAttribute('data-bs-theme') || 'dark';
+        return theme === 'light' ? '#4a4a4a' : '#b3b3b3';
+    }
+
+    getTooltipBg() {
+        const theme = document.documentElement.getAttribute('data-theme') ||
+            document.documentElement.getAttribute('data-bs-theme') || 'dark';
+        return theme === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.9)';
+    }
+
+    getBorderColor() {
+        const theme = document.documentElement.getAttribute('data-theme') ||
+            document.documentElement.getAttribute('data-bs-theme') || 'dark';
+        return theme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.2)';
+    }
+
+    // FIXED: Enhanced color detection for dark theme
+    getThemeColors() {
+        const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+
+        if (theme === 'light') {
+            return {
+                textPrimary: '#1a1a1a',
+                textSecondary: '#4a4a4a',
+                textMuted: '#666666',
+                cardBorder: 'rgba(0, 0, 0, 0.1)',
+                tooltipBg: 'rgba(255, 255, 255, 0.95)',
+                tooltipBorder: 'rgba(0, 0, 0, 0.1)'
+            };
+        } else {
+            return {
+                textPrimary: '#ffffff',
+                textSecondary: '#b3b3b3',
+                textMuted: '#888888',
+                cardBorder: 'rgba(255, 255, 255, 0.1)',
+                tooltipBg: 'rgba(0, 0, 0, 0.9)',
+                tooltipBorder: 'rgba(255, 255, 255, 0.2)'
+            };
+        }
     }
 
     getBaseChartOptions() {
+        const colors = this.getThemeColors();
+
         return {
             responsive: true,
             maintainAspectRatio: false,
             animation: {
-                duration: 750
+                duration: 750,
+                easing: 'easeInOutQuart'
             },
             plugins: {
                 legend: {
+                    position: 'top',
+                    align: 'end',
                     labels: {
-                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim(),
+                        color: colors.textPrimary, // FIXED: Use theme colors
                         usePointStyle: true,
                         font: {
-                            size: this.dashboard.isMobile ? 11 : 12
+                            size: this.dashboard.isMobile ? 11 : 12,
+                            family: "'Inter', sans-serif"
                         },
-                        padding: this.dashboard.isMobile ? 10 : 15
+                        padding: this.dashboard.isMobile ? 10 : 15,
+                        boxWidth: this.dashboard.isMobile ? 6 : 8,
+                        boxHeight: this.dashboard.isMobile ? 6 : 8
+                    }
+                },
+                tooltip: {
+                    enabled: true,
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: colors.tooltipBg, // FIXED: Theme-aware tooltip
+                    titleColor: colors.textPrimary,
+                    bodyColor: colors.textPrimary,
+                    borderColor: colors.tooltipBorder,
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    padding: 12,
+                    displayColors: true,
+                    titleFont: {
+                        size: 12,
+                        weight: '600'
+                    },
+                    bodyFont: {
+                        size: 11
+                    },
+                    callbacks: {
+                        label: function (context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                if (context.dataset.label?.includes('Usage')) {
+                                    label += context.parsed.y + '%';
+                                } else {
+                                    label += context.parsed.y.toLocaleString();
+                                }
+                            }
+                            return label;
+                        }
                     }
                 }
             },
             scales: {
                 x: {
                     ticks: {
-                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim(),
+                        color: colors.textMuted, // FIXED: Theme-aware axis labels
                         font: {
-                            size: this.dashboard.isMobile ? 10 : 11
-                        }
+                            size: this.dashboard.isMobile ? 10 : 11,
+                            family: "'Inter', sans-serif"
+                        },
+                        maxRotation: this.dashboard.isMobile ? 45 : 0,
+                        autoSkip: true,
+                        maxTicksLimit: this.dashboard.isMobile ? 6 : 12
                     },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    grid: {
+                        color: colors.cardBorder,
+                        drawBorder: false
+                    }
                 },
                 y: {
                     ticks: {
-                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim(),
+                        color: colors.textMuted, // FIXED: Theme-aware axis labels
                         font: {
-                            size: this.dashboard.isMobile ? 10 : 11
+                            size: this.dashboard.isMobile ? 10 : 11,
+                            family: "'Inter', sans-serif"
+                        },
+                        callback: function (value) {
+                            if (Number.isInteger(value)) {
+                                return value.toLocaleString();
+                            }
                         }
                     },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    grid: {
+                        color: colors.cardBorder,
+                        drawBorder: false
+                    },
+                    beginAtZero: true
                 }
             },
             interaction: {
@@ -1149,7 +2202,11 @@ class StatisticsManager {
             elements: {
                 point: {
                     radius: this.dashboard.isMobile ? 3 : 4,
-                    hoverRadius: this.dashboard.isMobile ? 5 : 6
+                    hoverRadius: this.dashboard.isMobile ? 5 : 6,
+                    hitRadius: this.dashboard.isMobile ? 10 : 15
+                },
+                line: {
+                    borderJoinStyle: 'round'
                 }
             }
         };
@@ -1157,227 +2214,535 @@ class StatisticsManager {
 
     initializeUserGrowthChart(chartOptions) {
         const userGrowthCtx = this.elements.userGrowthChart?.getContext('2d');
-        if (userGrowthCtx) {
-            this.charts.userGrowth = new Chart(userGrowthCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'New Users',
-                        data: [],
-                        borderColor: '#113CCF',
-                        backgroundColor: 'rgba(17, 60, 207, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        borderWidth: this.dashboard.isMobile ? 2 : 3
-                    }, {
-                        label: 'Active Users',
-                        data: [],
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        borderWidth: this.dashboard.isMobile ? 2 : 3
-                    }]
-                },
-                options: chartOptions
-            });
-        }
+        if (!userGrowthCtx) return;
+
+        const gradientNewUsers = userGrowthCtx.createLinearGradient(0, 0, 0, 400);
+        gradientNewUsers.addColorStop(0, 'rgba(17, 60, 207, 0.4)');
+        gradientNewUsers.addColorStop(1, 'rgba(17, 60, 207, 0.01)');
+
+        const gradientActiveUsers = userGrowthCtx.createLinearGradient(0, 0, 0, 400);
+        gradientActiveUsers.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+        gradientActiveUsers.addColorStop(1, 'rgba(16, 185, 129, 0.01)');
+
+        this.charts.userGrowth = new Chart(userGrowthCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'New Users',
+                    data: [],
+                    borderColor: '#113CCF',
+                    backgroundColor: gradientNewUsers,
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: this.dashboard.isMobile ? 2 : 3,
+                    pointBackgroundColor: '#113CCF',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }, {
+                    label: 'Active Users',
+                    data: [],
+                    borderColor: '#10b981',
+                    backgroundColor: gradientActiveUsers,
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: this.dashboard.isMobile ? 2 : 3,
+                    pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                ...chartOptions,
+                plugins: {
+                    ...chartOptions.plugins,
+                    title: {
+                        display: !this.dashboard.isMobile,
+                        text: 'User Growth & Activity Trends',
+                        color: this.getThemeColors().textPrimary, // FIXED: Theme-aware title
+                        font: {
+                            size: 14,
+                            weight: '600',
+                            family: "'Inter', sans-serif"
+                        },
+                        padding: { bottom: 10 }
+                    }
+                }
+            }
+        });
     }
 
+    // FIXED: Content Distribution Chart with proper theme handling
     initializeContentDistributionChart() {
         const contentDistCtx = this.elements.contentDistributionChart?.getContext('2d');
-        if (contentDistCtx) {
-            this.charts.contentDistribution = new Chart(contentDistCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        data: [],
-                        backgroundColor: [
-                            '#113CCF',
-                            '#e50914',
-                            '#10b981',
-                            '#f59e0b',
-                            '#8b5cf6',
-                            '#ef4444'
-                        ],
-                        borderWidth: 0,
-                        hoverOffset: this.dashboard.isMobile ? 4 : 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: this.dashboard.isMobile ? '60%' : '70%',
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim(),
-                                usePointStyle: true,
-                                padding: this.dashboard.isMobile ? 10 : 15,
-                                font: {
-                                    size: this.dashboard.isMobile ? 10 : 11
+        if (!contentDistCtx) return;
+
+        this.charts.contentDistribution = new Chart(contentDistCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#113CCF',
+                        '#e50914',
+                        '#10b981',
+                        '#f59e0b',
+                        '#8b5cf6',
+                        '#ef4444',
+                        '#3b82f6',
+                        '#ec4899'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: this.dashboard.isMobile ? 4 : 8,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: this.dashboard.isMobile ? '60%' : '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            // FIXED: Force theme colors for legend
+                            color: this.getTextColor(), // Use direct color instead of CSS variable
+                            usePointStyle: true,
+                            padding: this.dashboard.isMobile ? 10 : 15,
+                            font: {
+                                size: this.dashboard.isMobile ? 10 : 11,
+                                family: "'Inter', sans-serif"
+                            },
+                            generateLabels: (chart) => {
+                                const data = chart.data;
+                                if (data.labels.length && data.datasets.length) {
+                                    const dataset = data.datasets[0];
+                                    const total = dataset.data.reduce((a, b) => a + b, 0);
+
+                                    return data.labels.map((label, i) => {
+                                        const value = dataset.data[i];
+                                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+
+                                        return {
+                                            text: `${label} (${percentage}%)`,
+                                            fillStyle: dataset.backgroundColor[i],
+                                            strokeStyle: dataset.backgroundColor[i],
+                                            lineWidth: 0,
+                                            hidden: false,
+                                            index: i,
+                                            fontColor: this.getTextColor() // FIXED: Explicit font color
+                                        };
+                                    });
                                 }
+                                return [];
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: this.getTooltipBg(),
+                        titleColor: this.getTextColor(),
+                        bodyColor: this.getTextColor(),
+                        borderColor: this.getBorderColor(),
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        padding: 12,
+                        titleFont: {
+                            size: 12,
+                            weight: '600'
+                        },
+                        bodyFont: {
+                            size: 11
+                        },
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
                             }
                         }
                     }
                 }
-            });
-        }
+            }
+        });
+
+        this.addCenterTextPlugin();
     }
 
     initializeSystemPerformanceChart(baseOptions) {
         const ctx = this.elements.systemPerformanceChart?.getContext('2d');
-        if (ctx) {
-            this.charts.systemPerformance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'CPU Usage',
-                        data: [],
-                        borderColor: '#ef4444',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        borderWidth: this.dashboard.isMobile ? 2 : 3
-                    }, {
-                        label: 'Memory Usage',
-                        data: [],
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        borderWidth: this.dashboard.isMobile ? 2 : 3
-                    }, {
-                        label: 'Disk Usage',
-                        data: [],
-                        borderColor: '#8b5cf6',
-                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        borderWidth: this.dashboard.isMobile ? 2 : 3
-                    }]
+        if (!ctx) return;
+
+        const gradientCPU = ctx.createLinearGradient(0, 0, 0, 400);
+        gradientCPU.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
+        gradientCPU.addColorStop(1, 'rgba(239, 68, 68, 0.01)');
+
+        const gradientMemory = ctx.createLinearGradient(0, 0, 0, 400);
+        gradientMemory.addColorStop(0, 'rgba(245, 158, 11, 0.4)');
+        gradientMemory.addColorStop(1, 'rgba(245, 158, 11, 0.01)');
+
+        const gradientDisk = ctx.createLinearGradient(0, 0, 0, 400);
+        gradientDisk.addColorStop(0, 'rgba(139, 92, 246, 0.4)');
+        gradientDisk.addColorStop(1, 'rgba(139, 92, 246, 0.01)');
+
+        this.charts.systemPerformance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: this.performanceHistory.labels,
+                datasets: [{
+                    label: 'CPU Usage',
+                    data: this.performanceHistory.cpu,
+                    borderColor: '#ef4444',
+                    backgroundColor: gradientCPU,
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: this.dashboard.isMobile ? 2 : 3,
+                    pointBackgroundColor: '#ef4444',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }, {
+                    label: 'Memory Usage',
+                    data: this.performanceHistory.memory,
+                    borderColor: '#f59e0b',
+                    backgroundColor: gradientMemory,
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: this.dashboard.isMobile ? 2 : 3,
+                    pointBackgroundColor: '#f59e0b',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }, {
+                    label: 'Disk Usage',
+                    data: this.performanceHistory.disk,
+                    borderColor: '#8b5cf6',
+                    backgroundColor: gradientDisk,
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: this.dashboard.isMobile ? 2 : 3,
+                    pointBackgroundColor: '#8b5cf6',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                ...baseOptions,
+                animation: {
+                    duration: 500
                 },
-                options: {
-                    ...baseOptions,
-                    animation: {
-                        duration: 500
-                    },
-                    scales: {
-                        ...baseOptions.scales,
-                        y: {
-                            ...baseOptions.scales.y,
-                            beginAtZero: true,
-                            max: 100,
-                            ticks: {
-                                ...baseOptions.scales.y.ticks,
-                                callback: function (value) {
-                                    return value + '%';
-                                }
-                            }
+                scales: {
+                    ...baseOptions.scales,
+                    y: {
+                        ...baseOptions.scales.y,
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            ...baseOptions.scales.y.ticks,
+                            callback: function (value) {
+                                return value + '%';
+                            },
+                            stepSize: 25
                         }
                     }
+                },
+                plugins: {
+                    ...baseOptions.plugins,
+                    title: {
+                        display: !this.dashboard.isMobile,
+                        text: 'System Performance',
+                        color: this.getThemeColors().textPrimary, // FIXED: Theme-aware title
+                        font: {
+                            size: 14,
+                            weight: '600',
+                            family: "'Inter', sans-serif"
+                        },
+                        padding: { bottom: 10 }
+                    }
                 }
-            });
-        }
+            }
+        });
     }
 
+    // FIXED: Enhanced center text plugin with forced colors
+    addCenterTextPlugin() {
+        Chart.register({
+            id: 'centerText',
+            beforeDraw: (chart) => {
+                if (chart.config.type !== 'doughnut') return;
+
+                const ctx = chart.ctx;
+                const chartArea = chart.chartArea;
+
+                if (!chartArea || chartArea.width < 50 || chartArea.height < 50) return;
+
+                ctx.save();
+
+                const dataset = chart.data.datasets[0];
+                const total = dataset.data.reduce((a, b) => a + b, 0);
+
+                const centerX = (chartArea.left + chartArea.right) / 2;
+                const centerY = (chartArea.top + chartArea.bottom) / 2;
+
+                const availableRadius = Math.min(chartArea.width, chartArea.height) / 2;
+                const cutoutPercentage = chart.options.cutout ?
+                    parseFloat(chart.options.cutout.replace('%', '')) / 100 : 0.7;
+                const innerRadius = availableRadius * cutoutPercentage;
+
+                const textArea = innerRadius * 0.7;
+
+                const numberFontSize = Math.min(Math.max(textArea / 3, 12), this.dashboard.isMobile ? 16 : 20);
+                const labelFontSize = Math.min(Math.max(textArea / 6, 8), this.dashboard.isMobile ? 10 : 12);
+
+                // FIXED: Force colors based on current theme
+                const textPrimary = this.getTextColor();
+                const textSecondary = this.getSecondaryTextColor();
+
+                // Draw total number with forced color
+                ctx.font = `bold ${numberFontSize}px Inter`;
+                ctx.fillStyle = textPrimary; // Direct color, not CSS variable
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                const totalText = total > 999 ?
+                    (total > 999999 ? `${(total / 1000000).toFixed(1)}M` : `${(total / 1000).toFixed(0)}K`) :
+                    total.toLocaleString();
+
+                const totalTextWidth = ctx.measureText(totalText).width;
+
+                if (totalTextWidth < innerRadius * 1.4) {
+                    ctx.fillText(totalText, centerX, centerY - labelFontSize / 2);
+                }
+
+                // Draw label with forced color
+                ctx.font = `${labelFontSize}px Inter`;
+                ctx.fillStyle = textSecondary; // Direct color, not CSS variable
+
+                const labelText = 'Total Content';
+                const labelTextWidth = ctx.measureText(labelText).width;
+
+                if (labelTextWidth < innerRadius * 1.4) {
+                    ctx.fillText(labelText, centerX, centerY + numberFontSize / 2);
+                }
+
+                ctx.restore();
+            }
+        });
+    }
+
+    // FIXED: Enhanced theme update specifically for Content Distribution
+    updateChartsTheme() {
+        Object.values(this.charts).forEach(chart => {
+            if (chart && chart.options) {
+                // Update legend colors
+                if (chart.options.plugins?.legend?.labels) {
+                    chart.options.plugins.legend.labels.color = this.getTextColor();
+                }
+
+                // Update title colors
+                if (chart.options.plugins?.title) {
+                    chart.options.plugins.title.color = this.getTextColor();
+                }
+
+                // Update tooltip colors
+                if (chart.options.plugins?.tooltip) {
+                    chart.options.plugins.tooltip.backgroundColor = this.getTooltipBg();
+                    chart.options.plugins.tooltip.titleColor = this.getTextColor();
+                    chart.options.plugins.tooltip.bodyColor = this.getTextColor();
+                    chart.options.plugins.tooltip.borderColor = this.getBorderColor();
+                }
+
+                // Update scales colors
+                if (chart.options.scales) {
+                    Object.keys(chart.options.scales).forEach(scaleKey => {
+                        if (chart.options.scales[scaleKey].ticks) {
+                            chart.options.scales[scaleKey].ticks.color = this.getSecondaryTextColor();
+                        }
+                        if (chart.options.scales[scaleKey].grid) {
+                            chart.options.scales[scaleKey].grid.color = this.getBorderColor();
+                        }
+                    });
+                }
+
+                // FIXED: Force update for doughnut chart
+                if (chart.config.type === 'doughnut') {
+                    // Force regenerate legend labels with new colors
+                    chart.options.plugins.legend.labels.generateLabels = (chartInstance) => {
+                        const data = chartInstance.data;
+                        if (data.labels.length && data.datasets.length) {
+                            const dataset = data.datasets[0];
+                            const total = dataset.data.reduce((a, b) => a + b, 0);
+
+                            return data.labels.map((label, i) => {
+                                const value = dataset.data[i];
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+
+                                return {
+                                    text: `${label} (${percentage}%)`,
+                                    fillStyle: dataset.backgroundColor[i],
+                                    strokeStyle: dataset.backgroundColor[i],
+                                    lineWidth: 0,
+                                    hidden: false,
+                                    index: i,
+                                    fontColor: this.getTextColor() // FIXED: Force current theme color
+                                };
+                            });
+                        }
+                        return [];
+                    };
+                }
+
+                // Force chart update
+                chart.update('active');
+            }
+        });
+
+        console.log('🎨 Charts theme updated for', document.documentElement.getAttribute('data-theme') || 'dark', 'mode');
+    }
+
+    initializeCharts() {
+        const baseChartOptions = this.getBaseChartOptions();
+        this.initializeUserGrowthChart(baseChartOptions);
+        this.initializeContentDistributionChart();
+        this.initializeSystemPerformanceChart(baseChartOptions);
+        this.addChartLoadingAnimations();
+    }
+
+    // UPDATED: Main update method for charts with enhanced color handling
     updateCharts(data) {
-        // Update User Growth Chart
-        this.updateUserGrowthChart(data);
+        if (!data) return;
 
-        // Update Content Distribution Chart
-        this.updateContentDistributionChart(data);
-    }
-
-    updateUserGrowthChart(data) {
-        if (this.charts.userGrowth && data.user_analytics) {
-            const userGrowthData = data.user_analytics.user_growth || [];
-            const activeUsersData = data.user_analytics.active_users_trend || [];
-
-            const maxLabels = this.dashboard.isMobile ? 7 : 14;
-            const recentGrowthData = userGrowthData.slice(-maxLabels);
-            const recentActiveData = activeUsersData.slice(-maxLabels);
-
-            this.charts.userGrowth.data.labels = recentGrowthData.map(item =>
-                new Date(item.date).toLocaleDateString('en-US', {
-                    month: this.dashboard.isMobile ? 'numeric' : 'short',
-                    day: 'numeric'
-                })
-            );
-            this.charts.userGrowth.data.datasets[0].data = recentGrowthData.map(item => item.count);
-            this.charts.userGrowth.data.datasets[1].data = recentActiveData.map(item => item.count);
-            this.charts.userGrowth.update();
+        if (data.user_analytics) {
+            this.updateUserGrowthChart(data.user_analytics);
         }
-    }
 
-    updateContentDistributionChart(data) {
-        if (this.charts.contentDistribution && data.content_analytics) {
-            const contentDist = data.content_analytics.content_distribution || [];
-
-            this.charts.contentDistribution.data.labels = contentDist.map(item =>
-                this.dashboard.isMobile ? this.dashboard.capitalizeFirst(item.type) :
-                    item.type.charAt(0).toUpperCase() + item.type.slice(1)
-            );
-            this.charts.contentDistribution.data.datasets[0].data = contentDist.map(item => item.count);
-            this.charts.contentDistribution.update();
+        if (data.content_analytics) {
+            this.updateContentDistributionChart(data.content_analytics);
         }
+
+        if (data.interaction_analytics) {
+            this.updateInteractionMetrics(data.interaction_analytics);
+        }
+
+        this.removeChartLoadingAnimations();
     }
 
-    updatePerformanceChart(data) {
-        if (!this.charts.systemPerformance || !data.resources) return;
+    updateUserGrowthChart(userAnalytics) {
+        if (!this.charts.userGrowth || !userAnalytics) return;
+
+        const userGrowthData = userAnalytics.user_growth || [];
+        const activeUsersData = userAnalytics.active_users_trend || [];
+
+        const period = this.elements.activityPeriod?.value || '30d';
+        const maxLabels = period === '7d' ? 7 : period === '30d' ?
+            (this.dashboard.isMobile ? 15 : 30) :
+            (this.dashboard.isMobile ? 30 : 90);
+
+        const recentGrowthData = userGrowthData.slice(-maxLabels);
+        const recentActiveData = activeUsersData.slice(-maxLabels);
+
+        this.charts.userGrowth.data.labels = recentGrowthData.map(item => {
+            const date = new Date(item.date);
+            return this.dashboard.isMobile ?
+                date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) :
+                date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
+
+        this.charts.userGrowth.data.datasets[0].data = recentGrowthData.map(item => item.count);
+        this.charts.userGrowth.data.datasets[1].data = recentActiveData.map(item => item.count);
+
+        this.charts.userGrowth.update('active');
+        this.updateUserGrowthMetrics(userAnalytics);
+    }
+
+    // FIXED: Content distribution update with proper color handling
+    updateContentDistributionChart(contentAnalytics) {
+        if (!this.charts.contentDistribution || !contentAnalytics) return;
+
+        const contentDist = contentAnalytics.content_distribution || [];
+        const sortedDist = contentDist.sort((a, b) => b.count - a.count);
+
+        this.charts.contentDistribution.data.labels = sortedDist.map(item => {
+            const type = item.type || item.content_type;
+            return this.formatContentType(type);
+        });
+
+        this.charts.contentDistribution.data.datasets[0].data = sortedDist.map(item => item.count);
+
+        // FIXED: Update chart with proper legend colors
+        this.charts.contentDistribution.options.plugins.legend.labels.color = this.getTextColor();
+
+        this.charts.contentDistribution.update('active');
+        this.updateContentMetrics(contentAnalytics);
+    }
+
+    updatePerformanceChartNew(data) {
+        if (!this.charts.systemPerformance) return;
 
         const chart = this.charts.systemPerformance;
         const now = new Date();
+        const timeLabel = this.formatTimeLabel(now);
 
-        // Add new data point
-        chart.data.labels.push(now.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: this.dashboard.isMobile ? undefined : '2-digit'
-        }));
+        let cpuUsage = 0, memoryUsage = 0, diskUsage = 0;
 
-        // Add performance data
-        chart.data.datasets[0].data.push(data.resources.cpu_usage || 0);
-        chart.data.datasets[1].data.push(data.resources.memory_usage || 0);
-        chart.data.datasets[2].data.push(data.resources.disk_usage || 0);
-
-        // Keep only last 20 data points
-        const maxPoints = this.dashboard.isMobile ? 10 : 20;
-        if (chart.data.labels.length > maxPoints) {
-            chart.data.labels.shift();
-            chart.data.datasets.forEach(dataset => dataset.data.shift());
+        if (data.performance) {
+            cpuUsage = parseInt(data.performance.cpu?.replace('%', '') || 0);
+            memoryUsage = parseInt(data.performance.memory?.replace('%', '') || 0);
+            diskUsage = parseInt(data.performance.disk?.replace('%', '') || 0);
+        } else if (data.resources) {
+            cpuUsage = data.resources.cpu_usage || 0;
+            memoryUsage = data.resources.memory_usage || 0;
+            diskUsage = data.resources.disk_usage || 0;
+        } else if (data.cpu !== undefined) {
+            cpuUsage = parseInt(data.cpu?.replace?.('%', '') || data.cpu || 0);
+            memoryUsage = parseInt(data.memory?.replace?.('%', '') || data.memory || 0);
+            diskUsage = parseInt(data.disk?.replace?.('%', '') || data.disk || 0);
         }
 
-        chart.update();
+        this.performanceHistory.labels.push(timeLabel);
+        this.performanceHistory.cpu.push(cpuUsage);
+        this.performanceHistory.memory.push(memoryUsage);
+        this.performanceHistory.disk.push(diskUsage);
+
+        const maxPoints = this.dashboard.isMobile ? 10 : 20;
+        if (this.performanceHistory.labels.length > maxPoints) {
+            this.performanceHistory.labels.shift();
+            this.performanceHistory.cpu.shift();
+            this.performanceHistory.memory.shift();
+            this.performanceHistory.disk.shift();
+        }
+
+        chart.data.labels = this.performanceHistory.labels;
+        chart.data.datasets[0].data = this.performanceHistory.cpu;
+        chart.data.datasets[1].data = this.performanceHistory.memory;
+        chart.data.datasets[2].data = this.performanceHistory.disk;
+
+        chart.update('none');
+        this.updatePerformanceIndicatorNew(cpuUsage, memoryUsage, diskUsage);
     }
 
-    updatePerformanceIndicator(data) {
+    updatePerformanceIndicatorNew(cpuUsage, memoryUsage, diskUsage) {
         const performanceIndicator = this.elements.performanceIndicator;
-        const performanceDot = performanceIndicator?.querySelector('.performance-dot');
-        const performanceText = performanceIndicator?.querySelector('.performance-text');
+        if (!performanceIndicator) return;
 
-        if (!data.resources) return;
+        const performanceDot = performanceIndicator.querySelector('.performance-dot');
+        const performanceText = performanceIndicator.querySelector('.performance-text');
 
-        const maxUsage = Math.max(
-            data.resources.cpu_usage || 0,
-            data.resources.memory_usage || 0,
-            data.resources.disk_usage || 0
-        );
+        const maxUsage = Math.max(cpuUsage, memoryUsage, diskUsage);
 
-        let status, text;
+        let status, text, color;
         if (maxUsage > 90) {
             status = 'danger';
             text = 'Critical';
+            color = '#ef4444';
         } else if (maxUsage > 70) {
             status = 'warning';
             text = 'Warning';
+            color = '#f59e0b';
         } else {
             status = '';
             text = 'Optimal';
+            color = '#10b981';
         }
 
         if (performanceDot) {
@@ -1385,58 +2750,206 @@ class StatisticsManager {
         }
         if (performanceText) {
             performanceText.textContent = text;
+            performanceText.style.color = color;
+        }
+
+        if (maxUsage > 90) {
+            performanceIndicator.classList.add('pulse-animation');
+        } else {
+            performanceIndicator.classList.remove('pulse-animation');
+        }
+    }
+
+    async updateChartsForPeriod(period) {
+        this.addChartLoadingAnimations();
+
+        try {
+            const endpoint = `/admin/analytics?period=${period}`;
+            const response = await this.dashboard.makeAuthenticatedRequest(endpoint);
+
+            if (response.ok) {
+                const data = await response.json();
+                this.updateCharts(data);
+            }
+        } catch (error) {
+            console.error('Error updating charts for period:', error);
+            this.removeChartLoadingAnimations();
+        }
+    }
+
+    updateUserGrowthMetrics(userAnalytics) {
+        const totalUsers = userAnalytics.total_users || 0;
+        const activeToday = userAnalytics.active_today || 0;
+        const growthRate = this.calculateGrowthRate(userAnalytics.user_growth);
+
+        const metricsContainer = document.getElementById('userGrowthMetrics');
+        if (metricsContainer) {
+            metricsContainer.innerHTML = `
+                <div class="growth-metrics">
+                    <div class="growth-metric">
+                        <div class="growth-metric-value">${this.dashboard.formatNumber(totalUsers)}</div>
+                        <div class="growth-metric-label">Total Users</div>
+                    </div>
+                    <div class="growth-metric">
+                        <div class="growth-metric-value">${this.dashboard.formatNumber(activeToday)}</div>
+                        <div class="growth-metric-label">Active Today</div>
+                    </div>
+                    <div class="growth-metric">
+                        <div class="growth-metric-value growth-metric-change ${growthRate >= 0 ? 'positive' : 'negative'}">
+                            ${growthRate >= 0 ? '+' : ''}${growthRate}%
+                        </div>
+                        <div class="growth-metric-label">Growth Rate</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    updateContentMetrics(contentAnalytics) {
+        const totalContent = contentAnalytics.total_content || 0;
+        const popularGenres = contentAnalytics.popular_genres || [];
+        const topGenre = popularGenres[0]?.genre || 'N/A';
+
+        const metricsContainer = document.getElementById('contentMetrics');
+        if (metricsContainer) {
+            metricsContainer.innerHTML = `
+                <div class="content-metrics">
+                    <div class="content-metric">
+                        <div class="content-metric-value">${this.dashboard.formatNumber(totalContent)}</div>
+                        <div class="content-metric-label">Total Content</div>
+                    </div>
+                    <div class="content-metric">
+                        <div class="content-metric-value">${topGenre}</div>
+                        <div class="content-metric-label">Top Genre</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    updateInteractionMetrics(interactionAnalytics) {
+        const totalInteractions = interactionAnalytics.total_interactions || 0;
+        const dailyTrend = interactionAnalytics.daily_trend || [];
+
+        const avgDaily = dailyTrend.length > 0 ?
+            Math.round(dailyTrend.reduce((sum, day) => sum + day.count, 0) / dailyTrend.length) : 0;
+
+        const metricsContainer = document.getElementById('interactionMetrics');
+        if (metricsContainer) {
+            metricsContainer.innerHTML = `
+                <div class="interaction-metrics">
+                    <div class="interaction-metric">
+                        <div class="interaction-metric-value">${this.dashboard.formatNumber(totalInteractions)}</div>
+                        <div class="interaction-metric-label">Total Interactions</div>
+                    </div>
+                    <div class="interaction-metric">
+                        <div class="interaction-metric-value">${this.dashboard.formatNumber(avgDaily)}</div>
+                        <div class="interaction-metric-label">Daily Average</div>
+                    </div>
+                </div>
+            `;
         }
     }
 
     resizeCharts() {
-        Object.values(this.charts).forEach(chart => {
-            if (chart && typeof chart.resize === 'function') {
-                chart.resize();
+        const wasMobile = this.dashboard.isMobile;
+        this.dashboard.isMobile = window.innerWidth <= 768;
+
+        if (wasMobile !== this.dashboard.isMobile) {
+            Object.values(this.charts).forEach(chart => {
+                if (chart && typeof chart.resize === 'function') {
+                    this.updateChartOptionsForScreenSize(chart);
+                    chart.resize();
+                }
+            });
+        } else {
+            Object.values(this.charts).forEach(chart => {
+                if (chart && typeof chart.resize === 'function') {
+                    chart.resize();
+                }
+            });
+        }
+    }
+
+    updateChartOptionsForScreenSize(chart) {
+        if (!chart || !chart.options) return;
+
+        const colors = this.getThemeColors();
+
+        if (chart.options.plugins?.legend?.labels) {
+            chart.options.plugins.legend.labels.font.size = this.dashboard.isMobile ? 11 : 12;
+            chart.options.plugins.legend.labels.padding = this.dashboard.isMobile ? 10 : 15;
+            chart.options.plugins.legend.labels.color = colors.textPrimary;
+        }
+
+        if (chart.options.plugins?.title) {
+            chart.options.plugins.title.color = colors.textPrimary;
+        }
+
+        if (chart.options.scales?.x?.ticks) {
+            chart.options.scales.x.ticks.font.size = this.dashboard.isMobile ? 10 : 11;
+            chart.options.scales.x.ticks.maxRotation = this.dashboard.isMobile ? 45 : 0;
+            chart.options.scales.x.ticks.maxTicksLimit = this.dashboard.isMobile ? 6 : 12;
+            chart.options.scales.x.ticks.color = colors.textMuted;
+        }
+
+        if (chart.options.scales?.y?.ticks) {
+            chart.options.scales.y.ticks.font.size = this.dashboard.isMobile ? 10 : 11;
+            chart.options.scales.y.ticks.color = colors.textMuted;
+        }
+
+        if (chart.options.elements?.point) {
+            chart.options.elements.point.radius = this.dashboard.isMobile ? 3 : 4;
+            chart.options.elements.point.hoverRadius = this.dashboard.isMobile ? 5 : 6;
+        }
+
+        if (chart.config.type === 'doughnut') {
+            chart.options.cutout = this.dashboard.isMobile ? '60%' : '70%';
+        }
+
+        chart.update('none');
+    }
+
+    addChartLoadingAnimations() {
+        const containers = [
+            this.elements.userGrowthContainer,
+            this.elements.contentDistributionContainer,
+            this.elements.systemPerformanceContainer
+        ];
+
+        containers.forEach(container => {
+            if (container && !container.querySelector('.chart-loading')) {
+                const loader = document.createElement('div');
+                loader.className = 'chart-loading';
+                loader.innerHTML = '<div class="chart-skeleton"></div>';
+                container.appendChild(loader);
             }
         });
     }
 
-    // Theme update method for when theme changes
-    updateChartsTheme() {
-        const textPrimary = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim();
-        const textMuted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
-
-        Object.values(this.charts).forEach(chart => {
-            if (chart && chart.options) {
-                // Update legend colors
-                if (chart.options.plugins?.legend?.labels) {
-                    chart.options.plugins.legend.labels.color = textPrimary;
-                }
-
-                // Update scales colors
-                if (chart.options.scales) {
-                    Object.keys(chart.options.scales).forEach(scaleKey => {
-                        if (chart.options.scales[scaleKey].ticks) {
-                            chart.options.scales[scaleKey].ticks.color = textMuted;
-                        }
-                    });
-                }
-
-                chart.update();
-            }
+    removeChartLoadingAnimations() {
+        document.querySelectorAll('.chart-loading').forEach(loader => {
+            loader.remove();
         });
     }
 
-    // Export chart data for analytics
     exportChartData(chartType) {
         const chart = this.charts[chartType];
         if (!chart) return null;
 
         return {
+            type: chartType,
             labels: chart.data.labels,
             datasets: chart.data.datasets.map(dataset => ({
                 label: dataset.label,
-                data: dataset.data
-            }))
+                data: dataset.data,
+                borderColor: dataset.borderColor,
+                backgroundColor: dataset.backgroundColor
+            })),
+            timestamp: new Date().toISOString()
         };
     }
 
-    // Get chart statistics
     getChartStats(chartType) {
         const chart = this.charts[chartType];
         if (!chart || !chart.data.datasets) return null;
@@ -1445,17 +2958,55 @@ class StatisticsManager {
         chart.data.datasets.forEach(dataset => {
             const data = dataset.data;
             if (data.length > 0) {
+                const validData = data.filter(d => d !== null && d !== undefined);
                 stats[dataset.label] = {
-                    total: data.reduce((sum, value) => sum + value, 0),
-                    average: data.reduce((sum, value) => sum + value, 0) / data.length,
-                    max: Math.max(...data),
-                    min: Math.min(...data),
-                    latest: data[data.length - 1]
+                    total: validData.reduce((sum, value) => sum + value, 0),
+                    average: validData.reduce((sum, value) => sum + value, 0) / validData.length,
+                    max: Math.max(...validData),
+                    min: Math.min(...validData),
+                    latest: validData[validData.length - 1],
+                    count: validData.length
                 };
             }
         });
 
         return stats;
+    }
+
+    formatTimeLabel(date) {
+        if (this.dashboard.isMobile) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    formatContentType(type) {
+        const typeMap = {
+            'movie': 'Movies',
+            'tv': 'TV Shows',
+            'series': 'TV Series',
+            'anime': 'Anime',
+            'documentary': 'Documentaries',
+            'short': 'Shorts'
+        };
+        return typeMap[type?.toLowerCase()] ||
+            type?.charAt(0).toUpperCase() + type?.slice(1) ||
+            'Unknown';
+    }
+
+    calculateGrowthRate(growthData) {
+        if (!growthData || growthData.length < 2) return 0;
+
+        const recent = growthData.slice(-7);
+        const previous = growthData.slice(-14, -7);
+
+        const recentSum = recent.reduce((sum, item) => sum + item.count, 0);
+        const previousSum = previous.reduce((sum, item) => sum + item.count, 0);
+
+        if (previousSum === 0) return 100;
+
+        const rate = ((recentSum - previousSum) / previousSum) * 100;
+        return Math.round(rate * 10) / 10;
     }
 
     destroy() {
@@ -1464,685 +3015,24 @@ class StatisticsManager {
                 chart.destroy();
             }
         });
-        console.log('🗑 Statistics manager destroyed');
+
+        this.charts = {};
+        this.chartData = {
+            userGrowth: [],
+            activeUsers: [],
+            performance: [],
+            contentDistribution: [],
+            interactionTypes: []
+        };
+        this.performanceHistory = {
+            labels: [],
+            cpu: [],
+            memory: [],
+            disk: []
+        };
+
+        console.log('🗑 Statistics manager v3.0 destroyed');
     }
 }
 
-// Export for global access
 window.StatisticsManager = StatisticsManager;
-
-
-
-3. system.js
-/**
- * CineBrain Admin Dashboard - System Monitoring
- * Real-time system health and alert management
- */
-
-class SystemMonitor {
-    constructor(dashboard) {
-        this.dashboard = dashboard;
-        this.apiBase = dashboard.apiBase;
-
-        // System monitoring properties
-        this.monitoring = {
-            refreshRate: 5000,
-            healthTimer: null,
-            alertsTimer: null,
-            performanceTimer: null,
-            notificationTimer: null
-        };
-
-        this.systemData = {
-            health: null,
-            alerts: [],
-            performance: null,
-            services: null,
-            lastAlertCheck: null
-        };
-
-        this.processedAlerts = new Set();
-        this.notificationQueue = [];
-
-        this.elements = this.initializeElements();
-    }
-
-    async init() {
-        this.setupEventListeners();
-        this.setupNotificationSystem();
-        this.systemData.lastAlertCheck = new Date();
-        this.startSystemMonitoring();
-        await this.loadAllSystemData();
-    }
-
-    initializeElements() {
-        return {
-            mainStatusDot: document.getElementById('mainStatusDot'),
-            mainStatusText: document.getElementById('mainStatusText'),
-            dbStatus: document.getElementById('dbStatus'),
-            cacheStatus: document.getElementById('cacheStatus'),
-            apiStatus: document.getElementById('apiStatus'),
-            alertsSection: document.getElementById('alertsSection'),
-            realTimeAlerts: document.getElementById('realTimeAlerts'),
-            activeAlertsCount: document.getElementById('activeAlertsCount'),
-            servicesStatusGrid: document.getElementById('servicesStatusGrid'),
-            adminActivityMetrics: document.getElementById('adminActivityMetrics'),
-            systemNotificationsList: document.getElementById('systemNotificationsList')
-        };
-    }
-
-    setupEventListeners() {
-        // Quick health check
-        const quickHealthCheck = document.getElementById('quickHealthCheck');
-        quickHealthCheck?.addEventListener('click', () => {
-            this.performQuickHealthCheck();
-            this.dashboard.hapticFeedback('medium');
-        });
-
-        // Monitoring refresh rate
-        const monitoringRefreshRate = document.getElementById('monitoringRefreshRate');
-        monitoringRefreshRate?.addEventListener('change', (e) => {
-            this.updateMonitoringRefreshRate(parseInt(e.target.value));
-        });
-
-        // Dismiss all alerts
-        const dismissAllAlerts = document.getElementById('dismissAllAlerts');
-        dismissAllAlerts?.addEventListener('click', () => {
-            this.dismissAllAlerts();
-        });
-
-        // Mark all notifications read
-        const markAllNotificationsRead = document.getElementById('markAllNotificationsRead');
-        markAllNotificationsRead?.addEventListener('click', () => {
-            this.markAllNotificationsAsRead();
-        });
-    }
-
-    setupNotificationSystem() {
-        setInterval(() => {
-            this.processNotificationQueue();
-        }, 1000);
-    }
-
-    startSystemMonitoring() {
-        // Staggered polling to reduce server load
-        this.monitoring.alertsTimer = setInterval(() => {
-            this.loadSystemAlerts();
-        }, 5000);
-
-        setTimeout(() => {
-            this.monitoring.notificationTimer = setInterval(() => {
-                this.loadSystemNotifications();
-            }, 8000);
-        }, 2000);
-
-        setTimeout(() => {
-            this.monitoring.healthTimer = setInterval(() => {
-                this.loadSystemHealth();
-            }, 8000);
-        }, 4000);
-
-        setTimeout(() => {
-            this.monitoring.performanceTimer = setInterval(() => {
-                this.loadSystemPerformance();
-                this.loadServicesStatus();
-                this.loadAdminActivity();
-            }, 15000);
-        }, 6000);
-
-        console.log('✅ Optimized HTTP polling monitoring started');
-        console.log('   - Alerts: 5s | Health/Notifications: 8s | Performance: 15s');
-    }
-
-    async loadAllSystemData() {
-        try {
-            await Promise.allSettled([
-                this.loadSystemHealth(),
-                this.loadSystemAlerts(),
-                this.loadSystemPerformance(),
-                this.loadServicesStatus(),
-                this.loadAdminActivity(),
-                this.loadSystemNotifications()
-            ]);
-
-            this.updateSystemStatusBar();
-        } catch (error) {
-            console.error('Error loading system data:', error);
-        }
-    }
-
-    async loadSystemHealth() {
-        try {
-            const response = await this.dashboard.makeAuthenticatedRequest('/health/detailed');
-            if (response.ok) {
-                const data = await response.json();
-                this.systemData.health = data;
-                this.updateSystemHealthCards(data);
-                this.updateSystemStatusBar(data);
-            }
-        } catch (error) {
-            console.error('Error loading system health:', error);
-            this.updateSystemStatusBar({ status: 'error' });
-        }
-    }
-
-    async loadSystemAlerts() {
-        try {
-            const response = await this.dashboard.makeAuthenticatedRequest('/system/monitoring/alerts');
-            if (response.ok) {
-                const data = await response.json();
-                const alerts = data.alerts || [];
-
-                alerts.forEach(alert => {
-                    const alertId = alert.id || `${alert.component}-${alert.message}`;
-                    if (!this.processedAlerts.has(alertId)) {
-                        this.processedAlerts.add(alertId);
-                        this.handleNewAlert(alert);
-                    }
-                });
-
-                this.systemData.alerts = alerts;
-                this.updateSystemAlerts(alerts);
-            }
-        } catch (error) {
-            console.error('Error loading system alerts:', error);
-        }
-    }
-
-    async loadSystemPerformance() {
-        try {
-            const response = await this.dashboard.makeAuthenticatedRequest('/performance');
-            if (response.ok) {
-                const data = await response.json();
-                this.systemData.performance = data;
-
-                // Update statistics manager with performance data
-                if (this.dashboard.statisticsManager) {
-                    this.dashboard.statisticsManager.updatePerformanceChart(data);
-                    this.dashboard.statisticsManager.updatePerformanceIndicator(data);
-                }
-            }
-        } catch (error) {
-            console.error('Error loading system performance:', error);
-        }
-    }
-
-    async loadServicesStatus() {
-        try {
-            const response = await this.dashboard.makeAuthenticatedRequest('/system/services');
-            if (response.ok) {
-                const data = await response.json();
-                this.systemData.services = data;
-                this.updateServicesGrid(data);
-            }
-        } catch (error) {
-            console.error('Error loading services status:', error);
-        }
-    }
-
-    async loadAdminActivity() {
-        try {
-            const response = await this.dashboard.makeAuthenticatedRequest('/admin/monitoring/activity');
-            if (response.ok) {
-                const data = await response.json();
-                this.updateAdminActivityMetrics(data);
-            }
-        } catch (error) {
-            console.error('Error loading admin activity:', error);
-        }
-    }
-
-    async loadSystemNotifications() {
-        try {
-            const response = await this.dashboard.makeAuthenticatedRequest('/admin/monitoring/notifications');
-            if (response.ok) {
-                const data = await response.json();
-                this.updateSystemNotifications(data);
-
-                const notifications = data.recent_notifications || [];
-                const unreadCount = notifications.filter(n => !n.is_read).length;
-
-                const notificationBadge = document.getElementById('notificationBadge');
-                if (notificationBadge) {
-                    if (unreadCount > 0) {
-                        notificationBadge.textContent = unreadCount;
-                        notificationBadge.style.display = 'block';
-                    } else {
-                        notificationBadge.style.display = 'none';
-                    }
-                }
-
-                localStorage.setItem('cinebrain-admin-notifications', JSON.stringify(notifications));
-
-                window.dispatchEvent(new CustomEvent('cinebrain-notifications-updated', {
-                    detail: { notifications, unreadCount }
-                }));
-            }
-        } catch (error) {
-            console.error('Error loading system notifications:', error);
-        }
-    }
-
-    handleNewAlert(alert) {
-        this.notificationQueue.push({
-            type: 'alert',
-            title: `System Alert: ${alert.component || 'System'}`,
-            message: alert.message,
-            level: alert.level,
-            timestamp: alert.timestamp || new Date().toISOString(),
-            data: alert
-        });
-    }
-
-    handleNewNotification(notification) {
-        this.notificationQueue.push({
-            type: 'notification',
-            title: notification.title,
-            message: notification.message,
-            level: notification.is_urgent ? 'warning' : 'info',
-            timestamp: notification.created_at || new Date().toISOString(),
-            data: notification
-        });
-    }
-
-    handleStatsUpdate(stats) {
-        if (stats.overview) {
-            this.dashboard.dashboardData.overview = { ...this.dashboard.dashboardData.overview, ...stats.overview };
-            this.dashboard.renderOverviewCards(this.dashboard.dashboardData.overview);
-        }
-    }
-
-    handleSupportUpdate(support) {
-        if (support.ticket_stats) {
-            if (this.dashboard.dashboardData.supportDashboard) {
-                this.dashboard.dashboardData.supportDashboard.ticket_stats = support.ticket_stats;
-                this.dashboard.renderSupportStats(this.dashboard.dashboardData.supportDashboard);
-            }
-        }
-    }
-
-    processNotificationQueue() {
-        while (this.notificationQueue.length > 0) {
-            const notification = this.notificationQueue.shift();
-            this.sendNotificationToTopbar(notification);
-        }
-    }
-
-    sendNotificationToTopbar(notification) {
-        const notificationBadge = document.getElementById('notificationBadge');
-        if (notificationBadge) {
-            const currentCount = parseInt(notificationBadge.textContent || '0');
-            notificationBadge.textContent = currentCount + 1;
-            notificationBadge.style.display = 'block';
-        }
-
-        const notifications = JSON.parse(localStorage.getItem('cinebrain-admin-notifications') || '[]');
-        notifications.unshift({
-            id: Date.now(),
-            ...notification,
-            isRead: false,
-            createdAt: new Date().toISOString()
-        });
-
-        if (notifications.length > 50) {
-            notifications.splice(50);
-        }
-
-        localStorage.setItem('cinebrain-admin-notifications', JSON.stringify(notifications));
-
-        setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('cinebrain-notification', {
-                detail: notification,
-                bubbles: true
-            }));
-        }, 100);
-
-        if (notification.level === 'critical' || notification.level === 'error' || notification.level === 'urgent') {
-            this.dashboard.showToast(notification.message, notification.level === 'critical' ? 'error' : 'warning');
-        }
-    }
-
-    updateSystemHealthCards(data) {
-        this.updateHealthCard('database', data.components?.database || {});
-        this.updateHealthCard('cache', data.components?.cache || {});
-        this.updateHealthCard('services', data.components?.external_apis || {});
-        this.updateHealthCard('performance', data.resources || {});
-    }
-
-    updateHealthCard(type, data) {
-        const healthStatus = document.getElementById(`${type}HealthStatus`);
-        const healthDot = healthStatus?.querySelector('.health-dot');
-
-        if (!healthDot) return;
-
-        let status = 'healthy';
-        if (type === 'database') {
-            status = data.status === 'healthy' ? 'healthy' : 'danger';
-            this.updateElement(`dbConnectionStatus`, data.connection || data.status || 'Unknown');
-            this.updateElement(`dbResponseTime`, data.response_time_ms ? `${data.response_time_ms}ms` : '--');
-            this.updateElement(`dbConnections`, data.active_connections || '--');
-        } else if (type === 'cache') {
-            status = data.functional ? 'healthy' : (data.configured ? 'warning' : 'danger');
-            this.updateElement(`cacheType`, data.type || 'Not configured');
-            this.updateElement(`cacheHitRate`, data.hit_rate || '--');
-            this.updateElement(`cacheMemory`, data.memory_usage || '--');
-        } else if (type === 'services') {
-            const servicesHealthy = data.tmdb?.configured && data.youtube?.configured && data.cloudinary?.configured;
-            status = servicesHealthy ? 'healthy' : 'warning';
-            this.updateElement(`tmdbStatus`, data.tmdb?.configured ? '✓' : '✗');
-            this.updateElement(`youtubeStatus`, data.youtube?.configured ? '✓' : '✗');
-            this.updateElement(`cloudinaryStatus`, data.cloudinary?.configured ? '✓' : '✗');
-        } else if (type === 'performance') {
-            const maxUsage = Math.max(data.memory_usage || 0, data.cpu_usage || 0, data.disk_usage || 0);
-            status = maxUsage > 90 ? 'danger' : (maxUsage > 70 ? 'warning' : 'healthy');
-            this.updateElement(`cpuUsage`, data.cpu_usage ? `${data.cpu_usage}%` : '--%');
-            this.updateElement(`memoryUsage`, data.memory_usage ? `${data.memory_usage}%` : '--%');
-            this.updateElement(`diskUsage`, data.disk_usage ? `${data.disk_usage}%` : '--%');
-        }
-
-        healthDot.className = `health-dot ${status === 'healthy' ? '' : status}`;
-    }
-
-    updateSystemStatusBar(data) {
-        const mainStatusDot = this.elements.mainStatusDot;
-        const mainStatusText = this.elements.mainStatusText;
-
-        if (data) {
-            const status = data.status || 'unknown';
-            if (mainStatusDot) {
-                mainStatusDot.className = `status-dot ${status === 'healthy' ? 'pulse-green' :
-                    status === 'degraded' ? 'pulse-yellow' : 'pulse-red'
-                    }`;
-            }
-            if (mainStatusText) {
-                mainStatusText.textContent = status === 'healthy' ? 'System Online' :
-                    status === 'degraded' ? 'System Degraded' : 'System Issues';
-            }
-        }
-
-        this.updateElement('dbStatus', data?.database === 'connected' ? 'Connected' : 'Error');
-        this.updateElement('cacheStatus', data?.cache === 'connected' ? 'Active' : 'Inactive');
-        this.updateElement('apiStatus', data?.api_keys?.tmdb ? 'Online' : 'Offline');
-        this.updateElement('liveConnectionStatus', 'LIVE');
-    }
-
-    updateSystemAlerts(alerts) {
-        const alertsSection = this.elements.alertsSection;
-        const realTimeAlerts = this.elements.realTimeAlerts;
-        const activeAlertsCount = this.elements.activeAlertsCount;
-
-        if (!alerts || alerts.length === 0) {
-            if (alertsSection) alertsSection.style.display = 'none';
-            if (activeAlertsCount) activeAlertsCount.textContent = '0';
-            return;
-        }
-
-        if (alertsSection) alertsSection.style.display = 'block';
-        if (activeAlertsCount) activeAlertsCount.textContent = alerts.length;
-
-        alerts.forEach(alert => {
-            if (alert.level === 'critical' || alert.level === 'error') {
-                this.sendNotificationToTopbar({
-                    type: 'alert',
-                    title: `System Alert: ${alert.component || 'System'}`,
-                    message: alert.message,
-                    level: alert.level,
-                    timestamp: alert.timestamp || new Date().toISOString()
-                });
-            }
-        });
-
-        if (realTimeAlerts) {
-            realTimeAlerts.innerHTML = alerts.map(alert => `
-                <div class="alert-item ${alert.level || 'info'}" data-alert-id="${alert.id || Date.now()}">
-                    <div class="alert-icon">
-                        <i data-feather="${this.getAlertIcon(alert.level)}"></i>
-                    </div>
-                    <div class="alert-content">
-                        <div class="alert-title">${alert.component || 'System'}</div>
-                        <div class="alert-message">${alert.message}</div>
-                    </div>
-                    <div class="alert-time">${this.dashboard.formatTimeAgo(alert.timestamp || new Date().toISOString())}</div>
-                    <div class="alert-actions">
-                        <button class="alert-dismiss" onclick="adminDashboard.systemMonitor.dismissAlert('${alert.id || Date.now()}')">
-                            <i data-feather="x"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-
-            if (typeof feather !== 'undefined') {
-                feather.replace();
-            }
-        }
-    }
-
-    updateServicesGrid(data) {
-        const servicesGrid = this.elements.servicesStatusGrid;
-        if (!servicesGrid || !data.application_services) return;
-
-        const services = [
-            { name: 'Auth', status: data.application_services.auth_service },
-            { name: 'Admin', status: data.application_services.admin_service },
-            { name: 'Support', status: data.application_services.support_service },
-            { name: 'Content', status: data.application_services.content_service },
-            { name: 'Analytics', status: data.application_services.analytics_service || true },
-            { name: 'Cache', status: data.core_services.cache }
-        ];
-
-        servicesGrid.innerHTML = services.map(service => `
-            <div class="service-item">
-                <div class="service-status ${service.status ? '' : 'danger'}"></div>
-                <div class="service-name">${service.name}</div>
-                <div class="service-info">${service.status ? 'Online' : 'Offline'}</div>
-            </div>
-        `).join('');
-    }
-
-    updateAdminActivityMetrics(data) {
-        const adminActivityMetrics = this.elements.adminActivityMetrics;
-        if (!adminActivityMetrics || !data.admin_users) return;
-
-        const metrics = [
-            {
-                label: 'Active Admins',
-                value: data.admin_users.active_24h || 0,
-                change: `${data.admin_users.activity_rate_24h || 0}%`
-            },
-            {
-                label: 'Total Admins',
-                value: data.admin_users.total_admins || 0,
-                change: 'All time'
-            },
-            {
-                label: 'Recommendations',
-                value: data.admin_recommendations?.recent_7d || 0,
-                change: 'This week'
-            },
-            {
-                label: 'Active Rate',
-                value: `${data.admin_users.activity_rate_24h || 0}%`,
-                change: '24h rate'
-            }
-        ];
-
-        adminActivityMetrics.innerHTML = metrics.map(metric => `
-            <div class="activity-metric">
-                <div class="activity-metric-value">${metric.value}</div>
-                <div class="activity-metric-label">${metric.label}</div>
-                <div class="activity-metric-change">${metric.change}</div>
-            </div>
-        `).join('');
-    }
-
-    updateSystemNotifications(data) {
-        const notificationsList = this.elements.systemNotificationsList;
-        if (!notificationsList) return;
-
-        const notifications = data.recent_notifications || [];
-
-        if (notifications.length === 0) {
-            notificationsList.innerHTML = `
-                <div class="table-empty-state">
-                    <i data-feather="bell"></i>
-                    <p>No system notifications</p>
-                </div>
-            `;
-            if (typeof feather !== 'undefined') {
-                feather.replace();
-            }
-            return;
-        }
-
-        notificationsList.innerHTML = notifications.slice(0, 5).map(notification => `
-            <div class="notification-item ${notification.is_read ? '' : 'unread'} ${notification.is_urgent ? 'urgent' : ''}">
-                <div class="notification-icon">
-                    <i data-feather="${this.getNotificationIcon(notification.type)}"></i>
-                </div>
-                <div class="notification-content">
-                    <div class="notification-title">${notification.title}</div>
-                    <div class="notification-message">${this.dashboard.truncateText(notification.message, 60)}</div>
-                    <div class="notification-time">${this.dashboard.formatTimeAgo(notification.created_at)}</div>
-                </div>
-            </div>
-        `).join('');
-
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
-    }
-
-    // Action Methods
-    async performQuickHealthCheck() {
-        this.dashboard.showToast('Running quick health check...', 'info');
-
-        try {
-            await Promise.all([
-                this.loadSystemHealth(),
-                this.loadServicesStatus(),
-                this.loadSystemPerformance()
-            ]);
-            this.dashboard.showToast('Health check completed', 'success');
-        } catch (error) {
-            this.dashboard.showToast('Health check failed', 'error');
-        }
-    }
-
-    updateMonitoringRefreshRate(newRate) {
-        this.monitoring.refreshRate = newRate;
-
-        this.stopSystemMonitoring();
-        this.startSystemMonitoring();
-
-        this.dashboard.showToast(`Monitoring refresh rate updated to ${newRate / 1000}s`, 'success');
-    }
-
-    checkMissedNotifications() {
-        this.loadSystemNotifications();
-        this.loadSystemAlerts();
-    }
-
-    dismissAlert(alertId) {
-        const alertElement = document.querySelector(`[data-alert-id="${alertId}"]`);
-        if (alertElement) {
-            alertElement.remove();
-        }
-
-        this.systemData.alerts = this.systemData.alerts.filter(alert =>
-            (alert.id || Date.now().toString()) !== alertId
-        );
-    }
-
-    dismissAllAlerts() {
-        const alertsContainer = this.elements.realTimeAlerts;
-        const alertsSection = this.elements.alertsSection;
-
-        if (alertsContainer) {
-            alertsContainer.innerHTML = '';
-        }
-        if (alertsSection) {
-            alertsSection.style.display = 'none';
-        }
-
-        this.systemData.alerts = [];
-        this.processedAlerts.clear();
-
-        this.dashboard.showToast('All alerts dismissed', 'success');
-    }
-
-    async markAllNotificationsAsRead() {
-        try {
-            const response = await this.dashboard.makeAuthenticatedRequest('/admin/notifications/mark-all-read', {
-                method: 'PUT'
-            });
-
-            if (response.ok) {
-                this.dashboard.showToast('All notifications marked as read', 'success');
-                this.loadSystemNotifications();
-
-                const notificationBadge = document.getElementById('notificationBadge');
-                if (notificationBadge) {
-                    notificationBadge.style.display = 'none';
-                    notificationBadge.textContent = '0';
-                }
-            }
-        } catch (error) {
-            this.dashboard.showToast('Failed to mark notifications as read', 'error');
-        }
-    }
-
-    stopSystemMonitoring() {
-        if (this.monitoring.healthTimer) {
-            clearInterval(this.monitoring.healthTimer);
-        }
-        if (this.monitoring.alertsTimer) {
-            clearInterval(this.monitoring.alertsTimer);
-        }
-        if (this.monitoring.performanceTimer) {
-            clearInterval(this.monitoring.performanceTimer);
-        }
-        if (this.monitoring.notificationTimer) {
-            clearInterval(this.monitoring.notificationTimer);
-        }
-    }
-
-    // Utility Methods
-    getAlertIcon(level) {
-        const icons = {
-            'critical': 'alert-circle',
-            'error': 'x-circle',
-            'warning': 'alert-triangle',
-            'info': 'info',
-            'success': 'check-circle'
-        };
-        return icons[level] || 'alert-circle';
-    }
-
-    getNotificationIcon(type) {
-        const icons = {
-            'new_ticket': 'message-circle',
-            'urgent_ticket': 'alert-circle',
-            'sla_breach': 'clock',
-            'feedback_received': 'message-square',
-            'system_alert': 'alert-triangle',
-            'user_activity': 'users',
-            'content_added': 'plus-circle'
-        };
-        return icons[type] || 'bell';
-    }
-
-    updateElement(id, value) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = value;
-        }
-    }
-
-    destroy() {
-        this.stopSystemMonitoring();
-        console.log('🗑 System monitor destroyed');
-    }
-}
-
-// Export for global access
-window.SystemMonitor = SystemMonitor;
