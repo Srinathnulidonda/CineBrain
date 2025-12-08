@@ -1,24 +1,36 @@
-/**
- * CineBrain Admin Users Management - Complete Controller (Backend v4.0 Compatible)
- * Mobile-First Responsive User Administration System
- * Updated for Backend API v4.0 compatibility
- */
-
-class UsersManager {
+class CineBrainUsersCore {
     constructor() {
+        // Core configuration
         this.apiBase = window.CineBrainConfig.apiBase;
-        this.refreshInterval = 10000; // 10 seconds for users
+        this.refreshInterval = 10000; // 10 seconds
         this.refreshTimer = null;
         this.isRefreshing = false;
         this.currentUser = null;
+
+        // Device detection
         this.isMobile = window.innerWidth <= 768;
         this.touchDevice = 'ontouchstart' in window;
 
-        // Users data structure - Updated for backend v4.0
-        this.usersData = {
-            users: [],
-            analytics: null,
-            statistics: null,
+        // Core data structure - Centralized state management
+        this.state = {
+            users: {
+                list: [],
+                total: 0,
+                loading: false,
+                error: null
+            },
+            statistics: {
+                data: null,
+                loading: false,
+                error: null,
+                lastUpdated: null
+            },
+            analytics: {
+                data: null,
+                loading: false,
+                error: null,
+                period: '30d'
+            },
             filters: {
                 status: '',
                 role: '',
@@ -36,43 +48,63 @@ class UsersManager {
             sorting: {
                 sort_by: 'created_at',
                 sort_direction: 'desc'
+            },
+            selection: {
+                selectedUsers: new Set(),
+                selectAll: false
             }
         };
 
-        this.selectedUsers = new Set();
+        // Component references - Will be set by child modules
+        this.components = {
+            charts: null,    // UsersChartsManager
+            tables: null,    // UsersTableManager  
+            modals: null     // UsersModalsManager
+        };
 
-        // Initialize component managers
-        this.tableManager = null;
-        this.chartManager = null;
-        this.modalManager = null;
+        // Request cache for optimization
+        this.requestCache = new Map();
+        this.cacheTimeout = 30000; // 30 seconds
+
+        // Initialize charts component first
+        this.initChartsComponent();
 
         this.init();
-        this.handleResize();
+    }
+
+    initChartsComponent() {
+        // Initialize charts component early to avoid initialization errors
+        if (typeof CineBrainUsersChartsManager !== 'undefined') {
+            try {
+                const chartsManager = new CineBrainUsersChartsManager(this);
+                chartsManager.init().then(() => {
+                    console.log('✅ Charts component pre-initialized');
+                }).catch(error => {
+                    console.warn('⚠️ Charts pre-initialization failed:', error);
+                });
+            } catch (error) {
+                console.warn('⚠️ Could not pre-initialize charts:', error);
+            }
+        }
     }
 
     async init() {
         try {
-            // Check admin authentication
+            console.log('🚀 Initializing CineBrain Users Management Core v4.0...');
+
+            // Check admin authentication first
             if (!await this.checkAdminAuth()) {
-                window.location.href = '/auth/login.html';
+                this.redirectToLogin();
                 return;
             }
 
-            // Initialize elements and event listeners
+            // Initialize DOM elements and events
             this.initializeElements();
-            this.setupEventListeners();
-
-            // Initialize component managers
-            this.tableManager = new UsersTableManager(this);
-            this.chartManager = new UsersChartManager(this);
-            this.modalManager = new UsersModalManager(this);
-
-            await this.tableManager.init();
-            await this.chartManager.init();
-            await this.modalManager.init();
+            this.setupCoreEventListeners();
+            this.handleResize();
 
             // Load initial data
-            await this.loadAllUsersData();
+            await this.loadInitialData();
 
             // Start real-time updates
             this.startRealTimeUpdates();
@@ -82,209 +114,186 @@ class UsersManager {
                 this.setupTouchGestures();
             }
 
-            console.log('✅ CineBrain Users Management v4.0 initialized');
+            console.log('✅ CineBrain Users Core initialized successfully');
 
         } catch (error) {
-            console.error('❌ Users management initialization error:', error);
-            this.showError('Failed to initialize users management');
+            console.error('❌ Core initialization error:', error);
+            this.handleError('Failed to initialize users management', error);
         }
     }
 
-    handleResize() {
-        window.addEventListener('resize', () => {
-            const wasMobile = this.isMobile;
-            this.isMobile = window.innerWidth <= 768;
-
-            if (wasMobile !== this.isMobile) {
-                this.reinitializeForDevice();
-            }
-        });
-
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
-                this.reinitializeForDevice();
-            }, 100);
-        });
-    }
-
-    reinitializeForDevice() {
-        if (this.tableManager) {
-            this.tableManager.handleDeviceChange();
-        }
-        if (this.chartManager) {
-            this.chartManager.resizeCharts();
-        }
-        this.renderUserStatsCards();
-    }
+    // ==================== AUTHENTICATION ====================
 
     async checkAdminAuth() {
         try {
-            const token = localStorage.getItem('cinebrain-token');
+            const token = this.getStoredToken();
             const userStr = localStorage.getItem('cinebrain-user');
 
             if (!token || !userStr) {
+                console.warn('⚠️ No authentication credentials found');
                 return false;
             }
 
             const user = JSON.parse(userStr);
             if (!user.is_admin) {
+                console.warn('⚠️ User is not an admin');
+                return false;
+            }
+
+            // Validate token with server
+            const isValid = await this.validateToken(token);
+            if (!isValid) {
+                console.warn('⚠️ Token validation failed');
+                this.clearAuthData();
                 return false;
             }
 
             this.currentUser = user;
+            console.log('✅ Admin authentication validated');
             return true;
 
         } catch (error) {
-            console.error('Auth check error:', error);
+            console.error('❌ Auth check error:', error);
+            this.clearAuthData();
             return false;
         }
     }
 
+    async validateToken(token) {
+        try {
+            // Make a light API call to validate token
+            const response = await this.makeRequest('/admin/services/status', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return response.ok;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    getStoredToken() {
+        return localStorage.getItem('cinebrain-token');
+    }
+
+    clearAuthData() {
+        localStorage.removeItem('cinebrain-token');
+        localStorage.removeItem('cinebrain-user');
+    }
+
+    redirectToLogin() {
+        window.location.href = '/auth/login.html';
+    }
+
+    // ==================== DOM INITIALIZATION ====================
+
     initializeElements() {
         this.elements = {
-            // Statistics
+            // Statistics & Analytics
             userStatsCards: document.getElementById('userStatsCards'),
             mobileUserStatsCards: document.getElementById('mobileUserStatsCards'),
             statsTimeframe: document.getElementById('statsTimeframe'),
+            engagementMetrics: document.getElementById('engagementMetrics'),
 
-            // Search
+            // Search & Filters
             desktopSearchInput: document.getElementById('desktopSearchInput'),
             mobileSearchInput: document.getElementById('mobileSearchInput'),
             searchClear: document.getElementById('searchClear'),
-
-            // Filters and toolbar
             filterStatus: document.getElementById('filterStatus'),
             filterRole: document.getElementById('filterRole'),
             filterRegistration: document.getElementById('filterRegistration'),
             clearFilters: document.getElementById('clearFilters'),
+
+            // Controls
             refreshUsers: document.getElementById('refreshUsers'),
-
-            // Table controls
-            selectAllUsers: document.getElementById('selectAllUsers'),
             usersPerPage: document.getElementById('usersPerPage'),
-            userTableCount: document.getElementById('userTableCount'),
-            usersTableBody: document.getElementById('usersTableBody'),
-            usersPagination: document.getElementById('usersPagination'),
-            paginationInfo: document.getElementById('paginationInfo'),
 
-            // Bulk actions
-            bulkActionsBar: document.getElementById('bulkActionsBar'),
-            selectedCount: document.getElementById('selectedCount'),
-            deselectAll: document.getElementById('deselectAll'),
-            bulkSuspend: document.getElementById('bulkSuspend'),
-            bulkActivate: document.getElementById('bulkActivate'),
-            bulkDelete: document.getElementById('bulkDelete'),
+            // Loading & Notifications
+            pageLoadingIndicator: document.getElementById('page-loading-indicator'),
 
-            // Actions
-            addUser: document.getElementById('addUser'),
+            // Export & Actions
             exportUsers: document.getElementById('exportUsers'),
-
-            // Charts
-            userActivityChart: document.getElementById('userActivityChart'),
-            activityChartPeriod: document.getElementById('activityChartPeriod'),
-            engagementMetrics: document.getElementById('engagementMetrics'),
-
-            // Modals
-            userDetailsModal: document.getElementById('userDetailsModal'),
-            editUserModal: document.getElementById('editUserModal')
+            addUser: document.getElementById('addUser')
         };
     }
 
-    setupEventListeners() {
-        // Statistics timeframe
+    setupCoreEventListeners() {
+        // Statistics timeframe change
         this.elements.statsTimeframe?.addEventListener('change', () => {
             this.loadUserStatistics();
         });
 
-        // Search functionality
+        // Search functionality with debouncing
+        const searchHandler = this.debounce((value) => {
+            this.handleSearch(value);
+        }, 300);
+
         this.elements.desktopSearchInput?.addEventListener('input', (e) => {
-            this.handleSearch(e.target.value);
+            searchHandler(e.target.value);
+            this.updateSearchClearButton(e.target.value);
         });
 
         this.elements.mobileSearchInput?.addEventListener('input', (e) => {
-            this.handleSearch(e.target.value);
+            searchHandler(e.target.value);
+            this.updateSearchClearButton(e.target.value);
         });
 
         this.elements.searchClear?.addEventListener('click', () => {
             this.clearSearch();
         });
 
-        // Filters
-        this.elements.filterStatus?.addEventListener('change', () => {
-            this.handleFilterChange();
-        });
-
-        this.elements.filterRole?.addEventListener('change', () => {
-            this.handleFilterChange();
-        });
-
-        this.elements.filterRegistration?.addEventListener('change', () => {
-            this.handleFilterChange();
+        // Filter changes
+        ['filterStatus', 'filterRole', 'filterRegistration'].forEach(filterId => {
+            this.elements[filterId]?.addEventListener('change', () => {
+                this.handleFilterChange();
+            });
         });
 
         this.elements.clearFilters?.addEventListener('click', () => {
             this.clearAllFilters();
         });
 
+        // Actions
         this.elements.refreshUsers?.addEventListener('click', () => {
             this.refreshAllData();
             this.hapticFeedback('light');
-        });
-
-        // Table controls
-        this.elements.selectAllUsers?.addEventListener('change', (e) => {
-            this.handleSelectAll(e.target.checked);
-        });
-
-        this.elements.usersPerPage?.addEventListener('change', () => {
-            this.handlePerPageChange();
-        });
-
-        // Bulk actions
-        this.elements.deselectAll?.addEventListener('click', () => {
-            this.clearSelection();
-        });
-
-        this.elements.bulkSuspend?.addEventListener('click', () => {
-            this.handleBulkAction('suspend');
-        });
-
-        this.elements.bulkActivate?.addEventListener('click', () => {
-            this.handleBulkAction('activate');
-        });
-
-        this.elements.bulkDelete?.addEventListener('click', () => {
-            this.handleBulkAction('delete');
-        });
-
-        // Actions
-        this.elements.addUser?.addEventListener('click', () => {
-            this.showAddUserModal();
         });
 
         this.elements.exportUsers?.addEventListener('click', () => {
             this.exportUsersData();
         });
 
-        // Chart period
-        this.elements.activityChartPeriod?.addEventListener('change', () => {
-            this.updateChartsForPeriod();
+        this.elements.addUser?.addEventListener('click', () => {
+            this.showAddUserModal();
         });
 
-        // Window events
+        this.elements.usersPerPage?.addEventListener('change', () => {
+            this.handlePerPageChange();
+        });
+
+        // Global keyboard shortcuts
+        this.setupKeyboardShortcuts();
+
+        // Theme change detection
+        window.addEventListener('theme-changed', () => {
+            this.handleThemeChange();
+        });
+
+        // Visibility API for smart refresh
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 this.refreshAllData();
             }
         });
+    }
 
-        // Keyboard shortcuts
+    setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
                 switch (e.key) {
                     case 'r':
                         e.preventDefault();
                         this.refreshAllData();
+                        this.showToast('Data refreshed', 'info');
                         break;
                     case 'f':
                         e.preventDefault();
@@ -294,25 +303,544 @@ class UsersManager {
                         e.preventDefault();
                         this.showAddUserModal();
                         break;
+                    case 'e':
+                        e.preventDefault();
+                        this.exportUsersData();
+                        break;
                 }
             }
-        });
 
-        // Theme changes
-        window.addEventListener('theme-changed', () => {
-            if (this.chartManager) {
-                this.chartManager.updateChartsTheme();
+            // Escape key to clear selection
+            if (e.key === 'Escape') {
+                this.clearSelection();
             }
         });
     }
 
+    handleResize() {
+        const resizeHandler = this.debounce(() => {
+            const wasMobile = this.isMobile;
+            this.isMobile = window.innerWidth <= 768;
+
+            if (wasMobile !== this.isMobile) {
+                this.handleDeviceChange();
+            }
+        }, 100);
+
+        window.addEventListener('resize', resizeHandler);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.handleDeviceChange(), 100);
+        });
+    }
+
+    handleDeviceChange() {
+        // Notify all components of device change
+        Object.values(this.components).forEach(component => {
+            if (component && typeof component.handleDeviceChange === 'function') {
+                component.handleDeviceChange();
+            }
+        });
+
+        this.renderUserStatsCards();
+    }
+
+    handleThemeChange() {
+        // Notify chart component of theme change
+        if (this.components.charts && typeof this.components.charts.updateChartsTheme === 'function') {
+            this.components.charts.updateChartsTheme();
+        }
+    }
+
+    // ==================== DATA MANAGEMENT ====================
+
+    async loadInitialData() {
+        this.showLoading(true, 'Loading users data...');
+
+        try {
+            // Load all data in parallel for faster initial load
+            const promises = [
+                this.loadUsers(),
+                this.loadUserStatistics(),
+                this.loadUserAnalytics()
+            ];
+
+            const results = await Promise.allSettled(promises);
+
+            // Handle any failures
+            results.forEach((result, index) => {
+                if (result.status === 'rejected') {
+                    const operations = ['users', 'statistics', 'analytics'];
+                    console.error(`❌ Failed to load ${operations[index]}:`, result.reason);
+                }
+            });
+
+            this.updateLastRefreshTime();
+
+        } catch (error) {
+            console.error('❌ Error loading initial data:', error);
+            this.handleError('Failed to load users data', error);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    async loadUsers() {
+        if (this.state.users.loading) return;
+
+        this.state.users.loading = true;
+        this.state.users.error = null;
+
+        try {
+            const cacheKey = this.buildCacheKey('users', {
+                ...this.state.filters,
+                ...this.state.pagination,
+                ...this.state.sorting
+            });
+
+            // Check cache first
+            const cachedData = this.getFromCache(cacheKey);
+            if (cachedData) {
+                this.updateUsersState(cachedData);
+                return;
+            }
+
+            const params = this.buildQueryParams({
+                page: this.state.pagination.page,
+                per_page: this.state.pagination.per_page,
+                sort_by: this.state.sorting.sort_by,
+                sort_direction: this.state.sorting.sort_direction,
+                ...this.state.filters
+            });
+
+            const response = await this.makeAuthenticatedRequest(`/admin/users?${params}`);
+
+            // FIXED: Parse response body even on error to get error message
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = responseData.error || responseData.message || `HTTP ${response.status}: ${response.statusText}`;
+                throw new Error(errorMessage);
+            }
+
+            // FIXED: Handle both success responses and direct data responses
+            const data = responseData.data || responseData;
+
+            // Check if we have the expected structure
+            if (!data.users && responseData.success === false) {
+                throw new Error(responseData.error || 'Invalid response structure');
+            }
+
+            this.updateUsersState(data);
+
+            // Cache the result
+            this.setCache(cacheKey, data);
+
+            // Notify table component
+            if (this.components.tables) {
+                this.components.tables.renderUsers(this.state.users.list);
+                this.components.tables.renderPagination(this.state.pagination);
+            }
+
+            console.log('✅ Users loaded successfully:', data.users?.length || 0);
+
+        } catch (error) {
+            console.error('❌ Error loading users:', error);
+            this.state.users.error = error.message;
+
+            // Show specific error message
+            const errorMsg = error.message || 'Failed to load users';
+            this.handleError(`Failed to load users: ${errorMsg}`, error);
+
+            // Render error state in table
+            if (this.components.tables) {
+                this.components.tables.renderErrorState();
+            }
+        } finally {
+            this.state.users.loading = false;
+        }
+    }
+
+    async loadUserStatistics() {
+        if (this.state.statistics.loading) return;
+
+        this.state.statistics.loading = true;
+        this.state.statistics.error = null;
+
+        try {
+            const timeframe = this.elements.statsTimeframe?.value || 'week';
+            const cacheKey = this.buildCacheKey('statistics', { timeframe });
+
+            // Check cache first
+            const cachedData = this.getFromCache(cacheKey);
+            if (cachedData) {
+                this.state.statistics.data = cachedData;
+                this.renderUserStatsCards();
+                return;
+            }
+
+            const response = await this.makeAuthenticatedRequest(`/admin/users/statistics?timeframe=${timeframe}`);
+
+            // FIXED: Parse response body even on error
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = responseData.error || responseData.message || `HTTP ${response.status}: ${response.statusText}`;
+                throw new Error(errorMessage);
+            }
+
+            // FIXED: Handle both success responses and direct data responses
+            const data = responseData.data || responseData;
+
+            if (!data && responseData.success === false) {
+                throw new Error(responseData.error || 'Invalid statistics data');
+            }
+
+            this.state.statistics.data = data;
+            this.state.statistics.lastUpdated = new Date();
+
+            // Cache the result
+            this.setCache(cacheKey, data);
+
+            this.renderUserStatsCards();
+            console.log('✅ Statistics loaded successfully');
+
+        } catch (error) {
+            console.error('❌ Error loading statistics:', error);
+            this.state.statistics.error = error.message;
+
+            // Show specific error message
+            const errorMsg = error.message || 'Failed to load statistics';
+            this.handleError(`Failed to load statistics: ${errorMsg}`, error);
+
+            // Render placeholder stats
+            this.renderEmptyStatsCards();
+        } finally {
+            this.state.statistics.loading = false;
+        }
+    }
+
+    async loadUserAnalytics() {
+        if (this.state.analytics.loading) return;
+
+        this.state.analytics.loading = true;
+        this.state.analytics.error = null;
+
+        try {
+            const period = this.state.analytics.period;
+            const cacheKey = this.buildCacheKey('analytics', { period });
+
+            // Check cache first
+            const cachedData = this.getFromCache(cacheKey);
+            if (cachedData) {
+                this.state.analytics.data = cachedData;
+                this.updateChartsAndMetrics(cachedData);
+                return;
+            }
+
+            const response = await this.makeAuthenticatedRequest(`/admin/users/analytics?period=${period}`);
+
+            // FIXED: Parse response body
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = responseData.error || responseData.message || `HTTP ${response.status}: ${response.statusText}`;
+                throw new Error(errorMessage);
+            }
+
+            // FIXED: Handle both success responses and direct data responses
+            const data = responseData.data || responseData;
+
+            if (!data && responseData.success === false) {
+                throw new Error(responseData.error || 'Invalid analytics data');
+            }
+
+            this.state.analytics.data = data;
+
+            // Cache the result
+            this.setCache(cacheKey, data);
+
+            this.updateChartsAndMetrics(data);
+            console.log('✅ Analytics loaded successfully');
+
+        } catch (error) {
+            console.error('❌ Error loading analytics:', error);
+            this.state.analytics.error = error.message;
+
+            // Analytics failures are less critical, just log them
+            console.warn('⚠️ Analytics unavailable:', error.message);
+        } finally {
+            this.state.analytics.loading = false;
+        }
+    }
+
+    updateUsersState(data) {
+        this.state.users.list = data.users || [];
+        this.state.users.total = data.total || 0;
+        this.state.users.error = null;
+
+        this.state.pagination = {
+            page: data.page || 1,
+            per_page: data.per_page || 25,
+            total: data.total || 0,
+            total_pages: data.total_pages || 0,
+            has_prev: data.has_prev || false,
+            has_next: data.has_next || false
+        };
+    }
+
+    updateChartsAndMetrics(analyticsData) {
+        // Notify charts component
+        if (this.components.charts) {
+            this.components.charts.updateCharts(analyticsData);
+        }
+
+        // Update engagement metrics
+        this.renderEngagementMetrics(analyticsData.engagement || {});
+    }
+
+    // ==================== FILTERING & SEARCH ====================
+
+    handleSearch(query) {
+        this.state.filters.search = query;
+        this.state.pagination.page = 1; // Reset to first page
+        this.invalidateCache('users');
+        this.loadUsers();
+    }
+
+    clearSearch() {
+        this.elements.desktopSearchInput.value = '';
+        this.elements.mobileSearchInput.value = '';
+        this.updateSearchClearButton('');
+        this.state.filters.search = '';
+        this.state.pagination.page = 1;
+        this.invalidateCache('users');
+        this.loadUsers();
+    }
+
+    focusSearch() {
+        const input = this.isMobile ?
+            this.elements.mobileSearchInput :
+            this.elements.desktopSearchInput;
+        input?.focus();
+    }
+
+    updateSearchClearButton(value) {
+        if (this.elements.searchClear) {
+            this.elements.searchClear.style.display = value ? 'block' : 'none';
+        }
+    }
+
+    handleFilterChange() {
+        this.state.filters = {
+            status: this.elements.filterStatus?.value || '',
+            role: this.elements.filterRole?.value || '',
+            registration: this.elements.filterRegistration?.value || '',
+            search: this.state.filters.search // Preserve search
+        };
+
+        this.state.pagination.page = 1; // Reset to first page
+        this.invalidateCache('users');
+        this.loadUsers();
+    }
+
+    clearAllFilters() {
+        // Clear filter elements
+        ['filterStatus', 'filterRole', 'filterRegistration'].forEach(filterId => {
+            if (this.elements[filterId]) {
+                this.elements[filterId].value = '';
+            }
+        });
+
+        // Clear filter state (preserve search)
+        this.state.filters = {
+            status: '',
+            role: '',
+            registration: '',
+            search: this.state.filters.search
+        };
+
+        this.state.pagination.page = 1;
+        this.invalidateCache('users');
+        this.loadUsers();
+    }
+
+    handlePerPageChange() {
+        this.state.pagination.per_page = parseInt(this.elements.usersPerPage.value);
+        this.state.pagination.page = 1; // Reset to first page
+        this.invalidateCache('users');
+        this.loadUsers();
+    }
+
+    // ==================== PAGINATION ====================
+
+    goToPage(page) {
+        if (page >= 1 && page <= this.state.pagination.total_pages) {
+            this.state.pagination.page = page;
+            this.invalidateCache('users');
+            this.loadUsers();
+        }
+    }
+
+    // ==================== SELECTION MANAGEMENT ====================
+
+    handleSelectAll(checked) {
+        this.state.selection.selectedUsers.clear();
+
+        if (checked) {
+            this.state.users.list.forEach(user => {
+                this.state.selection.selectedUsers.add(user.id);
+            });
+        }
+
+        this.state.selection.selectAll = checked;
+        this.notifySelectionChange();
+    }
+
+    handleUserSelect(userId, checked) {
+        if (checked) {
+            this.state.selection.selectedUsers.add(userId);
+        } else {
+            this.state.selection.selectedUsers.delete(userId);
+        }
+
+        this.updateSelectAllState();
+        this.notifySelectionChange();
+    }
+
+    updateSelectAllState() {
+        const totalVisible = this.state.users.list.length;
+        const selectedVisible = this.state.users.list.filter(user =>
+            this.state.selection.selectedUsers.has(user.id)
+        ).length;
+
+        this.state.selection.selectAll = totalVisible > 0 && selectedVisible === totalVisible;
+    }
+
+    clearSelection() {
+        this.state.selection.selectedUsers.clear();
+        this.state.selection.selectAll = false;
+        this.notifySelectionChange();
+    }
+
+    getSelectedUsers() {
+        return Array.from(this.state.selection.selectedUsers);
+    }
+
+    notifySelectionChange() {
+        // Notify table component of selection changes
+        if (this.components.tables) {
+            this.components.tables.updateSelectionUI(this.state.selection);
+        }
+    }
+
+    // ==================== EXPORT FUNCTIONALITY ====================
+
+    async exportUsersData() {
+        try {
+            this.showLoading(true, 'Preparing export...');
+
+            const params = this.buildQueryParams({
+                format: 'csv',
+                ...this.state.filters
+            });
+
+            const response = await this.makeAuthenticatedRequest(`/admin/users/export?${params}`);
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Export failed: ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            this.downloadFile(blob, `cinebrain-users-${new Date().toISOString().split('T')[0]}.csv`);
+
+            this.showToast('Users data exported successfully', 'success');
+
+        } catch (error) {
+            console.error('❌ Export error:', error);
+            this.handleError('Failed to export users data', error);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    downloadFile(blob, filename) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }
+
+    // ==================== REAL-TIME UPDATES ====================
+
+    startRealTimeUpdates() {
+        this.refreshTimer = setInterval(() => {
+            if (!this.isRefreshing && !document.hidden) {
+                this.refreshData();
+            }
+        }, this.refreshInterval);
+
+        console.log(`✅ Real-time updates started (${this.refreshInterval / 1000}s interval)`);
+    }
+
+    stopRealTimeUpdates() {
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+            this.refreshTimer = null;
+            console.log('⏹ Real-time updates stopped');
+        }
+    }
+
+    async refreshAllData() {
+        if (this.isRefreshing) return;
+
+        this.isRefreshing = true;
+
+        try {
+            // Clear cache for fresh data
+            this.clearCache();
+
+            await this.loadInitialData();
+
+            this.showToast('Data refreshed', 'success');
+
+        } catch (error) {
+            console.error('❌ Refresh error:', error);
+            this.handleError('Failed to refresh data', error);
+        } finally {
+            this.isRefreshing = false;
+        }
+    }
+
+    async refreshData() {
+        // Silent refresh without loading indicators
+        try {
+            await Promise.all([
+                this.loadUsers(),
+                this.loadUserStatistics()
+            ]);
+            this.updateLastRefreshTime();
+        } catch (error) {
+            console.error('❌ Silent refresh error:', error);
+        }
+    }
+
+    // ==================== MOBILE TOUCH GESTURES ====================
+
     setupTouchGestures() {
         let startY = 0;
         let currentY = 0;
+        let isPulling = false;
 
         document.addEventListener('touchstart', (e) => {
             if (window.scrollY === 0) {
                 startY = e.touches[0].pageY;
+                isPulling = false;
             }
         }, { passive: true });
 
@@ -321,14 +849,15 @@ class UsersManager {
                 currentY = e.touches[0].pageY;
                 const pullDistance = currentY - startY;
 
-                if (pullDistance > 100 && !this.isRefreshing) {
-                    this.showPullToRefreshIndicator();
+                if (pullDistance > 50 && !this.isRefreshing) {
+                    isPulling = true;
+                    this.showPullToRefreshIndicator(pullDistance);
                 }
             }
         }, { passive: true });
 
         document.addEventListener('touchend', () => {
-            if (window.scrollY === 0 && startY && currentY) {
+            if (window.scrollY === 0 && startY && currentY && isPulling) {
                 const pullDistance = currentY - startY;
 
                 if (pullDistance > 100 && !this.isRefreshing) {
@@ -339,147 +868,149 @@ class UsersManager {
 
             startY = 0;
             currentY = 0;
+            isPulling = false;
             this.hidePullToRefreshIndicator();
         }, { passive: true });
     }
 
-    // ==================== DATA LOADING METHODS - Updated for Backend v4.0 ====================
+    showPullToRefreshIndicator(distance) {
+        const threshold = 100;
+        const progress = Math.min(distance / threshold, 1);
 
-    async loadAllUsersData() {
-        this.showLoading(true);
+        let indicator = document.getElementById('pullToRefreshIndicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'pullToRefreshIndicator';
+            indicator.innerHTML = '<i data-feather="refresh-cw"></i> Release to refresh';
+            indicator.style.cssText = `
+                position: fixed;
+                top: calc(var(--topbar-height, 70px) + 10px);
+                left: 50%;
+                transform: translateX(-50%) scale(${progress});
+                background: var(--admin-primary);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 14px;
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                opacity: ${progress};
+                transition: all 0.2s ease;
+            `;
+            document.body.appendChild(indicator);
 
-        try {
-            const promises = [
-                this.loadUsers(),
-                this.loadUserStatistics(),
-                this.loadUserAnalytics()
-            ];
-
-            const results = await Promise.allSettled(promises);
-
-            results.forEach((result, index) => {
-                if (result.status === 'rejected') {
-                    console.error(`Data loading failed for promise ${index}:`, result.reason);
-                }
-            });
-
-            this.updateLastRefreshTime();
-
-        } catch (error) {
-            console.error('Error loading users data:', error);
-            this.showError('Failed to load users data');
-        } finally {
-            this.showLoading(false);
-        }
-    }
-
-    async loadUsers() {
-        try {
-            const params = new URLSearchParams({
-                page: this.usersData.pagination.page,
-                per_page: this.usersData.pagination.per_page,
-                sort_by: this.usersData.sorting.sort_by,
-                sort_direction: this.usersData.sorting.sort_direction,
-                ...this.usersData.filters
-            });
-
-            // Remove empty filters
-            Object.keys(this.usersData.filters).forEach(key => {
-                if (!this.usersData.filters[key]) {
-                    params.delete(key);
-                }
-            });
-
-            const response = await this.makeAuthenticatedRequest(`/admin/users?${params}`);
-
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data) {
-                    const data = result.data;
-                    this.usersData.users = data.users || [];
-                    this.usersData.pagination = {
-                        page: data.page || 1,
-                        per_page: data.per_page || 25,
-                        total: data.total || 0,
-                        total_pages: data.total_pages || 0,
-                        has_prev: data.has_prev || false,
-                        has_next: data.has_next || false
-                    };
-
-                    if (this.tableManager) {
-                        this.tableManager.renderUsers();
-                        this.tableManager.renderPagination();
-                    }
-
-                    this.updateTableCount();
-                } else {
-                    throw new Error(result.error || 'Invalid users data structure');
-                }
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Users request failed: ${response.status}`);
+            if (typeof feather !== 'undefined') {
+                feather.replace();
             }
-        } catch (error) {
-            console.error('Error loading users:', error);
-            this.showError(error.message || 'Failed to load users');
         }
     }
 
-    async loadUserStatistics() {
-        try {
-            const timeframe = this.elements.statsTimeframe?.value || 'week';
-            const response = await this.makeAuthenticatedRequest(`/admin/users/statistics?timeframe=${timeframe}`);
+    hidePullToRefreshIndicator() {
+        const indicator = document.getElementById('pullToRefreshIndicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
 
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data) {
-                    this.usersData.statistics = result.data;
-                    this.renderUserStatsCards();
-                } else {
-                    throw new Error(result.error || 'Invalid statistics data structure');
-                }
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Statistics request failed: ${response.status}`);
+    // ==================== API UTILITIES ====================
+
+    async makeRequest(endpoint, options = {}) {
+        const url = `${this.apiBase}${endpoint}`;
+
+        const defaultOptions = {
+            headers: {
+                'Content-Type': 'application/json'
             }
-        } catch (error) {
-            console.error('Error loading user statistics:', error);
-            this.showError(error.message || 'Failed to load user statistics');
-        }
-    }
+        };
 
-    async loadUserAnalytics() {
-        try {
-            const period = this.elements.activityChartPeriod?.value || '30d';
-            const response = await this.makeAuthenticatedRequest(`/admin/users/analytics?period=${period}`);
-
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data) {
-                    this.usersData.analytics = result.data;
-                    if (this.chartManager) {
-                        this.chartManager.updateCharts(result.data);
-                    }
-                    this.renderEngagementMetrics(result.data.engagement || {});
-                } else {
-                    throw new Error(result.error || 'Invalid analytics data structure');
-                }
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Analytics request failed: ${response.status}`);
+        const mergedOptions = {
+            ...defaultOptions,
+            ...options,
+            headers: {
+                ...defaultOptions.headers,
+                ...(options.headers || {})
             }
-        } catch (error) {
-            console.error('Error loading user analytics:', error);
-            this.showError(error.message || 'Failed to load user analytics');
-        }
+        };
+
+        return await fetch(url, mergedOptions);
     }
 
-    // ==================== RENDERING METHODS ====================
+    async makeAuthenticatedRequest(endpoint, options = {}) {
+        const token = this.getStoredToken();
+
+        if (!token) {
+            throw new Error('No authentication token available');
+        }
+
+        const authenticatedOptions = {
+            ...options,
+            headers: {
+                ...options.headers,
+                'Authorization': `Bearer ${token}`
+            }
+        };
+
+        const response = await this.makeRequest(endpoint, authenticatedOptions);
+
+        // Handle authentication errors
+        if (response.status === 401) {
+            console.warn('⚠️ Authentication failed, redirecting to login');
+            this.clearAuthData();
+            this.redirectToLogin();
+            throw new Error('Authentication failed');
+        }
+
+        return response;
+    }
+
+    // ==================== CACHE MANAGEMENT ====================
+
+    buildCacheKey(type, params = {}) {
+        const paramString = Object.keys(params)
+            .sort()
+            .map(key => `${key}:${params[key]}`)
+            .join('|');
+        return `${type}-${paramString}`;
+    }
+
+    getFromCache(key) {
+        const cached = this.requestCache.get(key);
+        if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+            return cached.data;
+        }
+        this.requestCache.delete(key);
+        return null;
+    }
+
+    setCache(key, data) {
+        this.requestCache.set(key, {
+            data,
+            timestamp: Date.now()
+        });
+    }
+
+    invalidateCache(type) {
+        const keysToDelete = [];
+        for (const key of this.requestCache.keys()) {
+            if (key.startsWith(type)) {
+                keysToDelete.push(key);
+            }
+        }
+        keysToDelete.forEach(key => this.requestCache.delete(key));
+    }
+
+    clearCache() {
+        this.requestCache.clear();
+    }
+
+    // ==================== UI RENDERING ====================
 
     renderUserStatsCards() {
-        if (!this.usersData.statistics) return;
+        if (!this.state.statistics.data) return;
 
-        const stats = this.usersData.statistics;
+        const stats = this.state.statistics.data;
         const cards = [
             {
                 title: 'Total Users',
@@ -525,40 +1056,63 @@ class UsersManager {
             }
         ];
 
-        // Render desktop cards
-        if (this.elements.userStatsCards && !this.isMobile) {
-            this.elements.userStatsCards.innerHTML = cards.map(card => `
-                <div class="col-lg-2 col-md-4 col-6">
-                    <div class="users-stats-card fade-in" style="--card-color: ${card.color}">
-                        <div class="stats-card-header">
-                            <div class="stats-card-title">
-                                <i data-feather="${card.icon}" class="stats-card-icon"></i>
-                                ${card.title}
-                            </div>
-                        </div>
-                        <div class="stats-card-value">${card.value}</div>
-                        <div class="stats-card-change ${this.getChangeClass(card.change)}">
-                            <i data-feather="${this.getChangeIcon(card.change)}" class="change-icon"></i>
-                            ${card.change}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Render mobile cards
-        if (this.elements.mobileUserStatsCards && this.isMobile) {
-            this.elements.mobileUserStatsCards.innerHTML = cards.map(card => `
-                <div class="mobile-stats-card" style="--card-color: ${card.color}">
-                    <div class="mobile-stats-value">${card.value}</div>
-                    <div class="mobile-stats-label">${card.title}</div>
-                </div>
-            `).join('');
-        }
+        this.renderDesktopStatsCards(cards);
+        this.renderMobileStatsCards(cards);
 
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
+    }
+
+    renderEmptyStatsCards() {
+        const emptyCards = [
+            { title: 'Total Users', value: '—', change: '+0%', icon: 'users', color: '#113CCF' },
+            { title: 'Active Users', value: '—', change: '+0%', icon: 'activity', color: '#10b981' },
+            { title: 'New Users', value: '—', change: '+0%', icon: 'user-plus', color: '#e50914' },
+            { title: 'Admin Users', value: '—', change: '+0%', icon: 'shield', color: '#f59e0b' },
+            { title: 'Suspended', value: '—', change: '+0%', icon: 'pause-circle', color: '#ef4444' },
+            { title: 'Engagement Rate', value: '—', change: '+0%', icon: 'trending-up', color: '#8b5cf6' }
+        ];
+
+        this.renderDesktopStatsCards(emptyCards);
+        this.renderMobileStatsCards(emptyCards);
+
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+
+    renderDesktopStatsCards(cards) {
+        if (!this.elements.userStatsCards || this.isMobile) return;
+
+        this.elements.userStatsCards.innerHTML = cards.map(card => `
+            <div class="col-lg-2 col-md-4 col-6">
+                <div class="users-stats-card fade-in" style="--card-color: ${card.color}">
+                    <div class="stats-card-header">
+                        <div class="stats-card-title">
+                            <i data-feather="${card.icon}" class="stats-card-icon"></i>
+                            ${card.title}
+                        </div>
+                    </div>
+                    <div class="stats-card-value">${card.value}</div>
+                    <div class="stats-card-change ${this.getChangeClass(card.change)}">
+                        <i data-feather="${this.getChangeIcon(card.change)}" class="change-icon"></i>
+                        ${card.change}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderMobileStatsCards(cards) {
+        if (!this.elements.mobileUserStatsCards || !this.isMobile) return;
+
+        this.elements.mobileUserStatsCards.innerHTML = cards.map(card => `
+            <div class="mobile-stats-card" style="--card-color: ${card.color}">
+                <div class="mobile-stats-value">${card.value}</div>
+                <div class="mobile-stats-label">${card.title}</div>
+            </div>
+        `).join('');
     }
 
     renderEngagementMetrics(engagement) {
@@ -586,7 +1140,7 @@ class UsersManager {
             {
                 label: 'Avg. Session Time',
                 value: this.formatDuration(engagement.avg_session_time || 0),
-                progress: Math.min((engagement.avg_session_time / 3600 || 0) * 100, 100), // Max 1 hour
+                progress: Math.min((engagement.avg_session_time / 3600 || 0) * 100, 100),
                 icon: 'play-circle'
             }
         ];
@@ -611,339 +1165,19 @@ class UsersManager {
         }
     }
 
-    updateTableCount() {
-        if (this.elements.userTableCount) {
-            const { total, page, per_page } = this.usersData.pagination;
-            const start = (page - 1) * per_page + 1;
-            const end = Math.min(page * per_page, total);
-            
-            this.elements.userTableCount.textContent = 
-                `Showing ${start}-${end} of ${total} users`;
-        }
-    }
+    // ==================== UTILITY FUNCTIONS ====================
 
-    // ==================== FILTER AND SEARCH METHODS ====================
+    buildQueryParams(params) {
+        const searchParams = new URLSearchParams();
 
-    handleSearch(query) {
-        clearTimeout(this.searchTimeout);
-        
-        this.searchTimeout = setTimeout(() => {
-            this.usersData.filters.search = query;
-            this.usersData.pagination.page = 1; // Reset to first page
-            this.loadUsers();
-        }, 300);
-
-        // Show/hide clear button
-        if (this.elements.searchClear) {
-            this.elements.searchClear.style.display = query ? 'block' : 'none';
-        }
-    }
-
-    clearSearch() {
-        this.elements.desktopSearchInput.value = '';
-        this.elements.mobileSearchInput.value = '';
-        this.elements.searchClear.style.display = 'none';
-        this.usersData.filters.search = '';
-        this.usersData.pagination.page = 1;
-        this.loadUsers();
-    }
-
-    focusSearch() {
-        if (this.isMobile) {
-            this.elements.mobileSearchInput?.focus();
-        } else {
-            this.elements.desktopSearchInput?.focus();
-        }
-    }
-
-    handleFilterChange() {
-        this.usersData.filters = {
-            status: this.elements.filterStatus?.value || '',
-            role: this.elements.filterRole?.value || '',
-            registration: this.elements.filterRegistration?.value || '',
-            search: this.usersData.filters.search
-        };
-        
-        this.usersData.pagination.page = 1; // Reset to first page
-        this.loadUsers();
-    }
-
-    clearAllFilters() {
-        this.elements.filterStatus.value = '';
-        this.elements.filterRole.value = '';
-        this.elements.filterRegistration.value = '';
-        
-        this.usersData.filters = {
-            status: '',
-            role: '',
-            registration: '',
-            search: this.usersData.filters.search // Keep search
-        };
-        
-        this.usersData.pagination.page = 1;
-        this.loadUsers();
-    }
-
-    handlePerPageChange() {
-        this.usersData.pagination.per_page = parseInt(this.elements.usersPerPage.value);
-        this.usersData.pagination.page = 1; // Reset to first page
-        this.loadUsers();
-    }
-
-    // ==================== SELECTION AND BULK OPERATIONS - Updated ====================
-
-    handleSelectAll(checked) {
-        this.selectedUsers.clear();
-        
-        if (checked) {
-            this.usersData.users.forEach(user => {
-                this.selectedUsers.add(user.id);
-            });
-        }
-        
-        this.updateSelectionUI();
-        this.updateBulkActionsVisibility();
-    }
-
-    handleUserSelect(userId, checked) {
-        if (checked) {
-            this.selectedUsers.add(userId);
-        } else {
-            this.selectedUsers.delete(userId);
-        }
-        
-        this.updateSelectionUI();
-        this.updateBulkActionsVisibility();
-    }
-
-    updateSelectionUI() {
-        // Update individual checkboxes
-        document.querySelectorAll('.user-select-checkbox').forEach(checkbox => {
-            const userId = parseInt(checkbox.dataset.userId);
-            checkbox.checked = this.selectedUsers.has(userId);
+        Object.keys(params).forEach(key => {
+            const value = params[key];
+            if (value !== null && value !== undefined && value !== '') {
+                searchParams.append(key, value);
+            }
         });
 
-        // Update select all checkbox
-        if (this.elements.selectAllUsers) {
-            const totalVisible = this.usersData.users.length;
-            const selectedVisible = this.usersData.users.filter(user => 
-                this.selectedUsers.has(user.id)
-            ).length;
-
-            this.elements.selectAllUsers.checked = totalVisible > 0 && selectedVisible === totalVisible;
-            this.elements.selectAllUsers.indeterminate = selectedVisible > 0 && selectedVisible < totalVisible;
-        }
-    }
-
-    updateBulkActionsVisibility() {
-        const hasSelection = this.selectedUsers.size > 0;
-        
-        if (this.elements.bulkActionsBar) {
-            this.elements.bulkActionsBar.style.display = hasSelection ? 'block' : 'none';
-        }
-        
-        if (this.elements.selectedCount) {
-            this.elements.selectedCount.textContent = this.selectedUsers.size;
-        }
-    }
-
-    clearSelection() {
-        this.selectedUsers.clear();
-        this.updateSelectionUI();
-        this.updateBulkActionsVisibility();
-    }
-
-    async handleBulkAction(action) {
-        if (this.selectedUsers.size === 0) return;
-
-        const userIds = Array.from(this.selectedUsers);
-        const confirmMessage = this.getBulkActionConfirmMessage(action, userIds.length);
-
-        if (!confirm(confirmMessage)) return;
-
-        try {
-            this.showLoading(true);
-
-            const response = await this.makeAuthenticatedRequest('/admin/users/bulk', {
-                method: 'POST',
-                body: JSON.stringify({
-                    action: action,
-                    user_ids: userIds
-                })
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    const results = result.results || {};
-                    const successCount = results.success_count || 0;
-                    const failedCount = results.failed_count || 0;
-                    
-                    if (successCount > 0) {
-                        this.showSuccess(`${action.charAt(0).toUpperCase() + action.slice(1)} operation completed: ${successCount} successful${failedCount > 0 ? `, ${failedCount} failed` : ''}`);
-                    } else {
-                        this.showError(`All ${action} operations failed`);
-                    }
-                    
-                    this.clearSelection();
-                    await this.loadUsers();
-                    await this.loadUserStatistics(); // Refresh stats after bulk operation
-                } else {
-                    throw new Error(result.error || 'Bulk operation failed');
-                }
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Bulk operation failed: ${response.status}`);
-            }
-        } catch (error) {
-            console.error(`Bulk ${action} error:`, error);
-            this.showError(error.message || `Failed to ${action} selected users`);
-        } finally {
-            this.showLoading(false);
-        }
-    }
-
-    getBulkActionConfirmMessage(action, count) {
-        const messages = {
-            suspend: `Are you sure you want to suspend ${count} user(s)? This will prevent them from accessing the platform.`,
-            activate: `Are you sure you want to activate ${count} user(s)? This will restore their platform access.`,
-            delete: `Are you sure you want to delete ${count} user(s)? This action cannot be undone and will anonymize their data.`
-        };
-        return messages[action] || `Are you sure you want to ${action} ${count} user(s)?`;
-    }
-
-    // ==================== MODAL OPERATIONS ====================
-
-    showAddUserModal() {
-        if (this.modalManager) {
-            this.modalManager.showAddUserModal();
-        }
-    }
-
-    // ==================== EXPORT FUNCTIONALITY - Updated ====================
-
-    async exportUsersData() {
-        try {
-            this.showLoading(true);
-
-            const params = new URLSearchParams({
-                format: 'csv',
-                ...this.usersData.filters
-            });
-
-            // Remove empty filters
-            Object.keys(this.usersData.filters).forEach(key => {
-                if (!this.usersData.filters[key]) {
-                    params.delete(key);
-                }
-            });
-
-            const response = await this.makeAuthenticatedRequest(`/admin/users/export?${params}`);
-
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `cinebrain-users-${new Date().toISOString().split('T')[0]}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                
-                this.showSuccess('Users data exported successfully');
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Export failed: ${response.status}`);
-            }
-        } catch (error) {
-            console.error('Export error:', error);
-            this.showError(error.message || 'Failed to export users data');
-        } finally {
-            this.showLoading(false);
-        }
-    }
-
-    // ==================== REAL-TIME UPDATES ====================
-
-    startRealTimeUpdates() {
-        this.refreshTimer = setInterval(() => {
-            if (!this.isRefreshing && !document.hidden) {
-                this.refreshAllData();
-            }
-        }, this.refreshInterval);
-
-        console.log(`✅ Users real-time updates started (${this.refreshInterval / 1000}s interval)`);
-    }
-
-    stopRealTimeUpdates() {
-        if (this.refreshTimer) {
-            clearInterval(this.refreshTimer);
-            this.refreshTimer = null;
-            console.log('⏹ Users real-time updates stopped');
-        }
-    }
-
-    async refreshAllData() {
-        if (this.isRefreshing) return;
-
-        this.isRefreshing = true;
-
-        try {
-            await this.loadAllUsersData();
-        } catch (error) {
-            console.error('Refresh error:', error);
-            this.showError('Failed to refresh users data');
-        } finally {
-            this.isRefreshing = false;
-        }
-    }
-
-    updateChartsForPeriod() {
-        this.loadUserAnalytics();
-    }
-
-    // ==================== PAGINATION METHODS - Updated ====================
-
-    goToPage(page) {
-        if (page >= 1 && page <= this.usersData.pagination.total_pages) {
-            this.usersData.pagination.page = page;
-            this.loadUsers();
-        }
-    }
-
-    // ==================== UTILITY METHODS - Updated ====================
-
-    async makeAuthenticatedRequest(endpoint, options = {}) {
-        const token = localStorage.getItem('cinebrain-token');
-
-        const defaultOptions = {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        };
-
-        const mergedOptions = {
-            ...defaultOptions,
-            ...options,
-            headers: {
-                ...defaultOptions.headers,
-                ...(options.headers || {})
-            }
-        };
-
-        const response = await fetch(`${this.apiBase}${endpoint}`, mergedOptions);
-
-        if (response.status === 401) {
-            localStorage.removeItem('cinebrain-token');
-            localStorage.removeItem('cinebrain-user');
-            window.location.href = '/auth/login.html';
-            throw new Error('Authentication failed');
-        }
-
-        return response;
+        return searchParams.toString();
     }
 
     formatNumber(num) {
@@ -997,18 +1231,22 @@ class UsersManager {
         const timeString = this.isMobile ?
             now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) :
             now.toLocaleTimeString();
-        
-        // Update any last refresh indicators if they exist
+
         document.querySelectorAll('.last-refresh').forEach(element => {
             element.textContent = `Last updated: ${timeString}`;
         });
     }
 
-    showLoading(show) {
-        const indicator = document.getElementById('page-loading-indicator');
-        if (indicator) {
-            indicator.style.transform = show ? 'scaleX(1)' : 'scaleX(0)';
-        }
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 
     hapticFeedback(type = 'light') {
@@ -1022,46 +1260,27 @@ class UsersManager {
         }
     }
 
-    showPullToRefreshIndicator() {
-        if (!document.getElementById('pullToRefreshIndicator')) {
-            const indicator = document.createElement('div');
-            indicator.id = 'pullToRefreshIndicator';
-            indicator.innerHTML = '<i data-feather="refresh-cw"></i> Release to refresh';
-            indicator.style.cssText = `
-                position: fixed;
-                top: calc(var(--topbar-height) + 10px);
-                left: 50%;
-                transform: translateX(-50%);
-                background: var(--admin-primary);
-                color: white;
-                padding: 8px 16px;
-                border-radius: 20px;
-                font-size: 14px;
-                z-index: 1000;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            `;
-            document.body.appendChild(indicator);
-
-            if (typeof feather !== 'undefined') {
-                feather.replace();
+    showLoading(show, message = 'Loading...') {
+        const indicator = this.elements.pageLoadingIndicator;
+        if (indicator) {
+            indicator.style.transform = show ? 'scaleX(1)' : 'scaleX(0)';
+            if (show && message) {
+                indicator.setAttribute('data-message', message);
             }
         }
     }
 
-    hidePullToRefreshIndicator() {
-        const indicator = document.getElementById('pullToRefreshIndicator');
-        if (indicator) {
-            indicator.remove();
+    showAddUserModal() {
+        // Delegate to modal manager
+        if (this.components.modals && typeof this.components.modals.showAddUserModal === 'function') {
+            this.components.modals.showAddUserModal();
+        } else {
+            this.showToast('Add user functionality will be available soon', 'info');
         }
     }
 
-    showSuccess(message) {
-        this.showToast(message, 'success');
-    }
-
-    showError(message) {
+    handleError(message, error = null) {
+        console.error('❌', message, error);
         this.showToast(message, 'error');
     }
 
@@ -1108,983 +1327,63 @@ class UsersManager {
         }, 3000);
     }
 
+    // ==================== COMPONENT REGISTRATION ====================
+
+    registerComponent(type, component) {
+        this.components[type] = component;
+        console.log(`✅ ${type} component registered`);
+    }
+
+    // ==================== CLEANUP ====================
+
     destroy() {
+        console.log('🗑 Destroying CineBrain Users Core...');
+
         this.stopRealTimeUpdates();
+        this.clearCache();
 
-        if (this.tableManager) {
-            this.tableManager.destroy();
-        }
+        // Destroy all components
+        Object.values(this.components).forEach(component => {
+            if (component && typeof component.destroy === 'function') {
+                component.destroy();
+            }
+        });
 
-        if (this.chartManager) {
-            this.chartManager.destroy();
-        }
-
-        if (this.modalManager) {
-            this.modalManager.destroy();
-        }
-
+        // Remove event listeners
         window.removeEventListener('resize', this.handleResize);
         window.removeEventListener('orientationchange', this.handleResize);
 
-        console.log('🗑 Users management v4.0 destroyed');
+        console.log('🗑 CineBrain Users Core destroyed');
     }
 }
 
-// ==================== USERS TABLE MANAGER - Updated ====================
-
-class UsersTableManager {
-    constructor(usersManager) {
-        this.usersManager = usersManager;
-        this.sortableColumns = ['username', 'email', 'role', 'status', 'created_at'];
-    }
-
-    async init() {
-        this.setupTableEventListeners();
-        console.log('✅ Users table manager initialized');
-    }
-
-    setupTableEventListeners() {
-        // Sortable column headers
-        document.querySelectorAll('.users-table th.sortable').forEach(header => {
-            header.addEventListener('click', () => {
-                this.handleSort(header.dataset.sort);
-            });
-        });
-    }
-
-    handleSort(field) {
-        if (this.usersManager.usersData.sorting.sort_by === field) {
-            // Toggle direction
-            this.usersManager.usersData.sorting.sort_direction = 
-                this.usersManager.usersData.sorting.sort_direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            // New field
-            this.usersManager.usersData.sorting.sort_by = field;
-            this.usersManager.usersData.sorting.sort_direction = 'asc';
-        }
-
-        this.updateSortHeaders();
-        this.usersManager.loadUsers();
-    }
-
-    updateSortHeaders() {
-        document.querySelectorAll('.users-table th.sortable').forEach(header => {
-            header.classList.remove('sort-asc', 'sort-desc');
-            
-            if (header.dataset.sort === this.usersManager.usersData.sorting.sort_by) {
-                header.classList.add(`sort-${this.usersManager.usersData.sorting.sort_direction}`);
-            }
-        });
-    }
-
-    renderUsers() {
-        const tbody = this.usersManager.elements.usersTableBody;
-        if (!tbody) return;
-
-        if (!this.usersManager.usersData.users.length) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="table-empty-state">
-                        <i data-feather="users"></i>
-                        <p>No users found</p>
-                    </td>
-                </tr>
-            `;
-            if (typeof feather !== 'undefined') feather.replace();
-            return;
-        }
-
-        tbody.innerHTML = this.usersManager.usersData.users.map(user => `
-            <tr class="slide-up">
-                <td class="select-column">
-                    <input type="checkbox" class="user-select-checkbox" 
-                           data-user-id="${user.id}"
-                           onchange="usersManager.handleUserSelect(${user.id}, this.checked)">
-                </td>
-                <td>
-                    <div class="user-info">
-                        <div class="user-avatar">
-                            ${user.avatar_url ? 
-                                `<img src="${user.avatar_url}" alt="${user.username}">` :
-                                `<i data-feather="user" class="user-avatar-placeholder"></i>`
-                            }
-                        </div>
-                        <div class="user-details">
-                            <div class="user-name">${this.escapeHtml(user.full_name || user.username)}</div>
-                            <div class="user-username">@${this.escapeHtml(user.username)}</div>
-                        </div>
-                    </div>
-                </td>
-                <td class="d-none d-md-table-cell">
-                    <div class="user-email">${this.escapeHtml(user.email)}</div>
-                </td>
-                <td class="d-none d-lg-table-cell">
-                    <span class="role-badge role-badge-${user.is_admin ? 'admin' : 'user'}">
-                        ${user.is_admin ? 'Admin' : 'User'}
-                    </span>
-                </td>
-                <td>
-                    <span class="status-badge status-badge-${this.getUserStatusClass(user)}">
-                        <span class="status-indicator ${this.getUserStatusClass(user)}"></span>
-                        ${this.getUserStatusText(user)}
-                    </span>
-                </td>
-                <td class="d-none d-sm-table-cell">
-                    <div class="user-join-date">
-                        ${this.usersManager.formatTimeAgo(user.created_at)}
-                    </div>
-                </td>
-                <td class="actions-column">
-                    <div class="action-buttons">
-                        <button class="action-btn action-view" 
-                                onclick="usersManager.modalManager.showUserDetails(${user.id})"
-                                title="View details">
-                            <i data-feather="eye"></i>
-                        </button>
-                        <button class="action-btn action-edit" 
-                                onclick="usersManager.modalManager.showEditUser(${user.id})"
-                                title="Edit user">
-                            <i data-feather="edit"></i>
-                        </button>
-                        <button class="action-btn action-suspend" 
-                                onclick="usersManager.toggleUserStatus(${user.id})"
-                                title="${this.getUserStatusAction(user)}">
-                            <i data-feather="${this.getUserStatusIcon(user)}"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
-
-        // Update selection UI
-        this.usersManager.updateSelectionUI();
-    }
-
-    renderPagination() {
-        const pagination = this.usersManager.elements.usersPagination;
-        const paginationInfo = this.usersManager.elements.paginationInfo;
-        
-        if (!pagination) return;
-
-        const { page, total_pages, total, per_page } = this.usersManager.usersData.pagination;
-
-        // Update pagination info
-        if (paginationInfo) {
-            const start = (page - 1) * per_page + 1;
-            const end = Math.min(page * per_page, total);
-            paginationInfo.textContent = `Showing ${start}-${end} of ${total} users`;
-        }
-
-        if (total_pages <= 1) {
-            pagination.innerHTML = '';
-            return;
-        }
-
-        let paginationHtml = '';
-
-        // Previous button
-        paginationHtml += `
-            <li class="page-item ${page === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="usersManager.goToPage(${page - 1})" aria-label="Previous">
-                    <i data-feather="chevron-left"></i>
-                </a>
-            </li>
-        `;
-
-        // Page numbers
-        const startPage = Math.max(1, page - 2);
-        const endPage = Math.min(total_pages, page + 2);
-
-        if (startPage > 1) {
-            paginationHtml += `
-                <li class="page-item">
-                    <a class="page-link" href="#" onclick="usersManager.goToPage(1)">1</a>
-                </li>
-            `;
-            if (startPage > 2) {
-                paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
-        }
-
-        for (let i = startPage; i <= endPage; i++) {
-            paginationHtml += `
-                <li class="page-item ${i === page ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="usersManager.goToPage(${i})">${i}</a>
-                </li>
-            `;
-        }
-
-        if (endPage < total_pages) {
-            if (endPage < total_pages - 1) {
-                paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
-            paginationHtml += `
-                <li class="page-item">
-                    <a class="page-link" href="#" onclick="usersManager.goToPage(${total_pages})">${total_pages}</a>
-                </li>
-            `;
-        }
-
-        // Next button
-        paginationHtml += `
-            <li class="page-item ${page === total_pages ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="usersManager.goToPage(${page + 1})" aria-label="Next">
-                    <i data-feather="chevron-right"></i>
-                </a>
-            </li>
-        `;
-
-        pagination.innerHTML = paginationHtml;
-
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
-    }
-
-    getUserStatusClass(user) {
-        if (user.is_suspended) return 'suspended';
-        if (user.is_banned) return 'banned';
-        if (user.is_active) return 'active';
-        return 'inactive';
-    }
-
-    getUserStatusText(user) {
-        if (user.is_suspended) return 'Suspended';
-        if (user.is_banned) return 'Banned';
-        if (user.is_active) return 'Active';
-        return 'Inactive';
-    }
-
-    getUserStatusAction(user) {
-        if (user.is_suspended || user.is_banned) return 'Activate user';
-        return 'Suspend user';
-    }
-
-    getUserStatusIcon(user) {
-        if (user.is_suspended || user.is_banned) return 'play-circle';
-        return 'pause-circle';
-    }
-
-    handleDeviceChange() {
-        this.renderUsers();
-        this.renderPagination();
-    }
-
-    escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, m => map[m]);
-    }
-
-    destroy() {
-        console.log('🗑 Users table manager destroyed');
-    }
-}
-
-// ==================== USERS CHART MANAGER - Updated ====================
-
-class UsersChartManager {
-    constructor(usersManager) {
-        this.usersManager = usersManager;
-        this.charts = {};
-        this.chartData = {
-            userActivity: [],
-            userGrowth: []
-        };
-    }
-
-    async init() {
-        this.initializeCharts();
-        console.log('✅ Users chart manager initialized');
-    }
-
-    getThemeColors() {
-        const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-
-        if (theme === 'light') {
-            return {
-                textPrimary: '#1a1a1a',
-                textSecondary: '#4a4a4a',
-                textMuted: '#666666',
-                cardBorder: 'rgba(0, 0, 0, 0.1)',
-                tooltipBg: 'rgba(255, 255, 255, 0.95)',
-                tooltipBorder: 'rgba(0, 0, 0, 0.1)'
-            };
-        } else {
-            return {
-                textPrimary: '#ffffff',
-                textSecondary: '#b3b3b3',
-                textMuted: '#888888',
-                cardBorder: 'rgba(255, 255, 255, 0.1)',
-                tooltipBg: 'rgba(0, 0, 0, 0.9)',
-                tooltipBorder: 'rgba(255, 255, 255, 0.2)'
-            };
-        }
-    }
-
-    getBaseChartOptions() {
-        const colors = this.getThemeColors();
-        const isMobile = this.usersManager.isMobile;
-
-        return {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: {
-                duration: 750,
-                easing: 'easeInOutQuart'
-            },
-            plugins: {
-                legend: {
-                    position: 'top',
-                    align: 'end',
-                    labels: {
-                        color: colors.textPrimary,
-                        usePointStyle: true,
-                        font: {
-                            size: isMobile ? 11 : 12,
-                            family: "'Inter', sans-serif"
-                        },
-                        padding: isMobile ? 10 : 15,
-                        boxWidth: isMobile ? 6 : 8,
-                        boxHeight: isMobile ? 6 : 8
-                    }
-                },
-                tooltip: {
-                    enabled: true,
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: colors.tooltipBg,
-                    titleColor: colors.textPrimary,
-                    bodyColor: colors.textPrimary,
-                    borderColor: colors.tooltipBorder,
-                    borderWidth: 1,
-                    cornerRadius: 8,
-                    padding: 12,
-                    displayColors: true,
-                    titleFont: {
-                        size: 12,
-                        weight: '600'
-                    },
-                    bodyFont: {
-                        size: 11
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: {
-                        color: colors.textMuted,
-                        font: {
-                            size: isMobile ? 10 : 11,
-                            family: "'Inter', sans-serif"
-                        },
-                        maxRotation: isMobile ? 45 : 0,
-                        autoSkip: true,
-                        maxTicksLimit: isMobile ? 6 : 12
-                    },
-                    grid: {
-                        color: colors.cardBorder,
-                        drawBorder: false
-                    }
-                },
-                y: {
-                    ticks: {
-                        color: colors.textMuted,
-                        font: {
-                            size: isMobile ? 10 : 11,
-                            family: "'Inter', sans-serif"
-                        },
-                        callback: function(value) {
-                            if (Number.isInteger(value)) {
-                                return value.toLocaleString();
-                            }
-                        }
-                    },
-                    grid: {
-                        color: colors.cardBorder,
-                        drawBorder: false
-                    },
-                    beginAtZero: true
-                }
-            },
-            interaction: {
-                intersect: false,
-                mode: 'index'
-            },
-            elements: {
-                point: {
-                    radius: isMobile ? 3 : 4,
-                    hoverRadius: isMobile ? 5 : 6,
-                    hitRadius: isMobile ? 10 : 15
-                },
-                line: {
-                    borderJoinStyle: 'round'
-                }
-            }
-        };
-    }
-
-    initializeCharts() {
-        this.initializeUserActivityChart();
-    }
-
-    initializeUserActivityChart() {
-        const ctx = this.usersManager.elements.userActivityChart?.getContext('2d');
-        if (!ctx) return;
-
-        const gradientActive = ctx.createLinearGradient(0, 0, 0, 400);
-        gradientActive.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
-        gradientActive.addColorStop(1, 'rgba(16, 185, 129, 0.01)');
-
-        const gradientNew = ctx.createLinearGradient(0, 0, 0, 400);
-        gradientNew.addColorStop(0, 'rgba(17, 60, 207, 0.4)');
-        gradientNew.addColorStop(1, 'rgba(17, 60, 207, 0.01)');
-
-        this.charts.userActivity = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Active Users',
-                    data: [],
-                    borderColor: '#10b981',
-                    backgroundColor: gradientActive,
-                    tension: 0.4,
-                    fill: true,
-                    borderWidth: this.usersManager.isMobile ? 2 : 3,
-                    pointBackgroundColor: '#10b981',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2
-                }, {
-                    label: 'New Users',
-                    data: [],
-                    borderColor: '#113CCF',
-                    backgroundColor: gradientNew,
-                    tension: 0.4,
-                    fill: true,
-                    borderWidth: this.usersManager.isMobile ? 2 : 3,
-                    pointBackgroundColor: '#113CCF',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2
-                }]
-            },
-            options: {
-                ...this.getBaseChartOptions(),
-                plugins: {
-                    ...this.getBaseChartOptions().plugins,
-                    title: {
-                        display: !this.usersManager.isMobile,
-                        text: 'User Activity Trends',
-                        color: this.getThemeColors().textPrimary,
-                        font: {
-                            size: 14,
-                            weight: '600',
-                            family: "'Inter', sans-serif"
-                        },
-                        padding: { bottom: 10 }
-                    }
-                }
-            }
-        });
-    }
-
-    updateCharts(analyticsData) {
-        if (analyticsData.user_activity) {
-            this.updateUserActivityChart(analyticsData.user_activity);
-        }
-    }
-
-    updateUserActivityChart(activityData) {
-        if (!this.charts.userActivity || !activityData) return;
-
-        const period = this.usersManager.elements.activityChartPeriod?.value || '30d';
-        const maxLabels = period === '7d' ? 7 : period === '30d' ? 
-            (this.usersManager.isMobile ? 15 : 30) : 
-            (this.usersManager.isMobile ? 30 : 90);
-
-        const recentData = activityData.slice(-maxLabels);
-
-        this.charts.userActivity.data.labels = recentData.map(item => {
-            const date = new Date(item.date);
-            return this.usersManager.isMobile ?
-                date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) :
-                date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        });
-
-        this.charts.userActivity.data.datasets[0].data = recentData.map(item => item.active_users);
-        this.charts.userActivity.data.datasets[1].data = recentData.map(item => item.new_users);
-
-        this.charts.userActivity.update('active');
-    }
-
-    updateChartsTheme() {
-        Object.values(this.charts).forEach(chart => {
-            if (chart && chart.options) {
-                const colors = this.getThemeColors();
-
-                // Update legend colors
-                if (chart.options.plugins?.legend?.labels) {
-                    chart.options.plugins.legend.labels.color = colors.textPrimary;
-                }
-
-                // Update title colors
-                if (chart.options.plugins?.title) {
-                    chart.options.plugins.title.color = colors.textPrimary;
-                }
-
-                // Update tooltip colors
-                if (chart.options.plugins?.tooltip) {
-                    chart.options.plugins.tooltip.backgroundColor = colors.tooltipBg;
-                    chart.options.plugins.tooltip.titleColor = colors.textPrimary;
-                    chart.options.plugins.tooltip.bodyColor = colors.textPrimary;
-                    chart.options.plugins.tooltip.borderColor = colors.tooltipBorder;
-                }
-
-                // Update scales colors
-                if (chart.options.scales) {
-                    Object.keys(chart.options.scales).forEach(scaleKey => {
-                        if (chart.options.scales[scaleKey].ticks) {
-                            chart.options.scales[scaleKey].ticks.color = colors.textMuted;
-                        }
-                        if (chart.options.scales[scaleKey].grid) {
-                            chart.options.scales[scaleKey].grid.color = colors.cardBorder;
-                        }
-                    });
-                }
-
-                chart.update('active');
-            }
-        });
-    }
-
-    resizeCharts() {
-        Object.values(this.charts).forEach(chart => {
-            if (chart && typeof chart.resize === 'function') {
-                chart.resize();
-            }
-        });
-    }
-
-    destroy() {
-        Object.values(this.charts).forEach(chart => {
-            if (chart && typeof chart.destroy === 'function') {
-                chart.destroy();
-            }
-        });
-        this.charts = {};
-        console.log('🗑 Users chart manager destroyed');
-    }
-}
-
-// ==================== USERS MODAL MANAGER - Updated ====================
-
-class UsersModalManager {
-    constructor(usersManager) {
-        this.usersManager = usersManager;
-        this.currentUser = null;
-    }
-
-    async init() {
-        this.setupModalEventListeners();
-        console.log('✅ Users modal manager initialized');
-    }
-
-    setupModalEventListeners() {
-        // Edit user button in details modal
-        document.getElementById('editUserBtn')?.addEventListener('click', () => {
-            if (this.currentUser) {
-                this.showEditUser(this.currentUser.id);
-            }
-        });
-
-        // Edit user form submission
-        document.getElementById('editUserForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.handleEditUserSubmit();
-        });
-    }
-
-    async showUserDetails(userId) {
-        try {
-            this.usersManager.showLoading(true);
-
-            const response = await this.usersManager.makeAuthenticatedRequest(`/admin/users/${userId}`);
-
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data) {
-                    this.currentUser = result.data;
-                    this.renderUserDetails(result.data);
-                    
-                    const modal = new bootstrap.Modal(this.usersManager.elements.userDetailsModal);
-                    modal.show();
-                } else {
-                    throw new Error(result.error || 'Invalid user data structure');
-                }
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Failed to load user details: ${response.status}`);
-            }
-        } catch (error) {
-            console.error('Error loading user details:', error);
-            this.usersManager.showError(error.message || 'Failed to load user details');
-        } finally {
-            this.usersManager.showLoading(false);
-        }
-    }
-
-    renderUserDetails(user) {
-        const modalBody = document.getElementById('userDetailsModalBody');
-        if (!modalBody) return;
-
-        const formatDate = (dateString) => {
-            return new Date(dateString).toLocaleString();
-        };
-
-        modalBody.innerHTML = `
-            <div class="user-modal-header">
-                <div class="user-modal-avatar">
-                    ${user.avatar_url ? 
-                        `<img src="${user.avatar_url}" alt="${user.username}">` :
-                        `<i data-feather="user"></i>`
-                    }
-                </div>
-                <div class="user-modal-info">
-                    <h4>${this.escapeHtml(user.full_name || user.username)}</h4>
-                    <p>@${this.escapeHtml(user.username)} • ${user.email}</p>
-                </div>
-            </div>
-            
-            <div class="user-details-grid">
-                <div class="user-detail-item">
-                    <div class="user-detail-label">User ID</div>
-                    <div class="user-detail-value">${user.id}</div>
-                </div>
-                
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Role</div>
-                    <div class="user-detail-value">
-                        <span class="role-badge role-badge-${user.is_admin ? 'admin' : 'user'}">
-                            ${user.is_admin ? 'Admin' : 'User'}
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Status</div>
-                    <div class="user-detail-value">
-                        <span class="status-badge status-badge-${this.getUserStatusClass(user)}">
-                            <span class="status-indicator ${this.getUserStatusClass(user)}"></span>
-                            ${this.getUserStatusText(user)}
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Join Date</div>
-                    <div class="user-detail-value">${formatDate(user.created_at)}</div>
-                </div>
-                
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Last Active</div>
-                    <div class="user-detail-value">${user.last_active ? formatDate(user.last_active) : 'Never'}</div>
-                </div>
-                
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Location</div>
-                    <div class="user-detail-value">${user.location || 'Not specified'}</div>
-                </div>
-                
-                ${user.preferred_languages && user.preferred_languages.length ? `
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Preferred Languages</div>
-                    <div class="user-detail-value">${user.preferred_languages.join(', ')}</div>
-                </div>
-                ` : ''}
-                
-                ${user.preferred_genres && user.preferred_genres.length ? `
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Preferred Genres</div>
-                    <div class="user-detail-value">${user.preferred_genres.join(', ')}</div>
-                </div>
-                ` : ''}
-                
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Total Interactions</div>
-                    <div class="user-detail-value">${user.interaction_count || 0}</div>
-                </div>
-                
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Content Rated</div>
-                    <div class="user-detail-value">${user.ratings_count || 0}</div>
-                </div>
-                
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Favorites</div>
-                    <div class="user-detail-value">${user.favorites_count || 0}</div>
-                </div>
-                
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Watchlist Items</div>
-                    <div class="user-detail-value">${user.watchlist_count || 0}</div>
-                </div>
-
-                ${user.reviews_count !== undefined ? `
-                <div class="user-detail-item">
-                    <div class="user-detail-label">Reviews Written</div>
-                    <div class="user-detail-value">${user.reviews_count || 0}</div>
-                </div>
-                ` : ''}
-            </div>
-        `;
-
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
-    }
-
-    showEditUser(userId) {
-        // Close details modal first
-        const detailsModal = bootstrap.Modal.getInstance(this.usersManager.elements.userDetailsModal);
-        if (detailsModal) {
-            detailsModal.hide();
-        }
-
-        // Load user for editing
-        this.loadUserForEdit(userId);
-    }
-
-    async loadUserForEdit(userId) {
-        try {
-            this.usersManager.showLoading(true);
-
-            const response = await this.usersManager.makeAuthenticatedRequest(`/admin/users/${userId}`);
-
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data) {
-                    this.renderEditUserForm(result.data);
-                    
-                    const modal = new bootstrap.Modal(this.usersManager.elements.editUserModal);
-                    modal.show();
-                } else {
-                    throw new Error(result.error || 'Invalid user data structure');
-                }
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Failed to load user for editing: ${response.status}`);
-            }
-        } catch (error) {
-            console.error('Error loading user for edit:', error);
-            this.usersManager.showError(error.message || 'Failed to load user for editing');
-        } finally {
-            this.usersManager.showLoading(false);
-        }
-    }
-
-    renderEditUserForm(user) {
-        const modalBody = this.usersManager.elements.editUserModal?.querySelector('.modal-body');
-        if (!modalBody) return;
-
-        modalBody.innerHTML = `
-            <input type="hidden" id="editUserId" value="${user.id}">
-            
-            <div class="form-group">
-                <label for="editUsername" class="form-label">Username</label>
-                <input type="text" class="form-control" id="editUsername" value="${this.escapeHtml(user.username)}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editEmail" class="form-label">Email</label>
-                <input type="email" class="form-control" id="editEmail" value="${this.escapeHtml(user.email)}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editFullName" class="form-label">Full Name</label>
-                <input type="text" class="form-control" id="editFullName" value="${this.escapeHtml(user.full_name || '')}">
-            </div>
-            
-            <div class="form-group">
-                <label for="editRole" class="form-label">Role</label>
-                <select class="form-select" id="editRole">
-                    <option value="user" ${!user.is_admin ? 'selected' : ''}>User</option>
-                    <option value="admin" ${user.is_admin ? 'selected' : ''}>Admin</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="editStatus" class="form-label">Status</label>
-                <select class="form-select" id="editStatus">
-                    <option value="active" ${!user.is_suspended && !user.is_banned ? 'selected' : ''}>Active</option>
-                    <option value="suspended" ${user.is_suspended ? 'selected' : ''}>Suspended</option>
-                    <option value="banned" ${user.is_banned ? 'selected' : ''}>Banned</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="editLocation" class="form-label">Location</label>
-                <input type="text" class="form-control" id="editLocation" value="${this.escapeHtml(user.location || '')}">
-            </div>
-        `;
-    }
-
-    async handleEditUserSubmit() {
-        try {
-            const userId = document.getElementById('editUserId').value;
-            const formData = {
-                username: document.getElementById('editUsername').value,
-                email: document.getElementById('editEmail').value,
-                full_name: document.getElementById('editFullName').value,
-                is_admin: document.getElementById('editRole').value === 'admin',
-                status: document.getElementById('editStatus').value,
-                location: document.getElementById('editLocation').value
-            };
-
-            this.usersManager.showLoading(true);
-
-            const response = await this.usersManager.makeAuthenticatedRequest(`/admin/users/${userId}`, {
-                method: 'PUT',
-                body: JSON.stringify(formData)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    const changes = result.changes || [];
-                    this.usersManager.showSuccess(`User updated successfully${changes.length ? ': ' + changes.join(', ') : ''}`);
-                    
-                    const modal = bootstrap.Modal.getInstance(this.usersManager.elements.editUserModal);
-                    modal.hide();
-                    
-                    // Refresh users list and statistics
-                    await this.usersManager.loadUsers();
-                    await this.usersManager.loadUserStatistics();
-                } else {
-                    throw new Error(result.error || 'Failed to update user');
-                }
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Update failed: ${response.status}`);
-            }
-        } catch (error) {
-            console.error('Error updating user:', error);
-            this.usersManager.showError(error.message || 'Failed to update user');
-        } finally {
-            this.usersManager.showLoading(false);
-        }
-    }
-
-    showAddUserModal() {
-        // Implement add user functionality
-        this.usersManager.showError('Add user functionality will be implemented soon');
-    }
-
-    getUserStatusClass(user) {
-        if (user.is_suspended) return 'suspended';
-        if (user.is_banned) return 'banned';
-        if (user.is_active) return 'active';
-        return 'inactive';
-    }
-
-    getUserStatusText(user) {
-        if (user.is_suspended) return 'Suspended';
-        if (user.is_banned) return 'Banned';
-        if (user.is_active) return 'Active';
-        return 'Inactive';
-    }
-
-    escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, m => map[m]);
-    }
-
-    destroy() {
-        console.log('🗑 Users modal manager destroyed');
-    }
-}
-
-// ==================== GLOBAL FUNCTIONS FOR HTML ONCLICK - Updated ====================
-
-// Global navigation function for pagination
-window.goToPage = function(page) {
-    if (window.usersManager) {
-        window.usersManager.goToPage(page);
-    }
-};
-
-// Global user status toggle function - Updated
-window.toggleUserStatus = async function(userId) {
-    if (window.usersManager) {
-        try {
-            const user = window.usersManager.usersData.users.find(u => u.id === userId);
-            if (!user) return;
-
-            const action = (user.is_suspended || user.is_banned) ? 'activate' : 'suspend';
-            const confirmMessage = `Are you sure you want to ${action} this user?`;
-
-            if (!confirm(confirmMessage)) return;
-
-            window.usersManager.showLoading(true);
-
-            const response = await window.usersManager.makeAuthenticatedRequest(`/admin/users/${userId}/status`, {
-                method: 'PUT',
-                body: JSON.stringify({ action: action })
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    window.usersManager.showSuccess(result.message || `User ${action}d successfully`);
-                    await window.usersManager.loadUsers();
-                    await window.usersManager.loadUserStatistics(); // Refresh stats after status change
-                } else {
-                    throw new Error(result.error || `Failed to ${action} user`);
-                }
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Status update failed: ${response.status}`);
-            }
-        } catch (error) {
-            console.error('Error updating user status:', error);
-            window.usersManager.showError(error.message || 'Failed to update user status');
-        } finally {
-            window.usersManager.showLoading(false);
-        }
+// ==================== GLOBAL FUNCTIONS ====================
+
+// Global navigation for HTML onclick handlers
+window.goToPage = function (page) {
+    if (window.cineBrainUsersCore) {
+        window.cineBrainUsersCore.goToPage(page);
     }
 };
 
 // ==================== INITIALIZATION ====================
 
-let usersManager;
+let cineBrainUsersCore;
 
 document.addEventListener('DOMContentLoaded', () => {
-    usersManager = new UsersManager();
-    window.usersManager = usersManager; // Make it globally available
+    cineBrainUsersCore = new CineBrainUsersCore();
+    window.cineBrainUsersCore = cineBrainUsersCore; // Make globally available
 });
 
 window.addEventListener('beforeunload', () => {
-    if (usersManager) {
-        usersManager.destroy();
+    if (cineBrainUsersCore) {
+        cineBrainUsersCore.destroy();
     }
 });
 
-// Export classes for module systems
-window.UsersManager = UsersManager;
-window.UsersTableManager = UsersTableManager;
-window.UsersChartManager = UsersChartManager;
-window.UsersModalManager = UsersModalManager;
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = CineBrainUsersCore;
+} else {
+    window.CineBrainUsersCore = CineBrainUsersCore;
+}

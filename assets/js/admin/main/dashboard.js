@@ -202,7 +202,7 @@ class AdminDashboard {
 
         this.elements.viewSupportDashboard?.addEventListener('click', (e) => {
             e.preventDefault();
-            window.location.href = '/admin/Support-Dashboard.html';
+            window.location.href = '/admin/support.html';
         });
 
         // NEW: Email preferences toggle
@@ -950,7 +950,7 @@ class AdminDashboard {
             const actions = [
                 { href: '/admin/content.html', icon: 'film', label: 'Content' },
                 { href: '/admin/users.html', icon: 'users', label: 'Users' },
-                { href: '/admin/Support-Dashboard.html', icon: 'message-circle', label: 'Support' },
+                { href: '/admin/support.html', icon: 'message-circle', label: 'Support' },
                 { href: '/admin/analytics.html', icon: 'bar-chart-2', label: 'Analytics' },
                 { href: '/admin/recommendations.html', icon: 'star', label: 'Recommendations' },
                 { href: '/admin/settings.html', icon: 'settings', label: 'Settings' }
