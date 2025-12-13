@@ -10,7 +10,7 @@ class CineBrainGoogleAds {
 
         // Configuration
         this.config = {
-            publisherId: '', // Set your Google AdSense publisher ID
+            publisherId: 'ca-pub-8281321841090139', // Set your Google AdSense publisher ID
             adFrequency: {
                 carousel: 6, // Show ad every 6 cards in carousel
                 sections: 2  // Show ad every 2 content sections
@@ -18,17 +18,17 @@ class CineBrainGoogleAds {
             adTypes: {
                 carousel: {
                     sizes: [[300, 250], [250, 250], [200, 200]],
-                    slot: '', // Your ad slot ID
+                    slot: '2815420858', // Your ad slot ID
                     responsive: true
                 },
                 section: {
                     sizes: [[728, 90], [970, 250], [300, 250]],
-                    slot: '', // Your ad slot ID
+                    slot: '2815420858', // Your ad slot ID
                     responsive: true
                 },
                 article: {
                     sizes: [[728, 90], [300, 250], [336, 280]],
-                    slot: '', // Your ad slot ID
+                    slot: '9908454570', // Your ad slot ID
                     responsive: true
                 }
             },
