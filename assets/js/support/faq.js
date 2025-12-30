@@ -2,7 +2,7 @@
 
 class CineBrainFAQManager {
     constructor() {
-        this.apiBase = window.CineBrainConfig?.apiBase || 'https://cinebrain.onrender.com/api';
+        this.apiBase = window.CineBrainConfig.apiBase;
         this.allFAQs = [];
         this.allCategories = [];
         this.currentCategory = null;
